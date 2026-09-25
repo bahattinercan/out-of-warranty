@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dökümhane-9 — Arena Prototipi</title>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <div id="app">
+    <div id="stage">
+      <header id="hud">
+        <div id="players"></div>
+        <div class="center">
+          <div id="turn-banner">Sıra: -</div>
+          <div id="wind-indicator" role="status" aria-live="polite">Rüzgar: -</div>
+          <button id="fullscreen-btn" title="Tam ekran (F)">⛶ Tam Ekran</button>
+          <button id="quit-btn" title="Menüye dön (Esc)">⏏ Çıkış</button>
+        </div>
+      </header>
+
+      <!-- Ses denetimi HUD'un dışında, sahneye sabit: HUD menülerde gizlenirken
+           (karakter/harita/atölye/hikâye ekranları) da erişilebilir kalır. -->
+      <div id="audio-control" role="group" aria-label="Ses ayarları">
+        <button id="mute-btn" type="button" title="Sesi kapat (M)" aria-label="Sesi kapat" aria-pressed="false">
+          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+            <path d="M11 5 6 9H3v6h3l5 4Z" />
+            <path class="sound-waves" d="M15 8a6 6 0 0 1 0 8m3-11a10 10 0 0 1 0 14" />
+            <path class="sound-off" d="m16 9 6 6m0-6-6 6" />
+          </svg>
+          <span id="mute-label">Ses</span>
+        </button>
+        <input id="volume-slider" type="range" min="0" max="100" step="1" value="100" aria-label="Ses düzeyi" />
+        <output id="volume-value" for="volume-slider">100%</output>
+      </div>
+
+      <canvas id="game" width="960" height="540"></canvas>
+
+      <div id="power-bar" class="hidden">
+        <div id="power-fill"></div>
+        <div id="power-marker" class="hidden" title="Son atış gücü"></div>
+      </div>
+
+      <div id="overlay" class="hidden">
+        <div class="overlay-card">
+          <h1 id="overlay-title">Tahsis Tamamlandı</h1>
+          <p id="overlay-sub"></p>
+          <div id="overlay-reward" class="hidden" role="status"></div>
+          <div class="overlay-actions">
+            <button id="story-next-btn" class="hidden">Sonraki Etap</button>
+            <button id="workshop-btn">Atölyeye Git</button>
+            <button id="restart-btn">Tekrar Oyna</button>
+            <button id="menu-btn" class="secondary">Ana Menü</button>
+          </div>
+        </div>
+      </div>
+
+      <div id="storage-warning" class="hidden" role="status" aria-live="polite"></div>
+
+      <div id="weapon-panel" class="hidden">
+        <div id="weapon-bar"></div>
+        <div id="weapon-desc"></div>
+      </div>
+
+    </div>
+
+    <footer id="controls">
+      <span><b>A / D</b> veya <b>← →</b> hareket et (enerji harcar)</span>
+      <span><b>W</b> veya <b>↑</b> sıçra (enerji harcar)</span>
+      <span><b>Fare</b> nişan al</span>
+      <span><b>Sol tık (basılı tut)</b> güç doldur, <b>bırak</b> ateş et</span>
+      <span><b>Sağ tık / Esc</b> atışı iptal et</span>
+      <span><b>Esc / ⏏ Çıkış</b> menüye dön</span>
+      <span><b>M</b> sesi aç/kapat</span>
+      <span><b>Q</b> dahili modülü kullan <em>(hasar veren modüller o turun atış hakkını doldurur)</em></span>
+      <span><b>1–9 / fare tekerleği</b> silah seç</span>
+      <span><b>⏱ Süre</b> dolunca sıra geçer • <b>Enerji</b> her turda yenilenir</span>
+    </footer>
+  </div>
+
+  <!-- Klasik scriptler: file:// üzerinden çift tıklayınca çalışır -->
+  <script src="js/audio.js"></script>
+  <script src="js/characters.js"></script>
+  <script src="js/progression.js"></script>
+  <script src="js/profile.js"></script>
+  <script src="js/market.js"></script>
+  <script src="js/maps.js"></script>
+  <script src="js/story-data.js"></script>
+  <script src="js/skills.js"></script>
+  <script src="js/skill-fx.js"></script>
+  <script src="js/robots.js"></script>
+  <script src="js/terrain.js"></script>
+  <script src="js/weapons.js"></script>
+  <script src="js/entity.js"></script>
+  <script src="js/projectile.js"></script>
+  <script src="js/ai.js"></script>
+  <script src="js/story.js"></script>
+  <script src="js/game.js"></script>
+  <script src="js/main.js"></script>
+</body>
+</html>

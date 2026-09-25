@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<title>Mermi Tasarım Sayfası</title>
+<style>
+  body { background:#10151c; color:#dfe6ee; font-family:Consolas,monospace; margin:12px; }
+  h3 { margin:0 0 10px; font-size:15px; }
+  .grid { display:flex; flex-wrap:wrap; gap:10px; }
+  .cell { width:158px; background:#1a2230; border-radius:8px; padding:6px; text-align:center; }
+  .cell canvas { display:block; margin:0 auto; background:#0c1219; border-radius:6px; }
+  .name { font-size:10.5px; margin-top:5px; color:#9fb3c8; }
+  .shape { color:#ffd27a; }
+</style>
+</head>
+<body>
+<h3>Mermi tasarımları — sol: önizleme (drawIcon) · sağ: uçuş + iz</h3>
+<div class="grid" id="grid"></div>
+<script src="js/weapons.js"></script>
+<script src="js/projectile.js"></script>
+<script>
+let specs = [];
+for (const w of WEAPONS) specs.push({ id: w.id, spec: w });
+for (const w of WEAPONS) if (w.clusterSpec) specs.push({ id: w.clusterSpec.id, spec: w.clusterSpec });
+for (const [k, s] of Object.entries(SKILL_PROJECTILES)) specs.push({ id: k, spec: s });
+// Tek tek incelemek için: _projectile_sheet.html?only=drill,mine,nuke
+const only = new URLSearchParams(location.search).get("only");
+if (only) specs = specs.filter((s) => only.split(",").includes(s.id));
+
+const grid = document.getElementById("grid");
+for (const s of specs) {
+  const cell = document.createElement("div");
+  cell.className = "cell";
+
+  // 1) Arayüz önizlemesi (emoji ikonun yerini alan çizim)
+  const icon = document.createElement("canvas");
+  icon.width = 120; icon.height = 120;
+  cell.appendChild(icon);
+  const ictx = icon.getContext("2d");
+  ictx.translate(4, 4);
+  Projectile.drawIcon(ictx, s.spec, 112);
+
+  // 2) Uçuş hali: gövde + iz (tail stilini ve yönünü doğrular)
+  const fly = document.createElement("canvas");
+  fly.width = 120; fly.height = 120;
+  cell.appendChild(fly);
+  const fctx = fly.getContext("2d");
+  const pr = new Projectile(92, 62, 3, -0.6, s.spec);
+  pr.age = 8;
+  pr.spinAngle = 0.7;
+  for (let i = 9; i >= 0; i--) pr.trail.push({ x: 92 - i * 6, y: 62 + i * 1.1 });
+  pr.draw(fctx);
+
+  const lab = document.createElement("div");
+  lab.className = "name";
+  lab.innerHTML = s.id + ' · <span class="shape">' + (s.spec.look ? s.spec.look.shape : "—") + "</span>";
+  cell.appendChild(lab);
+  grid.appendChild(cell);
+}
+</script>
+</body>
+</html>

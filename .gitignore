@@ -1,0 +1,12 @@
+# OS / editor junk
+Thumbs.db
+desktop.ini
+.DS_Store
+*.log
+
+# Temp / probe outputs
+*.tmp
+_*.tmp.html
+
+# Node (if tooling is added later)
+node_modules/

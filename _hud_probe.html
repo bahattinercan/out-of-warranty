@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<title>HUD önizleme probu</title>
+<link rel="stylesheet" href="css/style.css">
+<style>body { padding: 14px; }</style>
+</head>
+<body>
+<div id="app">
+  <div id="weapon-panel">
+    <div id="weapon-bar"></div>
+    <div id="weapon-desc"></div>
+  </div>
+</div>
+<script src="js/characters.js"></script>
+<script src="js/skills.js"></script>
+<script src="js/weapons.js"></script>
+<script src="js/projectile.js"></script>
+<script src="js/game.js"></script>
+<script>
+// Gerçek HUD kodunu (Game.prototype.updateWeaponHud + paintProjectilePreview)
+// sahte bir oyun nesnesiyle çalıştırır: çipler ve açıklama paneli gerçek markup.
+const fake = Object.create(Game.prototype);
+fake.state = "AIMING";
+fake.turn = 0;
+fake._weaponKey = null;
+const ammo = {};
+for (const w of WEAPONS) ammo[w.id] = w.ammo;
+// `active`, Game.prototype'te getter (players[turn]); weaponSpec ise Entity'de
+// getter — sahte oyuncuda düz alan olarak verilir.
+fake.players = [{ weapon: 0, ammo: ammo, weaponSpec: WEAPONS[0] }];
+fake.updateWeaponHud();
+
+// Panel görünür olsun (gerçek oyunda savaş durumunda açılır)
+document.getElementById("weapon-panel").classList.remove("hidden");
+
+// drawMines artık mermi çizicisini paylaşıyor: kurulu/kurulmamış mayın görünümü
+const scene = document.createElement("canvas");
+scene.width = 420;
+scene.height = 120;
+scene.style.cssText = "position:fixed;top:8px;left:8px;z-index:9;background:#243040;border-radius:8px;display:block";
+document.body.appendChild(scene);
+const mineSpec = WEAPONS.find((w) => w.id === "mine");
+fake.mines = [
+  { x: 70, y: 70, spec: mineSpec, arm: 0, owner: 0 },
+  { x: 170, y: 70, spec: mineSpec, arm: 30, owner: 0 },
+];
+fake.drawMines(scene.getContext("2d"));
+
+// Dahili modül kartı (drawSkillHud): mermi fırlatan modüllerde sağda önizleme
+const hud = document.createElement("canvas");
+hud.width = 260;
+hud.height = 60 * 6;
+hud.style.cssText = "position:fixed;top:8px;left:440px;z-index:9;background:#243040;border-radius:8px";
+document.body.appendChild(hud);
+const hctx = hud.getContext("2d");
+const spitters = CHARACTERS.filter((c) => c.skill && c.skill.kind === "spit");
+spitters.forEach((c, i) => {
+  hctx.save();
+  hctx.translate(0, i * 60);
+  drawSkillHud(hctx, { skillId: c.skill.id, charDef: c, skillCooldown: 0 }, 260, 60);
+  hctx.restore();
+});
+
+window.__ready = true;
+</script>
+</body>
+</html>

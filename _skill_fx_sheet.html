@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <title>Dökümhane-9 — Yetenek Efekt Sayfası (dev)</title>
+  <style>
+    html, body { margin: 0; background: #0b0e13; }
+    canvas { display: block; }
+  </style>
+</head>
+<body>
+  <!-- Dev doğrulama sayfası (oyuna dâhil değil): tüm modül cast efektlerini
+       tek bir canvas'a çizer. Grid = her efektin yarı-ömür karesi, şerit =
+       seçili efektlerin kare kare animasyonu. file:// üzerinden çalışır. -->
+  <canvas id="sheet" width="1480" height="1200"></canvas>
+  <script src="js/characters.js"></script>
+  <script src="js/skill-fx.js"></script>
+  <script>
+    const cv = document.getElementById("sheet");
+    const ctx = cv.getContext("2d");
+    const strip = /(\?|&)strip=1/.test(location.search);
+    const big = /(\?|&)big=1/.test(location.search);
+    const icons = /(\?|&)icons=1/.test(location.search);
+
+    function panel(x, y, w, h) {
+      ctx.fillStyle = "#12161c";
+      ctx.strokeStyle = "#222b36";
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(x + 6, y);
+      ctx.lineTo(x + w - 6, y); ctx.quadraticCurveTo(x + w, y, x + w, y + 6);
+      ctx.lineTo(x + w, y + h - 6); ctx.quadraticCurveTo(x + w, y + h, x + w - 6, y + h);
+      ctx.lineTo(x + 6, y + h); ctx.quadraticCurveTo(x, y + h, x, y + h - 6);
+      ctx.lineTo(x, y + 6); ctx.quadraticCurveTo(x, y, x + 6, y);
+      ctx.closePath(); ctx.fill(); ctx.stroke();
+    }
+
+    function fxRecord(ch, x, y, t) {
+      const entry = SKILL_FX_SHAPES[ch.skill.fx.shape];
+      return {
+        shape: ch.skill.fx.shape, family: entry.family, kind: ch.skill.kind,
+        x, y, r: 14, facing: 1, aim: -0.7,
+        tint: ch.skill.fx.tint, accent: ch.skill.fx.accent,
+        label: ch.skill.label, params: ch.skill.params || {},
+        t, life: entry.life, dead: false, seed: 0x2f1a,
+      };
+    }
+
+    function robot(gx, gy, ch) {
+      const r = ch.r || 14;
+      ctx.beginPath(); ctx.ellipse(gx, gy, r, r * 0.28, 0, 0, Math.PI * 2);
+      ctx.fillStyle = "#00000055"; ctx.fill();
+      ctx.beginPath(); ctx.arc(gx, gy - r, r, 0, Math.PI * 2);
+      ctx.fillStyle = ch.color; ctx.fill();
+      ctx.strokeStyle = ch.accent; ctx.lineWidth = Math.max(2, r * 0.14); ctx.stroke();
+      ctx.beginPath(); ctx.arc(gx + r * 0.28, gy - r * 1.2, r * 0.2, 0, Math.PI * 2);
+      ctx.fillStyle = "#ffffff"; ctx.fill();
+    }
+
+    function title(text, sub) {
+      ctx.fillStyle = "#e8eef5";
+      ctx.font = "700 22px sans-serif";
+      ctx.fillText(text, 14, 30);
+      if (sub) { ctx.fillStyle = "#7f8fa3"; ctx.font = "13px sans-serif"; ctx.fillText(sub, 14, 50); }
+    }
+
+    if (icons) {
+      // ── İkon modu: kart önizlemelerinin okunurluğu (64px) ──────────────
+      title("Modül Kart İkonları (64px)", "drawSkillFxIcon — karttaki 30px önizlemenin büyütülmüşü");
+      const CELL = 176, COLS = 8, PAD = 4, TOP = 62;
+      cv.width = PAD + COLS * (CELL + PAD);
+      cv.height = TOP + Math.ceil(CHARACTERS.length / COLS) * (CELL + PAD) + 8;
+      CHARACTERS.forEach((ch, i) => {
+        const col = i % COLS, row = Math.floor(i / COLS);
+        const x = PAD + col * (CELL + PAD), y = TOP + row * (CELL + PAD);
+        panel(x, y, CELL, CELL);
+        ctx.fillStyle = "#e8eef5"; ctx.font = "700 11px sans-serif"; ctx.textAlign = "center";
+        ctx.fillText(ch.label, x + CELL / 2, y + 18);
+        ctx.save();
+        ctx.beginPath(); ctx.rect(x + 6, y + 24, CELL - 12, CELL - 54); ctx.clip();
+        ctx.translate(x + (CELL - 64) / 2, y + 26);
+        SkillFx.drawIcon(ctx, ch.skill, 64);
+        ctx.restore();
+        ctx.fillStyle = "#7f8fa3"; ctx.font = "10px sans-serif";
+        ctx.fillText(ch.skill.fx.shape, x + CELL / 2, y + CELL - 10);
+        ctx.textAlign = "left";
+      });
+    } else if (big) {
+      // ── Büyük mod: efektleri 3x robot ölçeğinde incele (okunurluk denetimi)
+      const only = (location.search.match(/shapes=([a-zA-Z,]+)/) || [])[1];
+      const list = only ? only.split(",").map((s) => CHARACTERS.find((c) => c.skill.fx.shape === s)).filter(Boolean) : CHARACTERS;
+      title("Yetenek Efektleri — Büyük Mod", `${list.length} modül · r = 40 (oyun içi okunurluk denetimi)`);
+      const TW = 470, TH = 300, COLS = 3, PAD = 8, TOP = 62;
+      cv.width = 1480;
+      cv.height = TOP + Math.ceil(list.length / COLS) * (TH + PAD) + 8;
+      list.forEach((ch, i) => {
+        const col = i % COLS, row = Math.floor(i / COLS);
+        const x = PAD + col * (TW + PAD), y = TOP + row * (TH + PAD);
+        ctx.save();
+        ctx.beginPath(); ctx.rect(x, y, TW, TH); ctx.clip();
+        panel(x, y, TW, TH);
+        ctx.fillStyle = "#e8eef5"; ctx.font = "700 15px sans-serif"; ctx.textAlign = "left";
+        ctx.fillText(`${ch.label} · ${ch.skill.label}`, x + 12, y + 22);
+        ctx.fillStyle = "#7f8fa3"; ctx.font = "12px sans-serif";
+        ctx.fillText(`${ch.skill.kind} · ${ch.skill.fx.shape}`, x + 12, y + 40);
+        const gx = x + TW * 0.42, gy = y + TH - 46;
+        ctx.strokeStyle = "#26303d"; ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.moveTo(x + 10, gy); ctx.lineTo(x + TW - 10, gy); ctx.stroke();
+        const entry = SKILL_FX_SHAPES[ch.skill.fx.shape];
+        const R = 40;
+        robot(gx, gy, { color: ch.color, accent: ch.accent, r: R });
+        const fx = Object.assign(fxRecord(ch, gx, gy, Math.round(entry.life * 0.45)), { r: R });
+        ctx.save(); ctx.translate(fx.x, fx.y - fx.r); entry.draw(ctx, fx); ctx.restore();
+        ctx.restore();
+      });
+    } else if (!strip) {
+      // ── Grid: 34 modül, yarı-ömür karesi ─────────────────────────────────
+      title("Dökümhane-9 — Yetenek Cast Efektleri", `${CHARACTERS.length} modül · her biri kendi efekti (t = yaşamın %45'i)`);
+      const TW = 238, TH = 176, COLS = 6, PAD = 6, TOP = 62;
+      CHARACTERS.forEach((ch, i) => {
+        const col = i % COLS, row = Math.floor(i / COLS);
+        const x = PAD + col * (TW + PAD), y = TOP + row * (TH + PAD);
+        ctx.save();
+        ctx.beginPath(); ctx.rect(x, y, TW, TH); ctx.clip();
+        panel(x, y, TW, TH);
+        ctx.fillStyle = "#e8eef5"; ctx.font = "700 13px sans-serif"; ctx.textAlign = "left";
+        ctx.fillText(`${ch.label} · ${ch.skill.label}`, x + 10, y + 19);
+        ctx.fillStyle = "#7f8fa3"; ctx.font = "11px sans-serif";
+        ctx.fillText(`${ch.skill.kind} · ${ch.skill.fx.shape}`, x + 10, y + 33);
+        // Kart ikonu önizlemesi
+        ctx.save();
+        ctx.beginPath(); ctx.rect(x + TW - 46, y + 8, 38, 38); ctx.clip();
+        ctx.translate(x + TW - 42, y + 10);
+        SkillFx.drawIcon(ctx, ch.skill, 30);
+        ctx.restore();
+        // Sahne: zemin + robot + efekt
+        const gx = x + TW / 2, gy = y + TH - 34;
+        ctx.strokeStyle = "#26303d"; ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.moveTo(x + 8, gy); ctx.lineTo(x + TW - 8, gy); ctx.stroke();
+        const entry = SKILL_FX_SHAPES[ch.skill.fx.shape];
+        const fx = fxRecord(ch, gx, gy, Math.round(entry.life * 0.45));
+        // Oyun içi sıra: önce robot, sonra cast efekti (efekt öne çizer).
+        robot(gx, gy, ch);
+        ctx.save(); ctx.translate(fx.x, fx.y - fx.r); ctx.scale(1, 1); entry.draw(ctx, fx); ctx.restore();
+        ctx.restore();
+      });
+    } else {
+      // ── Şerit: seçili efektlerin kare kare animasyonu ────────────────────
+      title("Yetenek Efekt Animasyonu — kare kare", "sol→sağ: t = %12 · %38 · %62 · %86 · şerit başına bir modül");
+      const picks = ["springJump", "pressSlam", "empPulse", "gasSpray", "cryoBurst", "drillSink", "rotorSpin", "turboCharge", "clampBite", "groundRam", "vortexFan", "magField"];
+      const TH = 92, PAD = 6, TOP = 62;
+      cv.height = TOP + picks.length * (TH + PAD) + 8;
+      picks.forEach((shapeName, row) => {
+        const ch = CHARACTERS.find((c) => c.skill.fx.shape === shapeName);
+        const entry = SKILL_FX_SHAPES[shapeName];
+        const y = TOP + row * (TH + PAD);
+        panel(6, y, cv.width - 12, TH);
+        ctx.fillStyle = "#e8eef5"; ctx.font = "700 13px sans-serif"; ctx.textAlign = "left";
+        ctx.fillText(`${ch.label} · ${ch.skill.label}`, 18, y + 20);
+        ctx.fillStyle = "#7f8fa3"; ctx.font = "11px sans-serif";
+        ctx.fillText(shapeName, 18, y + 34);
+        const gx0 = 250;
+        for (let f = 0; f < 5; f++) {
+          const gx = gx0 + f * 240, gy = y + TH - 20;
+          ctx.strokeStyle = "#26303d"; ctx.lineWidth = 1;
+          ctx.beginPath(); ctx.moveTo(gx - 90, gy); ctx.lineTo(gx + 90, gy); ctx.stroke();
+          const t = Math.round(entry.life * (0.12 + f * 0.185));
+          const fx = fxRecord(ch, gx, gy, t);
+          robot(gx, gy, ch);
+          ctx.save(); ctx.translate(fx.x, fx.y - fx.r); entry.draw(ctx, fx); ctx.restore();
+          ctx.fillStyle = "#5d6b7d"; ctx.font = "10px sans-serif"; ctx.textAlign = "center";
+          ctx.fillText(`t=${t}`, gx, y + 12);
+          ctx.textAlign = "left";
+        }
+      });
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8" />
+  <title>Modül → atış hakkı sondası</title>
+  <script src="js/audio.js"></script>
+  <script src="js/characters.js"></script>
+  <script src="js/progression.js"></script>
+  <script src="js/profile.js"></script>
+  <script src="js/maps.js"></script>
+  <script src="js/story-data.js"></script>
+  <script src="js/skills.js"></script>
+  <script src="js/skill-fx.js"></script>
+  <script src="js/robots.js"></script>
+  <script src="js/terrain.js"></script>
+  <script src="js/weapons.js"></script>
+  <script src="js/entity.js"></script>
+  <script src="js/projectile.js"></script>
+  <script src="js/ai.js"></script>
+  <script src="js/story.js"></script>
+  <script src="js/game.js"></script>
+</head>
+<body>
+  <canvas id="probe" width="960" height="540"></canvas>
+  <div id="power-bar" class="hidden"><div id="power-fill"></div><div id="power-marker" class="hidden"></div></div>
+  <pre id="out">çalışmadı</pre>
+  <script>
+    // Tarayıcıda gerçek Canvas bağlamıyla: (1) hasar veren modül turu kapatıyor mu,
+    // (2) modül kartı yeni satırla hatasız çiziliyor mu, (3) mermi üreten modül
+    // PROJECTILE'da kalıyor mu?
+    const lines = [];
+    const log = (s) => lines.push(s);
+
+    const makeEntity = (def, x, y) => {
+      const e = new Entity(x, y, def.color, def.label, def);
+      e.onGround = true;
+      return e;
+    };
+    const makeGame = (players) => {
+      const g = Object.create(Game.prototype);
+      g.players = players;
+      g.terrain = { h: 540, w: 960, surfaceBelow: () => 460 };
+      g.explosions = [];
+      g.projectiles = [];
+      g.damagePopups = [];
+      g.state = "AIMING";
+      g.shooterIdx = null;
+      g.shotMod = null;
+      g.shotIsSkill = false;
+      g.turn = 0;
+      g.settleTimer = 0;
+      g.input = { charging: false, power: 0, left: false, right: false };
+      g.matchProgress = { humanIndex: 0, humanShotsResolved: 0, pendingHumanShot: false };
+      return g;
+    };
+
+    const meleeDef = CHARACTERS.find((c) => c.skill.kind === "melee");
+    const self = makeEntity(meleeDef, 200, 400);
+    self.control = "human";
+    self.facing = 1;
+    const enemy = makeEntity(CHARACTERS[0], 230, 400);
+    const g = makeGame([self, enemy]);
+    g.turn = 0;
+
+    const used = useSkill(self, g);
+    log(`useSkill(melee)=${used} enemyHp=${enemy.hp}/${enemy.maxHp}`);
+    g.spendSkillShot(self);
+    log(`spendSkillShot sonrası state=${g.state} insanAtışı=${g.matchProgress.humanShotsResolved}`);
+    self.control = "human";
+    g.startCharge();
+    log(`SETTLE'da startCharge → charging=${g.input.charging}`);
+
+    // Modül kartı çizimi (hasar veren + mermi üreten) gerçek bağlamda patlamasın.
+    const ctx = document.getElementById("probe").getContext("2d");
+    let drawErr = "";
+    try {
+      drawSkillHud(ctx, self, 960, 540);
+      const spitDef = CHARACTERS.find((c) => c.skill.kind === "spit");
+      drawSkillHud(ctx, makeEntity(spitDef, 200, 400), 960, 540);
+    } catch (e) { drawErr = e.message; }
+    log(`kart çizimi hatası=${drawErr || "yok"}`);
+
+    const spitDef = CHARACTERS.find((c) => c.skill.kind === "spit");
+    const spitter = makeEntity(spitDef, 200, 400);
+    const sg = makeGame([spitter, makeEntity(CHARACTERS[0], 700, 400)]);
+    useSkill(spitter, sg);
+    sg.spendSkillShot(spitter);
+    log(`spit sonrası state=${sg.state} mermi=${sg.projectiles.length}`);
+
+    document.getElementById("out").textContent = lines.join("\n");
+  </script>
+</body>
+</html>
