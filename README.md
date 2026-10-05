@@ -20,8 +20,15 @@ Menüler "endüstriyel panel" dilinde çizilir (kesik köşeli çelik panel + pe
 dosyalarından `css/style.css` başındaki `@font-face` ile yüklenir — internet
 bağımlılığı yoktur, `"Segoe UI"` yalnız fallback'tir:
 
-- **Russo One** — başlıklar, buton yazıları (canvas: `uiTitleFont(px)`)
-- **Chakra Petch** — gövde metni, etiketler, istatistikler (canvas: `uiTextFont(px, weight?)`)
+- **Russo One** – başlıklar, buton yazıları (canvas: `uiTitleFont(px)`)
+- **Chakra Petch** – gövde metni, etiketler, istatistikler (canvas: `uiTextFont(px, weight?)`)
+
+Ağırlık kademeleri: başlık ≥14px → Russo One 400 · etiket/buton/vurgu →
+Chakra Petch **700** · gövde metni/diyalog/açıklama → Chakra Petch **600**
+(SemiBold, `uiTextFont` varsayılanı; DOM tarafında `body { font-weight: 600 }`).
+400 kesimi yalnız fallback olarak durur — bu fontun ince 400'ü aynı ekranda
+700 etiketlerin yanında başka bir aile gibi okunuyordu, o yüzden gövde 600'e
+bağlandı.
 
 Yeni canvas UI kodu yazarken fontu bu iki yardımcıdan alın (`js/game.js`);
 kart/panel çizimi için `_csPanel`, sığmayan metin için `_fitTextLines`
@@ -37,24 +44,36 @@ kullanılır. Ayrıntı: [`docs/ui-theme-plan.md`](docs/ui-theme-plan.md) ve
 | Fare | Nişan al |
 | Sol tık veya `Space` | Basılı tutarak güç doldur, bırakarak ateş et |
 | Sağ tık veya `Esc` | Hazırlanan atışı iptal et |
-| `1`–`9` veya fare tekerleği | Silah seç |
+| `1`–`9` veya fare tekerleği | Silah seç (seçim yapılınca alttaki açılır liste kapanır) |
 | `Q` | Dahili robot modülünü kullan. Hasar veren modüller (yakın saldırı, alan, sarsıntı, hücum, aparat mermisi) o turun atış hakkını doldurur; onarım, kalkan, hasar azaltma ve hareket modülleri atışı harcamaz |
 | `M` | Sesi aç veya kapat |
 | `F` | Tam ekrana geç |
+| Pazar'da `1`–`5` | Cephane / Kask / Gövde / Aparat / Ayak sekmesine geç |
+| Atölye'de `1` / `2` veya `Tab` | GELİŞTİRME / PARÇALAR modunu değiştir; `↑`/`↓` yuva (veya listede satır), `←`/`→` alt yuva seçer; `Enter` listeyi açar ve uygular |
 
 Ses düzeyi ve sessize alma denetimi sahnenin sağ üstünde sabittir; oyun sırasında olduğu gibi ana menü, zorluk/oyuncu sayısı, robot ve arena seçimi, atölye, kupa haritası, sahneler ve maç sonu ekranı dâhil her ekranda erişilebilir kalır.
 
+## Savaş alt paneli
+
+Maç ekranının altında Wild Ones düzeninde tek bir panel vardır (mesajlaşma ve
+sipariş yuvaları bilinçli olarak yoktur):
+
+- **Solda robot kartları:** portre, sıra numarası (`1.`–`4.`), ad ve can barı (`110/110`). Sırası gelen robotun kartı sarı çerçeveyle vurgulanır, elenen robot soluklaşır. 5–6 oyuncuda kartlar yatay kaydırılır.
+- **Sağda eylem alanı:** büyük **SİLAH DEĞİŞTİR** düğmesi ve dört yuva — seçili silah, dahili modül, **Işınlanma Topu** ve **Kanca** (mühimmat sayacı köşede, adı altta).
+- **Silah listesi** artık kalıcı bir şerit değil: SİLAH DEĞİŞTİR (veya seçili silah yuvası) ile panelin üstünde açılır; bir silaha tıklayınca (ya da `1`–`9`/tekerlekle) seçim yapılıp liste kapanır. Açık liste `Esc` ile de kapatılabilir.
+- **Yuvalar tıklanabilir:** modül yuvası `Q` ile aynı işi yapar, Işınlanma/Kanca yuvaları o cephaneyi doğrudan seçer. Silah ve yardımcı yuvalarda mermi bittiğinde yuva soluklaşır.
+
 ## Oyun akışı
 
-- Ana menüden hikâye modu, otomatik birimlere karşı veya 2–6 kişilik yerel oyun seçilir; dördüncü kart Atölye'yi açar.
+- Ana menüden hikâye modu, otomatik birimlere karşı veya 2–6 kişilik yerel oyun seçilir; diğer kartlar Atölye, Pazar ve Nasıl Oynanır ekranlarını açar.
 - Bütün menülerde sol üstte geri butonu vardır (ana menü hariç, çünkü ana menüdür); `Esc` aynı rotayı izler. Oyuncu sayısı, robot seçimi, arena seçimi, atölye, kupa haritası ve sahneler dâhil her ekrandan fareyle geri dönülebilir.
 - Hikâye modunda **Dokuz Bölge Kupası** oynanır: kupa haritasından görev seçilir, giriş sahnesi oynatılır, saha robotu seçilir ve brifingden arena maçına girilir (bkz. `docs/story-mode-lock.md`). Kupa haritası kartları bölge kodu, görev durumu, ev sahibi şampiyonlar, toplanan teknik kanıt, Bakım Puanı ve arşiv işaretini gösterir; tamamlanan görevler yeniden oynanabilir.
-- Bilgisayara karşı modunda zorluk ve 1–3 rakip robot belirlenebilir. Zorluk yalnız bot zekâsını değil çıkış gücünü de ölçekler (Kolay ×0.8, Orta ×1.0, Zor ×1.1, Ustalık ×1.2); insan robotu ve yerel maçlar etkilenmez.
+- Bilgisayara karşı modunda zorluk ve 1–3 rakip robot belirlenebilir. Zorluk yalnız bot zekâsını değil hasar gücünü de ölçekler (Kolay ×0.8, Orta ×1.0, Zor ×1.1, Ustalık ×1.2); insan robotu ve yerel maçlar etkilenmez.
 - Her operatör robotunu seçer, ardından ortak fabrika arenası belirlenir.
-- Her turda rüzgâr değişir ve mermilerin yatay hareketini etkiler.
+- Her turda rüzgâr değişir ve mermilerin yatay hareketini etkiler. Sıra, kalan süre ve rüzgâr üst bantta; robot kartları alt panelde gösterilir.
 - Patlamalar araziyi, üzerindeki yüzey dokusunu ve dekorları birlikte aşındırır.
-- Bütünlüğü sıfıra inen robot devre dışı kalır; son çalışan robot parça hakkını kazanır.
-- Tamamlanan bilgisayar maçı Hurda ve Servis XP'si kazandırır; bunlar Atölye'de kalıcı geliştirmeye dönüşür.
+- Canı sıfıra inen robot devre dışı kalır; son çalışan robot parça hakkını kazanır.
+- Tamamlanan bilgisayar maçı Hurda ve Servis XP'si kazandırır; Hurda Atölye'de kalıcı geliştirmeye, Pazar'da mühimmata ve parçaya dönüşür.
 
 ## Atölye ve robot geliştirme
 
@@ -66,11 +85,13 @@ Ana menüdeki **ATÖLYE** kartından açılan ekranda robotlar Hurda ile kalıc�
 
 | Dal | Kademe I | Kademe II | Kademe III |
 |---|---|---|---|
-| Gövde | Bütünlük +%5 | Kaplama +0.02 (üst sınır %40) | Bütünlük +%10, savrulma −%10 |
+| Gövde | Can +%5 | Zırh +0.02 (üst sınır %40) | Can +%10, savrulma −%10 |
 | Aparat | Modül gücü +%6 | Cooldown −1 tur (alt sınır 2) | Modül gücü toplam +%15 |
 | Çekirdek | Enerji 70 → 78 | Silah hasarı +%4 | Enerji 85, silah hasarı toplam +%7 |
 
 Kademe maliyetleri 60 / 120 / 220 Hurda'dır; bir dalı tamamlamak 400, bir robotun üç dalını tamamlamak 1200 Hurda tutar. Aparat gücü yetenek türüne göre uygulanır: onarım miktarı, alan hasarı, sıçrama gücü veya fırlatılan merminin hasarı artar; mermi sayısı, durum etkisi süresi ve tam kalkan sayısı değişmez.
+
+Aynı ekranın üstündeki **GELİŞTİRME / PARÇALAR** sekmeleriyle (`1`/`2` veya `Tab`) parça moduna geçilir: seçili robotun dört yuvası (Kask, Gövde, Aparat, Ayak) ve her yuvanın **iki alt yuvası** hücre olarak listelenir. Hücreye tıklanınca o alt yuvanın parça listesi **etki önizlemesiyle** açılır (`Can 110 → 125`) ve seçim anında uygulanır; liste sayfa başına 4 satırdır (`1/2` göstergesi) ve bir parçanın hangi alt yuvada takılı olduğunu yazar (`✓ burada` / `✓ 1. yuvada`). `Boş bırak` ilgili alt yuvayı boşaltır. **Parçalar robota kilitli değildir:** aynı parça başka robotlarda takılı kalır, istediğin robota takıp sökebilirsin. Katalog, fiyatlar ve kurallar için bkz. [Parça sekmeleri](#parça-sekmeleri-kask--gövde--aparat--ayak).
 
 Bilgisayara karşı tamamlanan maçlar ödül verir:
 
@@ -84,6 +105,44 @@ Bilgisayara karşı tamamlanan maçlar ödül verir:
 
 Profil tarayıcıda `dokumhane9_profile` anahtarında saklanır; ses tercihleri ayrı anahtarlarda kalır. Bozuk veya okunamayan kayıt oyunu durdurmaz: varsayılan profille devam edilir. Depolama kapalıysa ilerleme oturum boyunca bellekte tutulur ve tek seferlik uyarı gösterilir.
 
+## Pazar — Cephane ve yuva sekmeleri
+
+Ana menüdeki **PAZAR** kartı beş sekme sunar: **CEPHANE** ve dört parça yuvası **KASK · GÖVDE · APARAT · AYAK**. Sekmeler fareyle ya da `1`–`5` tuşlarıyla değişir (tekerlek aktif sekmeyi sayfalar). Her sekmenin kendi sayfası vardır; bilgi satırında Hurda bakiyesi ve sekme özeti yazar.
+
+### Cephane sekmesi
+
+Hurda karşılığında fazladan mühimmat almayı sağlar. Izgara 3 sütun × 5 satırdır (sayfa başına 15 kart): satın alınabilir her cephanenin mermi tasarımı, **taban** mühimmatı, **savaş tavanı** (`Savaş ≤x`), **depo** adedi (`x / 999`), özel davranışı ve birim fiyatı görünür. Karta tıklamak 1, `Shift` ile tıklamak 10, `Ctrl`/`Alt` ile tıklamak 50 mermi alır. Bakiye yetmezse alım kısılır, depo dolarsa reddedilir; ikisi de ekranda kısa bir bildirimle açıklanır (dolu kartlar `Dolu` yazar ve soluklaşır).
+
+- **Depo (envanter):** satın alınan mermi profilde **tek ve ortaktır** — robot başına ayrı cephane yoktur, bütün robotlar aynı depodan beslenir. Üst sınır silah başına **999** mermidir (uzun vadeli stok).
+- **Savaş tavanı:** depo ne kadar dolu olursa olsun bir maçta o silahtan en fazla `battleMax` atış yapılır (taban dâhil). Maç başında depodan yalnız `tavan − taban` kadar yüklenir; fazlası sonraki maçlara kalır. Örnek: El Bombası taban 3, tavan 5 → depoda 999 olsa bile maçta en fazla 5 atış.
+- **Maça yükleme:** maç başında depo, o maçta oynayan insan robotunun mermi sayacına **tavanı aşmadan** eklenir. **Bazuka sınırsız olduğu için pazarda hiç görünmez, tavana bağlanmaz ve alınması gerekmez.** Taban mühimmat ücretsizdir ve **önce** tüketilir; depo mermisi ancak taban bitince harcanır.
+- **İade:** maç bitince (ya da maç yarıda bırakılınca) depodan yalnız **harcanan** mermi düşülür; kullanılmayan cephane yerinde kalır. Depo maç başında dosyaya yazılmadığı için maç ortasında sayfa yenilense bile satın alınan mermi kaybolmaz.
+- **Kapsam:** depo, geliştirmelerle aynı kurallara uyar — yalnız **bilgisayara karşı** ve **hikâye** maçlarında, yalnız insan robotunda etkindir; botlar ve yerel maçlar taban mühimmatla oynar.
+- **Görünürlük:** maç içinde silah açıklaması `Mühimmat: 5 (taban 3 + depo 2) • savaş tavanı 5` satırıyla kaynağı ve tavanı gösterir; silah çubuğundaki rozet kalan mermiyi yazar. Ana menü kartı ve pazar başlığı depodaki toplam mermiyi ve dolu silah sayısını yazar.
+
+Fiyatlar `js/market.js > AMMO_PRICES` tablosunda ve tek atış gücünden türetilen formülde belirlenir (`round(0.8 × güç + 20)`, 30–130 Hurda; ucuz başlangıç cephanesi ve yardımcı silahlar bilinçli istisnadır). Gösterim puanları (`Hasar/Hız/Yarıçap`) silahın gerçek sayılarından türetilir, elle yazılmaz; tabloda olmayan yeni bir silah pazarda kendiliğinden doğru fiyatlanır.
+
+### Parça sekmeleri (KASK · GÖVDE · APARAT · AYAK)
+
+Robotları güçlendiren **kalıcı ve tek adetlik** donanımlar satılır. Her parça bir **yuvaya** aittir ve yalnız o yuvaya takılabilir; her yuva pazarın kendi sekmesidir. Takma/sökme **Atölye'nin PARÇALAR modunda** yapılır (pazar yalnız satar). Kartta parça ikonu, etkisi ve fiyatı bulunur; alınmış parça `Alındı`, bir robota takılıysa `Takılı → FIX-8` (birden çok robotta ise `Takılı → N robotta`) yazar.
+
+| Yuva | Parçalar (fiyat — etki) |
+|---|---|
+| Kask | Nişan Merceği (60 — silah hasarı +%5) · Termal Vizör (70 — modül gücü +%6) · Denge Sensörü (50 — savrulma −%10) · Hedef Takip Ünitesi (95 — silah hasarı +%8) · Radar Anteni (90 — modül gücü +%9) · Zırh Kaskı (80 — zırh +%4, savrulma −%5) |
+| Gövde | Lehim Yaması (40 — can +15) · Kompozit Plaka (75 — zırh +%6) · Soğutucu Radyatör (55 — enerji +10) · Takviyeli Gövde (100 — can +%10) · Çift Kat Plaka (110 — zırh +%9) · Basınç Hücresi (85 — enerji +14, can +8) |
+| Aparat | Yedek Yükleyici (95 — modül cooldown −1 tur) · Takviye Bobini (70 — modül gücü +%8) · Hassas Ayar Cıvatası (45 — silah hasarı +%4) · Aşırı Yük Bobini (110 — modül gücü +%12) · Namlu Aparatı (85 — silah hasarı +%7) · Zamanlayıcı Çip (125 — cooldown −1 tur, modül gücü +%4) |
+| Ayak | Denge Jiroskobu (55 — savrulma −%12) · Yay Takozları (50 — enerji +8) · Turbo Palet (90 — hareket hızı +%10) · Sıçrama Yayı (75 — sıçrama gücü +%10) · Kilitli Taban (95 — savrulma −%15) · Çift Turbo Palet (130 — hareket hızı +%16) |
+
+Kurallar: her parçadan yalnız **1 adet** satın alınır; buna karşılık parçalar robota **kilitli değildir** — satın alınan bir parça istenen her robota takılabilir ve **aynı anda birden çok robotta durabilir** (kopya gerekmez). Bir robotta **her yuvaya 2 parça** takılabilir (4 yuva × 2 = **8 parça**); aynı parça aynı robotta iki alt yuvada birden duramaz. Alt yuvaya yerleşen ikinci donanım robotta daha küçük bir **yardımcı modül** olarak, boş köşeye çizilir. Sökme ücretsizdir, geri satış yoktur. Parça etkileri geliştirme kademeleriyle **aynı maç kapsamında** işler (bilgisayara karşı + hikâye, insan robotu); karakter seçim kartında 4 noktalı rozet yuvaları özetler (içi koyu göbek = o yuvada iki parça). Fiyatlar `js/parts.js > PARTS` içinde tek kaynaktır (40–130 Hurda bandı).
+
+**Robot üzerindeki görünüm:** her parça, ikon şekline göre **farklı bir donanım** olarak çizilir — kaskta tek mercekli optik (`lens`), tarama bandı + anten (`visor`), yan jiroskop diski (`gyro`), tac + yanak zırhı (`armorHelm`); gövdede lehim yaması, katmanlı zırh plakası, kanatçıklı radyatör; sırtta bobin/şarjör/basınç tankı/çip modülü; ayakta damper, yay takozu, itici lüle (turbo) ve sıçrama yayı. Donanımlar katmanlı düz dolgu + koyu kontur + üst parlaklıkla çizilir (gradyan/shadowBlur yok); doğrulama sayfası: `_parts_wearables.html`.
+
+**Canlı donanım efektleri:** takılı donanımlar maçta hafifçe "çalışır" — tarama bandı soldan sağa tarar, anten ucu yanıp söner, jiroskop döner, mercek nefes alır, radyatörde ısı dalgası dolaşır, bobinde enerji akar, tank ibresi titrer, çipte LED'ler sırayla yanar, turbo egzozu yürürken alevlenir, sıçrama oku nabız atar (zırh/plaka/şarjör/damper statiktir). Tümü deterministiktir (rastgelelik yok) ve doğrulama sayfası `_parts_live.html`'dir.
+
+**Çarpan eksenleri ve üst sınırlar:** `maxHpPct` (+%15), `moveSpeedMult` (+%20), `jumpPowerMult` (+%20) ve `knockbackRedPct` (toplam savrulma en fazla yarıya iner) kırpılır; düz toplamlar (can, zırh, enerji) sınırsızdır ve zırh %40 tavanına tabidir.
+
+**Hareket hızı ve sıçrama:** yürüme adımı `Entity.walk`, sıçrama impulsu `Entity.jump` içinde çarpanla ölçeklenir; yürüyüş animasyonunun fazı **mesafeye kilitli** olduğu için hız artışı ayakları kaydırmaz.
+
 ## Robotlar
 
 34 robot veri güdümlü olarak tanımlanır. Her robotun şu görsel ve mekanik bileşenleri vardır:
@@ -93,7 +152,7 @@ Profil tarayıcıda `dokumhane9_profile` anahtarında saklanır; ses tercihleri 
 - gövde biçimi (`body`);
 - görev aparatı (`attachment`);
 - yüz/gösterge tipi (`face`);
-- bütünlük, kaplama ve çıkış gücü değerleri;
+- can, zırh ve hasar gücü değerleri;
 - `Q` ile kullanılan dahili modül (hasar verenler o turun atış hakkını doldurur).
 
 Örnek robotlar:
@@ -123,20 +182,22 @@ Robot çizimleri `js/robots.js` içindeki ortak Canvas çizicisiyle oluşturulur
 
 Maç içinde `aim` bilgisi geçilir: eller bazukayı kavrar ve namlu nişan yönüne döner. Menü, kart ve portre çizimlerinde `aim` verilmez; eller gevşek durur ve elde taşınan aparat görünür.
 
-Alt takım animasyonludur ve tamamen oyun durumundan türetilir (`motion { vx, vy, onGround, walk }` + `timeMs`). Yerde yürüme `vx` kullanmadığı için `Entity` ayrıca bir **adım sinyali** üretir: `walk()` her adımda `walkAnim = ±1` kurar, `update()` her karede söndürür; çizici genliği bu sinyalle ölçekler (`vx` yalnız hücum/kayma gibi itmelerde devreye girer):
+Namlu geometrisi **tek kaynaktır** (`js/robots.js`: `RB_GUN_PIVOT_X/Y`, `RB_GUN_MUZZLE` + `robotMuzzlePoint`). Çizim (`_rbLauncher`) ve oyun mantığı — nişan çizgisi, son-atış çizgisi, mermi çıkış noktası (`Entity.muzzle`) ve bot balistik benzetimi — aynı noktadan türetilir; bu yüzden hiza her zaman silahın ağzından çıkar.
 
-- **Yürüme:** bacaklar zıt fazda sallanır, adım frekansı hızla artar (ayak kaymaz), ayak bilekten yuvarlanır (önde burun kalkar → tabanda basar → arkada itiş verir), itilen ayağın arkasında soluk bir toz lekesi kalır.
-- **Boşta:** ağırlık kayması ve hafif ayak tıklatması (yaylı robotlarda daha belirgin).
+Alt takım animasyonludur ve tamamen oyun durumundan türetilir (`motion { vx, vy, onGround, walk, walkAmp, walkPhase, rollPhase }` + `timeMs`). Yerde yürüme `vx` kullanmadığı için `Entity` hem bir **adım sinyali** hem de **adım fazı** üretir: `walk()` her adımda `walkAnim = ±1` kurar (`update()` söndürür, `walkBlend` bu sinyali yumuşatır), ayrıca kat edilen mesafeye göre `walkPhase`/`rollPhase` ilerletir. Faz **zamana değil mesafeye** kilitli olduğu için animasyon yürüyüş hızıyla birlikte hızlanır/yavaşlar (hücum ve patlama savrulması dâhil), ayak yere basarken gövdeye göre geriye akar (adım başına ~2.5px/%14 kayma payı) ve duvara dayanınca adım da animasyon da durur:
+
+- **Yürüme:** bacaklar zıt fazda sallanır, adım frekansı hızla artar (adım uzunluğu `r × 1.3`; r=14'te 0.38 rad/kare ≈ 7.25 adım/s), gövde her adımda hafifçe yükselip yana kayar; ayak bilekten yuvarlanır (önde burun kalkar → tabanda basar → arkada itiş verir); itilen ayağın arkasında soluk bir toz lekesi kalır. Adım kesilince faz en yakın nötr poza yumuşakça kapanır.
+- **Boşta:** ağırlık kayması, hafif ayak tıklatması (yaylı robotlarda daha belirgin) ve çok hafif nefes salınımı.
 - **Havada:** yükselirken bacaklar toplanır, düşerken aşağı uzanır ve ayak burun ucu döner.
-- **Teker/bilye:** mono teker, paten göbekleri ve küre ayaklar gerçekten döner.
+- **Teker/bilye/palet:** mono teker, paten göbekleri, küre ayağın yay çizgisi ve palet bandı gerçekten döner/kayar — dönüş de mesafeye kilitlidir.
 
 ## Dahili modül türleri
 
 | Tür (`kind`) | İşlev |
 |---|---|
-| `heal` | Bütünlük onarımı |
+| `heal` | Can onarımı |
 | `shield` | Sonraki hasarı engelleyen enerji kalkanı |
-| `damageReduce` | Süreli kaplama güçlendirmesi |
+| `damageReduce` | Süreli zırh güçlendirmesi |
 | `nextShot` | Sonraki atışın yarıçapını veya mermi sayısını değiştirir |
 | `jump` | Yay/kanca destekli sıçrama |
 | `dash` | Hızlı hücum ve temas hasarı |
@@ -243,21 +304,49 @@ Her maçta **Hurda** ve **Servis XP** normal kuralda kazandırır (ödül formü
 
 ## Silahlar
 
-Bazuka sınırsız mühimmatlıdır; diğer silahlar sınırlıdır. Cephane bitince seçim otomatik olarak Bazuka'ya döner. Cephanelikte sekmeli, yapışkan, çoklu, parçalanan, delici, mayın ve alan bırakan mermi davranışları bulunur.
+Bazuka sınırsız mühimmatlıdır; diğer silahlar sınırlıdır. Cephane bitince seçim otomatik olarak Bazuka'ya döner. Cephanelikte sekmeli, yapışkan, çoklu, parçalanan, delici, mayın ve alan bırakan mermi davranışları bulunur. Sınırlı her cephane Cephane Pazarı'ndan Hurda ile depolanabilir (bkz. “Cephane Pazarı ve envanter”). **Taban** ücretsiz mühimmatı, **tavan** ise depo dolu olsa bile bir maçta yapılabilecek en fazla atışı gösterir.
+
+| Cephane | Hasar | Yarıçap | Taban | Savaş tavanı | Depo fiyatı |
+| --- | --- | --- | --- | --- | --- |
+| Bazuka | 46 | 38 | ∞ | ∞ | pazarda yok |
+| El Bombası | 40 | 46 | 3 | 5 | 30 |
+| Keskin Nişancı | 30 (+40 doğrudan) | 16 | 2 | 3 | 60 |
+| Pompalı | 16 × 5 saçma | 18 | 2 | 4 | 58 |
+| Misket | 28 (+5 × 18 parçacık) | 30 | 1 | 3 | 78 |
+| 3'lü Roket | 28 × 3 | 30 | 2 | 4 | 65 |
+| Yapışkan Bomba | 44 | 44 | 2 | 4 | 55 |
+| Lastik Bomba | 34 | 40 | 3 | 6 | 47 |
+| Lastik Üçlü | 24 × 3 | 32 | 2 | 4 | 58 |
+| El Bombası Üçlüsü | 28 × 3 | 36 | 2 | 4 | 65 |
+| Mega Misket | 30 (+8 × 20 parçacık) | 34 | 1 | 2 | 108 |
+| Nükleer | 80 | 84 | 1 | 2 | 84 |
+| Roket Demeti | 22 × 5 | 26 | 1 | 3 | 73 |
+| Tepe Bombası | 18 (+5 × 22 parçacık) | 24 | 2 | 3 | 78 |
+| Bomba Yağmuru | 24 × 6 bomba | 30 | 1 | 2 | 87 |
+| Matkap | 34 | 30 | 2 | 4 | 47 |
+| Mayın | 42 | 40 | 2 | 5 | 47 |
+| Napalm | 26 + yanan alan | 30 | 1 | 3 | 57 |
+| Işınlanma Topu | — | 12 | 2 | 5 | 40 |
+| Kanca | — | 12 | 2 | 5 | 35 |
+
+**Yardımcı cephaneler (hasarsız):** _Işınlanma Topu_ 🔮 normal gibi fırlatılır; top araziye değdiği anda atıcı, temas sütununun **tepesine** ışınlanır (duvara değen top sizi duvarın üstüne çıkarır; robotlara karşı geçerlidir). _Kanca_ 🪝 yerçekimsiz düz uçar, araziye tutununca atıcıyı ankraj noktasına çeker; fırlatma gücü, hava sürtünmesiyle menzili belirler. İkisi de hasar vermez, patlama olmaz; kullanım turu normal akışta bitirir. Botlar bu araçları kullanmaz (zorluk silah listelerine dahil değillerdir).
 
 Her cephanenin **kendi mermi tasarımı** vardır: roket kanatlı, el bombası pimli ve fitil kıvılcımlı, nişancı ince uzun mermi, lastik bomba dikişli top, matkap burgulu uç, mayın diskli, napalm alev dilli, asit damlayan gövde… Tasarımlar prosedürel Canvas çizimidir (harici görsel yok) ve `js/weapons.js` içindeki `look` bloğuyla veri-güdümlüdür. Aynı cephanenin farklı adedi aynı tasarımı paylaşır (El Bombası ≡ El Bombası Üçlüsü, Bazuka ≡ 3'lü Roket ≡ Roket Demeti); `SHARED_SHAPES` beyaz listesi bunu sınırlar ve `tests/run.js` ihlali yakalar. Mermi önizlemesi silah çubuğundaki çiplerde, silah açıklama panelinde ve dahili modül kartında görünür.
+
+**Çarpışma alt adımlarla (sub-step) çözülür:** her mermi kare başına kat ettiği yolu en fazla 2 px'lik parçalara böler ve **ilk katı pikselde** durur; robotlara karşı da süpürülmüş (swept) doğru parçası testi kullanılır. Böylece hızlı cephane (Keskin Nişancı, Matkap, Perçin) ince arazi sırtlarını ya da robotları delip geçmez ve patlama krateri tam temas noktasına düşer. Seken bombalar teğetsel sürtünmeyle (`bounceFriction`) yavaşlayıp yüzeye oturur; sonsuz mikro-zıplama yapmaz. Bot benzetimi aynı testi paylaşır ve kuru modda araziyi oymaz.
 
 ## Testler
 
 ```powershell
 node tests/run.js
 node tests/progression.js
+node tests/market.js
 node tests/story.js
 node tests/audio.js
 node tests/maps.js
 ```
 
-Ana test takımı robot veri sözleşmesini, 34 arena üretimini, dokuz fabrika bölgesini, bütün prop kayıtlarını, modüler çizimi, yetenekleri, bot karar sistemini (puanlama, güvenlik filtresi, hareket yolu, isabet kalitesi ve zorluk merdiveni) ve geliştirme sisteminin oyun entegrasyonunu doğrular. Harita testleri 34 benzersiz profili, 2–6 oyuncu doğuşlarını ve katmanlı köprü/raf/tünel maskelerini denetler. Hikâye testleri görev/kanıt kimliklerini, kilit grafiğini, dokuz bölge eşleşmesini ve profil v1→v2 göçünü (`story` alanında ekonomi korunmasını) denetler. Geliştirme testleri seviye eşiklerini, ödül formülünü, yetenek adaptörlerini, profil doğrulamasını ve satın alma önkoşullarını tarayıcısız denetler. Ses testleri Web Audio kaynak temizliğini, sessize alma davranışını, seviye kaydını ve hasar bildirimlerini denetler. Mermi görsel testleri 27 spec'in tasarım ailesi kuralını (paylaşım yalnız `SHARED_SHAPES` beyaz listesinde), shape'lerin birbirinden farklı çizim üretmesini, tüm spec'lerin hatasız çizilmesini ve önizleme çizicisini denetler. Yetenek efekti testleri her modülün kayıtlı ve benzersiz bir `fx.shape` taşıdığını, her türün varsayılan efektini, türetilmiş build'in görsel kimliği koruduğunu, 34 shape'in ömrü boyunca hatasız/farklı/deterministik çizildiğini, gradient-`shadowBlur` kullanılmadığını ve aura/ikon çizicilerini denetler.
+Ana test takımı robot veri sözleşmesini, 34 arena üretimini, dokuz fabrika bölgesini, bütün prop kayıtlarını, modüler çizimi, yetenekleri, bot karar sistemini (puanlama, güvenlik filtresi, hareket yolu, isabet kalitesi ve zorluk merdiveni) ve geliştirme sisteminin oyun entegrasyonunu doğrular. Harita testleri 34 benzersiz profili, 2–6 oyuncu doğuşlarını ve katmanlı köprü/raf/tünel maskelerini denetler. Hikâye testleri görev/kanıt kimliklerini, kilit grafiğini, dokuz bölge eşleşmesini ve profil göçünü (v1→v5; `story`, ortak `ammo` deposu ve parça alanlarında ekonomi korunmasını) denetler. Geliştirme testleri seviye eşiklerini, ödül formülünü, yetenek adaptörlerini, profil doğrulamasını ve satın alma önkoşullarını tarayıcısız denetler. Pazar testleri cephane fiyatlarını, ortak depo doğrulamasını (bilinmeyen/sınırsız silah ve üst sınır), satın alma önkoşullarını, maça yükleme ve harcanan mermiyi düşme döngüsünü, robot depolarının ortak depoya taşındığı v3→v4 göçünü ayrıca pazar ekranı/satın alma akışının oyun entegrasyonunu denetler. **Parça testleri** katalog bütünlüğünü (24 parça, yuva başına 6, etki eksenleri), benzersiz satın almayı, **yuva başına iki alt yuvayı** (indeksli takma, taşıma, kırpma, göç v5→v6), aynı parçanın birden çok robotta takılı olabilmesini, parçaların build'e etkilerini (düz toplamlar + çarpımsal güç/savrulma/hız/sıçrama, kırpma sınırları), pazar yuva sekmelerini, Atölye parça panelini (8 hücre + sayfalı liste) ve aksesuar çizimini denetler. Ses testleri Web Audio kaynak temizliğini, sessize alma davranışını, seviye kaydını ve hasar bildirimlerini denetler. Mermi görsel testleri 27 spec'in tasarım ailesi kuralını (paylaşım yalnız `SHARED_SHAPES` beyaz listesinde), shape'lerin birbirinden farklı çizim üretmesini, tüm spec'lerin hatasız çizilmesini ve önizleme çizicisini denetler. Yetenek efekti testleri her modülün kayıtlı ve benzersiz bir `fx.shape` taşıdığını, her türün varsayılan efektini, türetilmiş build'in görsel kimliği koruduğunu, 34 shape'in ömrü boyunca hatasız/farklı/deterministik çizildiğini, gradient-`shadowBlur` kullanılmadığını ve aura/ikon çizicilerini denetler.
 
 ## Mimari
 
@@ -267,7 +356,9 @@ Ana test takımı robot veri sözleşmesini, 34 arena üretimini, dokuz fabrika 
 | `css/style.css` | Arayüz ve yerleşim |
 | `js/characters.js` | 34 robotun veri tanımları |
 | `js/progression.js` | Saf ekonomi: seviye eşikleri, ödül formülü, türetilmiş build ve yetenek adaptörleri |
-| `js/profile.js`   | Profil şeması (v2, `story` alanı dâhil), doğrulama/migrasyon, kayıt ve satın alma cephesi   |
+| `js/profile.js`   | Profil şeması (v5: `story`, **ortak** cephane deposu ve **parça/loadout**), doğrulama/migrasyon, kayıt ve satın alma cephesi   |
+| `js/market.js` | Cephane pazarı ekonomisi: fiyatlar, ortak depo doğrulama, satın alma ve maç yükleme/harcama |
+| `js/parts.js` | Parça ekonomisi ve takma katmanı: katalog, benzersiz satın alma, `equipPart` (taşımalı), parça ikonları |
 | `js/robots.js` | Ortak modüler Canvas robot çizicisi |
 | `js/maps.js` | Fabrika bölgeleri, arena üretimi ve çevre çizimi |
 | `js/story-data.js` | Hikâye kampanyasının saf verisi: kampanya, 9 bölge, 12 görev, sahneler, öğreticiler |
@@ -276,7 +367,7 @@ Ana test takımı robot veri sözleşmesini, 34 arena üretimini, dokuz fabrika 
 | `js/skill-fx.js` | Modül cast efektleri: `SKILL_FX_SHAPES` çizicileri, kalıcı auralar, kart ikonu (`drawSkillFxIcon`) |
 | `js/terrain.js` | Yıkılabilir arazi maskesi |
 | `js/weapons.js` | Silah ve dahili fırlatıcı mermi tanımları |
-| `js/entity.js` | Robot fiziği, bütünlük ve maç içi çizim bağlantısı |
+| `js/entity.js` | Robot fiziği, can ve maç içi çizim bağlantısı |
 | `js/projectile.js` | Mermi ve patlama davranışı + veri-güdümlü mermi görselleri (`PROJECTILE_SHAPES`, önizleme çizicisi) |
 | `js/ai.js` | Bot balistik araması, zorluk tablosu ve güvenlik/hasar değerlendirmesi |
 | `js/audio.js` | Prosedürel Web Audio efektleri |

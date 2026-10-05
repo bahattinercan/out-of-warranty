@@ -30,8 +30,9 @@ Google Fonts CSS API'sinden alınır; Chrome User-Agent ile woff2 URL'leri
 | Dosya | Aile | Kalınlık | Kullanım |
 | --- | --- | --- | --- |
 | `RussoOne-regular-latin.woff2` / `-latin-ext.woff2` | Russo One | 400 | Başlıklar, buton yazıları, büyük etiketler |
-| `ChakraPetch-regular-latin.woff2` / `-latin-ext.woff2` | Chakra Petch | 400 | Gövde metin, açıklamalar, HUD |
-| `ChakraPetch-bold-latin.woff2` / `-latin-ext.woff2` | Chakra Petch | 700 | Vurgulu gövde, istatistik etiketleri, hasar sayıları |
+| `ChakraPetch-semibold-latin.woff2` / `-latin-ext.woff2` | Chakra Petch | 600 | Gövde metin, açıklamalar, diyalog, HUD (varsayılan) |
+| `ChakraPetch-bold-latin.woff2` / `-latin-ext.woff2` | Chakra Petch | 700 | Etiket/buton, vurgulu gövde, istatistikler, hasar sayıları |
+| `ChakraPetch-regular-latin.woff2` / `-latin-ext.woff2` | Chakra Petch | 400 | Yalnız fallback (UI'da kullanılmıyor — gövde 600) |
 
 Her aile için latin ve latin-ext ayrı dosya iner; `@font-face` içinde
 `unicode-range` ile ikisi de bildirilir (toplam ~90 KB).
@@ -71,9 +72,18 @@ nedenle yüklenmezse oyun boş kutu yerine sistem fontuyla çalışır.
 // değişir (K5). Russo One tek kalınlıklı olduğu için "bold" eklenmez.
 function uiTitleFont(px) { return `${px}px "Russo One", "Segoe UI", sans-serif`; }
 function uiTextFont(px, weight) {
-  return `${weight ? weight + " " : ""}${px}px "Chakra Petch", "Segoe UI", sans-serif`;
+  return `${weight || 600} ${px}px "Chakra Petch", "Segoe UI", sans-serif`;
 }
 ```
+
+**Ağırlık güncellemesi (25 Eyl 2026, kullanıcı bildirimi):** gövde varsayılanı
+400'den **600 (SemiBold)**'e alındı. Sebep: Chakra Petch'in 400 kesimi ince ve
+geniz; 700 etiketlerin yanında (özellikle hikâye sahnesindeki 15px diyalogda)
+aynı aile gibi okunmuyor, ekran "başka bir yazı tipi" kullanıyormuş gibi
+görünüyordu. Artık üç kademe var: Russo One 400 (başlık) · Chakra Petch 700
+(etiket/buton/vurgu) · Chakra Petch 600 (gövde/diyalog/açıklama). DOM tarafı
+da aynı kademeye çekildi: `body { font-weight: 600 }`. 400 kesimi dosya
+olarak durur ama UI'da kullanılmaz.
 
 - `game.js` içindeki 88 `ctx.font` satırı bu iki yardımcıya çevrilir.
 - `skills.js`'teki 3 satır da aynı yardımcıları kullanır. Yükleme sırası

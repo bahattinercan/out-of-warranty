@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <title>İkinci alt yuva yerleşimi — parça gövdeye bağlı mı?</title>
+  <style>
+    body { margin: 0; background: #05080c; }
+    canvas { position: fixed; left: 0; width: 960px; }
+    #c1 { top: 0; height: 520px; }
+    #c2 { top: 520px; height: 1000px; }
+  </style>
+</head>
+<body>
+  <canvas id="c1" width="960" height="520"></canvas>
+  <canvas id="c2" width="960" height="1000"></canvas>
+  <script src="js/audio.js"></script>
+  <script src="js/characters.js"></script>
+  <script src="js/progression.js"></script>
+  <script src="js/profile.js"></script>
+  <script src="js/parts.js"></script>
+  <script src="js/market.js"></script>
+  <script src="js/maps.js"></script>
+  <script src="js/story-data.js"></script>
+  <script src="js/skills.js"></script>
+  <script src="js/skill-fx.js"></script>
+  <script src="js/robots.js"></script>
+  <script src="js/terrain.js"></script>
+  <script src="js/weapons.js"></script>
+  <script src="js/entity.js"></script>
+  <script src="js/projectile.js"></script>
+  <script src="js/ai.js"></script>
+  <script src="js/story.js"></script>
+  <script src="js/game.js"></script>
+  <script>
+    const CEF = CHARACTERS[0]; // FIX-8
+    const SLOT_TR = { helmet: "KASK", body: "GÖVDE", tool: "APARAT", feet: "AYAK" };
+    const MOTION = { vx: 0, vy: 0, onGround: true };
+    // Parçayı YALNIZ 2. alt yuvaya koyar: birincil çizim yok, yerleşim tek başına görünür.
+    const onlySecond = (id) => {
+      const spec = partById(id);
+      const lo = { helmet: [null, null], body: [null, null], tool: [null, null], feet: [null, null] };
+      lo[spec.slot][1] = id;
+      return lo;
+    };
+
+    // 1) r=30: HER parça tek başına 2. alt yuvada — hepsi gövdeye bağlı kalmalı.
+    const c1 = document.getElementById("c1").getContext("2d");
+    c1.fillStyle = "#0b1017"; c1.fillRect(0, 0, 960, 520);
+    c1.fillStyle = "#ffe45e"; c1.font = '700 17px "Chakra Petch", sans-serif';
+    c1.textAlign = "center"; c1.textBaseline = "top";
+    c1.fillText("2. ALT YUVA (r = 30) — her parça tek başına: gövdeden kopmamalı", 480, 8);
+
+    const COLS = 8, CW = 118, CH = 112, X0 = 8, Y0 = 36;
+    PARTS.forEach((p, i) => {
+      const col = i % COLS, row = (i / COLS) | 0;
+      const x = X0 + col * CW, y = Y0 + row * CH;
+      c1.strokeStyle = "#1f2a36"; c1.lineWidth = 1;
+      c1.strokeRect(x, y, CW - 6, CH - 8);
+      drawRobot(c1, { cx: x + CW / 2 - 3, cy: y + 66, r: 30, facing: 1, charDef: CEF, timeMs: 600, motion: MOTION, parts: onlySecond(p.id) });
+      c1.textAlign = "center"; c1.textBaseline = "top";
+      c1.fillStyle = "#9fb6c9"; c1.font = '8px "Chakra Petch", sans-serif';
+      c1.fillText(p.label, x + CW / 2 - 3, y + CH - 20, CW - 10);
+      c1.fillStyle = "#55636f";
+      c1.fillText(SLOT_TR[p.slot], x + CW / 2 - 3, y + 4);
+    });
+
+    // 2) r=30: AYNI yuvada iki parça (birincil + ikincil) — çakışma/boşluk kontrolü.
+    const c2 = document.getElementById("c2").getContext("2d");
+    c2.fillStyle = "#0b1017"; c2.fillRect(0, 0, 960, 1000);
+    c2.fillStyle = "#ffe45e"; c2.font = '700 17px "Chakra Petch", sans-serif';
+    c2.textAlign = "center"; c2.textBaseline = "top";
+    c2.fillText("ÇİFT DONANIM (r = 30) — üst satır: 1. yuva · alt: +2. yuva · sağ: 4 yuva tam", 480, 8);
+
+    const PAIRS = [
+      { slot: "helmet", a: "nisan_mercegi", b: "zirh_kaski" },
+      { slot: "helmet", a: "termal_vizor", b: "denge_sensoru" },
+      { slot: "body", a: "lehim_yamasi", b: "kompozit_plaka" },
+      { slot: "body", a: "sogutucu_radyator", b: "cift_kat_plaka" },
+      { slot: "tool", a: "takviye_bobini", b: "zamanlayici_cip" },
+      { slot: "tool", a: "yedek_yukleyici", b: "basinc_hucre" },
+      { slot: "feet", a: "turbo_palet", b: "sicrama_yayi" },
+      { slot: "feet", a: "yay_takozlari", b: "cift_turbo" },
+    ];
+    const empty = () => ({ helmet: [null, null], body: [null, null], tool: [null, null], feet: [null, null] });
+    PAIRS.forEach((row, i) => {
+      const col = i % 4, line = (i / 4) | 0;
+      const cx = 130 + col * 200;
+      const cy = 46 + line * 230;
+      const one = empty(); one[row.slot][0] = row.a;
+      const two = empty(); two[row.slot][0] = row.a; two[row.slot][1] = row.b;
+      drawRobot(c2, { cx, cy, r: 30, facing: 1, charDef: CEF, timeMs: 600, motion: MOTION, parts: one });
+      drawRobot(c2, { cx: cx + 92, cy, r: 30, facing: 1, charDef: CEF, timeMs: 600, motion: MOTION, parts: two });
+      c2.fillStyle = "#9fb6c9"; c2.font = '9px "Chakra Petch", sans-serif';
+      c2.textAlign = "center"; c2.textBaseline = "top";
+      c2.fillText(SLOT_TR[row.slot] + ": " + partById(row.a).label + (i % 4 === 0 ? "" : ""), cx + 46, cy + 40);
+      c2.fillStyle = "#55636f";
+      c2.fillText("tek", cx, cy + 56); c2.fillText("+ " + partById(row.b).label, cx + 92, cy + 56);
+    });
+
+    // 3) FARKLI GÖVDELER + MAÇ ÖLÇEĞİ: 8 parça tam donanım r=30 ve r=14.
+    const FULL = {
+      helmet: ["nisan_mercegi", "zirh_kaski"], body: ["lehim_yamasi", "kompozit_plaka"],
+      tool: ["takviye_bobini", "zamanlayici_cip"], feet: ["turbo_palet", "sicrama_yayi"],
+    };
+    const IDS = ["kopek", "ayi", "kedi", "tavsan", "yeti", "dino"];
+    const baseY = 46 + 2 * 230 + 40;
+    c2.fillStyle = "#ffe45e"; c2.font = '700 11px "Chakra Petch", sans-serif';
+    c2.textAlign = "left"; c2.textBaseline = "middle";
+    c2.fillText("TAM ÇİFT DONANIM — farklı gövdeler, r=30 ve maç ölçeği r=14", 14, baseY - 12);
+    IDS.forEach((id, i) => {
+      const cx = 90 + i * 150;
+      const def = CHARACTERS.find((c) => c.id === id);
+      drawRobot(c2, { cx, cy: baseY + 56, r: 30, facing: 1, charDef: def, timeMs: 600, motion: MOTION, parts: FULL });
+      drawRobot(c2, { cx: cx + 46, cy: baseY + 70, r: 14, facing: 1, charDef: def, timeMs: 600, motion: MOTION, parts: FULL });
+      c2.textAlign = "center"; c2.textBaseline = "top";
+      c2.fillStyle = "#9fb6c9"; c2.font = '9px "Chakra Petch", sans-serif';
+      c2.fillText(def.label, cx + 23, baseY + 108);
+    });
+  </script>
+</body>
+</html>

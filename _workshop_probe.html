@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <title>Atölye (Geliştirme + Parçalar) — görsel doğrulama</title>
+  <style>
+    body { margin: 0; background: #05080c; }
+    canvas { position: fixed; left: 0; width: 960px; height: 540px; }
+    #c1 { top: 0; } #c2 { top: 540px; } #c3 { top: 1080px; } #c4 { top: 1620px; }
+  </style>
+</head>
+<body>
+  <canvas id="c1" width="960" height="540"></canvas>
+  <canvas id="c2" width="960" height="540"></canvas>
+  <canvas id="c3" width="960" height="540"></canvas>
+  <canvas id="c4" width="960" height="540"></canvas>
+  <!-- Oyunla aynı klasik script sırası -->
+  <script src="js/audio.js"></script>
+  <script src="js/characters.js"></script>
+  <script src="js/progression.js"></script>
+  <script src="js/profile.js"></script>
+  <script src="js/parts.js"></script>
+  <script src="js/market.js"></script>
+  <script src="js/maps.js"></script>
+  <script src="js/story-data.js"></script>
+  <script src="js/skills.js"></script>
+  <script src="js/skill-fx.js"></script>
+  <script src="js/robots.js"></script>
+  <script src="js/terrain.js"></script>
+  <script src="js/weapons.js"></script>
+  <script src="js/entity.js"></script>
+  <script src="js/projectile.js"></script>
+  <script src="js/ai.js"></script>
+  <script src="js/story.js"></script>
+  <script src="js/game.js"></script>
+  <script>
+    // Atölye çizimi DOM'a yalnız updateHud/overlay üzerinden dokunur; burada
+    // sahte bir oyun nesnesiyle yalnız çizim yolu çalıştırılır.
+    // Gövde yuvasında 6 parça sahip → Atölye listesi sayfalanır (4 satır/sayfa).
+    // Parçalar robota kilitli değildir: aynı parça birden çok robotta takılı.
+    // Şema v6: her yuvada İKİ alt yuva (dizi). Gövdede iki parça takılı.
+    const PROFILE = {
+      version: 6, scrap: 260,
+      parts: ["lehim_yamasi", "kompozit_plaka", "takviyeli_govde", "cift_kat_plaka",
+              "sogutucu_radyator", "basinc_hucre", "nisan_mercegi", "yedek_yukleyici", "turbo_palet"],
+      robots: {
+        kopek: { xp: 300, upgrades: { chassis: 1, module: 0, core: 0 }, stats: { matches: 3, wins: 2 },
+                 loadout: { helmet: ["nisan_mercegi", null], body: ["lehim_yamasi", "kompozit_plaka"],
+                            tool: ["yedek_yukleyici", null], feet: ["turbo_palet", null] } },
+        kedi: { xp: 120, upgrades: { chassis: 0, module: 0, core: 0 }, stats: { matches: 1, wins: 0 },
+                loadout: { helmet: [null, null], body: ["lehim_yamasi", null],
+                           tool: [null, null], feet: ["turbo_palet", null] } },
+      },
+    };
+    function makeWs(mode) {
+      const g = Object.create(Game.prototype);
+      g.W = 960; g.H = 540;
+      g.input = { mouseX: -1, mouseY: -1 };
+      g.renderTimeMs = 0;
+      g.selectedChars = [];
+      g.profile = normalizeProfile(PROFILE);
+      g.workshopSelectedId = CHARACTERS[0].id;
+      g.workshopPage = 0;
+      g.workshopBranch = "chassis";
+      g.workshopMode = mode;
+      g.workshopSlot = "body";
+      g.workshopSlotOpen = false;
+      g.workshopPartCursor = 0;
+      g.workshopFx = null;
+      g.workshopNotice = null;
+      g.updateHud = () => {};
+      return g;
+    }
+
+    // 1) Geliştirme modu (mevcut ekran + yeni mod sekmeleri)
+    const g1 = makeWs("upgrades");
+    g1.renderWorkshop(document.getElementById("c1").getContext("2d"));
+
+    // 2) Parçalar modu: 4 yuva paneli, biri hover (Gövde)
+    const g2 = makeWs("parts");
+    g2.input.mouseX = 700; g2.input.mouseY = 300; // yuva panelleri üzerinde
+    g2.renderWorkshop(document.getElementById("c2").getContext("2d"));
+
+    // 3) Parçalar modu: Gövde yuvası listesi açık + takma bildirimi
+    const g3 = makeWs("parts");
+    g3.workshopSlot = "body";
+    g3.workshopSlotIndex = 1;   // 2. alt yuva listesi
+    g3.workshopSlotOpen = true;
+    g3.workshopPartCursor = 0;
+    g3.workshopFx = { slot: "body", t: 0.1 };
+    g3.workshopNotice = { text: "Lehim Yaması takıldı", color: "#8affc0", t: 0.3 };
+    g3.renderWorkshop(document.getElementById("c3").getContext("2d"));
+
+    // 4) Karakter seçimi: "Sv." rozetinin altında 4 parça noktası (FIX-8'de
+    // gövde/aparat/ayak dolu, kask boş) — rozet konumu/çakışma kontrolü.
+    const cs = Object.create(Game.prototype);
+    cs.W = 960; cs.H = 540;
+    cs.input = { mouseX: -1, mouseY: -1, left: false, right: false, charging: false, power: 0 };
+    cs.renderTimeMs = 0;
+    cs.mode = "computer";
+    cs.playerCount = 2;
+    cs.charSelectPhase = 0;
+    cs.charPage = 0;
+    cs.selectedChars = [CHARACTERS[0], CHARACTERS[1]];
+    cs.playerControls = ["human", "bot"];
+    cs.profile = normalizeProfile(PROFILE);
+    cs.updateHud = () => {};
+    cs.renderCharSelect(document.getElementById("c4").getContext("2d"));
+  </script>
+</body>
+</html>

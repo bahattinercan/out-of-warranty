@@ -474,6 +474,51 @@ function projAcidShape(ctx, pr) {
   projCircle(ctx, r * 0.55, r * 0.95, r * 0.2, c.edge);
 }
 
+// Işınlanma topu: küre içinde dönen girdap yayları + parlak çekirdek.
+function projTeleportBallShape(ctx, pr) {
+  const r = pr.r, c = projColors(pr.spec);
+  projCircle(ctx, 0, 0, r, c.body);
+  projRing(ctx, 0, 0, r, c.edge, Math.max(1, r * 0.24));
+  // İç girdap: iki eş merkezli yay dönüşle kayar (spinAngle) — aktif portal izlenimi
+  const a0 = pr.spinAngle || 0;
+  ctx.strokeStyle = c.accent;
+  ctx.lineWidth = Math.max(1, r * 0.18);
+  for (let k = 0; k < 2; k++) {
+    ctx.beginPath();
+    ctx.ellipse(0, 0, r * (0.75 - k * 0.32), r * (0.45 - k * 0.14), 0.5,
+                a0 + k * 1.9, a0 + k * 1.9 + Math.PI * 1.4);
+    ctx.stroke();
+  }
+  projCircle(ctx, 0, 0, r * 0.22, c.accent);
+}
+
+// Kanca: bağlantı halkası + şaft + aşağı kıvrılan hilal burun + sivri uç.
+function projHookShape(ctx, pr) {
+  const r = pr.r, c = projColors(pr.spec);
+  // Bağlantı halkası (ip buradan geçer)
+  projRing(ctx, -r * 1.15, 0, r * 0.5, c.accent, Math.max(1, r * 0.2));
+  // Gövde şaftı
+  projPoly(ctx, [[-r * 0.7, -r * 0.35], [r * 0.6, -r * 0.35], [r * 0.6, r * 0.35], [-r * 0.7, r * 0.35]]);
+  ctx.fillStyle = c.body;
+  ctx.fill();
+  ctx.strokeStyle = c.edge;
+  ctx.lineWidth = Math.max(1, r * 0.2);
+  ctx.stroke();
+  // Kanca burnu: aşağı kıvrılan hilal + sivri uç
+  ctx.beginPath();
+  ctx.moveTo(r * 0.5, -r * 0.35);
+  ctx.quadraticCurveTo(r * 1.9, -r * 0.2, r * 1.1, r * 0.9);
+  ctx.quadraticCurveTo(r * 0.8, r * 1.2, r * 0.45, r * 0.95);
+  ctx.quadraticCurveTo(r * 1.0, r * 0.1, r * 0.5, -r * 0.1);
+  ctx.closePath();
+  ctx.fillStyle = c.edge;
+  ctx.fill();
+  ctx.strokeStyle = c.accent;
+  ctx.lineWidth = Math.max(1, r * 0.16);
+  ctx.stroke();
+  projCircle(ctx, r * 0.62, r * 1.0, r * 0.15, "#ffffff");
+}
+
 // Eski varsayılan görünüm: dolu daire + halka (look'suz spec'ler için).
 function projBallShape(ctx, pr) {
   const spec = pr.spec;
@@ -505,6 +550,8 @@ const PROJECTILE_SHAPES = {
   rivet: projRivetShape,
   vortex: projVortexShape,
   acid: projAcidShape,
+  teleport_ball: projTeleportBallShape,
+  hook: projHookShape,
 };
 
 /* Aynı tasarımı paylaşmasına izin verilen spec grupları: "aynı cephane, farklı
@@ -568,6 +615,19 @@ class Projectile {
     const wasUp = this.vy < 0;
     this.vy += GRAVITY * this.spec.gravity;
     this.vx += wind * this.spec.windFactor;
+
+    // Hava sürtünmesi (Kanca): hız kare başına `drag` oranında kaybedilir.
+    // Yerçekimi olmadığından güç, fırlatma menzilini belirler; hız eşiğin
+    // altına inince kanca fırlamadan kaybolur (tutunamaz, mermi boşa gider).
+    if (this.spec.drag) {
+      const keep = 1 - this.spec.drag;
+      this.vx *= keep;
+      this.vy *= keep;
+      if (Math.hypot(this.vx, this.vy) < 2) {
+        this.dead = true;
+        return { hit: false };
+      }
+    }
 
     // Tepe Bombası: yayın tepesinde (yukarı->aşağı dönüşte) havada bölün
     if (this.spec.splitAtApex && !this._split && wasUp && this.vy >= 0) {
@@ -637,16 +697,27 @@ class Projectile {
   }
 
   /* Yüzey normaline göre hızı yansıt, sönümle, normal yönünde biraz dışarı it.
-   * `bounceFriction` teğetsel hızı da kısar; hız iyice düşünce bomba yüzeye
-   * oturur (sonsuz mikro-zıplama yerine fitilini bekler). Alanı yazmayan
-   * spec'lerde varsayılan 1'dir → eski davranış korunur. */
+   * Fizik ayrımı korunur: `restitution` YALNIZ normal bileşeni sönümler,
+   * `bounceFriction` ise YALNIZ teğetsel (kayma) bileşeni kısar — zıplama
+   * yüksekliğini etkilemez. Alanları yazmayan spec'lerde sürtünme 1'dir →
+   * eski davranış birebir korunur. Hız iyice düşünce bomba yüzeye oturur
+   * (sonsuz mikro-zıplama yerine fitilini bekler). */
   bounceOff(terrain) {
     const n = terrain.normalAt(this.x, this.y);
     const d = this.vx * n.x + this.vy * n.y;
-    const rest = this.spec.restitution || 0.5;
+    const rest = this.spec.restitution != null ? this.spec.restitution : 0.5;
     const fr = this.spec.bounceFriction != null ? this.spec.bounceFriction : 1;
-    this.vx = (this.vx - 2 * d * n.x) * rest * fr;
-    this.vy = (this.vy - 2 * d * n.y) * rest * fr;
+    // Tam yansıma (v - 2(v·n)n) sonra normal sönümü
+    let vx = (this.vx - 2 * d * n.x) * rest;
+    let vy = (this.vy - 2 * d * n.y) * rest;
+    if (fr !== 1) {
+      // Yansımış vektörün YALNIZ teğetsel bileşenini kıs
+      const rn = vx * n.x + vy * n.y;
+      vx -= (vx - rn * n.x) * (1 - fr);
+      vy -= (vy - rn * n.y) * (1 - fr);
+    }
+    this.vx = vx;
+    this.vy = vy;
     if (Math.hypot(this.vx, this.vy) < 0.5) { this.vx = 0; this.vy = 0; }
     this.x += n.x * 3;
     this.y += n.y * 3;

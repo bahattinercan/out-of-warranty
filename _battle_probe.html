@@ -10,7 +10,6 @@
   <div id="app">
     <div id="stage">
       <header id="hud">
-        <div id="players"></div>
         <div class="center">
           <div id="turn-banner">Sıra: -</div>
           <div id="wind-indicator" role="status" aria-live="polite">Rüzgar: -</div>
@@ -19,8 +18,6 @@
         </div>
       </header>
 
-      <!-- Ses denetimi HUD'un dışında, sahneye sabit: HUD menülerde gizlenirken
-           (karakter/harita/atölye/hikâye ekranları) da erişilebilir kalır. -->
       <div id="audio-control" role="group" aria-label="Ses ayarları">
         <button id="mute-btn" type="button" title="Sesi kapat (M)" aria-label="Sesi kapat" aria-pressed="false">
           <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
@@ -41,6 +38,8 @@
         <div id="power-marker" class="hidden" title="Son atış gücü"></div>
       </div>
 
+      <div id="storage-warning" class="hidden" role="status" aria-live="polite"></div>
+
       <div id="overlay" class="hidden">
         <div class="overlay-card">
           <h1 id="overlay-title">Tahsis Tamamlandı</h1>
@@ -55,7 +54,30 @@
         </div>
       </div>
 
-      <div id="storage-warning" class="hidden" role="status" aria-live="polite"></div>
+      <footer id="battle-bar" class="hidden">
+        <div id="players" role="list" aria-label="Robotlar"></div>
+        <div id="battle-actions">
+          <button id="weapon-toggle" type="button" title="Silah listesini aç/kapat (1–9)">
+            <span>SİLAH</span><span>DEĞİŞTİR</span>
+          </button>
+          <button class="act-slot" id="slot-weapon" type="button" data-slot="weapon" title="Seçili silah">
+            <canvas class="slot-icon" width="44" height="44"></canvas>
+            <span class="slot-count"></span><span class="slot-name"></span>
+          </button>
+          <button class="act-slot" id="slot-skill" type="button" data-slot="skill" title="Dahili modül (Q)">
+            <canvas class="slot-icon" width="44" height="44"></canvas>
+            <span class="slot-count"></span><span class="slot-name"></span>
+          </button>
+          <button class="act-slot" id="slot-teleport" type="button" data-slot="teleport" title="Işınlanma Topu">
+            <canvas class="slot-icon" width="44" height="44"></canvas>
+            <span class="slot-count"></span><span class="slot-name"></span>
+          </button>
+          <button class="act-slot" id="slot-hook" type="button" data-slot="hook" title="Kanca">
+            <canvas class="slot-icon" width="44" height="44"></canvas>
+            <span class="slot-count"></span><span class="slot-name"></span>
+          </button>
+        </div>
+      </footer>
 
       <div id="weapon-panel" class="hidden">
         <div id="weapon-bar"></div>
@@ -64,18 +86,6 @@
 
     </div>
 
-    <footer id="controls">
-      <span><b>A / D</b> veya <b>← →</b> hareket et (enerji harcar)</span>
-      <span><b>W</b> veya <b>↑</b> sıçra (enerji harcar)</span>
-      <span><b>Fare</b> nişan al</span>
-      <span><b>Sol tık (basılı tut)</b> güç doldur, <b>bırak</b> ateş et</span>
-      <span><b>Sağ tık / Esc</b> atışı iptal et</span>
-      <span><b>Esc / ⏏ Çıkış</b> menüye dön</span>
-      <span><b>M</b> sesi aç/kapat</span>
-      <span><b>Q</b> dahili modülü kullan <em>(hasar veren modüller o turun atış hakkını doldurur)</em></span>
-      <span><b>1–9 / fare tekerleği</b> silah seç</span>
-      <span><b>⏱ Süre</b> dolunca sıra geçer • <b>Enerji</b> her turda yenilenir</span>
-    </footer>
   </div>
 
   <!-- Klasik scriptler: file:// üzerinden çift tıklayınca çalışır -->
@@ -83,6 +93,8 @@
   <script src="js/characters.js"></script>
   <script src="js/progression.js"></script>
   <script src="js/profile.js"></script>
+  <script src="js/parts.js"></script>
+  <script src="js/market.js"></script>
   <script src="js/maps.js"></script>
   <script src="js/story-data.js"></script>
   <script src="js/skills.js"></script>
@@ -95,32 +107,60 @@
   <script src="js/ai.js"></script>
   <script src="js/story.js"></script>
   <script src="js/game.js"></script>
-  
+
 <script>
+// Gerçek savaş sahnesi: alt panel (oyuncu kartları + silah/modül/yardımcı
+// yuvaları) ve açılır silah listesi gerçek kodla çizilir. `#open` ile açılır
+// liste de görünür (CHANGE WEAPON ekran görüntüsü).
 window.addEventListener("DOMContentLoaded", () => {
   const canvas = document.getElementById("game");
   const game = new Game(canvas);
-  game.selectedChars = [CHARACTERS[0], CHARACTERS[1], CHARACTERS[2]];
+  const mode = location.hash.replace("#", "");
+  const count = mode === "p6" ? 6 : mode === "p2" ? 2 : 4;
+  game.selectedChars = CHARACTERS.slice(0, count);
   game.selectedMap = MAPS[0];
-  game.playerControls = ["human", "bot", "bot"];
+  game.playerControls = game.selectedChars.map((_, i) => i === 0 ? "human" : "bot");
   game.mode = "computer";
   game.startGame();
   game.players[0].skillCooldown = 0;
-  game.input.charging = true;
-  game.input.power = 0.55;
+  if (mode === "dead") game.players[1].alive = false;
+  game.updateHud();
   setTimeout(() => {
-    const panel = document.getElementById("weapon-panel");
-    const pb = document.getElementById("power-bar");
-    const cs = getComputedStyle(canvas);
-    console.log("MEASURE canvasCss=" + canvas.clientWidth + "x" + canvas.clientHeight +
-      " internal=" + canvas.width + "x" + canvas.height +
-      " panelH=" + panel.offsetHeight +
-      " panelTop=" + Math.round(panel.getBoundingClientRect().top) +
-      " powerBarBottomCss=" + Math.round(pb.getBoundingClientRect().bottom) +
-      " powerBarTopCss=" + Math.round(pb.getBoundingClientRect().top) +
-      " state=" + game.state + " canvasBottom=" + Math.round(canvas.getBoundingClientRect().bottom) +
-      " canvasTop=" + Math.round(canvas.getBoundingClientRect().top));
-  }, 600);
+    game.syncBottomHud();
+    const bar = document.getElementById("battle-bar");
+    console.log("BAR h=" + bar.offsetHeight + " state=" + game.state +
+      " powerBottom=" + document.getElementById("power-bar").style.bottom);
+    if (location.hash === "#test") {
+      const log = [];
+      const player = game.players[0];
+      document.getElementById("weapon-toggle").click();
+      log.push("open=" + game.weaponMenuOpen + " panelOpen=" + document.getElementById("weapon-panel").classList.contains("open"));
+      document.querySelectorAll("#weapon-bar .weapon-chip")[1].click();
+      log.push("weapon=" + WEAPONS[player.weapon].id + " menuClosed=" + !game.weaponMenuOpen);
+      const cdBefore = player.skillCooldown;
+      document.getElementById("slot-skill").click();
+      log.push("skillUsed=" + (player.skillCooldown > cdBefore) + " cd=" + player.skillCooldown);
+      document.getElementById("slot-teleport").click();
+      log.push("teleport=" + WEAPONS[player.weapon].id);
+      document.getElementById("slot-hook").click();
+      log.push("hook=" + WEAPONS[player.weapon].id);
+      console.log("TEST " + log.join(" | "));
+      window.__ready = true;
+      return;
+    }
+    if (location.hash === "#open") {
+      game.weaponMenuOpen = true;
+      game.updateHud();
+      setTimeout(() => {
+        game.syncBottomHud();
+        console.log("PANEL top=" + Math.round(game.hudPanelRect.top) +
+          " bottom=" + Math.round(game.hudPanelRect.bottom));
+        window.__ready = true;
+      }, 150);
+    } else {
+      window.__ready = true;
+    }
+  }, 400);
 });
 </script>
 

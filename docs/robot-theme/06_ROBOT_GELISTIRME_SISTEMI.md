@@ -185,11 +185,11 @@ maliyeti 1200 Hurda'dır. Satın alınmış kademe kalıcıdır.
 
 | Kademe | Etki |
 |---:|---|
-| I — Güçlendirilmiş Şasi | Azami bütünlük `baseHp × 1.05` |
-| II — Katmanlı Kaplama | Taban kaplamaya `+0.02`; mutlak üst sınır `0.40` |
-| III — Yedek Taşıyıcılar | Toplam bütünlük bonusu `%10`, savrulma hızı `%10` azalır |
+| I — Güçlendirilmiş Şasi | Azami can `baseHp × 1.05` |
+| II — Katmanlı Zırh | Taban zırha `+0.02`; mutlak üst sınır `0.40` |
+| III — Yedek Taşıyıcılar | Toplam can bonusu `%10`, savrulma hızı `%10` azalır |
 
-Kademe III'teki bütünlük `%5 + %5` olarak üst üste eklenmez; tek türetilmiş
+Kademe III'teki can `%5 + %5` olarak üst üste eklenmez; tek türetilmiş
 çarpan `1.10` olur. Böylece yükleme sırası sonucu değiştirmez.
 
 ### 7.2 Aparat dalı
@@ -226,7 +226,7 @@ anında yuvarlanır. Kaynak tanımlar değiştirilmez.
 | Kademe | Etki |
 |---:|---|
 | I — Kapasitör Paketi | Azami hareket enerjisi `70 → 78` |
-| II — Çıkış Regülatörü | Silah hasar çarpanına toplam `%4` bonus |
+| II — Hasar Regülatörü | Silah hasar çarpanına toplam `%4` bonus |
 | III — Aşırı Besleme | Azami enerji `85`, silah hasar bonusu toplam `%7` |
 
 Çekirdek hasarı yalnız normal silah ve kalıcı tehlikelerin sahibine bağlı hasar
@@ -267,7 +267,7 @@ Kurallar:
 
 - Çözümleyici saf olmalı; girişleri değiştirmemeli.
 - Eksik/bozuk ilerleme verisi üç adet sıfır kademe gibi davranmalı.
-- Kaplama `[0, 0.40]`, cooldown `[2, tabanCooldown]` aralığında sınırlandırılmalı.
+- Zırh `[0, 0.40]`, cooldown `[2, tabanCooldown]` aralığında sınırlandırılmalı.
 - HP, hasar, stamina ve yetenek sonuçları sonlu sayılar olmalı.
 - Entity yalnız çözülmüş değerleri almalı; `localStorage` okumamalı.
 - Bot ve yerel oyuncu Entity'leri aynı kurucuyu kullanmaya devam etmeli.

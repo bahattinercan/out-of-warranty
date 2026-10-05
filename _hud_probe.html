@@ -8,31 +8,58 @@
 </head>
 <body>
 <div id="app">
-  <div id="weapon-panel">
-    <div id="weapon-bar"></div>
-    <div id="weapon-desc"></div>
+  <div id="stage">
+    <footer id="battle-bar">
+      <div id="players" role="list" aria-label="Robotlar"></div>
+      <div id="battle-actions">
+        <button id="weapon-toggle" type="button"><span>SİLAH</span><span>DEĞİŞTİR</span></button>
+        <button class="act-slot" id="slot-weapon" type="button" data-slot="weapon"><canvas class="slot-icon" width="44" height="44"></canvas><span class="slot-count"></span><span class="slot-name"></span></button>
+        <button class="act-slot" id="slot-skill" type="button" data-slot="skill"><canvas class="slot-icon" width="44" height="44"></canvas><span class="slot-count"></span><span class="slot-name"></span></button>
+        <button class="act-slot" id="slot-teleport" type="button" data-slot="teleport"><canvas class="slot-icon" width="44" height="44"></canvas><span class="slot-count"></span><span class="slot-name"></span></button>
+        <button class="act-slot" id="slot-hook" type="button" data-slot="hook"><canvas class="slot-icon" width="44" height="44"></canvas><span class="slot-count"></span><span class="slot-name"></span></button>
+      </div>
+    </footer>
+    <div id="weapon-panel">
+      <div id="weapon-bar"></div>
+      <div id="weapon-desc"></div>
+    </div>
   </div>
 </div>
+<script src="js/audio.js"></script>
 <script src="js/characters.js"></script>
+<script src="js/progression.js"></script>
+<script src="js/profile.js"></script>
+<script src="js/parts.js"></script>
+<script src="js/market.js"></script>
+<script src="js/maps.js"></script>
+<script src="js/story-data.js"></script>
 <script src="js/skills.js"></script>
+<script src="js/skill-fx.js"></script>
+<script src="js/robots.js"></script>
+<script src="js/terrain.js"></script>
 <script src="js/weapons.js"></script>
+<script src="js/entity.js"></script>
 <script src="js/projectile.js"></script>
+<script src="js/ai.js"></script>
+<script src="js/story.js"></script>
 <script src="js/game.js"></script>
 <script>
-// Gerçek HUD kodunu (Game.prototype.updateWeaponHud + paintProjectilePreview)
-// sahte bir oyun nesnesiyle çalıştırır: çipler ve açıklama paneli gerçek markup.
+// Gerçek HUD kodunu (Game.prototype.updateWeaponHud + paintProjectilePreview +
+// paintBattleSlots) sahte bir oyun nesnesiyle çalıştırır. Sahne görünürlüğü
+// için açılır panel `.open` sınıfına bağlıdır.
 const fake = Object.create(Game.prototype);
 fake.state = "AIMING";
 fake.turn = 0;
 fake._weaponKey = null;
+fake.weaponMenuOpen = true;
 const ammo = {};
 for (const w of WEAPONS) ammo[w.id] = w.ammo;
-// `active`, Game.prototype'te getter (players[turn]); weaponSpec ise Entity'de
-// getter — sahte oyuncuda düz alan olarak verilir.
-fake.players = [{ weapon: 0, ammo: ammo, weaponSpec: WEAPONS[0] }];
+// `active`, Game.prototype'te getter (players[turn]); weaponSpec Entity getter.
+fake.players = [{
+  weapon: 0, ammo: ammo, weaponSpec: WEAPONS[0],
+  charDef: CHARACTERS[0], skillCooldown: 0, resolvedSkill: null,
+}];
 fake.updateWeaponHud();
-
-// Panel görünür olsun (gerçek oyunda savaş durumunda açılır)
 document.getElementById("weapon-panel").classList.remove("hidden");
 
 // drawMines artık mermi çizicisini paylaşıyor: kurulu/kurulmamış mayın görünümü

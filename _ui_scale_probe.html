@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<title>UI ölçek ölçümü</title>
+<style>html,body{margin:0;height:100%}iframe{width:100%;height:100%;border:0;display:block}</style>
+</head>
+<body>
+<!-- Canvas dünyası pencereye göre ölçeklenir (W = 540 × en-boy, _scaleY = pxH/540)
+     ama DOM yazıları sabit CSS px. Bu prob gerçek index.html'i iframe'e yükleyip
+     iki tarafın "cihaz pikseli başına" boyutunu ölçer. -->
+<iframe id="f" src="index.html"></iframe>
+<script>
+const f = document.getElementById("f");
+function measure() {
+  const w = f.contentWindow, d = f.contentDocument;
+  const cv = d.getElementById("game");
+  if (!cv) return console.log("UI-SCALE no-canvas");
+  const dpr = w.devicePixelRatio || 1;
+  const cssH = cv.getBoundingClientRect().height;
+  const pxH = cv.height;                       // geri tampon yüksekliği
+  const scale = pxH / 540;                     // world px -> device px
+  const scaleCss = cssH / 540;                 // world px -> CSS px
+  const fontPx = (sel) => { const el = d.querySelector(sel); return el ? parseFloat(w.getComputedStyle(el).fontSize) : null; };
+  const out = {
+    window: w.innerWidth + "x" + w.innerHeight,
+    dpr,
+    canvasCss: Math.round(cv.getBoundingClientRect().width) + "x" + Math.round(cssH),
+    canvasPx: cv.width + "x" + pxH,
+    worldW: Math.round(cv.width / scale),
+    canvasZoom: +scale.toFixed(3),
+    domCss: {
+      banner: fontPx("#turn-banner"),
+      playerName: fontPx(".player-info .name"),
+      skillLine: fontPx(".player-info .skill-line"),
+      audioLabel: fontPx("#mute-label"),
+      wcName: fontPx(".weapon-chip .wc-name"),
+      footer: fontPx("#controls"),
+    },
+  };
+  // Aynı nominal boyut karşılaştırması: 13px canvas yazısı vs 13px DOM yazısı
+  out.compare_13px = {
+    canvas_device_px: +(13 * scale).toFixed(1),
+    dom_device_px: 13 * dpr,
+    ratio: +(scale / dpr).toFixed(2),
+  };
+  // Gövde ağırlığı gerçekten SemiBold mü? (Aynı realm'de ölçüm + face durumu)
+  const c = w.document.createElement("canvas").getContext("2d");
+  const SENT = "Şu raflardaki parçalar hepimize lazım.";
+  const mw = (f) => { c.font = f; return Math.round(c.measureText(SENT).width); };
+  out.bodyWeight = {
+    w400: mw('400 15px "Chakra Petch"'),
+    w600: mw('600 15px "Chakra Petch"'),
+    w700: mw('700 15px "Chakra Petch"'),
+    check600: w.document.fonts.check('600 15px "Chakra Petch"'),
+    check400: w.document.fonts.check('400 15px "Chakra Petch"'),
+  };
+  console.log("UI-SCALE " + JSON.stringify(out));
+}
+f.addEventListener("load", () => setTimeout(measure, 1500));
+</script>
+</body>
+</html>

@@ -15,12 +15,14 @@ const path = require("path");
 
 // ── Kaynakları tek sandbox'ta yükle ─────────────────────────────────────────
 const JS_DIR = path.join(__dirname, "..", "js");
-const FILES = ["audio.js", "characters.js", "progression.js", "profile.js", "maps.js", "story-data.js", "skills.js", "skill-fx.js", "robots.js", "terrain.js", "weapons.js", "entity.js", "projectile.js", "ai.js", "story.js", "game.js"];
+const FILES = ["audio.js", "characters.js", "progression.js", "profile.js", "parts.js", "market.js", "maps.js", "story-data.js", "skills.js", "skill-fx.js", "robots.js", "terrain.js", "weapons.js", "entity.js", "projectile.js", "ai.js", "story.js", "game.js"];
 const bundle =
   FILES.map((f) => fs.readFileSync(path.join(JS_DIR, f), "utf8")).join("\n;\n") +
-  "\n;globalThis.__M = { CHARACTERS, MAPS, BIOMES, FACTORY_ZONES, PROP_DRAWERS, WEAPONS, SKILL_PROJECTILES, PROJECTILE_SHAPES, SHARED_SHAPES, useSkill, drawCharExtras, drawRobot, Entity, Projectile, Explosion, GRAVITY, Game, BotController, AI_LIMITS, aiWorldKey, aiSimulateShot, aiCoarseCandidates, aiPathIsSafe, aiRandom, AI_DIFFICULTY, aiDamageMultiplier, aiAssignDamageScale, aiSelectWeapon, skillConsumesShot, SKILL_SHOT_KINDS, AI_SKILL_REPLACE_SCORE, " +
+  "\n;globalThis.__M = { CHARACTERS, MAPS, BIOMES, FACTORY_ZONES, PROP_DRAWERS, WEAPONS, SKILL_PROJECTILES, PROJECTILE_SHAPES, SHARED_SHAPES, PROJ_SUBSTEP, PROJ_MAX_SUBSTEPS, useSkill, drawCharExtras, drawRobot, robotMuzzlePoint, RB_GUN_PIVOT_X, RB_GUN_PIVOT_Y, RB_GUN_MUZZLE, Entity, Projectile, Explosion, GRAVITY, Game, BotController, AI_LIMITS, aiWorldKey, aiSimulateShot, aiCoarseCandidates, aiPathIsSafe, aiRandom, AI_DIFFICULTY, aiDamageMultiplier, aiAssignDamageScale, aiSelectWeapon, skillConsumesShot, SKILL_SHOT_KINDS, AI_SKILL_REPLACE_SCORE, " +
   "SKILL_FX_SHAPES, SKILL_FX_KIND_DEFAULT, SKILL_FX_EXTENT, spawnSkillFx, updateSkillFx, drawSkillFx, drawSkillFxIcon, drawSkillAura, SkillFx, " +
   "SERVICE_LEVELS, MAX_SERVICE_XP, MAX_TIER, START_SCRAP, BRANCHES, BRANCH_LABELS, TIER_COSTS, TIER_LEVEL_GATES, REWARD_BASE, DIFFICULTY_MULTIPLIER, levelForXp, xpForLevel, nextLevelXp, levelUpMessage, calculateMatchReward, resolveRobotBuild, upgradeEffectText, robotUpgradeSummary, totalTiers, sanitizeUpgrades, nextUpgradeStep, toSafeInt, defaultProfile, defaultRobotProgress, normalizeProfile, loadProfile, saveProfile, getRobotProgress, grantMatchReward, purchaseUpgrade, PROFILE_KEY, createSessionId, " +
+  "AMMO_DEPOT_CAP, AMMO_BULK_QTY, AMMO_BULK_QTY_BIG, AMMO_PRICES, ammoPriceFor, ammoBasePrice, weaponPowerScore, weaponStats, sellableWeapons, sanitizeAmmoDepot, getAmmoDepot, setAmmoDepot, mergeDepots, ammoDepotTotal, buyAmmo, mergeAmmoWithDepot, battleLoad, unspentDepot, settleDepot, weaponById, weaponBattleMax, isSellableWeapon, initialAmmo, " +
+  "PARTS, PART_SLOTS, SLOT_LABELS, partById, sanitizeParts, sanitizeLoadoutShape, getOwnedParts, isPartOwned, buildPartsSummary, buyPart, equipPart, drawPartIcon, PART_ICON_SHAPES, partEffectText, PART_KNOCKBACK_MIN, _drawPartDots, PARTS_PER_SLOT, loadoutPartIds, AUDIO_SAFE, STORY_HINT_Y, _rbPartAccessories, _rbPartSpecs, _RB_PART_SECONDARY, MARKET_TABS, " +
   "STORY_CAMPAIGN, STORY_ZONES, STORY_MISSIONS, STORY_SCENES, STORY_TUTORIALS, STORY_DIFFICULTIES, validateStoryData, getMissionById, missionsInOrder, firstMissionId, nextMissionId, missionPrerequisites, isMissionUnlocked, selectableRobotsForMission, defaultStoryProgress, normalizeStoryProgress, maintenancePoints, collectedEvidence, curtailedZones, resolveStoryDifficulty, missionsForZone, missionStatusOf, firstMissionRobotId, sceneById, sceneTotalLines, storySceneInfo, isSinglePlayerProgressionMode };";
 
 const sandbox = { Math, Date, console, JSON, Set, Map, Array, Object };
@@ -436,6 +438,61 @@ for (const ch of chars) {
   check(`${ch.label}: robot çizildi`, result === true && ctx.calls.fill + ctx.calls.stroke > 0);
 }
 
+// Nişan hizası, son-atış çizgisi ve mermi çıkışı ÇİZİLEN namlunun ağzından
+// çıkmalı. Eskiden mantık gövde MERKEZİNDEN `r + 12` ileri bakıyordu; namlu ise
+// omuz pivotunda durduğu için hiza silahın altından başlıyor ve oyuncu "nişan
+// hizası silahla aynı değil" diye görüyordu. Bu test çizimi gerçek bir CTM ile
+// takip edip namlu ağzı halkasının dünya konumunu `Entity.muzzle` ile
+// karşılaştırır: geometri iki taraftan biri değişip ayrışırsa test kırılır.
+group("Nişan hizası — çizilen namlu ağzı ile muzzle aynı noktada");
+{
+  // translate/scale/rotate/save/restore uygulayan minik matris izleyici.
+  const trackedCtx = () => {
+    const ctx = mockCtx();
+    let m = [1, 0, 0, 1, 0, 0]; // [a,b,c,d,e,f] — x' = a·x + c·y + e
+    const stack = [];
+    const mul = (m1, m2) => [
+      m1[0] * m2[0] + m1[2] * m2[1], m1[1] * m2[0] + m1[3] * m2[1],
+      m1[0] * m2[2] + m1[2] * m2[3], m1[1] * m2[2] + m1[3] * m2[3],
+      m1[0] * m2[4] + m1[2] * m2[5] + m1[4], m1[1] * m2[4] + m1[3] * m2[5] + m1[5],
+    ];
+    const apply = (x, y) => [m[0] * x + m[2] * y + m[4], m[1] * x + m[3] * y + m[5]];
+    const arcs = [];
+    ctx.save = () => stack.push(m.slice());
+    ctx.restore = () => { m = stack.pop() || [1, 0, 0, 1, 0, 0]; };
+    ctx.translate = (x, y) => { m = mul(m, [1, 0, 0, 1, x, y]); };
+    ctx.scale = (x, y) => { m = mul(m, [x, 0, 0, y, 0, 0]); };
+    ctx.rotate = (a) => { const c = Math.cos(a), s = Math.sin(a); m = mul(m, [c, s, -s, c, 0, 0]); };
+    ctx.arc = (x, y, rad) => { arcs.push({ p: apply(x, y), rad }); };
+    return { ctx, arcs };
+  };
+
+  for (const ch of chars) {
+    for (const facing of [1, -1]) {
+      for (const aimDeg of [-40, -120]) {
+        const aim = aimDeg * Math.PI / 180;
+        const e = makeEntity(ch, 300, 400);
+        e.facing = facing; e.aim = aim;
+        const { ctx, arcs } = trackedCtx();
+        M.drawRobot(ctx, {
+          cx: e.x, cy: e.y - e.r, r: ch.r, facing, aim, charDef: ch,
+          timeMs: 0, motion: { vx: 0, vy: 0, onGround: true },
+        });
+        const muzzle = e.muzzle;
+        const ringRad = ch.r * 0.28 * 0.44; // _rbLauncher ağız halkası (th·0.44)
+        const hit = arcs.some((a) => Math.abs(a.rad - ringRad) < 1e-6 &&
+          Math.hypot(a.p[0] - muzzle.x, a.p[1] - muzzle.y) < 0.01);
+        const label = `${ch.label} (facing=${facing}, ${aimDeg}°)`;
+        check(`${label}: nişan çizgisi namlu ağzından çıkıyor`, hit,
+          `muzzle=(${muzzle.x.toFixed(1)},${muzzle.y.toFixed(1)}) ağız=${arcs.filter((a) => Math.abs(a.rad - ringRad) < 1e-6).map((a) => `(${a.p[0].toFixed(1)},${a.p[1].toFixed(1)})`).join(" ")}`);
+        check(`${label}: namlu ağzı gövdenin dışında`,
+          Math.hypot(muzzle.x - e.x, muzzle.y - (e.y - e.r)) > ch.r,
+          `d=${Math.hypot(muzzle.x - e.x, muzzle.y - (e.y - e.r)).toFixed(1)} r=${ch.r}`);
+      }
+    }
+  }
+}
+
 // Yürüyüş animasyonu sözleşmesi. Yerde yürüme `Entity.vx` kullanmadığı için
 // (x doğrudan adımlanır) çizici ayrı bir adım sinyali (`motion.walk`) bekler.
 // Sinyal kaybolursa robotlar yerinde kayar gibi görünür — bir kez yaşandı.
@@ -482,11 +539,15 @@ group("Yürüyüş fazı mesafeye kilitli");
   check("faz adımlarla ilerler", one > 0 && two > one, `bir=${one} iki=${two}`);
   check("iki adım fazı iki kat ilerletir", Math.abs(two - one * 2) < 1e-9, `bir=${one} iki=${two}`);
 
-  // Geri adım aynı mesafeyi ters yönde kat eder: faz başlangıca döner.
-  a.walk(-1, terrain);
-  check("ters adım fazı geri sarar", Math.abs(a.walkPhase - one) < 1e-9, `phase=${a.walkPhase}`);
-  a.walk(-1, terrain);
-  check("başlangıç mesafesine dönünce faz sıfırlanır", a.walkPhase < 1e-9 || Math.abs(a.walkPhase - Math.PI * 2) < 1e-9, `phase=${a.walkPhase}`);
+  // Geri adımlama: yüz ters yöndeyken ilerlemek fazı geri sarar (ayaklar
+  // gövdeye göre geriye savrulur — moonwalk değil, gerçek geri yürüyüş).
+  const back = makeEntity(chars[0], 200, 400);
+  back.facing = -1;
+  back.advanceStride(2.2);
+  check("yüz tersken faz geri sarar", back.walkPhase > Math.PI, `phase=${back.walkPhase}`);
+  const beforeBack = back.walkPhase;
+  back.advanceStride(2.2);
+  check("geri adım fazı aynı yönde ilerletir", back.walkPhase < beforeBack && back.walkPhase > Math.PI, `önce=${beforeBack} sonra=${back.walkPhase}`);
 
   // Duvara dayanınca adım yok = faz yok: bacaklar havada sallanmaz.
   const walled = makeFlatTerrain();
@@ -536,6 +597,103 @@ group("Yürüyüş fazı mesafeye kilitli");
   const walkB = poseSig({ walkAmp: 1, walkPhase: 1.9 });
   check("farklı fazlar farklı bacak pozu üretir", walkA !== walkB);
   check("zarf sıfırken faz pozu değiştirmez (duruş çizimi)", poseSig({ walkAmp: 0, walkPhase: 1.9 }) === poseSig({}));
+}
+
+// Yürüyüş geometrisi: çizicinin GERÇEK komutlarından (translate → rotate →
+// translate) ayak konumu okunur. Böylece "animasyon hıza kilitli mi, ayak yere
+// basarken kayıyor mu, iki bacak zıt fazda mı" sorusu tahmine değil ölçüme
+// dayanır. Sabit zaman temposu bir kez yaşandı: bacaklar 2 rad/s'de sallanıyordu.
+group("Yürüyüş geometrisi ve kayma (çizim komutlarından)");
+{
+  const def = chars[0];
+  const r = def.r, stride = r * 1.3;
+  const walkMotion = (phase) => ({ vx: 0, vy: 0, onGround: true, walkAmp: 1, walkPhase: phase });
+
+  // Ayak dönüşümü çizici içinde tek desendir: translate(x,y) → rotate(a) →
+  // translate(-x,-y). Bu üçlüyü arayıp ayağın konumunu/bilek açısını okuruz.
+  const feetOf = (motion, timeMs = 0) => {
+    const ops = [];
+    M.drawRobot(mockCtx(ops), { cx: 100, cy: 100, r, facing: 1, charDef: def, timeMs, motion });
+    const parsed = ops.map((s) => ({
+      k: s.slice(0, s.indexOf("(")),
+      a: s.slice(s.indexOf("(") + 1, -1).split(",").map(Number),
+    }));
+    const out = [];
+    for (let i = 0; i < parsed.length - 2; i++) {
+      const p0 = parsed[i], p1 = parsed[i + 1], p2 = parsed[i + 2];
+      if (p0.k === "translate" && p1.k === "rotate" && p2.k === "translate" &&
+          Math.abs(p2.a[0] + p0.a[0]) < 1e-9 && Math.abs(p2.a[1] + p0.a[1]) < 1e-9) {
+        out.push({ x: p0.a[0], y: p0.a[1], rot: p1.a[0] });
+      }
+    }
+    return out;
+  };
+
+  check("iki ayak da okunur (duruş pozunda da)", feetOf({ vx: 0, vy: 0, onGround: true }).length === 2);
+
+  // İki bacak zıt fazda: yerel salınımları eşit ve ters işaretli olmalı.
+  let antiErr = 0;
+  for (let i = 0; i < 180; i++) {
+    const f = feetOf(walkMotion((i / 180) * Math.PI * 2));
+    antiErr = Math.max(antiErr, Math.abs((f[0].x + r * 0.20) + (f[1].x - r * 0.20)));
+  }
+  check("iki bacak tam zıt fazda", antiErr < 1e-9, `maks sapma=${antiErr.toExponential(2)}`);
+
+  // Ayak salınımı ve kayma payı: salınım 2 × 0.56r, kayma adımın %10–20'si.
+  let lo = Infinity, hi = -Infinity, rotSpread = 0, rotLo = Infinity, rotHi = -Infinity;
+  for (let i = 0; i < 360; i++) {
+    const f = feetOf(walkMotion((i / 360) * Math.PI * 2))[1];
+    lo = Math.min(lo, f.x); hi = Math.max(hi, f.x);
+    rotLo = Math.min(rotLo, f.rot); rotHi = Math.max(rotHi, f.rot);
+  }
+  const travel = hi - lo, slipRatio = (stride - travel) / stride;
+  rotSpread = rotHi - rotLo;
+  check("ayak salınımı = 2 × 0.56r", Math.abs(travel - 2 * r * 0.56) < 1e-9, `salınım=${travel.toFixed(3)} beklenen=${(2 * r * 0.56).toFixed(3)}`);
+  check("kayma payı adımın %10–20'si", slipRatio > 0.10 && slipRatio < 0.20,
+    `%${(slipRatio * 100).toFixed(1)} (adım başına ${(stride - travel).toFixed(2)}px / ${stride.toFixed(1)}px)`);
+  check("bilek açısı döngüde belirgin değişir", rotSpread > 0.3, `${rotSpread.toFixed(3)} rad`);
+  check("adım döngüsünün yarısı temas", (() => {
+    let contact = 0;
+    for (let i = 0; i < 360; i++) if (Math.cos((i / 360) * Math.PI * 2) <= 0) contact++;
+    return contact === 180;
+  })());
+
+  // Bacak pozu ZAMANA bağlı olmamalı (eski hata) — faz otoriter tek girdidir.
+  check("aynı faz, farklı timeMs → aynı ayak geometrisi",
+    JSON.stringify(feetOf(walkMotion(2.3), 0)) === JSON.stringify(feetOf(walkMotion(2.3), 900000)));
+
+  // Gerçek simülasyon: her yürüyen karede Δfaz = dx·π/adım ve net kayma < %10.
+  const terrain = makeFlatTerrain();
+  const e = makeEntity(def, 200, 400);
+  let maxErr = 0, netSlip = 0, slipN = 0, worst = 0, prevFoot = null;
+  for (let i = 0; i < 200; i++) {
+    e.refreshStamina();                    // tur enerjisi: yürüme kesilmesin
+    const x0 = e.x, p0 = e.walkPhase;
+    e.update(terrain);                     // oyun sırası: fizik + zarf
+    e.walk(1, terrain);                    // oyun sırası: adım
+    const dx = e.x - x0;
+    let d = e.walkPhase - p0;
+    while (d > Math.PI) d -= Math.PI * 2;
+    while (d < -Math.PI) d += Math.PI * 2;
+    maxErr = Math.max(maxErr, Math.abs(d - (dx * Math.PI) / stride));
+    // Temas eden ayağın dünya x'i: gövdeyle birlikte kaymamalı.
+    const feet = feetOf(Object.assign({ walkAmp: 1 }, walkMotion(e.walkPhase)));
+    const side = Math.cos(e.walkPhase) <= 0 ? 1 : 0;
+    const foot = feet[side];
+    const wx = e.x + foot.x;
+    if (prevFoot && prevFoot.side === side) {
+      netSlip += wx - prevFoot.wx;
+      worst = Math.max(worst, Math.abs(wx - prevFoot.wx));
+      slipN++;
+    }
+    prevFoot = { wx, side };
+  }
+  check("her yürüyen karede Δfaz = dx·π/adım", maxErr < 1e-9, `maks hata=${maxErr.toExponential(2)}`);
+  const netPerFrame = netSlip / slipN;
+  check("net kayma gövde hızının %10'undan az", Math.abs(netPerFrame) < 0.22,
+    `net ${netPerFrame.toFixed(3)} px/kare = gövdenin %${(Math.abs(netPerFrame) / 2.2 * 100).toFixed(1)}'i`);
+  check("anlık kayma gövde hızını aşmaz (ayak+ gövde birlikte sürüklenmez)", worst < 2.2 + 1e-9,
+    `en kötü ${worst.toFixed(3)} px/kare (gövde 2.20)`);
 }
 check("34 karakter için 34 harita üretildi", M.MAPS.length === chars.length, `maps=${M.MAPS.length}`);
 check("dokuz fabrika bölgesi tanımlı", Object.keys(M.FACTORY_ZONES).length === 9, `zones=${Object.keys(M.FACTORY_ZONES).length}`);
@@ -678,6 +836,30 @@ group("Mermi çarpışma doğruluğu — tünelleme, süpürme ve sekme");
       const h = M.Projectile.sweepHit(0, 0, 100, 0, 50, 3, 4);
       return !!h && Math.abs(h.x - 50) < 0.001 && Math.abs(h.y) < 0.001;
     })());
+  check("sweepHit: sıfır uzunluklu yol nokta testi gibi çalışır",
+    !!M.Projectile.sweepHit(10, 10, 10, 10, 12, 10, 3) &&
+    M.Projectile.sweepHit(10, 10, 10, 10, 20, 10, 3) === null);
+  check("sweepHit: teğet geçen yolu yakalar, uzaktakini yakalamaz",
+    !!M.Projectile.sweepHit(0, 0, 100, 0, 50, 4, 4) &&
+    M.Projectile.sweepHit(0, 0, 100, 0, 50, 4.01, 4) === null);
+
+  // 2b) Alt adım üst sınırı ancak kare başına hız sınırın altındaysa
+  //     tünelleme garantisi verir; yeni bir cephane bunu aşarsa test yakalar.
+  const maxStep = M.PROJ_MAX_SUBSTEPS * M.PROJ_SUBSTEP;
+  const tooFast = M.WEAPONS.filter((w) => (w.baseSpeed + w.speedMul) > maxStep)
+    .map((w) => `${w.id}=${w.baseSpeed + w.speedMul}`);
+  check("her cephanenin azami kare hızı alt adım sınırının altında",
+    tooFast.length === 0, `sınır=${maxStep} | aşan: ${tooFast.join(", ")}`);
+
+  // 2c) Adım ≤ 2 px olduğu için 2 px kalınlığındaki bariyer de yakalanmalı.
+  const thin = makeFlatTerrain();
+  for (let y = 0; y < 420; y++) for (let x = 400; x < 402; x++) thin.solid[y * thin.w + x] = 1;
+  const t2 = new M.Projectile(120, 200, 36, 0, sniper);
+  let thinHit = null;
+  for (let i = 0; i < 20 && !thinHit; i++) { const r = t2.update(thin, 0); if (r) thinHit = r; }
+  check("alt adım: 2 px kalınlığındaki bariyer de yakalanır",
+    !!thinHit && thinHit.hit === true && thinHit.x >= 400 && thinHit.x < 402,
+    thinHit && `x=${thinHit.x.toFixed(2)}`);
 
   // 3) Yavaş cephane davranışı korunur: zemin yüzeyinde patlar, içine gömülmez.
   const ground = makeFlatTerrain(960, 540, 420);
@@ -694,12 +876,28 @@ group("Mermi çarpışma doğruluğu — tünelleme, süpürme ve sekme");
   g1.bounceOff(flat);
   check("seken bomba sekmede sürtünmeyle hız kaybeder",
     Math.hypot(g1.vx, g1.vy) < Math.hypot(4, 6), `hız=${Math.hypot(g1.vx, g1.vy).toFixed(2)}`);
-  const g2 = new M.Projectile(200, 420, 0.1, 0.1, grenade);
-  g2.bounceOff(flat);
-  check("çok yavaşlayan bomba yüzeye oturur", g2.vx === 0 && g2.vy === 0);
-  const g3 = new M.Projectile(200, 420, 0.1, 0.1, M.WEAPONS[0]); // sürtünmesiz spec
-  g3.bounceOff(flat);
-  check("bounceFriction yazmayan spec eski davranışı korur", g3.vx !== 0 || g3.vy !== 0);
+  check("sekmeli bomba dinlenme eşiğinin altına inince durur", (() => {
+    const g = new M.Projectile(200, 420, 0.1, 0.1, grenade);
+    g.bounceOff(flat);
+    return g.vx === 0 && g.vy === 0;
+  })());
+  const g3 = new M.Projectile(200, 420, 4, 6, { restitution: 0.5 }); // sürtünme alanı yok
+  const g4 = new M.Projectile(200, 420, 4, 6, { restitution: 0.5, bounceFriction: 0.8 });
+  g3.bounceOff(flat); g4.bounceOff(flat);
+  check("bounceFriction yazmayan spec sürtünmesiz kalır (daha hızlı)",
+    Math.hypot(g3.vx, g3.vy) > Math.hypot(g4.vx, g4.vy),
+    `sürtünmesiz=${Math.hypot(g3.vx, g3.vy).toFixed(2)} sürtünmeli=${Math.hypot(g4.vx, g4.vy).toFixed(2)}`);
+  // Sürtünme YALNIZ teğetsel bileşeni kısmalı: normal hız (zıplama yüksekliği)
+  // her iki durumda da aynı olmalı (normal = (0,-1) → vy).
+  check("bounceFriction yalnız teğetsel hızı kısar (zıplama yüksekliği aynı)",
+    g3.vy === g4.vy,
+    `vy sürtünmesiz=${g3.vy.toFixed(4)} sürtünmeli=${g4.vy.toFixed(4)}`);
+  check("restitution: 0 ifade edilebilir (tamamen sönümlü sekme)",
+    (() => {
+      const g = new M.Projectile(200, 420, 3, 5, { restitution: 0 });
+      g.bounceOff(flat);
+      return g.vx === 0 && g.vy === 0;
+    })());
 
   // 5) Kuru mod (bot benzetimi) matkabın araziyi oymasını engeller; gerçek mod oyar.
   const drillSpec = M.WEAPONS.find((w) => w.id === "drill");
@@ -714,18 +912,116 @@ group("Mermi çarpışma doğruluğu — tünelleme, süpürme ve sekme");
       dry ? t.version === before : t.version > before,
       `version ${before} → ${t.version}`);
   }
+  // Matkap bütçesi KARE başına bir düşer (alt adım sayısı kadar değil) ve
+  // katı içinde ilerlerken tünel boyunca sürekli oyar (tek kare = tek bütçe).
+  {
+    const deep = makeFlatTerrain(960, 540, 100); // y≥100 tamamen katı
+    const dr = new M.Projectile(200, 300, 10, 8, drillSpec);
+    const budget = dr.drillLeft;
+    const r1 = dr.update(deep, 0);
+    check("matkap bütçesi kare başına bir azalır",
+      dr.drillLeft === budget - 1 && r1 === null,
+      `bütçe ${budget} → ${dr.drillLeft}`);
+  }
 
   // 6) Bot benzetimi de süpürülmüş testi kullanır: iki örnek noktasının tam
   //    ortasındaki hedefi yakalar (eski nokta testi ıskalıyordu).
   const tg = makeAiGame(180, 720);
   const mr = tg.players[0].r;
-  const muzzleX = 180 + Math.cos(-0.02) * (mr + 12);
+  const muzzleX = M.robotMuzzlePoint(180, 420 - mr, mr, 1, -0.02).x;
   const step = sniper.baseSpeed + sniper.speedMul; // tam güç
   tg.players[1].x = muzzleX + step * 5.5;
   const through = M.aiSimulateShot(tg, 0, -0.02, 1, sniper);
   check("bot benzetimi: hızlı nişancı iki adım arasındaki hedefi yakalar",
     !!through && through.enemyDamage > 0,
     through && `hasar=${through.enemyDamage} isabet=${through.hit ? through.hit.x.toFixed(1) : "-"}`);
+}
+
+// ── 5e) Yardımcı cephaneler: Işınlanma Topu + Kanca ────────────────────
+group("Yardımcı cephaneler — ışınlanma topu + kanca");
+{
+  const tp = M.WEAPONS.find((w) => w.id === "teleportball");
+  const hk = M.WEAPONS.find((w) => w.id === "hook");
+  check("ışınlanma topu: hasarsız, değdiği yere ışınlar, robotlardan geçer",
+    !!tp && tp.damage === 0 && tp.teleport === true && tp.passPlayers === true);
+  check("kanca: hasarsız, yerçekimsiz düz uçuş + sürtünme, robotlardan geçer",
+    !!hk && hk.damage === 0 && hk.hook === true && hk.gravity === 0 && hk.drag > 0 && hk.passPlayers === true);
+
+  // Işınlanma topu fizik olarak normal mermi gibi uçar; temas bilgisi döner
+  // (patlama yerine Game.teleportShooter temayı noktayı kullanır).
+  const ground = makeFlatTerrain(960, 540, 420);
+  const ball = new M.Projectile(200, 300, 0, 9, tp);
+  let bhit = null;
+  for (let i = 0; i < 60 && !bhit; i++) { const r = ball.update(ground, 0); if (r) bhit = r; }
+  check("ışınlanma topu zemin temas noktasını bildirir",
+    !!bhit && bhit.hit === true && bhit.y >= 419 && bhit.y <= 421,
+    bhit && `y=${bhit.y.toFixed(1)}`);
+
+  // Kanca fizik: yerçekimsiz düz uçar, sürtünme hızını eritir, menzil sonunda
+  // tutunamadan kaybolur ({hit:false}).
+  const open = makeFlatTerrain(960, 540, 540); // zemin yok: açık gökyüzü
+  const hk1 = new M.Projectile(100, 200, 10, 0, hk);
+  let fizzled = null, straight = true;
+  for (let i = 0; i < 120 && !fizzled; i++) {
+    const r = hk1.update(open, 0);
+    if (r) fizzled = r;
+    if (hk1.vy !== 0) straight = false;
+  }
+  check("kanca yerçekimsiz düz uçar (vy 0 kalır)", straight);
+  check("kanca sürtünmeyle menzil sonunda tutunamadan kaybolur",
+    !!fizzled && fizzled.hit === false && hk1.dead);
+
+  // Işınlanma: robot temas sütununun yüzeyine taşınır; can değişmez, patlama olmaz.
+  const gtp = Object.create(M.Game.prototype);
+  const tshooter = makeEntity(M.CHARACTERS[0], 200, 420);
+  gtp.terrain = makeFlatTerrain(960, 540, 420);
+  gtp.players = [tshooter];
+  gtp.shooterIdx = 0;
+  gtp.explosions = [];
+  const hpBefore = tshooter.hp;
+  M.Game.prototype.teleportShooter.call(gtp, 700, 420);
+  check("ışınlanma: robot temas sütununun yüzeyine oturur, hasar almaz",
+    Math.abs(tshooter.x - 700) < 1 && tshooter.y >= 415 && tshooter.y <= 421 && tshooter.hp === hpBefore,
+    `x=${tshooter.x.toFixed(1)} y=${tshooter.y.toFixed(1)}`);
+  // Duvara değen top: robot sütunun TEPESİNE oturur (içine gömülmez).
+  const wallT = makeFlatTerrain(960, 540, 420);
+  for (let y = 200; y < 420; y++) for (let x = 498; x < 503; x++) wallT.solid[y * wallT.w + x] = 1;
+  gtp.terrain = wallT;
+  M.Game.prototype.teleportShooter.call(gtp, 500, 300);
+  check("ışınlanma: duvar kenarındaki temas sütun tepesine çıkarır",
+    tshooter.y === 199 && tshooter.y < 300,
+    `y=${tshooter.y}`);
+
+  // Kanca çekme: ankraja doğru ilerler, varınca ip bırakılır, hasar yok.
+  const hpull = Object.create(M.Game.prototype);
+  const hshooter = makeEntity(M.CHARACTERS[0], 200, 420);
+  hpull.terrain = makeFlatTerrain(960, 540, 420);
+  hpull.players = [hshooter];
+  hpull.shooterIdx = 0;
+  hpull.explosions = [];
+  hpull.tether = null;
+  const hpBefore2 = hshooter.hp;
+  M.Game.prototype.startHookPull.call(hpull, 600, 300);
+  check("kanca tutununca çekme durumu kurulur", !!hpull.tether && hpull.tether.ax === 600);
+  for (let i = 0; i < 200 && hpull.tether; i++) M.Game.prototype.updateTether.call(hpull);
+  check("kanca robotu ankraja çeker ve ip bırakılır",
+    hpull.tether === null && hshooter.x > 500 && hshooter.hp === hpBefore2,
+    `x=${hshooter.x.toFixed(1)} tether=${hpull.tether}`);
+
+  // Duvara çekilirken gövde katı maddeye girmeden durur ve ip kısa sürede çözülür.
+  const hwall = Object.create(M.Game.prototype);
+  const wshooter = makeEntity(M.CHARACTERS[0], 200, 420);
+  const wallT2 = makeFlatTerrain(960, 540, 420);
+  for (let y = 100; y < 420; y++) for (let x = 590; x < 610; x++) wallT2.solid[y * wallT2.w + x] = 1;
+  hwall.terrain = wallT2;
+  hwall.players = [wshooter];
+  hwall.shooterIdx = 0;
+  hwall.explosions = [];
+  M.Game.prototype.startHookPull.call(hwall, 600, 200); // ankraj duvarın İÇİNDE
+  for (let i = 0; i < 200 && hwall.tether; i++) M.Game.prototype.updateTether.call(hwall);
+  check("kanca duvara çekilirken gövde içeride kalmaz ve ip çözülür",
+    hwall.tether === null && wshooter.x + wshooter.r <= 592,
+    `x=${wshooter.x.toFixed(1)} tether=${hwall.tether}`);
 }
 
 // ── 5d) Yetenek efektleri — her modül kendi cast efektini taşır ─────────────
@@ -1095,7 +1391,7 @@ group("Zorluğa göre bot hasar ölçeği");
     check("ölçek yeniden atanabilir (rövanş)", players[1].aiDamageMult === M.aiDamageMultiplier("easy"));
   }
 
-  // Çıkış çarpanı: taban × (normal silahta) çekirdek bonusu × zorluk ölçeği.
+  // Hasar çarpanı: taban × (normal silahta) çekirdek bonusu × zorluk ölçeği.
   {
     const g = Object.create(M.Game.prototype);
     const shooter = makeEntity(M.CHARACTERS[0], 200, 420);
@@ -1103,7 +1399,7 @@ group("Zorluğa göre bot hasar ölçeği");
     shooter.weaponDamageMult = 1.07;
     shooter.aiDamageMult = 1;
     g.shotIsSkill = false;
-    check("çıkış çarpanı taban × çekirdek bonusunu içerir",
+    check("hasar çarpanı taban × çekirdek bonusunu içerir",
       Math.abs(g._shooterDamageMult(shooter) - 1.07) < 1e-9, String(g._shooterDamageMult(shooter)));
     g.shotIsSkill = true;
     check("yetenek mermisi çekirdek bonusunu almaz", Math.abs(g._shooterDamageMult(shooter) - 1.0) < 1e-9);
@@ -1335,8 +1631,8 @@ group("Geliştirme — türetilmiş build ve ödül döngüsü");
   const healDef = M.CHARACTERS[0]; // FIX-8: heal
   const fullUp = { upgrades: { chassis: 3, module: 3, core: 3 } };
   const full = M.resolveRobotBuild(healDef, fullUp, { upgradesEnabled: true });
-  check("Gövde III bütünlüğü tek çarpanla %10 artırır", full.maxHp === Math.round(healDef.hp * 1.10), `hp=${full.maxHp}`);
-  check("Gövde II kaplamayı +0.02 artırır", Math.abs(full.armor - (healDef.armor + 0.02)) < 1e-9, `armor=${full.armor}`);
+  check("Gövde III canı tek çarpanla %10 artırır", full.maxHp === Math.round(healDef.hp * 1.10), `hp=${full.maxHp}`);
+  check("Gövde II zırhı +0.02 artırır", Math.abs(full.armor - (healDef.armor + 0.02)) < 1e-9, `armor=${full.armor}`);
   check("Çekirdek III enerjiyi 85 yapar", full.maxStamina === 85);
   check("Çekirdek III silah bonusu toplam %7", Math.abs(full.weaponDamageMult - 1.07) < 1e-9);
   check("Gövde III savrulma direnci %10", Math.abs(full.knockbackTakenMult - 0.9) < 1e-9);
@@ -1545,6 +1841,617 @@ group("Atölye akışı ve sayfalama");
   check("ilk sayfadan geri gidilmez", wg.workshopPage === 0);
   wg.changeWorkshopPage(1);
   check("sonraki sayfaya geçilir", wg.workshopPage === 1);
+}
+
+// ── 8a) Atölye parça takma (mod sekmeleri + yuva paneli + taşıma) ────────
+group("Atölye parça takma");
+{
+  const fakeEl = () => ({
+    classList: { add() {}, remove() {}, toggle() {} },
+    style: {}, dataset: {}, textContent: "", innerHTML: "",
+    setAttribute() {}, appendChild() {}, removeChild() {}, children: [],
+    addEventListener() {}, querySelector: () => null, scrollLeft: 0, offsetLeft: 0,
+    clientWidth: 100, offsetWidth: 40, width: 0, height: 0,
+    getContext: () => ctx2,
+  });
+  const prevDoc = sandbox.document;
+  sandbox.document = {
+    getElementById: () => fakeEl(),
+    createElement: () => fakeEl(),
+    documentElement: { style: { setProperty() {} } },
+  };
+  const ctx2 = Object.assign(mockCtx(), {
+    fillText() {}, setLineDash() {}, strokeRect() {}, clearRect() {}, drawImage() {},
+    createLinearGradient: () => ({ addColorStop() {} }),
+    createRadialGradient: () => ({ addColorStop() {} }),
+    globalAlpha: 1, font: "", textAlign: "", textBaseline: "",
+  });
+
+  const pwg = Object.create(M.Game.prototype);
+  pwg.W = 960; pwg.H = 540;
+  pwg.input = { mouseX: 0, mouseY: 0, left: false, right: false, charging: false, power: 0 };
+  pwg.renderTimeMs = 0;
+  pwg.selectedChars = [];
+  pwg.updateHud = () => {};
+  pwg.workshopSelectedId = null;
+  pwg.workshopPage = 0;
+  pwg.workshopBranch = "chassis";
+  pwg.workshopFx = null;
+  pwg.workshopMode = "upgrades";
+  // 3 parça sahipte; biri (yükleyici) başka robota takılı ki taşıma sınansın.
+  pwg.profile = M.normalizeProfile({ version: 5, scrap: 300, parts: ["lehim_yamasi", "yedek_yukleyici", "denge_jiroskobu"] });
+  const ROBOT2 = M.CHARACTERS[0].id;
+  const OTHER = M.CHARACTERS[1].id;
+  pwg.profile = M.equipPart(pwg.profile, OTHER, "tool", "yedek_yukleyici").profile;
+
+  pwg.openWorkshop();
+  check("atölye geliştirme modunda açılır", pwg.workshopMode === "upgrades" && pwg.workshopSlotOpen === false);
+
+  let ok = true;
+  try { M.Game.prototype.renderWorkshop.call(pwg, ctx2); } catch (e) { ok = false; console.error(e); }
+  check("atölye mod sekmeleri çizilir (2 sekme)", ok && (pwg._workshopModeRects || []).length === 2);
+  check("geliştirme modunda 3 dal paneli", (pwg._workshopBranchRects || []).length === 3);
+  check("geliştirme modunda yuva paneli yok", (pwg._workshopSlotRects || []).length === 0);
+
+  // Mod değiştirme: 2 tuşu ve tıklama yolu.
+  pwg.handleWorkshopKey({ key: "2", code: "Digit2", preventDefault() {} });
+  check("2 tuşu parça moduna geçirir", pwg.workshopMode === "parts");
+  ok = true;
+  try { M.Game.prototype.renderWorkshop.call(pwg, ctx2); } catch (e) { ok = false; console.error(e); }
+  check("parça modu hatasız çizilir", ok);
+  check("parça modunda 8 alt yuva hücresi (4 yuva × 2)", (pwg._workshopSlotRects || []).length === 8, `= ${(pwg._workshopSlotRects || []).length}`);
+  check("parça modunda dal paneli yok", (pwg._workshopBranchRects || []).length === 3 && pwg._workshopSlotRects.length === 8);
+  M.Game.prototype.switchWorkshopMode.call(pwg, "upgrades");
+  M.Game.prototype.switchWorkshopMode.call(pwg, "parts");
+  check("yuvada takılı parça listede görünür (kask→—, gövde→yama)",
+    !!pwg._workshopSlotRects.find((r) => r.slot === "body"));
+
+  // Liste açma: yuvaya tıklama + Enter yolu.
+  const bodySlot = pwg._workshopSlotRects.find((r) => r.slot === "body");
+  M.Game.prototype.handleWorkshopClick.call(pwg, bodySlot.x + 4, bodySlot.y + 4);
+  check("yuvaya tıklamak listeyi açar", pwg.workshopSlotOpen === true && pwg.workshopSlot === "body");
+  M.Game.prototype.renderWorkshop.call(pwg, ctx2);
+  check("liste satırları: sahip olunan parçalar + Boş bırak",
+    (pwg._workshopPartRects || []).length === 2 && pwg._workshopPartRects[0].partId === "lehim_yamasi" && pwg._workshopPartRects[1].partId === null);
+
+  // Takma: liste satırına tıklama → yuva dolar, bildirim yeşil, liste kapanır.
+  const row = pwg._workshopPartRects[0];
+  M.Game.prototype.handleWorkshopClick.call(pwg, row.x + 4, row.y + 4);
+  check("satıra tıklamak parçayı 1. alt yuvaya takar", pwg.profile.robots[ROBOT2].loadout.body[0] === "lehim_yamasi");
+  check("takma sonrası liste kapanır + montaj efekti + yeşil bildirim",
+    pwg.workshopSlotOpen === false && !!pwg.workshopFx && pwg.workshopNotice && pwg.workshopNotice.color === "#8affc0");
+  M.Game.prototype.updateWorkshopFx.call(pwg, 99);
+  check("montaj efekti ve bildirim süre sonunda söner", pwg.workshopFx === null && pwg.workshopNotice === null);
+
+  // Parçalar robota kilitli değildir: başka robottaki parça bu robota da
+  // takılır ve eskisinde TAKILI KALIR (kullanıcı isteği).
+  // Yuva sırası döngüsel: body → tool (tek adım aşağı).
+  pwg.handleWorkshopKey({ key: "ArrowDown", code: "ArrowDown", preventDefault() {} });
+  check("ok tuşu yuva seçimini değiştirir", pwg.workshopSlot === "tool");
+  pwg.handleWorkshopKey({ key: "Enter", code: "Enter", preventDefault() {} });
+  check("Enter yuvayı açar", pwg.workshopSlotOpen === true);
+  M.Game.prototype.renderWorkshop.call(pwg, ctx2);
+  M.Game.prototype.applyWorkshopPart.call(pwg, "yedek_yukleyici");
+  check("parça ikinci robota da takılır", pwg.profile.robots[ROBOT2].loadout.tool[0] === "yedek_yukleyici");
+  check("ilk robotta takılı KALIR (kopya gerekmez)", pwg.profile.robots[OTHER].loadout.tool[0] === "yedek_yukleyici");
+  check("takma bildirimi parçayı söyler", /takıldı/.test(pwg.workshopNotice ? pwg.workshopNotice.text : ""));
+
+  // Sökme ve sahipsiz parça reddi.
+  M.Game.prototype.applyWorkshopPart.call(pwg, null);
+  check("Boş bırak alt yuvayı boşaltır", pwg.profile.robots[ROBOT2].loadout.tool[0] === null && /boşaltıldı/.test(pwg.workshopNotice.text));
+  M.Game.prototype.applyWorkshopPart.call(pwg, "kompozit_plaka");
+  check("sahipsiz parça takılamaz (kırmızı bildirim)", pwg.workshopNotice.color === "#ff9b9b" && pwg.profile.robots[ROBOT2].loadout.body[0] === "lehim_yamasi");
+
+  // Esc: açık liste önce kapanır, ikinci Esc ekrandan çıkar.
+  pwg.openWorkshopSlot("feet");
+  pwg.state = "WORKSHOP";
+  M.Game.prototype.goBack.call(pwg);
+  check("Esc açık listeyi kapatır (ekran kapanmaz)", pwg.workshopSlotOpen === false && pwg.state === "WORKSHOP");
+  M.Game.prototype.goBack.call(pwg);
+  check("ikinci Esc atölyeden çıkar", pwg.state === "MODE_SELECT");
+
+  // Parça noktaları çizici (karakter seçim rozeti) — boş/dolu karışık girdiyle.
+  let dotsOk = true;
+  try { M._drawPartDots(mockCtx(), 100, 20, { body: "lehim_yamasi", tool: "yedek_yukleyici" }); } catch (e) { dotsOk = false; }
+  check("parça noktaları çizilir (boş/dolu karışık)", dotsOk);
+  check("bilinmeyen parça noktada yok sayılır", (() => { try { M._drawPartDots(mockCtx(), 100, 20, { body: "hayalet" }); return true; } catch (e) { return false; } })());
+
+  // Karakter seçim ekranı smoke testi: parça rozeti çizim yolu burada da
+  // çalışıyor mu (renderCharSelect başka yerde test edilmiyordu).
+  const cs = Object.create(M.Game.prototype);
+  cs.W = 960; cs.H = 540;
+  cs.input = { mouseX: -1, mouseY: -1, left: false, right: false, charging: false, power: 0 };
+  cs.renderTimeMs = 0;
+  cs.mode = "computer";
+  cs.playerCount = 2;
+  cs.charSelectPhase = 0;
+  cs.charPage = 0;
+  cs.selectedChars = [M.CHARACTERS[0], M.CHARACTERS[1]];
+  cs.playerControls = ["human", "bot"];
+  cs.profile = pwg.profile; // parça takılı profil → rozet dolu nokta çizer
+  cs.updateHud = () => {};
+  let csOk = true;
+  try { M.Game.prototype.renderCharSelect.call(cs, ctx2); } catch (e) { csOk = false; console.error(e); }
+  check("karakter seçimi parça rozetiyle hatasız çizilir", csOk);
+
+  // ── Aksesuar çizimi: parça verilince zenginleşir, verilmeyince birebir korunur ──
+  const robotDef = M.CHARACTERS[0];
+  const sig = (parts) => {
+    const ops = [];
+    M.drawRobot(mockCtx(ops), {
+      cx: 100, cy: 100, r: 20, facing: 1, charDef: robotDef, timeMs: 500,
+      motion: { vx: 0, vy: 0, onGround: true }, parts,
+    });
+    return ops.join("|");
+  };
+  const plain = sig(undefined);
+  check("parçasız çizim değişmedi (undefined = null)", plain === sig(null));
+  check("takılı parçalar çizimi zenginleştirir",
+    sig({ body: "lehim_yamasi", helmet: "nisan_mercegi", tool: "yedek_yukleyici", feet: "denge_jiroskobu" }) !== plain);
+  check("bilinmeyen parça çizimi değiştirmez", sig({ body: "hayalet" }) === plain);
+  // Şekil aileleri: aynı yuvadaki farklı parçalar farklı donanım çizer.
+  check("kask şekil aileleri farklı çizim üretir",
+    sig({ helmet: "nisan_mercegi" }) !== sig({ helmet: "termal_vizor" }) &&
+    sig({ helmet: "termal_vizor" }) !== sig({ helmet: "zirh_kaski" }));
+  check("gövde şekil aileleri farklı çizim üretir",
+    sig({ body: "lehim_yamasi" }) !== sig({ body: "kompozit_plaka" }) &&
+    sig({ body: "kompozit_plaka" }) !== sig({ body: "sogutucu_radyator" }));
+  check("ayak şekil aileleri farklı çizim üretir",
+    sig({ feet: "turbo_palet" }) !== sig({ feet: "yay_takozlari" }) &&
+    sig({ feet: "yay_takozlari" }) !== sig({ feet: "sicrama_yayi" }));
+  // Bilinmeyen ikon şekli yuvanın yedek şekline düşer ve patlamaz.
+  M.PARTS.push({ id: "test_sekil", label: "Test Şekil", slot: "helmet", price: 1, desc: "test", effects: { armorFlat: 0.01 }, icon: { shape: "yok_boyle_sekil", tint: "#ffffff", accent: "#ffffff" } });
+  let seklOk = true;
+  try { sig({ helmet: "test_sekil" }); } catch (e) { seklOk = false; console.error(e); }
+  M.PARTS.pop();
+  check("bilinmeyen ikon şekli yedek şekle düşer (patlamaz)", seklOk);
+
+  // İki alt yuva: ikinci donanım AYRI ve KÜÇÜLTÜLMÜŞ çizilir (üst üste binmez).
+  const onePartOps = [];
+  M._rbPartAccessories(mockCtx(onePartOps), 20, M._rbPartSpecs({ body: ["lehim_yamasi", null] }), 400, false);
+  const twoPartOps = [];
+  M._rbPartAccessories(mockCtx(twoPartOps), 20, M._rbPartSpecs({ body: ["lehim_yamasi", "kompozit_plaka"] }), 400, false);
+  check("iki donanım tek donanımdan fazla çizim üretir", twoPartOps.length > onePartOps.length);
+  check("ikinci donanım küçültülerek çizilir (scale çağrısı)",
+    twoPartOps.some((o) => o.startsWith("scale(")) && !onePartOps.some((o) => o.startsWith("scale(")));
+  // Regresyon: ikinci donanımın ölçeği ÖNCE yuvanın anatomik çapasına, SONRA
+  // geri uygulanır (translate → scale → translate). Eski sürüm tek translate
+  // ile ölçekliyordu: şekil robot MERKEZİ çevresinde küçülüp sabit bir köşeye
+  // kayıyordu — kask omuza, aparat göğse düşüp gövdeden kopuyordu.
+  const trNums = (o) => o.slice("translate(".length, -1).split(",").map(Number);
+  const near = (a, b) => Math.abs(a - b) < 1e-6;
+  const anchoredOk = M.PART_SLOTS.every((slot) => {
+    const sec = M._RB_PART_SECONDARY[slot];
+    if (!sec) return false;
+    const lo = { helmet: [null, null], body: [null, null], tool: [null, null], feet: [null, null] };
+    lo[slot][1] = M.PARTS.find((p) => p.slot === slot).id;
+    const ops = [];
+    M._rbPartAccessories(mockCtx(ops), 20, M._rbPartSpecs(lo), 400, false);
+    const trs = ops.filter((o) => o.startsWith("translate(")).map(trNums);
+    return trs.length === 2
+      && near(trs[0][0], (sec.ax + sec.dx) * 20) && near(trs[0][1], (sec.ay + sec.dy) * 20)
+      && near(trs[1][0], -sec.ax * 20) && near(trs[1][1], -sec.ay * 20)
+      && ops.some((o) => o.startsWith("scale("));
+  });
+  check("ikinci donanım yuvanın çapası çevresinde ölçeklenir (robot merkezi değil)", anchoredOk);
+
+  check("dört yuvada da ikişer donanım çizilebilir", (() => {
+    const ops3 = [];
+    M._rbPartAccessories(mockCtx(ops3), 20, M._rbPartSpecs({
+      helmet: ["nisan_mercegi", "zirh_kaski"],
+      body: ["lehim_yamasi", "kompozit_plaka"],
+      tool: ["takviye_bobini", "zamanlayici_cip"],
+      feet: ["turbo_palet", "sicrama_yayi"],
+    }), 400, false);
+    return ops3.filter((o) => o.startsWith("scale(")).length === 4;
+  })());
+
+  // ── Canlı efektler: yalnız aksesuar çizici karşılaştırılır (gövde salınımı
+  // gibi zaman bağımlı çizimler testi kirletmesin). ──
+  const accOps = (lo, timeMs, moving) => {
+    const ops2 = [];
+    M._rbPartAccessories(mockCtx(ops2), 20, M._rbPartSpecs(lo), timeMs, !!moving);
+    return ops2.join("|");
+  };
+  check("aksesuar çizimi deterministik (aynı zaman → aynı çizim)",
+    accOps({ helmet: "termal_vizor", tool: "zamanlayici_cip", feet: "turbo_palet" }, 777) ===
+    accOps({ helmet: "termal_vizor", tool: "zamanlayici_cip", feet: "turbo_palet" }, 777));
+  check("tarama bandı canlı: farklı zaman → farklı çizim",
+    accOps({ helmet: "termal_vizor" }, 0) !== accOps({ helmet: "termal_vizor" }, 450));
+  check("jiroskop döner: farklı zaman → farklı çizim",
+    accOps({ helmet: "denge_sensoru" }, 0) !== accOps({ helmet: "denge_sensoru" }, 450));
+  check("çip LED sırası yanar: farklı zaman → farklı çizim",
+    accOps({ tool: "zamanlayici_cip" }, 0) !== accOps({ tool: "zamanlayici_cip" }, 400));
+  check("radyatör ısı dalgası: farklı zaman → farklı çizim",
+    accOps({ body: "sogutucu_radyator" }, 0) !== accOps({ body: "sogutucu_radyator" }, 300));
+  check("turbo egzoz rölantide de titreşir: farklı zaman → farklı çizim",
+    accOps({ feet: "turbo_palet" }, 0) !== accOps({ feet: "turbo_palet" }, 160));
+  check("turbo egzoz yürürken güçlenir (walking farkı)",
+    accOps({ feet: "turbo_palet" }, 300, true) !== accOps({ feet: "turbo_palet" }, 300, false));
+  check("statik zırh kaskı animasyonsuz (zaman değişse de aynı)",
+    accOps({ helmet: "zirh_kaski" }, 0) === accOps({ helmet: "zirh_kaski" }, 450));
+
+  // Build parçaları taşır; Entity maç içi aksesuar yolunu (partLoadout) besler.
+  const bwp = M.resolveRobotBuild(robotDef, { upgrades: {}, loadout: { helmet: null, body: "lehim_yamasi", tool: null, feet: null } }, { upgradesEnabled: true });
+  check("build parçaları sanitize loadout olarak taşır (dizi)",
+    !!bwp.parts && bwp.parts.body[0] === "lehim_yamasi" && bwp.parts.helmet[0] === null);
+  const ewp = new M.Entity(0, 0, "#fff", "T", robotDef, bwp);
+  check("Entity maç içi parça bilgisini taşır", !!ewp.partLoadout && ewp.partLoadout.body[0] === "lehim_yamasi");
+  const ep = new M.Entity(0, 0, "#fff", "T", robotDef, null);
+  check("parçasız/bot Entity boş loadout taşır", ep.partLoadout === null);
+
+  // ── İki alt yuva (v6): hücre seçimi + indeksli takma ───────────────────
+  const savedProfileV6 = pwg.profile; // sonraki maç kontrolleri bu profili bekliyor
+  pwg.state = "WORKSHOP";
+  pwg.profile = M.normalizeProfile({ version: 6, scrap: 0, parts: M.PARTS.filter((p) => p.slot === "body").map((p) => p.id) });
+  pwg.workshopSlot = "body";
+  pwg.workshopSlotIndex = 0;
+  pwg.workshopSlotOpen = false;
+  M.Game.prototype.renderWorkshop.call(pwg, ctx2);
+  const cells = pwg._workshopSlotRects.filter((r) => r.slot === "body");
+  check("gövde yuvasında iki alt hücre var", cells.length === 2 && cells[0].index === 0 && cells[1].index === 1);
+  M.Game.prototype.handleWorkshopClick.call(pwg, cells[1].x + 4, cells[1].y + 4);
+  check("ikinci hücre 2. alt yuvayı açar", pwg.workshopSlotOpen === true && pwg.workshopSlotIndex === 1);
+  M.Game.prototype.renderWorkshop.call(pwg, ctx2);
+  const firstRow = pwg._workshopPartRects[0];
+  M.Game.prototype.handleWorkshopClick.call(pwg, firstRow.x + 4, firstRow.y + 4);
+  check("seçim 2. alt yuvaya yazılır (1. yuva boş kalır)",
+    pwg.profile.robots[ROBOT2].loadout.body[1] !== null && pwg.profile.robots[ROBOT2].loadout.body[0] === null,
+    JSON.stringify(pwg.profile.robots[ROBOT2].loadout.body));
+  M.Game.prototype.openWorkshopSlot.call(pwg, "body", 0);
+  M.Game.prototype.renderWorkshop.call(pwg, ctx2);
+  const secondRow = pwg._workshopPartRects[1];
+  M.Game.prototype.handleWorkshopClick.call(pwg, secondRow.x + 4, secondRow.y + 4);
+  check("aynı yuvada iki parça bir arada durur",
+    pwg.profile.robots[ROBOT2].loadout.body.filter(Boolean).length === 2,
+    JSON.stringify(pwg.profile.robots[ROBOT2].loadout.body));
+  // Liste etiketi parçanın HANGİ alt yuvada takılı olduğunu bilir.
+  M.Game.prototype.openWorkshopSlot.call(pwg, "body", 0);
+  M.Game.prototype.renderWorkshop.call(pwg, ctx2);
+  const otherPid = pwg.profile.robots[ROBOT2].loadout.body[1];
+  check("diğer alt yuvadaki parça listede görünür (✓ işareti)",
+    !!pwg._workshopPartRects.find((r) => r.partId === otherPid));
+  // ←/→ alt yuva seçer (yuva listesi kapalıyken).
+  pwg.workshopSlotOpen = false;
+  pwg.workshopSlotIndex = 0;
+  M.Game.prototype.handleWorkshopKey.call(pwg, { key: "ArrowRight", code: "ArrowRight", preventDefault() {} });
+  check("sağ ok 2. alt yuvayı seçer", pwg.workshopSlotIndex === 1);
+  M.Game.prototype.handleWorkshopKey.call(pwg, { key: "ArrowLeft", code: "ArrowLeft", preventDefault() {} });
+  check("sol ok 1. alt yuvayı seçer", pwg.workshopSlotIndex === 0);
+  // Enter, seçili alt yuva için listeyi açar.
+  M.Game.prototype.handleWorkshopKey.call(pwg, { key: "ArrowRight", code: "ArrowRight", preventDefault() {} });
+  M.Game.prototype.handleWorkshopKey.call(pwg, { key: "Enter", code: "Enter", preventDefault() {} });
+  check("Enter seçili ALT yuvanın listesini açar", pwg.workshopSlotOpen === true && pwg.workshopSlotIndex === 1);
+  pwg.workshopSlotOpen = false;
+  pwg.workshopSlotIndex = 0;
+  pwg.profile = savedProfileV6;
+
+  // ── Yuva listesi sayfalanır (yuva başına 6 parça + "Boş bırak" = 7 satır) ──
+  const savedProfile = pwg.profile; // sonraki maç kontrolleri bu profili bekliyor
+  pwg.profile = M.normalizeProfile({ version: 5, scrap: 0, parts: M.PARTS.filter((p) => p.slot === "body").map((p) => p.id) });
+  pwg.workshopSlot = "body";
+  pwg.workshopSlotOpen = true;
+  pwg.workshopPartCursor = 0;
+  pwg.workshopPartPage = 0;
+  M.Game.prototype.renderWorkshop.call(pwg, ctx2);
+  check("yuva listesi sayfa başına 4 satır", (pwg._workshopPartRects || []).length === 4, `= ${(pwg._workshopPartRects || []).length}`);
+  check("sayfa göstergesi 1/2", pwg.workshopPartPage === 0);
+  for (let i = 0; i < 6; i++) M.Game.prototype._moveWorkshopPartCursor.call(pwg, 1);
+  check("imleç listeyi sonuna kadar gezer ve sayfayı kaydırır", pwg.workshopPartCursor === 6 && pwg.workshopPartPage === 1,
+    `cursor=${pwg.workshopPartCursor} page=${pwg.workshopPartPage}`);
+  M.Game.prototype.renderWorkshop.call(pwg, ctx2);
+  check("son sayfada kalan satırlar (2 + Boş bırak)", (pwg._workshopPartRects || []).length === 3,
+    `= ${(pwg._workshopPartRects || []).length}`);
+  check("son satır Boş bırak", pwg._workshopPartRects[2] && pwg._workshopPartRects[2].partId === null);
+  // İmleci ilk satıra alıp profili eski hâline dön (sonraki kontroller için).
+  pwg.workshopPartCursor = 0;
+  pwg.workshopPartPage = 0;
+  pwg.workshopSlotOpen = false;
+  pwg.profile = savedProfile;
+
+  // ── Turbo Palet: adım uzunluğu ölçeklenir, animasyon fazı mesafeye kilitli kalır ──
+  const flat = { w: 960, h: 540, surfaceBelow: () => 460, isSolid: () => false };
+  const slow = new M.Entity(100, 460, "#fff", "Y", robotDef, null);
+  slow.onGround = true;
+  const turboBuild = M.resolveRobotBuild(robotDef, { upgrades: {}, loadout: { helmet: null, body: null, tool: null, feet: "turbo_palet" } }, { upgradesEnabled: true });
+  const fast = new M.Entity(100, 460, "#fff", "H", robotDef, turboBuild);
+  fast.onGround = true;
+  check("yürüme hızı çarpanı Entity'ye geçer", Math.abs(slow.moveSpeedMult - 1) < 1e-9 && Math.abs(fast.moveSpeedMult - 1.10) < 1e-9, `slow=${slow.moveSpeedMult} fast=${fast.moveSpeedMult}`);
+  for (let i = 0; i < 3; i++) { M.Entity.prototype.walk.call(slow, 1, flat); M.Entity.prototype.walk.call(fast, 1, flat); }
+  const slowDx = slow.x - 100, fastDx = fast.x - 100;
+  check("turbo palet adımı %10 uzatır", Math.abs(fastDx - slowDx * 1.10) < 1e-9, `slow=${slowDx} fast=${fastDx}`);
+  // Faz mesafeye kilitli: iki robotta da (faz / alınan yol) aynıdır → ayak kaymaz.
+  check("yürüyüş fazı mesafeye kilitli kalır (kayma yok)",
+    Math.abs(slow.walkPhase / slowDx - fast.walkPhase / fastDx) < 1e-9,
+    `slow=${slow.walkPhase / slowDx} fast=${fast.walkPhase / fastDx}`);
+
+  // ── Maç entegrasyonu: takılı parça maç başı build'ine işler ────────────
+  // game.js startGame, insan robotu için TAM OLARAK şu ifadeyi kurar:
+  //   resolveRobotBuild(def, getRobotProgress(profile, def.id), { upgradesEnabled: true })
+  // Zinciri parça parça doğrulamak, tam startGame'in arazi üretimini tetiklemesine
+  // (vm sandbox canvas stub'ında ağır) gerek kalmadan aynı sözleşmeyi kanıtlar.
+  const humanRp = M.getRobotProgress(pwg.profile, M.CHARACTERS[0].id);
+  check("getRobotProgress loadout taşır (parça maç yolunda)", humanRp.loadout.body[0] === "lehim_yamasi", JSON.stringify(humanRp.loadout));
+  const humanBuild = M.resolveRobotBuild(M.CHARACTERS[0], humanRp, { upgradesEnabled: true });
+  check("maç başı build parçayı içerir", humanBuild.maxHp === M.CHARACTERS[0].hp + 15, `= ${humanBuild.maxHp}`);
+  const he = new M.Entity(200, 420, M.CHARACTERS[0].color, M.CHARACTERS[0].label, M.CHARACTERS[0], humanBuild);
+  check("Entity parçalı bütünlüğü alır", he.maxHp === M.CHARACTERS[0].hp + 15);
+  // Bot tarafı: profil göçü/parça yolu botlara uygulanmaz (taban tanım).
+  const botBuild = M.resolveRobotBuild(M.CHARACTERS[1], null, { upgradesEnabled: false });
+  check("bot parçasız oynar (taban tanım)", botBuild.maxHp === M.CHARACTERS[1].hp && botBuild.skill.powerMult === 1);
+
+  sandbox.document = prevDoc;
+}
+
+// ── 8b) Cephane Pazarı akışı (ekran + satın alma + maç entegrasyonu) ────────
+group("Cephane Pazarı akışı");
+{
+  const mkEl = () => {
+    const kids = [];
+    return {
+      classList: { add() {}, remove() {}, toggle() {}, contains: () => true },
+      style: {}, dataset: {}, textContent: "", innerHTML: "",
+      setAttribute() {}, children: kids,
+      appendChild(n) { kids.push(n); return n; },
+      removeChild(n) { const i = kids.indexOf(n); if (i >= 0) kids.splice(i, 1); return n; },
+      get lastChild() { return kids[kids.length - 1]; },
+      addEventListener() {}, querySelector: () => null, querySelectorAll: () => [],
+      scrollLeft: 0, offsetLeft: 0, clientWidth: 100, offsetWidth: 40,
+      width: 0, height: 0, getContext: () => ctxStub,
+    };
+  };
+  const ctxStub = Object.assign(mockCtx(), {
+    fillText() {}, setLineDash() {}, strokeRect() {}, clearRect() {}, drawImage() {},
+    createLinearGradient: () => ({ addColorStop() {} }),
+    globalAlpha: 1, font: "", textAlign: "", textBaseline: "",
+  });
+  const nodes = {};
+  const prevDoc = sandbox.document;
+  sandbox.document = {
+    getElementById: (id) => (nodes[id] = nodes[id] || mkEl()),
+    createElement: () => mkEl(),
+    documentElement: { style: { setProperty() {} } },
+  };
+
+  // ── Ekran, sayfalama ve satın alma (DOM'suz) ──────────────────────────────
+  const mg = Object.create(M.Game.prototype);
+  mg.W = 960; mg.H = 540;
+  mg.input = { mouseX: -1, mouseY: -1, left: false, right: false, charging: false, power: 0 };
+  mg.renderTimeMs = 0;
+  mg.marketWeaponPage = 0;
+  mg.marketFx = null; mg.marketNotice = null;
+  mg.profile = M.normalizeProfile({ version: 3, scrap: 500 });
+  mg.selectedChars = [];
+  mg.updateHud = () => {};
+
+  mg.openMarket();
+  check("pazar durumu açılır (ortak depo — robot seçici yok)", mg.state === "MARKET",
+    mg.state);
+
+  let marketRenderOk = true;
+  try { M.Game.prototype.renderMarket.call(mg, ctxStub); } catch (e) { marketRenderOk = false; console.error(e); }
+  check("pazar ekranı hatasız çizilir", marketRenderOk);
+  check("mühimmat grid'i sayfa başına 15 kart üretir (3×5)", (mg._marketWeaponRects || []).length === Math.min(15, M.sellableWeapons().length));
+  check("mühimmat sayfası 2 sayfaya böler", Math.ceil(M.sellableWeapons().length / 15) === 2);
+
+  // Karta tıklamak 1 mermi alır (fiyatı düşerek) ve parıltı/bildirim üretir.
+  const card = mg._marketWeaponRects[0];
+  const boughtId = card.spec.id;
+  const price = M.ammoPriceFor(boughtId);
+  M.Game.prototype.handleMarketClick.call(mg, card.x + 4, card.y + 4, false);
+  check("karta tıklamak 1 mermi alır (ortak depo)", M.getAmmoDepot(mg.profile)[boughtId] === 1);
+  check("satın alma Hurda düşer", mg.profile.scrap === 500 - price, `= ${mg.profile.scrap}`);
+  check("satın alma parıltısı ve bildirimi çıkar",
+    !!mg.marketFx && mg.marketFx.weaponId === boughtId && !!mg.marketNotice && mg.marketNotice.color === "#8affc0");
+  M.Game.prototype.updateMarketFx.call(mg, 999);
+  check("parıltı ve bildirim süre sonunda temizlenir", mg.marketFx === null && mg.marketNotice === null);
+
+  // Shift ile toplu alım ve yetersiz bakiye reddi.
+  mg.profile = M.normalizeProfile({ version: 3, scrap: 5000 });
+  M.Game.prototype.handleMarketClick.call(mg, card.x + 4, card.y + 4, true);
+  check("Shift ile toplu alım yapılır", M.getAmmoDepot(mg.profile)[boughtId] === M.AMMO_BULK_QTY);
+  mg.profile = M.normalizeProfile({ version: 3, scrap: 0 });
+  M.Game.prototype.handleMarketClick.call(mg, card.x + 4, card.y + 4, false);
+  check("yetersiz Hurda satın almayı engeller", mg.marketNotice && mg.marketNotice.color === "#ff9b9b");
+
+  // Sayfa sınırları ve geri dönüş.
+  mg.marketWeaponPage = 0; mg.changeMarketWeaponPage(-1);
+  check("ilk mühimmat sayfasından geri gidilmez", mg.marketWeaponPage === 0);
+  mg.marketWeaponPage = 1; mg.changeMarketWeaponPage(1);
+  check("son mühimmat sayfasından ileri gidilmez", mg.marketWeaponPage === 1);
+  mg.goBack();
+  check("Esc pazardan ana menüye döner", mg.state === "MODE_SELECT");
+
+  // ── Maça yükleme ve maç sonu iadesi (gerçek startGame/quitToMenu) ─────────
+  const sg = Object.create(M.Game.prototype);
+  sg.W = 960; sg.H = 540;
+  sg.bot = { cancel() {}, resetMatch() {} };
+  sg.bots = [];
+  sg.mode = "computer";
+  sg.difficulty = "normal";
+  sg.selectedMap = M.MAPS[0];
+  sg.selectedChars = [M.CHARACTERS[0], M.CHARACTERS[1]];
+  sg.playerControls = ["human", "bot"];
+  sg.matchProgress = null;
+  sg.input = { mouseX: 0, mouseY: 0, left: false, right: false, charging: false, power: 0 };
+  sg.players = [];
+  sg.projectiles = []; sg.explosions = []; sg.skillFx = []; sg.damagePopups = [];
+  sg.mines = []; sg.fires = [];
+  sg.sessionId = "t";
+  sg.renderTimeMs = 0;
+  sg.profile = M.normalizeProfile({ version: 3, scrap: 100, robots: { [M.CHARACTERS[0].id]: { ammo: { grenade: 5, sniper: 2 } } } });
+  // Eski robot depoları normalizeProfile göçüyle köke (ortak depoya) taşınır.
+  sg.startGame();
+  const human = sg.players[0];
+  const gCap = M.weaponBattleMax(M.weaponById("grenade"));
+  const sCap = M.weaponBattleMax(M.weaponById("sniper"));
+  check("depo maç başında savaş tavanına kadar yüklenir",
+    human.ammo.grenade === gCap && human.ammo.sniper === sCap,
+    `grenade=${human.ammo.grenade} sniper=${human.ammo.sniper}`);
+  check("bot taban mühimmatla oynar (depo yüklenmez)", sg.players[1].ammo.grenade === M.initialAmmo().grenade && !sg.players[1].ammoDepot);
+  check("ortak depo profilde dokunulmaz kalır (yenilenmeye dayanıklı)",
+    M.getAmmoDepot(sg.profile).grenade === 5);
+  check("yüklenen depo dilimi snapshot'ı tutulur (tavan dâhil)",
+    human.ammoDepot && human.ammoDepot.grenade === gCap - M.initialAmmo().grenade &&
+    human.ammoDepot.sniper === sCap - M.initialAmmo().sniper,
+    JSON.stringify(human.ammoDepot));
+
+  // 4 el bombası atıldı (3 taban + 1 depo); nişancı hiç kullanılmadı.
+  human.ammo.grenade -= 4;
+  sg.quitToMenu();
+  check("maç sonunda harcanmayan mermi ortak depoya döner",
+    M.getAmmoDepot(sg.profile).grenade === 4, `= ${M.getAmmoDepot(sg.profile).grenade}`);
+  check("kullanılmayan cephane eksiksiz döner", M.getAmmoDepot(sg.profile).sniper === 2);
+  check("iade sonrası snapshot temizlenir", human.ammoDepot === null);
+  check("iade iki kez uygulanmaz", (sg._settleAmmoDepot(), M.getAmmoDepot(sg.profile).grenade === 4));
+
+  sandbox.document = prevDoc;
+}
+
+// ── 8c) Parça pazarı akışı (sekmeler + satın alma + Atölye işareti) ──────
+group("Parça pazarı akışı");
+{
+  const mkEl = () => {
+    const kids = [];
+    return {
+      classList: { add() {}, remove() {}, toggle() {}, contains: () => true },
+      style: {}, dataset: {}, textContent: "", innerHTML: "",
+      setAttribute() {}, children: kids,
+      appendChild(n) { kids.push(n); return n; },
+      removeChild(n) { const i = kids.indexOf(n); if (i >= 0) kids.splice(i, 1); return n; },
+      get lastChild() { return kids[kids.length - 1]; },
+      addEventListener() {}, querySelector: () => null, querySelectorAll: () => [],
+      scrollLeft: 0, offsetLeft: 0, clientWidth: 100, offsetWidth: 40,
+      width: 0, height: 0, getContext: () => ctxStub,
+    };
+  };
+  const ctxStub = Object.assign(mockCtx(), {
+    fillText() {}, setLineDash() {}, strokeRect() {}, clearRect() {}, drawImage() {},
+    createLinearGradient: () => ({ addColorStop() {} }),
+    globalAlpha: 1, font: "", textAlign: "", textBaseline: "",
+  });
+  const nodes = {};
+  const prevDoc = sandbox.document;
+  sandbox.document = {
+    getElementById: (id) => (nodes[id] = nodes[id] || mkEl()),
+    createElement: () => mkEl(),
+    documentElement: { style: { setProperty() {} } },
+  };
+
+  const pg = Object.create(M.Game.prototype);
+  pg.W = 960; pg.H = 540;
+  pg.input = { mouseX: -1, mouseY: -1, left: false, right: false, charging: false, power: 0 };
+  pg.renderTimeMs = 0;
+  pg.marketWeaponPage = 0;
+  pg.marketPartPage = 0;
+  pg.marketTab = "ammo";
+  pg.marketFx = null; pg.marketNotice = null;
+  pg.profile = M.normalizeProfile({ version: 5, scrap: 500 });
+  pg.selectedChars = [];
+  pg.updateHud = () => {};
+  pg.openMarket();
+
+  // Varsayılan sekme cephane; 5 sekme (cephane + dört yuva) ve sekme başına kartlar.
+  let ok = true;
+  try { M.Game.prototype.renderMarket.call(pg, ctxStub); } catch (e) { ok = false; console.error(e); }
+  check("pazar 5 sekme üretir (cephane + 4 yuva)", ok && (pg._marketTabRects || []).length === 5);
+  check("varsayılan sekme cephane", pg.marketTab === "ammo" && (pg._marketWeaponRects || []).length > 0);
+  check("cephane sekmesinde parça kartı yok", (pg._marketPartRects || []).length === 0);
+
+  // Yuva sekmesine geçiş: tıklama yolu (KASK) + klavye yolu.
+  const helmetTabRect = pg._marketTabRects[1];
+  M.Game.prototype.handleMarketClick.call(pg, helmetTabRect.x + 4, helmetTabRect.y + 4, false);
+  check("KASK sekmesine tıklama geçirir", pg.marketTab === "helmet");
+  ok = true;
+  try { M.Game.prototype.renderMarket.call(pg, ctxStub); } catch (e) { ok = false; console.error(e); }
+  check("parça ekranı hatasız çizilir", ok);
+  const slotParts = M.PARTS.filter((p) => p.slot === "helmet");
+  check("yuva sekmesi yalnız o yuvanın parçalarını gösterir",
+    (pg._marketPartRects || []).length === slotParts.length && pg._marketPartRects.every((r) => r.part.slot === "helmet"),
+    `= ${(pg._marketPartRects || []).length}`);
+  check("parça sekmesinde mühimmat kartı yok", (pg._marketWeaponRects || []).length === 0);
+  check("yuva başına tek sayfa (6 parça)", slotParts.length <= 15);
+  pg.changeMarketPage(1);
+  check("parçalarda sayfa sınırı korunur", pg.marketPartPage === 0);
+  // Sekmeler arası geçiş: GÖVDE'ye klavye/çağrı yolu.
+  M.Game.prototype.switchMarketTab.call(pg, "body");
+  check("gövde sekmesine geçilir", pg.marketTab === "body");
+
+  // Satın alma: en ucuz parça (Lehim Yaması, 40) kart tıklamasıyla alınır.
+  M.Game.prototype.renderMarket.call(pg, ctxStub);
+  const bodySlotParts = M.PARTS.filter((p) => p.slot === "body");
+  const cheapest = bodySlotParts.reduce((a, b) => (b.price < a.price ? b : a), bodySlotParts[0]);
+  const card = (pg._marketPartRects || []).find((r) => r.part.id === cheapest.id);
+  check("gövde sekmesinde en ucuz parça kartı bulunur", !!card);
+  const scrapBefore = pg.profile.scrap;
+  M.Game.prototype.handleMarketClick.call(pg, card.x + 4, card.y + 4, false);
+  check("parça satın alınır (envantere girer)", M.getOwnedParts(pg.profile).includes(cheapest.id));
+  check("satın alma Hurda düşer", pg.profile.scrap === scrapBefore - cheapest.price, `= ${pg.profile.scrap}`);
+  check("satın alma parıltısı/bildirimi parçaya bağlanır",
+    !!pg.marketFx && pg.marketFx.partId === cheapest.id && !!pg.marketNotice && pg.marketNotice.color === "#8affc0");
+
+  // Aynı parçaya ikinci tıklama: benzersiz parça reddi (kırmızı bildirim).
+  M.Game.prototype.handleMarketClick.call(pg, card.x + 4, card.y + 4, false);
+  check("aynı parça ikinci kez alınamaz (benzersiz)", pg.marketNotice && pg.marketNotice.color === "#ff9b9b");
+  check("tekrar tıklama envanteri büyütmez", M.getOwnedParts(pg.profile).length === 1);
+
+  // Yetersiz bakiye: bildirim ve alım yok.
+  pg.profile = M.normalizeProfile({ version: 5, scrap: 0 });
+  M.Game.prototype.renderMarket.call(pg, ctxStub);
+  const poorCard = pg._marketPartRects.find((r) => r.part.id === "kompozit_plaka");
+  M.Game.prototype.handleMarketClick.call(pg, poorCard.x + 4, poorCard.y + 4, false);
+  check("yetersiz Hurda parça alımını engeller", pg.marketNotice && pg.marketNotice.color === "#ff9b9b" && M.getOwnedParts(pg.profile).length === 0);
+
+  // Takılı parça kartı "Takılı → robot" durumuna geçer (Atölye işareti).
+  pg.profile = M.normalizeProfile({ version: 5, scrap: 500, parts: ["lehim_yamasi"] });
+  const eq = M.equipPart(pg.profile, M.CHARACTERS[0].id, "body", "lehim_yamasi");
+  pg.profile = eq.profile;
+  M.Game.prototype.renderMarket.call(pg, ctxStub);
+  const equippedCard = pg._marketPartRects.find((r) => r.part.id === "lehim_yamasi");
+  check("takılı parça kartta işaretlenir",
+    !!equippedCard && (pg._marketEquippedMap()["lehim_yamasi"] || []).includes(M.CHARACTERS[0].id));
+  // Aynı parça ikinci robota da takılınca kart "2 robotta" durumuna geçer.
+  const eq2 = M.equipPart(pg.profile, M.CHARACTERS[1].id, "body", "lehim_yamasi");
+  pg.profile = eq2.profile;
+  check("aynı parça iki robotta birden takılı olabilir",
+    (pg._marketEquippedMap()["lehim_yamasi"] || []).length === 2, JSON.stringify(pg._marketEquippedMap()["lehim_yamasi"]));
+
+  // ── Yerleşim regresyonu (kullanıcı bildirimi) ──────────────────────────
+  // (1) Sekmeler geri butonuyla üst üste binmemeli; (2) DOM ses denetiminin
+  // kapladığı üst-sağ alana hiçbir canvas yazısı çizilmemeli.
+  pg.marketTab = "body";
+  pg.profile = M.normalizeProfile({ version: 5, scrap: 260 });
+  const texts = [];
+  const recCtx = Object.assign(mockCtx(), {
+    fillText: (t, x, y) => texts.push({ t, x, y }),
+    measureText: () => ({ width: 60 }),
+    setLineDash() {}, strokeRect() {}, clearRect() {}, drawImage() {},
+    createLinearGradient: () => ({ addColorStop() {} }),
+    createRadialGradient: () => ({ addColorStop() {} }),
+    globalAlpha: 1, font: "", textAlign: "", textBaseline: "",
+  });
+  M.Game.prototype.renderMarket.call(pg, recCtx);
+  const inSafe = (s) => s.x >= M.AUDIO_SAFE.x && s.x <= M.AUDIO_SAFE.x + M.AUDIO_SAFE.w &&
+                        s.y >= M.AUDIO_SAFE.y && s.y <= M.AUDIO_SAFE.y + M.AUDIO_SAFE.h;
+  const offenders = texts.filter(inSafe);
+  check("pazar: DOM ses denetimi alanına canvas yazısı çizilmez",
+    texts.length > 0 && offenders.length === 0,
+    offenders.map((s) => `"${s.t}"@${s.x},${s.y}`).join(" | "));
+  const backRect2 = pg._backRect;
+  const tabRects = pg._marketTabRects || [];
+  const kapisir = (a, b) => a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
+  check("pazar: sekmeler geri butonuyla kesişmez",
+    !!backRect2 && tabRects.length === 5 && tabRects.every((r) => !kapisir(r, backRect2)));
+  check("pazar: bilgi satırı ses denetimi alanının altında",
+    M.AUDIO_SAFE.y + M.AUDIO_SAFE.h < tabRects[0].y, `tabY=${tabRects[0] && tabRects[0].y}`);
+  check("hikâye ilerletme ipucu ses denetiminin altında",
+    M.STORY_HINT_Y > M.AUDIO_SAFE.y + M.AUDIO_SAFE.h, `y=${M.STORY_HINT_Y}`);
+
+  // Parçaları kapatmak pazardan çıkışı bozmaz.
+  pg.goBack();
+  check("Esc pazardan ana menüye döner (parça sekmesi)", pg.state === "MODE_SELECT");
+
+  sandbox.document = prevDoc;
 }
 
 // ── Hikâye modu durum makinesi ve maç entegrasyonu ────────────────────────

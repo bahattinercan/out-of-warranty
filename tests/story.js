@@ -1,9 +1,9 @@
-/* Hikâye modu veri, kilit grafiği ve profil v2 testleri — bağımlılıksız.
+/* Hikâye modu veri, kilit grafiği ve profil göçü testleri — bağımlılıksız.
  *
  * tests/progression.js çatısını taklit eder: story-data.js ve story.js DOM'a
  * dokunmadığı için karakter/profil dosyalarıyla tek bir vm sandbox'ında
- * yüklenir. localStorage yerine sahte depolama kullanılır; böylece profil v2
- * göçü ve bozuk story kurtarması tarayıcı olmadan doğrulanır.
+ * yüklenir. localStorage yerine sahte depolama kullanılır; böylece profil göçü
+ * (v1→v3) ve bozuk story kurtarması tarayıcı olmadan doğrulanır.
  *
  * Normatif kural listesi docs/story-mode-lock.md §14'tedir (14 hata + 3 uyarı).
  *
@@ -14,7 +14,7 @@ const fs = require("fs");
 const path = require("path");
 
 const JS_DIR = path.join(__dirname, "..", "js");
-const FILES = ["characters.js", "progression.js", "profile.js", "maps.js", "story-data.js", "story.js", "ai.js"];
+const FILES = ["characters.js", "progression.js", "profile.js", "parts.js", "market.js", "maps.js", "story-data.js", "story.js", "ai.js"];
 const bundle =
   FILES.map((f) => fs.readFileSync(path.join(JS_DIR, f), "utf8")).join("\n;\n") +
   "\n;globalThis.__S = { CHARACTERS, MAPS, FACTORY_ZONES, STORY_CAMPAIGN, STORY_ZONES, STORY_MISSIONS, STORY_SCENES, STORY_TUTORIALS, STORY_DIFFICULTIES, STORY_SCENES_COMPLETE, validateStoryData, getMissionById, missionsInOrder, firstMissionId, nextMissionId, actOf, missionPrerequisites, isMissionUnlocked, selectableRobotsForMission, defaultStoryProgress, normalizeStoryProgress, maintenancePoints, collectedEvidence, curtailedZones, resolveStoryDifficulty, sceneById, sceneTotalLines, PROFILE_SCHEMA_VERSION, defaultProfile, normalizeProfile, loadProfile, saveProfile, PROFILE_KEY, getMapById, calculateMatchReward, BotController };";
@@ -269,10 +269,10 @@ group("Bölge temsilcileri");
   check("dokuz bölgenin tamamında temsilci var", S.STORY_ZONES.every((z) => z.representativeIds.length >= 2));
 }
 
-// ── 12) Profil v2 göçü ve bozuk kayıt ──────────────────────────────────────
-group("Profil v2 göçü ve bozuk kayıt");
+// ── 12) Profil göçü ve bozuk kayıt ────────────────────────────────────────
+group("Profil göçü ve bozuk kayıt");
 {
-  check("şema sürümü 2", S.PROFILE_SCHEMA_VERSION === 2);
+  check("şema sürümü 6", S.PROFILE_SCHEMA_VERSION === 6);
   const fresh = S.defaultProfile();
   check("varsayılan profil story alanı taşır",
     !!fresh.story && fresh.story.campaignId === "nine_zones_cup_v1");
@@ -280,7 +280,7 @@ group("Profil v2 göçü ve bozuk kayıt");
   check("defaultStoryProgress round-trip",
     JSON.stringify(S.normalizeStoryProgress(fresh.story)) === JSON.stringify(fresh.story));
 
-  // v1 → v2 göçü: ekonomi aynen korunur, hikâye varsayılana düşer.
+  // v1 → v3 göçü: ekonomi aynen korunur, hikâye varsayılana, depo boşa düşer.
   const v1 = {
     version: 1, scrap: 555,
     robots: { kopek: { xp: 450, upgrades: { chassis: 2, module: 1, core: 0 }, stats: { matches: 7, wins: 5 } } },
@@ -292,7 +292,7 @@ group("Profil v2 göçü ve bozuk kayıt");
   check("v1 maç istatistikleri korunur", v2.robots.kopek.stats.matches === 7 && v2.robots.kopek.stats.wins === 5);
   check("v1 maç anahtarları korunur", JSON.stringify(v2.claimedMatches) === JSON.stringify(["a", "b"]));
   check("v1 updatedAt korunur", v2.updatedAt === 123);
-  check("v2 sürümü yazılır", v2.version === 2);
+  check("v6 sürümü yazılır", v2.version === 6);
   check("v1 kaydına varsayılan hikâye eklenir", v2.story.currentMissionId === S.firstMissionId() && v2.story.completedMissions.length === 0);
 
   // Bozuk story ekonomiyi SIFIRLAMAZ (kilit §10'un en kritik kuralı).

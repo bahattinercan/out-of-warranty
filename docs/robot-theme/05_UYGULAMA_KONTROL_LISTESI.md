@@ -106,7 +106,7 @@ Bu dosya uygulama sırasında canlı görev listesi olarak kullanılacaktır. Bi
 - [ ] Ana başlık ve alt başlık.
 - [ ] “Robotunu seç” ekran başlığı.
 - [ ] Karakter kartında gövde ailesi/rol etiketi.
-- [ ] “Bütünlük”, “Kaplama” ve “Çıkış gücü” terimlerinin okunabilirlik değerlendirmesi.
+- [x] “Can”, “Zırh” ve “Hasar” terimlerinin okunabilirlik değerlendirmesi (sade terimler seçildi).
 - [ ] “Fabrika bölgesi seç” ekran başlığı.
 - [ ] Maç sonu parça hakkı metni.
 - [ ] Bot düşünme metinleri.
@@ -121,7 +121,7 @@ Bu dosya uygulama sırasında canlı görev listesi olarak kullanılacaktır. Bi
 - [ ] Elektrik kalkanı sesi.
 - [ ] Hidrolik pres sesi.
 - [ ] Metal hasar sesi.
-- [ ] Düşük bütünlük kıvılcım sesi gerekiyorsa seyrekleştirme.
+- [ ] Düşük can kıvılcım sesi gerekiyorsa seyrekleştirme.
 - [ ] Sessize alındığında tüm yeni kaynakların durması.
 - [ ] Yeniden açıldığında eski planlanmış efektlerin başlamaması.
 - [ ] `tests/audio.js` kapsamını güncelle.

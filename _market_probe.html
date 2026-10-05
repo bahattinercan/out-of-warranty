@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <title>Pazar (Cephane + yuva sekmeleri) — görsel doğrulama</title>
+  <style>
+    body { margin: 0; background: #05080c; }
+    canvas { position: fixed; left: 0; width: 960px; height: 540px; }
+    #c1 { top: 0; } #c2 { top: 540px; } #c3 { top: 1080px; } #c4 { top: 1620px; }
+  </style>
+</head>
+<body>
+  <canvas id="c1" width="960" height="540"></canvas>
+  <canvas id="c2" width="960" height="540"></canvas>
+  <canvas id="c3" width="960" height="540"></canvas>
+  <canvas id="c4" width="960" height="540"></canvas>
+  <!-- Oyunla aynı klasik script sırası -->
+  <script src="js/audio.js"></script>
+  <script src="js/characters.js"></script>
+  <script src="js/progression.js"></script>
+  <script src="js/profile.js"></script>
+  <script src="js/parts.js"></script>
+  <script src="js/market.js"></script>
+  <script src="js/maps.js"></script>
+  <script src="js/story-data.js"></script>
+  <script src="js/skills.js"></script>
+  <script src="js/skill-fx.js"></script>
+  <script src="js/robots.js"></script>
+  <script src="js/terrain.js"></script>
+  <script src="js/weapons.js"></script>
+  <script src="js/entity.js"></script>
+  <script src="js/projectile.js"></script>
+  <script src="js/ai.js"></script>
+  <script src="js/story.js"></script>
+  <script src="js/game.js"></script>
+  <script>
+    // Sahte oyun nesnesi: renderMarket yalnız bu alanları okur (DOM'a dokunmaz).
+    function makeFake(profile, tab) {
+      const g = Object.create(Game.prototype);
+      g.W = 960; g.H = 540;
+      g.input = { mouseX: -1, mouseY: -1 };
+      g.renderTimeMs = 0;
+      g.marketWeaponPage = 0;
+      g.marketPartPage = 0;
+      g.marketTab = tab || "ammo";
+      g.marketFx = null;
+      g.marketNotice = null;
+      g.profile = normalizeProfile(profile);
+      return g;
+    }
+
+    // Doğrulama kılavuzu: DOM ses denetiminin kapladığı alan. Bu kutunun İÇİNE
+    // hiçbir canvas yazısı çizilmemelidir (AUDIO_SAFE).
+    function audioGuide(ctx) {
+      ctx.save();
+      ctx.setLineDash([6, 4]);
+      ctx.strokeStyle = "#ff7b7b";
+      ctx.lineWidth = 1.5;
+      ctx.strokeRect(AUDIO_SAFE.x, AUDIO_SAFE.y, AUDIO_SAFE.w, AUDIO_SAFE.h);
+      ctx.setLineDash([]);
+      ctx.fillStyle = "#ff7b7b";
+      ctx.font = '9px "Chakra Petch", sans-serif';
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText("DOM ses denetimi (canvas yazısı yasak)", AUDIO_SAFE.x + AUDIO_SAFE.w / 2, AUDIO_SAFE.y + AUDIO_SAFE.h / 2);
+      ctx.restore();
+    }
+
+    // Parçalar robota kilitli değildir: aynı parçalar birden çok robotta takılı.
+    const PARTS_PROFILE = {
+      version: 5, scrap: 260,
+      parts: ["lehim_yamasi", "kompozit_plaka", "takviyeli_govde", "cift_kat_plaka",
+              "sogutucu_radyator", "basinc_hucre", "nisan_mercegi", "termal_vizor",
+              "yedek_yukleyici", "turbo_palet"],
+      robots: {
+        kopek: { xp: 300, upgrades: { chassis: 1, module: 0, core: 0 }, stats: { matches: 3, wins: 2 },
+                 loadout: { helmet: "nisan_mercegi", body: "lehim_yamasi", tool: "yedek_yukleyici", feet: "turbo_palet" } },
+        kedi: { xp: 200, upgrades: { chassis: 0, module: 0, core: 0 }, stats: { matches: 2, wins: 1 },
+                loadout: { helmet: null, body: "lehim_yamasi", tool: null, feet: "turbo_palet" } },
+      },
+    };
+
+    // 1) Cephane sekmesi (hover + parıltı + bildirim)
+    const g1 = makeFake({ version: 5, scrap: 1450, ammo: { grenade: 3, sniper: 1, mine: 2, nuke: 1 } }, "ammo");
+    g1.input.mouseX = 150; g1.input.mouseY = 130;
+    g1.marketFx = { weaponId: "grenade", t: 0.15 };
+    g1.marketNotice = { text: "3× El Bombası alındı  (−90 Hurda)", color: "#8affc0", t: 0.3 };
+    g1.renderMarket(document.getElementById("c1").getContext("2d"));
+    audioGuide(document.getElementById("c1").getContext("2d"));
+
+    // 2) GÖVDE sekmesi: 6 parça, sahipli/takılı/sahipsiz durumları bir arada
+    const g2 = makeFake(PARTS_PROFILE, "body");
+    g2.input.mouseX = 150; g2.input.mouseY = 130;
+    g2.marketFx = { partId: "takviyeli_govde", t: 0.15 };
+    g2.marketNotice = { text: "Takviyeli Gövde alındı (−100 Hurda) — Atölye'den bir robota tak", color: "#8affc0", t: 0.25 };
+    g2.renderMarket(document.getElementById("c2").getContext("2d"));
+    audioGuide(document.getElementById("c2").getContext("2d"));
+
+    // 3) KASK sekmesi (sahiplerin bir kısmı; takılı etiketi)
+    const g3 = makeFake(PARTS_PROFILE, "helmet");
+    g3.renderMarket(document.getElementById("c3").getContext("2d"));
+    audioGuide(document.getElementById("c3").getContext("2d"));
+
+    // 4) AYAK sekmesi (iki robotta takılı parça → "2 robotta" etiketi)
+    const g4 = makeFake(PARTS_PROFILE, "feet");
+    g4.input.mouseX = 700; g4.input.mouseY = 240;
+    g4.renderMarket(document.getElementById("c4").getContext("2d"));
+    audioGuide(document.getElementById("c4").getContext("2d"));
+  </script>
+</body>
+</html>

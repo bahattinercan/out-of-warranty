@@ -23,7 +23,7 @@ function useSkill(entity, game) {
 
   switch (def.kind) {
     case "heal":
-      // Modül gücü onarım miktarını ölçekler; bütünlük tam sayı kalır.
+      // Modül gücü onarım miktarını ölçekler; can tam sayı kalır.
       entity.hp = Math.min(entity.maxHp, entity.hp + Math.round(p.amount != null ? p.amount : 25));
       break;
 
@@ -126,20 +126,33 @@ function useSkill(entity, game) {
 // bütün görsel parçalarını robots.js içindeki drawRobot ile çizer.
 function drawCharExtras() {}
 
-function drawSkillHud(ctx, entity, W, H, bottomInset) {
+function drawSkillHud(ctx, entity, W, H, bottomInset, panelRect) {
   if (!entity.skillId || !entity.charDef) return;
   const def = entity.charDef.skill;
   const ready = entity.skillCooldown === 0;
   // Hasar veren modüller atış hakkını doldurduğundan kart bunu ayrı bir satırda
-  // yazar ve biraz daha uzar. Kartın ALT kenarı silah panelinin üstünde sabit
-  // kalsın diye uzayan kısım kadar yukarıdan başlar.
+  // yazar ve biraz daha uzar. Kartın ALT kenarı silah paneliyle hizalı kalsın
+  // diye uzayan kısım kadar yukarıdan başlar.
   const consumes = skillConsumesShot(def.kind);
-  const px = 14, pw = 168, ph = consumes ? 62 : 48;
+  const pw = 168, ph = consumes ? 62 : 48;
   // `bottomInset`: DOM silah panelinin mantıksal yüksekliği (game.js >
   // syncBottomHud). Panel mermi önizlemesiyle birlikte büyüyebildiği için sabit
   // sayı yerine ölçüm kullanılır; verilmezse eski değere (124) düşer.
   const inset = typeof bottomInset === "number" && bottomInset > 0 ? bottomInset : 124;
-  const py = Math.max(82, H - inset - ph);
+  // Varsayılan (panel ölçülemediyse): sol alt köşede, silah panelinin üstünde.
+  let px = 14;
+  let py = Math.max(82, H - inset - ph);
+  // Panel ölçüldüyse modül kartı mermi çubuğunun SOLUNA ve çiplerle aynı
+  // hizaya (panel alt kenarına) yerleşir — oyuncu modülü ile mühimmatını tek
+  // bakışta okur. Dar ekranda panel neredeyse tüm genişliği kaplar; kart
+  // sığmıyorsa eski davranışa (sol üst) düşülür.
+  if (panelRect && panelRect.left > 0) {
+    const beside = panelRect.left - 10 - pw;
+    if (beside >= 0) {
+      px = beside;
+      py = Math.max(82, panelRect.bottom - ph);
+    }
+  }
 
   // Mermi fırlatan modüllerde kartın sağında mermi önizlemesi gösterilir; diğer
   // modüllerde aynı yeri cast efektinin ikonu alır (SkillFx.drawIcon). Metin

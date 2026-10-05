@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <title>Ana menü — beş kart yerleşimi</title>
+  <style>
+    body { margin: 0; background: #05080c; }
+    canvas { position: fixed; left: 0; display: block; }
+    #wide { top: 0; }
+    #narrow { top: 540px; }
+  </style>
+</head>
+<body>
+  <canvas id="wide" width="960" height="540"></canvas>
+  <canvas id="narrow" width="700" height="540"></canvas>
+
+  <script src="js/audio.js"></script>
+  <script src="js/characters.js"></script>
+  <script src="js/progression.js"></script>
+  <script src="js/profile.js"></script>
+  <script src="js/parts.js"></script>
+  <script src="js/market.js"></script>
+  <script src="js/maps.js"></script>
+  <script src="js/story-data.js"></script>
+  <script src="js/skills.js"></script>
+  <script src="js/skill-fx.js"></script>
+  <script src="js/robots.js"></script>
+  <script src="js/terrain.js"></script>
+  <script src="js/weapons.js"></script>
+  <script src="js/entity.js"></script>
+  <script src="js/projectile.js"></script>
+  <script src="js/ai.js"></script>
+  <script src="js/story.js"></script>
+  <script src="js/game.js"></script>
+  <script>
+    function makeFake(w, h, mouse) {
+      const g = Object.create(Game.prototype);
+      g.W = w; g.H = h;
+      g.input = { mouseX: mouse[0], mouseY: mouse[1] };
+      g.renderTimeMs = 0;
+      g.profile = normalizeProfile({
+        version: 3, scrap: 1240,
+        robots: {
+          [CHARACTERS[0].id]: { xp: 450, ammo: { grenade: 3, nuke: 1 } },
+          [CHARACTERS[4].id]: { xp: 120, ammo: { sniper: 2 } },
+        },
+      });
+      return g;
+    }
+    // Yeni kart yerleşiminde (gap 14, bh 132, y=H/2-38) hover ATÖLYE kartında:
+    // kart içi merkez ~ (startX + 3.5*(bw+gap), H/2-38+60). 700 px'de sığdırma kontrolü.
+    const wide = makeFake(960, 540, [558, 292]);
+    wide.renderModeSelect(document.getElementById("wide").getContext("2d"));
+    const narrow = makeFake(700, 540, [-1, -1]);
+    narrow.renderModeSelect(document.getElementById("narrow").getContext("2d"));
+  </script>
+</body>
+</html>

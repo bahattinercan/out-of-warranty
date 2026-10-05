@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <title>Parça canlı efektleri — kare karşılaştırma</title>
+  <style>
+    body { margin: 0; background: #05080c; }
+    canvas { position: fixed; left: 0; width: 960px; }
+    #c1 { top: 0; height: 620px; }
+    #c2 { top: 620px; height: 330px; }
+  </style>
+</head>
+<body>
+  <canvas id="c1" width="960" height="620"></canvas>
+  <canvas id="c2" width="960" height="330"></canvas>
+  <script src="js/audio.js"></script>
+  <script src="js/characters.js"></script>
+  <script src="js/progression.js"></script>
+  <script src="js/profile.js"></script>
+  <script src="js/parts.js"></script>
+  <script src="js/market.js"></script>
+  <script src="js/maps.js"></script>
+  <script src="js/story-data.js"></script>
+  <script src="js/skills.js"></script>
+  <script src="js/skill-fx.js"></script>
+  <script src="js/robots.js"></script>
+  <script src="js/terrain.js"></script>
+  <script src="js/weapons.js"></script>
+  <script src="js/entity.js"></script>
+  <script src="js/projectile.js"></script>
+  <script src="js/ai.js"></script>
+  <script src="js/story.js"></script>
+  <script src="js/game.js"></script>
+  <script>
+    const CEF = CHARACTERS[0];
+    const one = (id) => {
+      const lo = { helmet: null, body: null, tool: null, feet: null };
+      const spec = partById(id);
+      lo[spec.slot] = id;
+      return lo;
+    };
+    const MOTION = { vx: 0, vy: 0, onGround: true };
+    const WALK = { vx: 2.2, vy: 0, onGround: true, walk: 1, walkAmp: 1, walkPhase: 1.2, rollPhase: 0.4 };
+
+    // 1) CANLI EFEKT KARELERİ: her satır bir donanım, sütunlar zaman kareleri.
+    const c1 = document.getElementById("c1").getContext("2d");
+    c1.fillStyle = "#0b1017"; c1.fillRect(0, 0, 960, 620);
+    c1.fillStyle = "#ffe45e"; c1.font = '700 17px "Chakra Petch", sans-serif';
+    c1.textAlign = "center"; c1.textBaseline = "top";
+    c1.fillText("CANLI EFEKT KARELERİ — aynı robot, farklı zamanlar (0 · 0.25 · 0.5 · 0.75 sn)", 480, 8);
+
+    const ANIMATED = [
+      ["termal_vizor", "Tarama bandı + anten"],
+      ["denge_sensoru", "Dönen jiroskop"],
+      ["nisan_mercegi", "Nefes alan mercek"],
+      ["sogutucu_radyator", "Isı dalgası"],
+      ["takviye_bobini", "Enerji akışı"],
+      ["zamanlayici_cip", "LED sırası"],
+      ["lehim_yamasi", "Dikiş parıltısı"],
+      ["turbo_palet", "Egzoz alevi (yürüyor)"],
+    ];
+    const FRAMES = [0, 250, 500, 750];
+    ANIMATED.forEach((row, ri) => {
+      const y = 40 + ri * 70;
+      c1.textAlign = "left"; c1.textBaseline = "middle";
+      c1.fillStyle = "#7f93a5"; c1.font = '700 10px "Chakra Petch", sans-serif';
+      c1.fillText(row[1], 12, y + 30);
+      c1.strokeStyle = "#1b2430"; c1.beginPath(); c1.moveTo(150, y - 4); c1.lineTo(946, y - 4); c1.stroke();
+      FRAMES.forEach((ms, fi) => {
+        const cx = 200 + fi * 190;
+        const spec = partById(row[0]);
+        drawRobot(c1, {
+          cx, cy: y + 30, r: 24, facing: 1, charDef: CEF, timeMs: ms,
+          motion: row[0] === "turbo_palet" ? WALK : MOTION, parts: one(row[0]),
+        });
+        c1.textAlign = "center"; c1.textBaseline = "top";
+        c1.fillStyle = "#55636f"; c1.font = '8px "Chakra Petch", sans-serif';
+        c1.fillText((ms / 1000).toFixed(2) + " sn", cx, y + 58);
+      });
+    });
+
+    // 2) TURBO: duran (rölanti) vs yürüyen — egzoz şiddeti karşılaştırması.
+    const c2 = document.getElementById("c2").getContext("2d");
+    c2.fillStyle = "#0b1017"; c2.fillRect(0, 0, 960, 330);
+    c2.fillStyle = "#ffe45e"; c2.font = '700 15px "Chakra Petch", sans-serif';
+    c2.textAlign = "center"; c2.textBaseline = "top";
+    c2.fillText("TURBO PALET — rölanti (üst) vs yürüyor (alt): egzoz şiddeti", 480, 8);
+    const turbo = one("turbo_palet");
+    [0, 180, 360].forEach((ms, i) => {
+      const cx = 300 + i * 190;
+      drawRobot(c2, { cx, cy: 92, r: 26, facing: 1, charDef: CEF, timeMs: ms, motion: MOTION, parts: turbo });
+      drawRobot(c2, { cx, cy: 250, r: 26, facing: 1, charDef: CEF, timeMs: ms, motion: WALK, parts: turbo });
+      c2.textAlign = "center"; c2.textBaseline = "top";
+      c2.fillStyle = "#55636f"; c2.font = '8px "Chakra Petch", sans-serif';
+      c2.fillText((ms / 1000).toFixed(2) + " sn", cx, 122);
+    });
+  </script>
+</body>
+</html>

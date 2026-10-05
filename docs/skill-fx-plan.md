@@ -101,7 +101,7 @@ Entity.draw  → drawSkillAura(ctx, entity, cx, cy)  // kalıcı durumlar
 | shield | `cloakShift` | HAYALET-4 · Optik Saptırıcı | Tarama çizgileri + hayalet art-görüntü |
 | nextShot | `pressureCharge` | BOM-12 · Basınç Yüklemesi | İbre kırmızıya süpürülür, buhar valfi, namlu basınç halkası |
 | nextShot | `dualLoad` | ÇİFT-6 · Çift Namlu | İki namlu ağzı yanar, çift şevron |
-| damageReduce | `plateLock` | ZIRH-2 · Kaplama Kilidi | Dört zırh plakası kapanır + perçin flaşı |
+| damageReduce | `plateLock` | ZIRH-2 · Zırh Kilidi | Dört zırh plakası kapanır + perçin flaşı |
 | jump | `springJump` | ZIP · Yay Fırlatıcı | Yay sıkışır-açar, toz halkası |
 | jump | `hookSwing` | KANCA-4 · Servis Kancası | Kanca + halat ileri fırlar, çapa flaşı |
 | jump | `overCoil` | ZIP-X · Aşırı Yay | Çift sıkıştırma, mavi-sıcak yay |

@@ -11,7 +11,7 @@
 
 // ── Sabitler ────────────────────────────────────────────────────────────────
 
-const PROFILE_SCHEMA_VERSION = 3; // profile.js ile ortak kayıt şeması sürümü (v2: +story, v3: +ammo deposu)
+const PROFILE_SCHEMA_VERSION = 6; // profile.js ile ortak kayıt şeması sürümü (v2: +story, v3: +ammo, v4: ortak ammo deposu, v5: +parçalar/loadout, v6: yuva başına 2 parça)
 
 // Servis seviyeleri: xp alanı KÜMÜLATİF eşiktir (levelForXp ile eşleşir).
 const SERVICE_LEVELS = [
@@ -51,7 +51,7 @@ const OPPONENT_STEP = 0.20;         // her ek rakip için +%20
 const REWARD_CAP = { scrap: 150, xp: 180 };
 
 // Gövde dalı
-const ARMOR_CAP = 0.40;                     // kaplama mutlak üst sınırı
+const ARMOR_CAP = 0.40;                     // zırh mutlak üst sınırı
 const CHASSIS_HP_BONUS = { tier1: 0.05, tier3: 0.10 };
 const CHASSIS_ARMOR_BONUS = 0.02;
 const CHASSIS_KNOCKBACK_REDUCTION = 0.10;   // savrulma hızı %10 azalır
@@ -61,6 +61,16 @@ const MODULE_POWER_BONUS = { tier1: 0.06, tier3: 0.15 };
 const MODULE_COOLDOWN_REDUCTION = 1;        // yalnız bir tur
 const MODULE_MIN_COOLDOWN = 2;              // cooldown alt sınırı
 const SHIELD_STAMINA_REFUND = { base: 0, tier1: 5, tier3: 10 };
+
+// Parçalar (v5): savrulma indirimlerinin toplandığı çarpımsal alt sınır —
+// atölye kademesi + parçalar birlikte savrulmayı asla yarısının altına indiremez.
+const PART_KNOCKBACK_MIN = 0.5;
+// Hareket hızı ekseni: parçalar adım uzunluğunu yüzdelik artırır; üst sınır
+// aşırı yığılmayı (ve bot dengelemesini) korumak için kırpılır.
+const PART_MOVE_SPEED_MAX = 0.20;
+// Can çarpanı ve sıçrama gücü eksenleri: parçalar üst sınırla kırpılır.
+const PART_HP_PCT_MAX = 0.15;
+const PART_JUMP_MAX = 0.20;
 const GLIDE_GRAVITY_BASE = 0.35;            // süzülme sırasında yerçekimi katsayısı
 const GLIDE_GRAVITY_MIN = 0.22;             // güç artsa bile serbest uçuşa dönmez
 
@@ -239,11 +249,48 @@ function scaleSkillParams(baseSkill, powerMult) {
 }
 
 /* Taban karakter tanımından maçlık build üretir. Saf fonksiyondur: girişleri
- * mutasyona uğratmaz ve eksik/bozuk ilerleme verisini "sıfır kademe" sayar. */
+ * mutasyona uğratmaz ve eksik/bozuk ilerleme verisini "sıfır kademe" sayar.
+ *
+ * Parçalar (v5): robotProgress.loadout'taki yuva→parça eşleşmesinden gelir.
+ * Etkiler yalnız enabled (upgradesEnabled) geçidinde işler — parçalar
+ * geliştirmelerle aynı maç kapsamına bağlıdır (tek geçit). Katalogda olmayan
+ * bir parça id'si sessizce yok sayılır (kaldırılmış parçaya dayanıklılık).
+ * Sahiplik denetimi profil köküyle normalizeProfile'da yapılır; burada etki
+ * id → spec bakışıyla uygulanır, böylece fonksiyon profilsiz de test
+ * edilebilir kalır. */
+
+// Parça etkilerinin toplanabilir alanları: düz toplamlar (adet/tur) ve
+// yüzdelik kesirler. Tek yerde tablolanır; katalogda yeni etki alanı
+// eklenirse buraya da yazılır (plan §6).
+const PART_EFFECT_KEYS = ["maxHpFlat", "maxHpPct", "armorFlat", "staminaFlat", "weaponDamagePct", "powerPct", "knockbackRedPct", "cooldownFlat", "moveSpeedMult", "jumpPowerMult"];
+
+function _partEffectTotals(loadout) {
+  const totals = { maxHpFlat: 0, maxHpPct: 0, armorFlat: 0, staminaFlat: 0, weaponDamagePct: 0, powerPct: 0, knockbackRedPct: 0, cooldownFlat: 0, moveSpeedMult: 0, jumpPowerMult: 0 };
+  if (!loadout) return totals;
+  // Yuva başına PARTS_PER_SLOT parça toplanır (v6); bilinmeyen id yok sayılır.
+  for (const slot of PART_SLOTS) {
+    const slotList = Array.isArray(loadout[slot]) ? loadout[slot] : [loadout[slot]];
+    for (const id of slotList) {
+      const part = partById(id);
+      const fx = part && part.effects ? part.effects : null;
+      if (!fx) continue;
+      for (const key of PART_EFFECT_KEYS) {
+        const v = Number(fx[key]);
+        if (Number.isFinite(v)) totals[key] += v;
+      }
+    }
+  }
+  return totals;
+}
+
 function resolveRobotBuild(charDef, robotProgress, options) {
   const opts = options || {};
   const enabled = !!opts.upgradesEnabled && !!robotProgress;
   const tiers = enabled ? sanitizeUpgrades(robotProgress) : { chassis: 0, module: 0, core: 0 };
+  // Parçalar tek geçişte çözülür: hem etki toplamı hem de build'e taşınan
+  // loadout (Entity maç içi aksesuar çizimi için `build.parts` okur).
+  const loadout = enabled ? sanitizeLoadoutShape(robotProgress.loadout) : null;
+  const partTotals = _partEffectTotals(loadout);
 
   const baseHp = Number(charDef && charDef.hp);
   const hp = Number.isFinite(baseHp) ? baseHp : 100;
@@ -251,26 +298,33 @@ function resolveRobotBuild(charDef, robotProgress, options) {
   const armor0 = Number.isFinite(baseArmor) ? baseArmor : 0;
 
   // Gövde: kademe bonusları üst üste çarpılmaz; tek türetilmiş çarpan kullanılır
-  // ki yükleme sırası sonucu değiştirmesin.
+  // ki yükleme sırası sonucu değiştirmesin. Parçalar bu çarpanların üzerine
+  // DÜZ TOPLANIR (can) veya eklenecek yüzdelikle birleşir (aşağıda).
   const hpMult = tiers.chassis >= 3 ? 1 + CHASSIS_HP_BONUS.tier3
                : tiers.chassis >= 1 ? 1 + CHASSIS_HP_BONUS.tier1 : 1;
-  const maxHp = Math.round(hp * hpMult);
-  const armor = clampNumber(armor0 + (tiers.chassis >= 2 ? CHASSIS_ARMOR_BONUS : 0), 0, ARMOR_CAP);
-  const knockbackTakenMult = tiers.chassis >= 3 ? 1 - CHASSIS_KNOCKBACK_REDUCTION : 1;
+  const maxHp = Math.round(hp * hpMult * (1 + clampNumber(partTotals.maxHpPct, 0, PART_HP_PCT_MAX))) + partTotals.maxHpFlat;
+  const armor = clampNumber(armor0 + (tiers.chassis >= 2 ? CHASSIS_ARMOR_BONUS : 0) + partTotals.armorFlat, 0, ARMOR_CAP);
+  // Savrulma: kademe ve parçalar çarpımsal (kademe −%10 × parçalar) — üstteki
+  // tek-çarpan kuralı; PART_KNOCKBACK_MIN alt sınırı aşırı yığılmayı kırpar.
+  const knockbackTakenMult = Math.max(PART_KNOCKBACK_MIN,
+    (tiers.chassis >= 3 ? 1 - CHASSIS_KNOCKBACK_REDUCTION : 1) * (1 - partTotals.knockbackRedPct));
 
   // Çekirdek: enerji ve silah hasarı toplam bonusu.
-  const maxStamina = tiers.core >= 3 ? CORE_STAMINA.tier3
-                   : tiers.core >= 1 ? CORE_STAMINA.tier1 : CORE_STAMINA.base;
+  const maxStamina = (tiers.core >= 3 ? CORE_STAMINA.tier3
+                   : tiers.core >= 1 ? CORE_STAMINA.tier1 : CORE_STAMINA.base)
+                   + partTotals.staminaFlat;
   const weaponBonus = tiers.core >= 3 ? CORE_WEAPON_BONUS.tier3
                     : tiers.core >= 2 ? CORE_WEAPON_BONUS.tier2 : 0;
 
-  // Aparat: güç çarpanı, cooldown ve adaptör çıktıları.
-  const powerMult = tiers.module >= 3 ? 1 + MODULE_POWER_BONUS.tier3
-                  : tiers.module >= 1 ? 1 + MODULE_POWER_BONUS.tier1 : 1;
+  // Aparat: güç çarpanı, cooldown ve adaptör çıktıları. Parça gücü
+  // ÇARPIMSAL ekler: kademe +%6 ve parça +%8 → 1.06 × 1.08 (yükleme sırası
+  // sonucu değiştirmesin diye iki çarpan da türetmeden önce çözülür).
+  const powerMult = (tiers.module >= 3 ? 1 + MODULE_POWER_BONUS.tier3
+                  : tiers.module >= 1 ? 1 + MODULE_POWER_BONUS.tier1 : 1) * (1 + partTotals.powerPct);
   const baseSkill = charDef && charDef.skill ? charDef.skill : null;
   const baseCooldown = baseSkill ? Number(baseSkill.cooldown) : 0;
   const cd = Number.isFinite(baseCooldown) ? baseCooldown : 0;
-  const cooldown = Math.min(cd, Math.max(MODULE_MIN_COOLDOWN, cd - (tiers.module >= 2 ? MODULE_COOLDOWN_REDUCTION : 0)));
+  const cooldown = Math.min(cd, Math.max(MODULE_MIN_COOLDOWN, cd - (tiers.module >= 2 ? MODULE_COOLDOWN_REDUCTION : 0) - partTotals.cooldownFlat));
   const shieldStaminaRefund = baseSkill && baseSkill.kind === "shield"
     ? (tiers.module >= 3 ? SHIELD_STAMINA_REFUND.tier3
       : tiers.module >= 1 ? SHIELD_STAMINA_REFUND.tier1 : SHIELD_STAMINA_REFUND.base)
@@ -297,11 +351,18 @@ function resolveRobotBuild(charDef, robotProgress, options) {
   return {
     maxHp,
     armor,
-    weaponDamageMult: 1 + weaponBonus,
+    weaponDamageMult: 1 + weaponBonus + partTotals.weaponDamagePct,
     maxStamina,
     knockbackTakenMult,
     skill,
     tiers: Object.assign({}, tiers),
+    // Takılı parçaların SANITIZE edilmiş yuva→id eşlemesi. Etki hesabından
+    // ayrı taşınır: Entity maç içi aksesuar çiziminde build.parts okur.
+    parts: loadout,
+    // Yürüme hızı çarpanı (Entity.walk adımını ölçekler).
+    moveSpeedMult: 1 + clampNumber(partTotals.moveSpeedMult, 0, PART_MOVE_SPEED_MAX),
+    // Sıçrama gücü çarpanı (Entity.jump impulsunu ölçekler).
+    jumpPowerMult: 1 + clampNumber(partTotals.jumpPowerMult, 0, PART_JUMP_MAX),
   };
 }
 
@@ -317,9 +378,9 @@ function upgradeEffectText(charDef, progress, branch) {
   const pct = (v) => Math.round(v * 100);
   switch (branch) {
     case "chassis":
-      if (step.nextTier === 1) return `Bütünlük ${before.maxHp} → ${after.maxHp}`;
-      if (step.nextTier === 2) return `Kaplama %${pct(before.armor)} → %${pct(after.armor)}`;
-      return `Bütünlük ${before.maxHp} → ${after.maxHp} • Savrulma −%10`;
+      if (step.nextTier === 1) return `Can ${before.maxHp} → ${after.maxHp}`;
+      if (step.nextTier === 2) return `Zırh %${pct(before.armor)} → %${pct(after.armor)}`;
+      return `Can ${before.maxHp} → ${after.maxHp} • Savrulma −%10`;
     case "module":
       if (step.nextTier === 1) return "Modül gücü +%6";
       if (step.nextTier === 2) return `Modül cooldown ${before.skill.cooldown} → ${after.skill.cooldown} tur`;
@@ -331,4 +392,41 @@ function upgradeEffectText(charDef, progress, branch) {
     default:
       return "";
   }
+}
+
+/* Atölye parça listesinde "mevcut → takılırsa" satırını üretir
+ * (upgradeEffectText deseni). Fark, gerçek build üzerinden okunur; kaynak
+ * tanımlar yalnız okunur. candidatePartId null → metin yok (sökme satırı etki
+ * göstermez). `index` hedef ALT yuvadır (0|1); önizleme o alt yuvaya parçayı
+ * koyar (aynı parça diğer alt yuvada varsa oradan çekilir). Çok eksenli
+ * parçalarda segmentler " • " ile birleştirilir. */
+function partEffectText(charDef, progress, candidatePartId, index) {
+  const part = partById(candidatePartId);
+  const fx = part && part.effects ? part.effects : null;
+  if (!fx) return "";
+
+  const currentLoadout = sanitizeLoadoutShape(progress && progress.loadout);
+  const idx = index == null ? 0 : clampNumber(toSafeInt(index), 0, PARTS_PER_SLOT - 1);
+  const afterLoadout = {};
+  for (const slot of PART_SLOTS) afterLoadout[slot] = currentLoadout[slot].slice();
+  for (let i = 0; i < PARTS_PER_SLOT; i++) {
+    if (i !== idx && afterLoadout[part.slot][i] === part.id) afterLoadout[part.slot][i] = null;
+  }
+  afterLoadout[part.slot][idx] = part.id;
+
+  const upgrades = sanitizeUpgrades(progress);
+  const before = resolveRobotBuild(charDef, { upgrades, loadout: currentLoadout }, { upgradesEnabled: true });
+  const after = resolveRobotBuild(charDef, { upgrades, loadout: afterLoadout }, { upgradesEnabled: true });
+  const pct = (v) => Math.round(v * 100);
+  const seg = [];
+  if (fx.maxHpPct != null || fx.maxHpFlat != null) seg.push(`Can ${before.maxHp} → ${after.maxHp}`);
+  if (fx.armorFlat != null) seg.push(`Zırh %${pct(before.armor)} → %${pct(after.armor)}`);
+  if (fx.staminaFlat != null) seg.push(`Enerji ${before.maxStamina} → ${after.maxStamina}`);
+  if (fx.weaponDamagePct != null) seg.push(`Silah hasarı +%${pct(before.weaponDamageMult - 1)} → +%${pct(after.weaponDamageMult - 1)}`);
+  if (fx.powerPct != null) seg.push(`Modül gücü +%${pct(before.skill ? before.skill.powerMult - 1 : 0)} → +%${pct(after.skill ? after.skill.powerMult - 1 : 0)}`);
+  if (fx.knockbackRedPct != null) seg.push(`Savrulma %${pct(before.knockbackTakenMult)} → %${pct(after.knockbackTakenMult)}`);
+  if (fx.cooldownFlat != null) seg.push(`Modül cooldown ${before.skill.cooldown} → ${after.skill.cooldown} tur`);
+  if (fx.jumpPowerMult != null) seg.push(`Sıçrama +%${pct(before.jumpPowerMult - 1)} → +%${pct(after.jumpPowerMult - 1)}`);
+  if (fx.moveSpeedMult != null) seg.push(`Hareket hızı +%${pct(before.moveSpeedMult - 1)} → +%${pct(after.moveSpeedMult - 1)}`);
+  return seg.join(" • ");
 }

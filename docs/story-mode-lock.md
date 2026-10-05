@@ -32,7 +32,7 @@ Tasarım planı §22'deki 12 karar **aynen onaylandı**:
 | K-07 | Dokuz bölgenin tamamı haklı ve vazgeçilmez | ✔ | §4 ve §5 |
 | K-08 | Final çözümü dokuz bölge verisini gerektiren Ortak Vardiya Planı | ✔ | Dokuz teknik kanıt görev 1–9'dan gelir |
 | K-09 | Robotlar kısa metin ve prosedürel biplerle konuşur | ✔ | §10 |
-| K-10 | Mevcut AI, Hurda, Servis XP ve Atölye sistemleri kullanılır | ✔ | |
+| K-10 | Mevcut AI, Hurda, Servis XP ve Atölye sistemleri kullanılır | ✔ | Parçalar (v5) bu sistemlerin üzerine eklenir: Pazar'da satılır, Atölye'nin PARÇALAR modunda takılır ve geliştirmelerle **aynı** maç kapsamında (`upgradesEnabled`) etkindir — hikâyede de geçerlidir |
 | K-11 | Hikâye profil v2'nin ayrı `story` alanında tutulur | ✔ | §11 |
 | K-12 | Kupa finalden sonra yıllık bakım festivali olarak sürer | ✔ | `endingSeen` |
 

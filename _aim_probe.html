@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <title>Nişan hizası ölçüm sondası</title>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <div id="app">
+    <div id="stage">
+      <header id="hud"><div id="players"></div><div class="center"><div id="turn-banner">Sıra: -</div><div id="wind-indicator">Rüzgar: -</div><button id="fullscreen-btn">F</button><button id="quit-btn">Q</button></div></header>
+      <div id="audio-control"><button id="mute-btn">S</button><input id="volume-slider" type="range" min="0" max="100" value="100" /><output id="volume-value">100%</output></div>
+      <canvas id="game" width="960" height="540"></canvas>
+      <div id="power-bar" class="hidden"><div id="power-fill"></div><div id="power-marker" class="hidden"></div></div>
+      <div id="overlay" class="hidden"><div class="overlay-card"><h1 id="overlay-title"></h1><p id="overlay-sub"></p><div id="overlay-reward" class="hidden"></div><div class="overlay-actions"><button id="story-next-btn" class="hidden"></button><button id="workshop-btn"></button><button id="restart-btn"></button><button id="menu-btn"></button></div></div></div>
+      <div id="storage-warning" class="hidden"></div>
+      <div id="weapon-panel" class="hidden"></div>
+      <pre id="out" style="position:fixed;z-index:99;left:0;top:0;color:#fff;background:#000c;font:11px monospace;margin:0;padding:4px;"></pre>
+    </div>
+  </div>
+  <script src="js/audio.js"></script>
+  <script src="js/characters.js"></script>
+  <script src="js/progression.js"></script>
+  <script src="js/profile.js"></script>
+  <script src="js/parts.js"></script>
+  <script src="js/market.js"></script>
+  <script src="js/maps.js"></script>
+  <script src="js/story-data.js"></script>
+  <script src="js/skills.js"></script>
+  <script src="js/skill-fx.js"></script>
+  <script src="js/robots.js"></script>
+  <script src="js/terrain.js"></script>
+  <script src="js/weapons.js"></script>
+  <script src="js/entity.js"></script>
+  <script src="js/projectile.js"></script>
+  <script src="js/ai.js"></script>
+  <script src="js/story.js"></script>
+  <script src="js/game.js"></script>
+<script>
+/* Namlu çiziminin GERÇEK canvas dönüşümünü yakala: _rbLauncher'ın kurduğu
+ * yerel uzayın dünya matrisi. Böylece "çizilen namlu" ile nişan çizgisinin
+ * kullandığı `Entity.muzzle` noktası nesnel olarak karşılaştırılabilir. */
+let BARRELS = [];
+let SCALE = { x: 1, y: 1 };
+const _origLauncher = window._rbLauncher;
+window._rbLauncher = function (ctx, ang, r, accent, px, py) {
+  ctx.save();
+  ctx.translate(px === undefined ? r * 0.10 : px, py === undefined ? -r * 0.34 : py);
+  ctx.rotate(ang);
+  const m = ctx.getTransform();
+  BARRELS.push({ m: [m.a, m.b, m.c, m.d, m.e, m.f], ang, r });
+  ctx.restore();
+  return _origLauncher(ctx, ang, r, accent, px, py);
+};
+
+/* Namlu yerel koordinatı -> oyun mantıksal koordinatı (taban ölçeği geri al). */
+function barrelWorld(b, lx, ly) {
+  const [a, c0, c, d, e, f] = b.m;
+  return [(a * lx + c * ly + e) / SCALE.x, (c0 * lx + d * ly + f) / SCALE.y];
+}
+
+window.addEventListener("DOMContentLoaded", () => {
+  const canvas = document.getElementById("game");
+  const game = new Game(canvas);
+  game.selectedChars = [CHARACTERS[0], CHARACTERS[1]];
+  game.selectedMap = MAPS[0];
+  game.playerControls = ["human", "bot"];
+  game.mode = "computer";
+  game.startGame();
+  game.turn = 0;
+  game.state = "AIMING";
+  game.input.charging = false;
+  game.input.power = 0.5;
+  if (game.bot && game.bot.cancel) game.bot.cancel();
+  for (const b of game.bots || []) if (b.cancel) b.cancel();
+
+  const a = game.players[0];
+  a.x = 480; a.y = 420; a.onGround = true;
+  a.vx = 0; a.vy = 0;
+  a.walkAnim = 0; a.walkBlend = 0; a.walkPhase = 0; a.rollPhase = 0;
+
+  const AIM_DEG = -40; // canvas y aşağı: -40 => "40°" yukarı
+  a.aim = AIM_DEG * Math.PI / 180;
+  a.facing = Math.cos(a.aim) >= 0 ? 1 : -1;
+
+  BARRELS = [];
+  game.render();
+  // Taban ölçeği render() içindeki resize() kurar; ölçüm ondan SONRA okunmalı
+  // yoksa namlu matrisiyle karşılaştırma yanlış ölçekle yapılır.
+  SCALE = { x: game._scaleX, y: game._scaleY };
+
+  const r = a.r;
+  const sx = SCALE.x, sy = SCALE.y;
+  const wantX = (a.x + 0.10 * r) * sx, wantY = (a.y - r - 0.34 * r) * sy;
+  const b = BARRELS.find((x) => Math.abs(x.m[4] - wantX) < 2 && Math.abs(x.m[5] - wantY) < 2) || BARRELS[0];
+  const m = a.muzzle; // drawAim'in başlangıcı
+  const out = [];
+  out.push(JSON.stringify({ x: a.x, y: a.y, r, aimDeg: AIM_DEG, facing: a.facing, scaleX: +sx.toFixed(4), scaleY: +sy.toFixed(4), canvasW: canvas.width, canvasH: canvas.height, cssW: canvas.clientWidth, cssH: canvas.clientHeight }));
+  out.push("namlu cizim sayisi=" + BARRELS.length + " yerelAci(deg)=" + BARRELS.map((x) => (x.ang * 180 / Math.PI).toFixed(1)).join(","));
+  out.push("secili matris=" + JSON.stringify(b.m.map((v) => +v.toFixed(3))));
+  const pivot = barrelWorld(b, 0, 0);
+  const dirPt = barrelWorld(b, 1, 0);
+  const dirAng = Math.atan2(dirPt[1] - pivot[1], dirPt[0] - pivot[0]) * 180 / Math.PI;
+  const ring = barrelWorld(b, r * 1.36, 0);
+  const tip = barrelWorld(b, r * 1.52, 0);
+  out.push("namlu dayanagi=(" + pivot[0].toFixed(1) + "," + pivot[1].toFixed(1) + ")  mantiksal beklenen=(" + (a.x + 0.10 * r).toFixed(1) + "," + (a.y - r - 0.34 * r).toFixed(1) + ")");
+  out.push("namlu yonu=" + dirAng.toFixed(2) + "  hedef(aim)=" + AIM_DEG + "  fark=" + (dirAng - AIM_DEG).toFixed(2) + "°");
+  out.push("namlu halkasi(1.36r)=(" + ring[0].toFixed(1) + "," + ring[1].toFixed(1) + ")  ucu(1.52r)=(" + tip[0].toFixed(1) + "," + tip[1].toFixed(1) + ")");
+  out.push("rehber baslangici(muzzle)=(" + m.x.toFixed(1) + "," + m.y.toFixed(1) + ")");
+  const dx = tip[0] - m.x, dy = tip[1] - m.y;
+  const ax = Math.cos(a.aim), ay = Math.sin(a.aim);
+  out.push("muzzle -> namlu ucu: dx=" + dx.toFixed(1) + " dy=" + dy.toFixed(1) + " dist=" + Math.hypot(dx, dy).toFixed(1) + " | eksene DIK sapma=" + (-dx * ay + dy * ax).toFixed(1) + " px");
+  out.push("r=" + r + "  r+12=" + (r + 12) + "  1.52r=" + (r * 1.52).toFixed(1));
+  document.getElementById("out").textContent = out.join("\n");
+  window.__OUT = out.join("\n");
+});
+</script>
+</body>
+</html>

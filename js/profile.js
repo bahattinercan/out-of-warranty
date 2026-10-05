@@ -41,15 +41,22 @@ function notifyStorageFailure() {
 // ── Varsayılanlar ve doğrulama ──────────────────────────────────────────────
 
 function defaultRobotProgress() {
-  // `ammo`: Cephane Pazarı'ndan alınan ve maç başında mermilere yüklenen
-  // robot deposu (id -> adet). Şema v3 ile eklendi; eski kayıtlarda yoktur.
-  return { xp: 0, upgrades: { chassis: 0, module: 0, core: 0 }, ammo: {}, stats: { matches: 0, wins: 0 } };
+  // loadout: yuva → parça id eşleşmesi (v5). Takma Atölye'den equipPart ile
+  // yapılır; burada yalnız boş şekil üretilir.
+  return { xp: 0, upgrades: { chassis: 0, module: 0, core: 0 }, stats: { matches: 0, wins: 0 }, loadout: sanitizeLoadoutShape(null) };
 }
 
 function defaultProfile() {
   return {
     version: PROFILE_SCHEMA_VERSION,
     scrap: START_SCRAP,
+    // Ortak cephane deposu (id -> adet): Cephane Pazarı'ndan alınır ve tüm
+    // robotlar tarafından paylaşılır. Şema v4 ile robot kayıtlarından köke taşındı.
+    ammo: {},
+    // Parça envanteri (v5): sahip olunan parça id'leri — js/parts.js'teki
+    // sanitizeParts doğrular; satın alma buyPart ile, takma Atölye'den
+    // equipPart ile yapılır. Parçalar benzersizdir (dizi, tekrarsız).
+    parts: [],
     robots: {},
     claimedMatches: [],
     // Hikâye durumu ayrı alanda tutulur (profil v2). defaultStoryProgress
@@ -75,11 +82,29 @@ function sanitizeRobotProgress(raw) {
   return {
     xp: Math.min(MAX_SERVICE_XP, toSafeInt(src.xp)),
     upgrades: { chassis: clampTier(up.chassis), module: clampTier(up.module), core: clampTier(up.core) },
-    // Cephane deposu market.js'te doğrulanır: bilinmeyen/sınırsız silah
-    // kayıtları atılır, adetler üst sınıra çekilir.
-    ammo: sanitizeAmmoDepot(src.ammo),
     stats: { matches: toSafeInt(st.matches), wins: toSafeInt(st.wins) },
+    // Loadout ŞEKİL doğrulaması burada; sahiplik/çakışma çapraz denetimi
+    // normalizeProfile'da (profil kökünü görür).
+    loadout: sanitizeLoadoutShape(src.loadout),
   };
+}
+
+// Loadout'ları profil köküne göre doğrular: SAHİP OLUNMAYAN parça null'a düşer
+// (KONUM KORUNUR — 2. alt yuvadaki parça 1. yuvaya kaymaz). Parçalar robota
+// kilitli DEĞİLDİR — aynı parça birden çok robotta durabilir. Aynı yuvada aynı
+// parçanın iki kez durması zaten sanitizeLoadoutShape'ta tekilleştirilir.
+function _crossValidateLoadouts(robots, parts) {
+  const owned = new Set(parts);
+  for (const id of Object.keys(robots)) {
+    const lo = robots[id].loadout;
+    for (const slot of PART_SLOTS) {
+      const slotList = lo[slot];
+      for (let i = 0; i < slotList.length; i++) {
+        const pid = slotList[i];
+        if (pid && !owned.has(pid)) slotList[i] = null;
+      }
+    }
+  }
 }
 
 // Sürümü bilinmeyen (gelecekteki) kayıt güvenli varsayılana düşer; alt sürümler
@@ -101,12 +126,33 @@ function migrateProfile(raw) {
     data.version = 2;
     version = 2;
   }
-  if (version < 3) {
-    // v2 → v3: Cephane deposu eklenir. Eksik `ammo` alanı
-    // sanitizeRobotProgress içinde boş depoya tamamlanır — ekonomi ve
-    // geliştirmeler korunur.
-    data.version = 3;
-    version = 3;
+  if (version < 4) {
+    // v3 → v4: cephane deposu robot başına tutuluyordu, artık profilde ORTAK.
+    // Eski robot depoları (ve varsa kök `ammo`) toplanıp köke taşınır; adetler
+    // silah başına üst sınıra kırpılır. Sanitizasyon normalizeProfile'da yapılır.
+    let merged = data.ammo && typeof data.ammo === "object" ? data.ammo : {};
+    const oldRobots = data.robots && typeof data.robots === "object" ? data.robots : {};
+    for (const rid of Object.keys(oldRobots)) {
+      const r = oldRobots[rid];
+      if (r && typeof r === "object" && r.ammo) merged = mergeDepots(merged, r.ammo);
+    }
+    data.ammo = merged;
+    data.version = 4;
+    version = 4;
+  }
+  if (version < 5) {
+    // v4 → v5: parça envanteri (parts) ve robot loadout'ları eklenir. Mevcut
+    // veri (scrap/ammo/robots/story) HİÇ taşınmaz ve değişmez; boş alanlar
+    // normalizeProfile'da üretilir (ekonomiye dokunmayan göç).
+    data.version = 5;
+    version = 5;
+  }
+  if (version < 6) {
+    // v5 → v6: loadout'ta yuva başına TEK parça vardı (string|null); artık
+    // yuva başına İKİ parça tutulur (dizi). Eski değerler [id, null]'a sarılır —
+    // dönüşümü sanitizeLoadoutShape yapar, göç yalnız sürümü yükseltir.
+    data.version = 6;
+    version = 6;
   }
   return data;
 }
@@ -128,9 +174,20 @@ function normalizeProfile(raw) {
     ? migrated.claimedMatches.filter((k) => typeof k === "string" && k).slice(-CLAIMED_MATCH_LIMIT)
     : [];
 
+  // Parça alanı (v5): önce sahip listesi doğrulanır, sonra tüm robotların
+  // loadout'ları bu listeye göre çapraz denetlenir.
+  const parts = sanitizeParts(migrated.parts);
+  _crossValidateLoadouts(robots, parts);
+
   return {
     version: PROFILE_SCHEMA_VERSION,
     scrap: migrated.scrap == null ? START_SCRAP : toSafeInt(migrated.scrap),
+    // Ortak depo market.js'te doğrulanır: bilinmeyen/sınırsız silah kayıtları
+    // atılır, adetler üst sınıra çekilir.
+    ammo: sanitizeAmmoDepot(migrated.ammo),
+    // Parçalar parts.js'te doğrulanır: bilinmeyen id/tekrar atılır, satın
+    // alma sırası korunur.
+    parts,
     robots,
     claimedMatches: claimed,
     // Hikâye durumu ayrı alanda tutulur: bozuk/eksik story ekonomiyi ASLA

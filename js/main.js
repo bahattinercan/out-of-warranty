@@ -5,7 +5,9 @@ window.addEventListener("DOMContentLoaded", () => {
   // Oyun her kareyi yeniden çizdiği için yüklenince ekran kendiliğinden güncellenir.
   if (document.fonts && document.fonts.load) {
     document.fonts.load('16px "Russo One"');
-    document.fonts.load('16px "Chakra Petch"');
+    // Gövde varsayılanı SemiBold (600) — 400 kesimi artık UI'da kullanılmıyor
+    // (bkz. uiTextFont); ön yükleme de yalnız kullanılan kesimleri ister.
+    document.fonts.load('600 16px "Chakra Petch"');
     document.fonts.load('bold 16px "Chakra Petch"');
   }
 

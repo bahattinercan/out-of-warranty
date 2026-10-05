@@ -69,7 +69,7 @@ Katman B, dikey prototip onaylanmadan yapılmamalıdır.
   - kükreme/uluma → rezonans halkası;
   - pençe/ısırık → kesici veya kıskaç;
   - kamuflaj → optik saptırıcı;
-  - dev form → kaplama kilidi.
+  - dev form → zırh kilidi.
 
 ### `js/robots.js` — yeni dosya
 

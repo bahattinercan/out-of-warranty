@@ -313,11 +313,15 @@ function _rbLegs(ctx, locomotion, r, color, accent, gait, seed) {
       rot = tap * (0.10 + bos * 0.12) - 0.02;
     }
     const hipX = side * r * 0.20, hipY = r * 0.04;
-    // Salınım genliği adım uzunluğuyla örtüşür (bkz. Entity WALK_STRIDE_UNIT):
-    // ayak yere basılıyken geriye kayması gövdenin ilerlemesini karşılar.
-    const kneeX = hipX + stride * r * 0.34 + r * 0.05;
-    const kneeY = r * 0.46 - lift * r * 0.14;
-    const footX = hipX + stride * r * 0.52;
+    // Ayak salınımı (2 × 0.56r = 15.7px) adım uzunluğundan (1.3r = 18.2px at
+    // r=14) biraz kısadır: ayak yere basılıyken geriye kayması gövdenin
+    // ilerlemesini büyük ölçüde karşılar, adım başına ~2.5px (%14) kayma payı
+    // kalır. Temas kenarlarında ayak gövdeye göre durakladığı için anlık kayma
+    // kare başına en fazla ~1.6px'e çıkar (gövde hızı 2.2px/karenin altında —
+    // hiçbir zaman ayakla gövde birlikte aynı yöne kaymaz).
+    const kneeX = hipX + stride * r * 0.36 + r * 0.05;
+    const kneeY = r * 0.46 - lift * r * 0.17;
+    const footX = hipX + stride * r * 0.56;
     const footY = r * 0.82 - lift * r * 0.24;
     // uyluk
     _rbLimb(ctx, hipX, hipY, kneeX, kneeY, r * 0.25, legColor);
@@ -664,12 +668,35 @@ function _rbHeadGear(ctx, tag, r, accent, hy) {
 }
 
 // ── Namlu (maç içi nişan duruşunda ellerin tuttuğu bazuka) ─────────────────
+//
+// Geometri TEK KAYNAKTIR: hem çizim (_rbLauncher) hem de oyun mantığı (nişan çizgisi,
+// mermi çıkış noktası, bot benzetimi) buradan türetilir. Değerler `r` oranıdır.
+// Daha önce mantık gövde MERKEZİNDEN `r + 12` ileri bir nokta kullanıyordu;
+// oysa namlu omuz pivotunda durur, bu yüzden nişan çizgisi silahın ağzından
+// kayıyordu (namlunun altından başlıyordu). Artık ikisi de aynı noktada.
+const RB_GUN_PIVOT_X = 0.10;  // omuz pivotu, gövde merkezine göre yatay
+const RB_GUN_PIVOT_Y = -0.34; // omuz pivotu, gövde merkezine göre dikey (− = yukarı)
+// Pivot → namlu ağzı. Ağzı okutan aksan halkasının merkeziyle BİREBİR aynı
+// olmalı (`_rbLauncher` içindeki `len - r * 0.06` = 1.36r).
+const RB_GUN_MUZZLE = 1.36;
+
+// Verilen gövde merkezi, yarıçap, bakış yönü ve nişan açısı için namlu ağzının
+// dünya konumu. Bakış yönü yalnız pivotun aynalanmasını etkiler; namlu HER
+// ZAMAN nişan yönüne bakar (çizimde de `ctx.scale(facing,1)` bunu yapar).
+function robotMuzzlePoint(cx, cy, r, facing, aim) {
+  const px = cx + (facing < 0 ? -1 : 1) * r * RB_GUN_PIVOT_X;
+  const py = cy + r * RB_GUN_PIVOT_Y;
+  return {
+    x: px + Math.cos(aim) * r * RB_GUN_MUZZLE,
+    y: py + Math.sin(aim) * r * RB_GUN_MUZZLE,
+  };
+}
 
 function _rbLauncher(ctx, ang, r, accent, px, py) {
   const len = r * 1.42, th = r * 0.28;
   const outline = "#0a0d0f";
   ctx.save();
-  ctx.translate(px === undefined ? r * 0.10 : px, py === undefined ? -r * 0.34 : py);
+  ctx.translate(px === undefined ? r * RB_GUN_PIVOT_X : px, py === undefined ? r * RB_GUN_PIVOT_Y : py);
   ctx.rotate(ang);
   // dipçik
   _rbRoundRect(ctx, -r * 0.46, -th * 0.55, r * 0.40, th * 1.10, th * 0.40);
@@ -960,10 +987,11 @@ function drawRobot(ctx, options) {
   const air = motion.onGround === false;
 
   // ── Yürüyüş döngüsü ───────────────────────────────────────────────────
-  // Adım sinyali Entity'den gelir (`motion.walk`): yerde adım atıldığında ±1,
-  // bırakılınca sönümlenir. Yerde yürüme `vx` kullanmadığı için bu alan
-  // olmadan animasyon tetiklenmez. `vx` yine de okunur: hücum/kayma gibi
-  // itmelerde de bacaklar çalışsın.
+  // Animasyon `Entity` durumundan gelir: `motion.walk` adım sinyali (±1),
+  // `motion.walkAmp` yumuşatılmış zarf, `motion.walkPhase`/`rollPhase` ise
+  // MESAFEYE kilitli faz açılarıdır. Yerde yürüme `vx` kullanmadığı için bu
+  // alanlar olmadan animasyon tetiklenmez/tempo tutmaz. `vx` yine de okunur:
+  // hücum/kayma gibi itmelerde de bacaklar çalışsın.
   const vx = Math.abs(motion.vx || 0);
   const wt = motion.walk || 0;
   // Genlik zarfı: `Entity` yumuşatılmış `walkAmp` verirse onu kullan (adım
@@ -976,7 +1004,8 @@ function drawRobot(ctx, options) {
   // (yalnız yedek yol kullanır; `walkPhase` zaten gövde-yereldir).
   const dir = ((wt || motion.vx || 0) * facing) >= 0 ? 1 : -1;
   // Adım fazı MESAFEYE kilitlidir (`motion.walkPhase`): yürüyüş hızı artınca
-  // animasyon da hızlanır, yavaşlayınca yavaşlar ve ayak kaymaz. Yedek yol
+  // animasyon da hızlanır, yavaşlayınca yavaşlar ve ayak yere basarken
+  // gövdeye göre geriye akar (adım başına ~%14 kayma payı). Yedek yol
   // zaman tabanlıdır (hareketsiz menü/kart çizimlerinde fark etmez).
   const phase = motion.walkPhase != null
     ? motion.walkPhase
@@ -1007,8 +1036,9 @@ function drawRobot(ctx, options) {
 
   const shFX = r * 0.36, shFY = -r * 0.38;
   const shBX = -r * 0.34, shBY = -r * 0.38;
-  // Namlu omuz hizasında taşınır: gövdeyi ortadan kesmesin.
-  const gunX = r * 0.10, gunY = -r * 0.34;
+  // Namlu omuz hizasında taşınır: gövdeyi ortadan kesmesin. Pivot geometrisi
+  // `robotMuzzlePoint` ile ortaktır (nişan çizgisi/mermi de aynı noktadan çıkar).
+  const gunX = r * RB_GUN_PIVOT_X, gunY = r * RB_GUN_PIVOT_Y;
   let handF, handB;
   if (holding) {
     const ax = Math.cos(localAim), ay = Math.sin(localAim);
@@ -1068,6 +1098,419 @@ function drawRobot(ctx, options) {
   if (o.upgradeVisuals && o.upgradeVisuals.attachmentGlow) {
     _rbAttachmentGlow(ctx, def.attachment, r, accent, { handFx: handF.x, handFy: handF.y });
   }
+  // 8) Takılı parça aksesuarları (v5): yuva→parça eşlemesi (id veya spec)
+  // verilmezse hiçbir şey çizilmez — parçasız robot görünümü birebir korunur.
+  // timeMs/walking canlı efektlerin (tarama çizgisi, egzoz alevi, LED sırası…)
+  // fazını belirler; deterministiktir.
+  _rbPartAccessories(ctx, r, _rbPartSpecs(o.parts), timeMs, walking);
   ctx.restore();
   return true;
+}
+
+/* Takılı parçaların robot siluetine eklediği donanımlar. Yuva→parça eşlemesi
+ * id (profil loadout'u) veya doğrudan spec olabilir; bilinmeyen id/yuva yok
+ * sayılır. Konumlar r oranlıdır ve rastgele/zaman kaynağı kullanılmaz — aynı
+ * girdi aynı zamanda aynı çizimi verir (parçasız robotlarda çağrı hiç
+ * yapılmaz, çizim imzası değişmez).
+ *
+ * Çözümleme WeakMap'te önbelleklenir: maç içinde loadout nesnesi sabit
+ * olduğundan kare başına yeni nesne ÜRETİLMEZ (performans kuralı). */
+const _rbPartSpecCache = new WeakMap();
+function _rbPartSpecs(loadout) {
+  if (!loadout || typeof loadout !== "object") return null;
+  if (typeof partById !== "function") return null;
+  const cached = _rbPartSpecCache.get(loadout);
+  if (cached !== undefined) return cached;
+  const slots = typeof PART_SLOTS !== "undefined" ? PART_SLOTS : ["helmet", "body", "tool", "feet"];
+  const per = typeof PARTS_PER_SLOT === "number" ? PARTS_PER_SLOT : 2;
+  const out = {};
+  let any = false;
+  for (const slot of slots) {
+    const value = loadout[slot];
+    const list = Array.isArray(value) ? value : [value];
+    const specs = [];
+    for (let i = 0; i < per; i++) {
+      const p = partById(list[i]);
+      specs.push(p || null);
+      if (p) any = true;
+    }
+    out[slot] = specs;
+  }
+  const result = any ? out : null;
+  _rbPartSpecCache.set(loadout, result);
+  return result;
+}
+
+/* ── Parça donanımları (robot üzerinde) ─────────────────────────────────────
+ * Takılı parçalar robotun siluetine yuva başına FARKLI donanımlar olarak
+ * işlenir: her parçanın ikon şekli (spec.icon.shape) kendi çizim ailesini
+ * seçer — ör. kaskta "lens" tek mercekli optik, "visor" tarama bandı + anten,
+ * "armorHelm" tac plakası + yanak zırhı. Ortak dil: koyu kontur + düz gövde
+ * dolgusu + üst parlaklık bandı + vurgu ışıkları (gradyan/shadowBlur yok,
+ * Date.now/Math.random yok). Parça yoksa HİÇBİR şey çizilmez: parçasız robot
+ * görünümü birebir korunur.
+ */
+
+// Donanım plakası: koyu kontur + dolgu + üst parlaklık (ortak zemin).
+function _rbModPlate(ctx, x, y, w, h, rad, tint, lwScale) {
+  _rbRoundRect(ctx, x, y, w, h, rad);
+  ctx.fillStyle = tint; ctx.fill();
+  ctx.strokeStyle = _rbShade(tint, -0.55);
+  ctx.lineWidth = Math.max(1, Math.min(w, h) * (lwScale || 0.18));
+  ctx.stroke();
+  _rbFillGloss(ctx, x + w * 0.08, y + h * 0.10, w * 0.84, h * 0.36, rad * 0.8, 0.20);
+}
+
+// ── KASK: görüş hattına takılan optik/algı donanımları ─────────────────────
+//
+// Canlı efektler deterministiktir: yalnız `timeMs` fazına bağlı sinüs
+// salınımlarıdır — Date.now/Math.random yok, kare başına allocation yok.
+// `timeMs` verilmezse (eski çağrılar) efektler statik kalır.
+
+// Tek mercekli nişan optiği: yatak halkası + mercek + nefes alan iris + gezen parıltı.
+function _rbPartHelmLens(ctx, r, t, a, timeMs) {
+  const cx = r * 0.18, cy = -r * 0.96;
+  const ph = (timeMs || 0) / 1000;
+  const pulse = 0.5 + 0.5 * Math.sin(ph * 2.2);
+  _rbDot(ctx, cx, cy, r * 0.155, _rbShade(t, -0.45), _rbShade(t, -0.72));
+  _rbDot(ctx, cx, cy, r * 0.110, t, _rbShade(t, -0.78));
+  _rbDot(ctx, cx, cy, r * (0.048 + 0.008 * pulse), a, _rbShade(t, -0.6));
+  // Mercek üzerinde yavaşça dönen tarama parıltısı.
+  const ang = ph * 1.1;
+  ctx.save();
+  ctx.globalAlpha = 0.45 + 0.55 * pulse;
+  _rbDot(ctx, cx + Math.cos(ang) * r * 0.072, cy + Math.sin(ang) * r * 0.072, r * 0.026, "#ffffff", _rbShade(t, -0.5));
+  ctx.restore();
+  // optik bağlantı kolu (vizör hattına iner)
+  _rbLine(ctx, -r * 0.30, cy + r * 0.10, cx - r * 0.14, cy + r * 0.03, _rbShade(t, -0.30), Math.max(1.2, r * 0.055));
+}
+
+// Tarama bandı: gövde + vurgu tikleri + soldan sağa kayan tarama çizgisi +
+// yanıp sönen anten ucu.
+function _rbPartHelmVisor(ctx, r, t, a, timeMs) {
+  const w = r * 0.62, h = r * 0.17, x = -w / 2, y = -r * 1.06;
+  const ph = (timeMs || 0) / 1000;
+  _rbModPlate(ctx, x, y, w, h, h * 0.38, t, 0.22);
+  for (let i = 0; i < 3; i++) {
+    const px = x + w * (0.22 + i * 0.28);
+    _rbLine(ctx, px, y + h * 0.26, px, y + h * 0.74, a, Math.max(1, r * 0.038));
+  }
+  // Tarama çizgisi bandın içinde döngüyle kayar; kenarlarda sönerek girer/çıkar.
+  const sweep = (ph * 0.85) % 1;
+  ctx.save();
+  ctx.globalAlpha = 0.30 + 0.60 * Math.sin(sweep * Math.PI);
+  _rbLine(ctx, x + w * (0.10 + 0.80 * sweep), y + h * 0.14, x + w * (0.10 + 0.80 * sweep), y + h * 0.86, "#ffffff", Math.max(1.3, r * 0.055));
+  ctx.restore();
+  _rbLine(ctx, r * 0.30, y + h * 0.5, r * 0.42, y - r * 0.16, _rbShade(t, -0.40), Math.max(1.3, r * 0.055));
+  ctx.save();
+  ctx.globalAlpha = 0.45 + 0.55 * (0.5 + 0.5 * Math.sin(ph * 5));
+  _rbDot(ctx, r * 0.42, y - r * 0.21, r * 0.055, a, _rbShade(t, -0.6));
+  ctx.restore();
+}
+
+// Yan jiroskop diski: yavaşça DÖNEN üç kol + göbek.
+function _rbPartHelmGyro(ctx, r, t, a, timeMs) {
+  const cx = -r * 0.26, cy = -r * 0.90, rad = r * 0.17;
+  const rot = ((timeMs || 0) / 1000) * 0.9;
+  ctx.beginPath(); ctx.arc(cx, cy, rad, 0, Math.PI * 2);
+  ctx.fillStyle = _rbShade(t, -0.52); ctx.fill();
+  ctx.strokeStyle = _rbShade(t, -0.75); ctx.lineWidth = Math.max(1, r * 0.04); ctx.stroke();
+  ctx.beginPath(); ctx.arc(cx, cy, rad * 0.92, 0, Math.PI * 2);
+  ctx.strokeStyle = t; ctx.lineWidth = Math.max(1.2, r * 0.06); ctx.stroke();
+  for (let i = 0; i < 3; i++) {
+    const ang = -Math.PI / 2 + i * (Math.PI * 2 / 3) + rot;
+    _rbLine(ctx, cx + Math.cos(ang) * rad * 0.22, cy + Math.sin(ang) * rad * 0.22,
+      cx + Math.cos(ang) * rad * 0.90, cy + Math.sin(ang) * rad * 0.90, a, Math.max(1.1, r * 0.05));
+  }
+  _rbDot(ctx, cx, cy, r * 0.05, a);
+}
+
+// Zırh kaskı: tac plakası + iki yanak plakası (perçinli) — statik zırh.
+function _rbPartHelmArmor(ctx, r, t, a) {
+  _rbModPlate(ctx, -r * 0.30, -r * 1.34, r * 0.60, r * 0.17, r * 0.06, t, 0.24);
+  _rbDot(ctx, -r * 0.19, -r * 1.26, r * 0.035, a, _rbShade(t, -0.6));
+  _rbDot(ctx, r * 0.19, -r * 1.26, r * 0.035, a, _rbShade(t, -0.6));
+  for (const side of [-1, 1]) {
+    _rbModPlate(ctx, side * r * 0.30 - r * 0.09, -r * 1.06, r * 0.18, r * 0.26, r * 0.05, _rbShade(t, -0.12), 0.22);
+    _rbDot(ctx, side * r * 0.30, -r * 0.88, r * 0.035, a, _rbShade(t, -0.6));
+  }
+}
+
+// ── GÖVDE: dayanım plakaları ────────────────────────────────────────────────
+
+// Lehim yaması: açık yama + dalgalı dikiş + 4 perçin + dikişte gezinen sıcaklık.
+function _rbPartBodyWeld(ctx, r, t, a, timeMs) {
+  const x = -r * 0.30, y = -r * 0.16, w = r * 0.60, h = r * 0.32;
+  const ph = (timeMs || 0) / 1000;
+  _rbModPlate(ctx, x, y, w, h, r * 0.06, a, 0.20);
+  ctx.beginPath();
+  ctx.moveTo(x + w * 0.10, y + h * 0.54);
+  ctx.quadraticCurveTo(x + w * 0.32, y + h * 0.24, x + w * 0.52, y + h * 0.54);
+  ctx.quadraticCurveTo(x + w * 0.72, y + h * 0.84, x + w * 0.90, y + h * 0.54);
+  ctx.strokeStyle = t; ctx.lineWidth = Math.max(1.2, r * 0.055); ctx.stroke();
+  for (const [fx, fy] of [[0.16, 0.22], [0.84, 0.22], [0.16, 0.80], [0.84, 0.80]]) {
+    _rbDot(ctx, x + w * fx, y + h * fy, r * 0.045, t, _rbShade(a, -0.5));
+  }
+  // Dikiş boyunca ileri-geri giden parıltı (soğuyan kaynak izi).
+  const gp = 0.5 + 0.5 * Math.sin(ph * 1.6);
+  ctx.save();
+  ctx.globalAlpha = 0.30 + 0.55 * gp;
+  _rbDot(ctx, x + w * (0.14 + 0.72 * gp), y + h * (0.54 + 0.22 * Math.sin(ph * 1.6)), r * 0.035, "#ffffff", _rbShade(t, -0.4));
+  ctx.restore();
+}
+
+// Katmanlı zırh plakası: taban + koyu kuşak + 2×3 perçin + orta çizgi (statik).
+function _rbPartBodyPlate(ctx, r, t, a) {
+  const x = -r * 0.32, y = -r * 0.16, w = r * 0.64, h = r * 0.32;
+  _rbModPlate(ctx, x, y, w, h, r * 0.07, t, 0.20);
+  _rbRoundRect(ctx, x + w * 0.06, y + h * 0.10, w * 0.88, h * 0.26, r * 0.04);
+  ctx.fillStyle = _rbShade(t, -0.28); ctx.fill();
+  for (let i = 0; i < 3; i++) {
+    const px = x + w * (0.16 + i * 0.34);
+    _rbDot(ctx, px, y + h * 0.22, r * 0.042, a, _rbShade(t, -0.6));
+    _rbDot(ctx, px, y + h * 0.78, r * 0.042, a, _rbShade(t, -0.6));
+  }
+  _rbLine(ctx, x + w * 0.10, y + h * 0.50, x + w * 0.90, y + h * 0.50, _rbShade(t, -0.42), Math.max(1.1, r * 0.04));
+}
+
+// Kanatçıklı radyatör: koyu taban + sırayla parlayan 4 kanat + raylar.
+function _rbPartBodyRadiator(ctx, r, t, a, timeMs) {
+  const x = -r * 0.30, y = -r * 0.16, w = r * 0.60, h = r * 0.32;
+  const ph = (timeMs || 0) / 1000;
+  _rbModPlate(ctx, x, y, w, h, r * 0.05, _rbShade(t, -0.22), 0.18);
+  for (let i = 0; i < 4; i++) {
+    ctx.save();
+    // Isı dalgası kanatlarda soldan sağa dolaşır.
+    ctx.globalAlpha = 0.60 + 0.40 * (0.5 + 0.5 * Math.sin(ph * 2.4 - i * 0.7));
+    _rbRoundRect(ctx, x + w * (0.14 + i * 0.24), y + h * 0.20, w * 0.10, h * 0.60, r * 0.025);
+    ctx.fillStyle = a; ctx.fill();
+    ctx.strokeStyle = _rbShade(t, -0.55); ctx.lineWidth = Math.max(0.9, r * 0.03); ctx.stroke();
+    ctx.restore();
+  }
+  _rbLine(ctx, x + w * 0.06, y + h * 0.10, x + w * 0.94, y + h * 0.10, _rbShade(t, -0.5), Math.max(1, r * 0.045));
+  _rbLine(ctx, x + w * 0.06, y + h * 0.90, x + w * 0.94, y + h * 0.90, _rbShade(t, -0.5), Math.max(1, r * 0.045));
+}
+
+// ── APARAT: sırt modülü (omuz üstü) ────────────────────────────────────────
+
+// Bobin modülü: 4 sarımda aşağıdan yukarı akan enerji + 2 terminal.
+function _rbPartToolCoil(ctx, r, t, a, timeMs) {
+  const x = -r * 0.68, y = -r * 0.76, w = r * 0.30, h = r * 0.32;
+  const ph = (timeMs || 0) / 1000;
+  _rbModPlate(ctx, x, y, w, h, r * 0.06, _rbShade(t, -0.22), 0.18);
+  for (let i = 0; i < 4; i++) {
+    ctx.save();
+    ctx.globalAlpha = 0.50 + 0.50 * (0.5 + 0.5 * Math.sin(ph * 4 - i * 0.9));
+    _rbLine(ctx, x + w * 0.16, y + h * (0.22 + i * 0.19), x + w * 0.84, y + h * (0.22 + i * 0.19), a, Math.max(1.1, r * 0.05));
+    ctx.restore();
+  }
+  _rbDot(ctx, x + w * 0.5, y - r * 0.03, r * 0.045, a, _rbShade(t, -0.6));
+  _rbDot(ctx, x + w * 0.5, y + h + r * 0.03, r * 0.045, a, _rbShade(t, -0.6));
+}
+
+// Şarjör: gövde + koyu pencere + 3 yay çizgisi + kapak rayı (statik).
+function _rbPartToolLoader(ctx, r, t, a) {
+  const x = -r * 0.68, y = -r * 0.76, w = r * 0.30, h = r * 0.34;
+  _rbModPlate(ctx, x, y, w, h, r * 0.05, t, 0.18);
+  _rbRoundRect(ctx, x + w * 0.20, y + h * 0.24, w * 0.60, h * 0.52, r * 0.03);
+  ctx.fillStyle = _rbShade(t, -0.55); ctx.fill();
+  for (let i = 0; i < 3; i++) {
+    const yy = y + h * (0.34 + i * 0.16);
+    _rbLine(ctx, x + w * 0.26, yy, x + w * 0.74, yy, a, Math.max(1, r * 0.035));
+  }
+  _rbLine(ctx, x + w * 0.30, y - r * 0.02, x + w * 0.70, y - r * 0.02, _rbShade(t, -0.45), Math.max(1.2, r * 0.06));
+}
+
+// Basınç tankı: silindir + TİTREŞEN kadran ibresi + 2 cıvata.
+function _rbPartToolTank(ctx, r, t, a, timeMs) {
+  const x = -r * 0.66, y = -r * 0.74, w = r * 0.26, h = r * 0.30;
+  const ph = (timeMs || 0) / 1000;
+  _rbModPlate(ctx, x, y, w, h, w * 0.5, t, 0.18);
+  const cx = x + w * 0.5, cy = y + h * 0.44, rad = w * 0.22;
+  ctx.beginPath(); ctx.arc(cx, cy, rad, 0, Math.PI * 2);
+  ctx.strokeStyle = a; ctx.lineWidth = Math.max(1.1, r * 0.045); ctx.stroke();
+  // İbre basınçla hafifçe titrer (kadran canlı okunur).
+  const ang = -Math.PI * 0.5 + 0.55 + 0.16 * Math.sin(ph * 3.1);
+  _rbLine(ctx, cx, cy, cx + Math.cos(ang) * rad * 0.82, cy + Math.sin(ang) * rad * 0.82, a, Math.max(1, r * 0.035));
+  ctx.save();
+  ctx.globalAlpha = 0.5 + 0.5 * (0.5 + 0.5 * Math.sin(ph * 2.2));
+  _rbDot(ctx, cx, cy, r * 0.022, a);
+  ctx.restore();
+  _rbDot(ctx, x + w * 0.26, y + h * 0.86, r * 0.035, a, _rbShade(t, -0.6));
+  _rbDot(ctx, x + w * 0.74, y + h * 0.86, r * 0.035, a, _rbShade(t, -0.6));
+}
+
+// Çip modülü: PCB + 3 pin + SIRAYLA yanan 3 LED.
+function _rbPartToolChip(ctx, r, t, a, timeMs) {
+  const x = -r * 0.68, y = -r * 0.74, w = r * 0.30, h = r * 0.26;
+  const ph = (timeMs || 0) / 1000;
+  const step = Math.floor(ph * 3) % 3;
+  _rbModPlate(ctx, x, y, w, h, r * 0.03, _rbShade(t, -0.28), 0.18);
+  for (let i = 0; i < 3; i++) {
+    const px = x + w * (0.22 + i * 0.28);
+    _rbLine(ctx, px, y + h, px, y + h + r * 0.08, _rbShade(t, -0.5), Math.max(1, r * 0.035));
+    ctx.save();
+    ctx.globalAlpha = i === step ? 1 : 0.30;
+    _rbDot(ctx, px, y + h * 0.42, r * (i === step ? 0.040 : 0.032), a);
+    ctx.restore();
+  }
+}
+
+// ── AYAK: alt takım donanımları ────────────────────────────────────────────
+
+// Damper: plaka + orta silindir + 2 cıvata (statik).
+function _rbPartFeetDamper(ctx, r, t, a) {
+  for (const side of [-1, 1]) {
+    const x = side * r * 0.22 - r * 0.20, y = r * 0.84, w = r * 0.40, h = r * 0.15;
+    _rbModPlate(ctx, x, y, w, h, r * 0.05, t, 0.20);
+    _rbRoundRect(ctx, x + w * 0.36, y + h * 0.14, w * 0.28, h * 0.54, r * 0.03);
+    ctx.fillStyle = a; ctx.fill();
+    ctx.strokeStyle = _rbShade(t, -0.5); ctx.lineWidth = Math.max(0.9, r * 0.03); ctx.stroke();
+    _rbDot(ctx, x + w * 0.12, y + h * 0.5, r * 0.035, a, _rbShade(t, -0.6));
+    _rbDot(ctx, x + w * 0.88, y + h * 0.5, r * 0.035, a, _rbShade(t, -0.6));
+  }
+}
+
+// Yay takozu: plaka + görünen sarmal; YÜRÜRKEN sarmal hafifçe sıkışır.
+function _rbPartFeetSpring(ctx, r, t, a, timeMs, walking) {
+  const ph = (timeMs || 0) / 1000;
+  const squash = walking ? r * 0.02 * (0.5 + 0.5 * Math.sin(ph * 8)) : 0;
+  for (const side of [-1, 1]) {
+    const x = side * r * 0.22 - r * 0.18, y = r * 0.87, w = r * 0.36, h = r * 0.13;
+    _rbModPlate(ctx, x, y, w, h, r * 0.05, t, 0.20);
+    ctx.beginPath();
+    for (let i = 0; i <= 4; i++) {
+      const xx = x + w * (0.20 + i * 0.15);
+      const yy = y - r * 0.02 - (i % 2 ? 0 : r * 0.07) + squash * (i / 4);
+      ctx[i ? "lineTo" : "moveTo"](xx, yy);
+    }
+    ctx.strokeStyle = a; ctx.lineWidth = Math.max(1.2, r * 0.05); ctx.stroke();
+  }
+}
+
+// Turbo palet: plaka + itici lüle + hız okları + ARKADA TİTREŞEN egzoz alevi
+// (yürürken daha güçlü; dururken rölanti parıltısı).
+function _rbPartFeetTurbo(ctx, r, t, a, timeMs, walking) {
+  const ph = (timeMs || 0) / 1000;
+  const hot = walking ? 1 : 0.42;
+  for (const side of [-1, 1]) {
+    const x = side * r * 0.22 - r * 0.20, y = r * 0.84, w = r * 0.40, h = r * 0.15;
+    _rbModPlate(ctx, x, y, w, h, r * 0.05, t, 0.20);
+    ctx.beginPath();
+    ctx.moveTo(x + w * 0.60, y + h * 0.08);
+    ctx.lineTo(x + w * 0.99, y + h * 0.26);
+    ctx.lineTo(x + w * 0.99, y + h * 0.82);
+    ctx.lineTo(x + w * 0.60, y + h * 0.94);
+    ctx.closePath();
+    ctx.fillStyle = _rbShade(t, -0.42); ctx.fill();
+    ctx.strokeStyle = _rbShade(t, -0.7); ctx.lineWidth = Math.max(1, r * 0.04); ctx.stroke();
+    for (let i = 0; i < 2; i++) {
+      const ax = x + w * (0.13 + i * 0.19);
+      _rbLine(ctx, ax, y + h * 0.76, ax + w * 0.09, y + h * 0.50, a, Math.max(1.1, r * 0.045));
+      _rbLine(ctx, ax + w * 0.09, y + h * 0.50, ax, y + h * 0.24, a, Math.max(1.1, r * 0.045));
+    }
+    // Egzoz alevi: lülenin önünde üç kısa alev tiki, sinüsle titrer.
+    for (let i = 0; i < 3; i++) {
+      const flick = 0.5 + 0.5 * Math.sin(ph * 9 + i * 1.7 + (side > 0 ? 0.8 : 0));
+      ctx.save();
+      ctx.globalAlpha = hot * (0.55 - i * 0.13) * flick;
+      _rbRoundRect(ctx, x + w * (1.02 + i * 0.11), y + h * (0.34 + i * 0.10), r * 0.06, h * (0.30 - i * 0.06), r * 0.02);
+      ctx.fillStyle = i === 0 ? "#fff2c4" : a;
+      ctx.fill();
+      ctx.restore();
+    }
+  }
+}
+
+// Sıçrama yayı: plaka + sarmal + YUKARI OK (ok nabız gibi parlar).
+function _rbPartFeetJump(ctx, r, t, a, timeMs) {
+  const ph = (timeMs || 0) / 1000;
+  for (const side of [-1, 1]) {
+    const x = side * r * 0.22 - r * 0.18, y = r * 0.88, w = r * 0.36, h = r * 0.12;
+    _rbModPlate(ctx, x, y, w, h, r * 0.05, t, 0.20);
+    ctx.beginPath();
+    for (let i = 0; i <= 4; i++) {
+      const yy = y - r * 0.02 - i * r * 0.05;
+      const xx = x + w * 0.5 + (i % 2 ? 1 : -1) * w * 0.24;
+      ctx[i ? "lineTo" : "moveTo"](xx, yy);
+    }
+    ctx.strokeStyle = a; ctx.lineWidth = Math.max(1.2, r * 0.05); ctx.stroke();
+    const ox = x + w * 0.5, oy = y - r * 0.26;
+    ctx.save();
+    ctx.globalAlpha = 0.55 + 0.45 * (0.5 + 0.5 * Math.sin(ph * 2.6));
+    _rbLine(ctx, ox, oy + r * 0.13, ox, oy - r * 0.02, _rbShade(t, -0.4), Math.max(1.2, r * 0.05));
+    _rbLine(ctx, ox - r * 0.06, oy + r * 0.04, ox, oy - r * 0.03, _rbShade(t, -0.4), Math.max(1.2, r * 0.05));
+    _rbLine(ctx, ox + r * 0.06, oy + r * 0.04, ox, oy - r * 0.03, _rbShade(t, -0.4), Math.max(1.2, r * 0.05));
+    ctx.restore();
+  }
+}
+
+// Yuva → şekil ailesi; bilinmeyen şekil yuvanın varsayılanına düşer.
+// Aileler (ctx, r, tint, accent, timeMs, walking) ile çağrılır; kullanmadıkları
+// faz parametrelerini yok sayar (statik donanımlar böyle kalır).
+const _RB_PART_DRAW = {
+  helmet: { lens: _rbPartHelmLens, visor: _rbPartHelmVisor, gyro: _rbPartHelmGyro, armorHelm: _rbPartHelmArmor },
+  body: { weldPatch: _rbPartBodyWeld, plate: _rbPartBodyPlate, radiator: _rbPartBodyRadiator },
+  tool: { coil: _rbPartToolCoil, loader: _rbPartToolLoader, bolt: _rbPartToolTank, chip: _rbPartToolChip },
+  feet: { damping: _rbPartFeetDamper, springPad: _rbPartFeetSpring, turboPad: _rbPartFeetTurbo, jumpPad: _rbPartFeetJump },
+};
+const _RB_PART_FALLBACK = { helmet: "visor", body: "plate", tool: "coil", feet: "turboPad" };
+// Çizim sırası arkadan öne: ayak → sırt modülü → gövde plakası → kask donanımı.
+const _RB_PART_ORDER = ["feet", "tool", "body", "helmet"];
+
+// İkinci alt yuvadaki donanım, birincinin üstüne binmesin diye YUVANIN KENDİ
+// anatomik çapası çevresinde küçültülür ve boş kalan bölgeye kaydırılır: iki
+// parça üst üste binmez, robot "çift donanımlı" okunur.
+//
+// Kritik: dönüşüm mutlaka çapa çevresinde yapılır (eski sürüm şekli robotun
+// MERKEZİ çevresinde ölçekleyip sabit bir köşeye kaydırıyordu; kask omuza,
+// aparat göğse düşüyor — parçalar gövdeden kopup havada duruyordu). Çapa,
+// şeklin çizildiği bölgenin merkezidir:
+//   helmet → kafa, body → kasa, tool → sırt/omuz modülü, feet → alt takım.
+//
+// Dönüşüm zinciri: çapayı (ax+dx, ay+dy)'ye taşı → çapa çevresinde ölçekle/
+// aynala → çapaya geri dön. Böylece çapa noktası tam olarak çapa+delta'ya
+// oturur; şekil gövdeden kopmadan ikinci bir kopya olur.
+//
+// ax/ay : yuvanın anatomik çapası (r oranı, robot merkezi = 0)
+// mirror: -1 ise çapa çevresinde yatay ayna (asimetrik şekiller — mercek,
+//         jiroskop, sırt modülü — karşı yana bakan ikinci kopya olur)
+// dx/dy : çapaya göre kayma (r oranı) — ikinci donanımın boş bölgesi
+// scale : ikinci donanımın küçültme katsayısı
+const _RB_PART_SECONDARY = {
+  // Kafa: ikinci donanım kafanın öbür yanına, biraz küçük oturur.
+  helmet: { ax: 0, ay: -1.02, mirror: -1, dx: -0.30, dy: 0.04, scale: 0.58 },
+  // Kasa: ikinci plaka göğsün diğer yarısına kayar (gövde siluetinde kalır).
+  body: { ax: 0, ay: -0.18, mirror: -1, dx: 0.34, dy: 0.04, scale: 0.52 },
+  // Sırt/omuz modülü: soldan sağ omuza aynalanır (çift modül okunur).
+  tool: { ax: -0.53, ay: -0.60, mirror: -1, dx: 1.06, dy: 0, scale: 0.78 },
+  // Alt takım: ikinci donanım ayak pedlerinin üstüne (bilek hattına) oturur.
+  feet: { ax: 0, ay: 0.93, mirror: 1, dx: 0, dy: -0.30, scale: 0.50 },
+};
+
+function _rbPartAccessories(ctx, r, parts, timeMs, walking) {
+  if (!parts) return;
+  for (const slot of _RB_PART_ORDER) {
+    const specs = parts[slot];
+    if (!specs) continue;
+    const family = _RB_PART_DRAW[slot];
+    if (!family) continue;
+    for (let i = 0; i < specs.length; i++) {
+      const spec = specs[i];
+      if (!spec || !spec.icon) continue;
+      const shape = family[spec.icon.shape] ? spec.icon.shape : _RB_PART_FALLBACK[slot];
+      if (i === 0) {
+        family[shape](ctx, r, spec.icon.tint, spec.icon.accent, timeMs, walking);
+      } else {
+        const sec = _RB_PART_SECONDARY[slot];
+        if (!sec) continue;
+        ctx.save();
+        ctx.translate((sec.ax + sec.dx) * r, (sec.ay + sec.dy) * r);
+        ctx.scale(sec.scale * sec.mirror, sec.scale);
+        ctx.translate(-sec.ax * r, -sec.ay * r);
+        family[shape](ctx, r, spec.icon.tint, spec.icon.accent, timeMs, walking);
+        ctx.restore();
+      }
+    }
+  }
 }

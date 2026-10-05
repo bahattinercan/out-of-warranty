@@ -23,6 +23,7 @@ start index.html         # Windows
 
 # Testleri çalıştır (saf Node, bağımlılıksız):
 node tests/run.js
+node tests/market.js
 node tests/audio.js
 ```
 
@@ -42,7 +43,9 @@ Oyun `file://` üzerinden çift tıklayınca çalışmak zorunda. Bu yüzden:
 | `CHARACTERS`                                    | `characters.js` | Karakter veri dizisi                      |
 | `SERVICE_LEVELS`, `resolveRobotBuild`, `calculateMatchReward` | `progression.js` | Ekonomi sabitleri, ödül formülü, türetilmiş build |
 | `loadProfile`, `saveProfile`, `purchaseUpgrade`, `grantMatchReward` | `profile.js` | Kalıcı profil, doğrulama ve satın alma cephesi |
-| `WEAPONS`, `SKILL_PROJECTILES`, `initialAmmo()` | `weapons.js`    | Silah spec'leri + yetenek mermileri       |
+| `AMMO_PRICES`, `buyAmmo`, `battleLoad`, `weaponBattleMax`, `getAmmoDepot`, `settleDepot` | `market.js` | Cephane fiyatları, ortak depo (999 stok), satın alma, savaş tavanı yüklemesi ve iade |
+| `PARTS`, `buyPart`, `equipPart`, `getOwnedParts`, `drawPartIcon` | `parts.js` | Parça kataloğu, benzersiz satın alma, robota takma (taşımalı), parça ikonları |
+| `WEAPONS`, `SKILL_PROJECTILES`, `initialAmmo()`, `weaponStats`, `weaponPowerScore` | `weapons.js`    | Silah spec'leri (taban mühimmat + `battleMax` savaş tavanı) + türetilmiş gösterim puanları + yetenek mermileri |
 | `MAPS`, `getMapById()`, `BIOMES`, `drawSky()` … | `maps.js`       | Harita temaları + arka plan çizimi        |
 | `STORY_CAMPAIGN`, `STORY_MISSIONS`, `STORY_SCENES` | `story-data.js` | Hikâye kampanyası, görev ve sahne verileri |
 | `validateStoryData`, `isMissionUnlocked`, `maintenancePoints` | `story.js` | Hikâye doğrulama, kilit grafiği, türetilen durumlar |
@@ -63,7 +66,9 @@ Oyun `file://` üzerinden çift tıklayınca çalışmak zorunda. Bu yüzden:
 | `js/game.js`       | ~3350  | **En büyük dosya.** Durum makinesi (karakter seç → harita seç → savaş → bitiş + hikâye ekranları), sıra/rüzgar, girdi, render döngüsü, hasar uygulama yardımcıları |
 | `js/characters.js` | ~53    | `CHARACTERS` (34 karakter): can/zırh/hasar + veri-güdümlü `skill`                                                                               |
 | `js/progression.js` | ~330  | Saf ekonomi: seviye eşikleri, ödül formülü, `resolveRobotBuild`, yetenek adaptörleri                                                            |
-| `js/profile.js`    | ~240   | Profil şeması (v2, `story` alanı dâhil), doğrulama/migrasyon, `loadProfile`/`saveProfile`, satın alma ve ödül cephesi                            |
+| `js/profile.js`    | ~330   | Profil şeması (v6: `story` + **ortak** cephane deposu + **parça/loadout, yuva başına 2**), doğrulama/migrasyon, `loadProfile`/`saveProfile`, satın alma ve ödül cephesi                            |
+| `js/market.js`     | ~250   | Cephane pazarı ekonomisi: fiyatlar (tablo + güç formülü), ortak depo doğrulama (999 stok), `buyAmmo`, savaş tavanlı maç yüklemesi (`battleLoad` / `weaponBattleMax`) ve harcananı düşme (`settleDepot`)                          |
+| `js/parts.js`      | ~700   | Parça ekonomisi/takma: `PARTS` kataloğu (yuva başına 6), `buyPart` (benzersiz), `equipPart` (yuva başına 2 alt yuva), sanitize, `drawPartIcon` + 15 ikon şekli                          |
 | `js/maps.js`       | ~781   | Harita temaları, biyomlar, çok katmanlı arka plan/önizleme çizimi                                                                               |
 | `js/story-data.js`   | ~790     | Hikâye kampanyasının SAF verisi: kampanya, 9 bölge, 12 görev, 39 sahne, öğreticiler — sıfır fonksiyon                                             |
 | `js/story.js`        | ~500     | Hikâye kural katmanı (DOM'suz): `validateStoryData`, kilit grafiği, Bakım Puanı, kanıt/kısıntı türetme, `story` normalizasyonu                    |
@@ -78,7 +83,8 @@ Oyun `file://` üzerinden çift tıklayınca çalışmak zorunda. Bu yüzden:
 
 Yeni içerik çoğunlukla **kod değil veri** eklemekle yapılır:
 
-- **Yeni silah:** `weapons.js > WEAPONS` dizisine bir spec ekle. Davranış `projectile.js` tarafından spec alanlarından (sekme/fitil/saçma/yarıçap/hız) yorumlanır. README'deki silah tablosunu da güncelle.
+- **Yeni silah:** `weapons.js > WEAPONS` dizisine bir spec ekle. Davranış `projectile.js` tarafından spec alanlarından (sekme/fitil/saçma/yarıçap/hız) yorumlanır. `battleMax` alanıyla o silahın bir maçta en fazla kaç atış yapabileceğini yaz (taban mühimmat `ammo` ile birlikte; depo 999 olsa da maçta bu tavan aşılmaz). Fiyatını `market.js > AMMO_PRICES` tablosuna yaz; yazmazsan tek atış gücünden (`weaponPowerScore`) türetilen formül fiyatı kullanılır. Gösterim puanları (`stats`) artık elle yazılmaz, `weaponStats` türetir. README'deki silah tablosunu da güncelle.
+- **Yeni parça:** `parts.js > PARTS` dizisine bir spec ekle: `{ id, label, slot, desc, price, effects, icon }`. `slot` dört yuvadan biri olmalı (`helmet/body/tool/feet`); `effects` yalnız tanımlı eksenleri kullanır (`maxHpFlat`, `maxHpPct`, `armorFlat`, `staminaFlat`, `weaponDamagePct`, `powerPct`, `knockbackRedPct`, `cooldownFlat`, `moveSpeedMult`, `jumpPowerMult`); her yuvaya `PARTS_PER_SLOT` (2) parça takılır — loadout[yuva] bir dizidir. Yeni bir eksen eklenirse `progression.js > PART_EFFECT_KEYS` + `_partEffectTotals` + `resolveRobotBuild` formülü ve `partEffectText` de güncellenir. `icon.shape` `parts.js > PART_ICON_SHAPES` içinde olmalı (yoksa cıvata yedeğine düşer). README parça tablosunu güncelle.
 - **Yeni karakter:** `characters.js > CHARACTERS` dizisine ekle; `skill.kind` mevcut türlerden biri olmalı (`heal`, `shield`, `damageReduce`, `nextShot`, `jump`, `dash`, `dig`, `glide`, `melee`, `radial`, `quake`, `spit`). Yeni bir `kind` eklersen `skills.js > useSkill` içine dallanma ekle.
 - **Yeni harita teması:** `maps.js` içindeki biyom/tema tablolarından üretilir; her karaktere bir harita bağlanır.
 - Süreli yetenek durumları **entity üzerinde** tutulur (`nextShotMod`, `damageReduce`, `poison`, `dashAttack`, `glideTurns`) ve her tur sonunda (`endTurn`) işlenir/azaltılır.
@@ -87,13 +93,14 @@ Yeni içerik çoğunlukla **kod değil veri** eklemekle yapılır:
 
 `tests/run.js` bağımlılıksızdır: oyun kaynaklarını Node `vm` ile tek bir sandbox'ta bundle'layıp globalleri doğrular.
 
-- Yüklenen dosyalar sabittir: `audio.js, characters.js, progression.js, profile.js, maps.js, story-data.js, skills.js, robots.js, terrain.js, weapons.js, entity.js, projectile.js, ai.js, story.js, game.js` (test ettiğin yeni dosya bu listede yoksa testte görünmez).
+- Yüklenen dosyalar sabittir: `audio.js, characters.js, progression.js, profile.js, parts.js, market.js, maps.js, story-data.js, skills.js, robots.js, terrain.js, weapons.js, entity.js, projectile.js, ai.js, story.js, game.js` (test ettiğin yeni dosya bu listede yoksa testte görünmez). `parts.js`, `run.js`/`progression.js`/`story.js`/`market.js` bundle'larının **hepsine** girer çünkü `profile.js` artık çalışma zamanında onu çağırır (`sanitizeParts`/`sanitizeLoadoutShape`).
 - `game.js` DOM'a yalnızca metot **gövdelerinde** dokunduğundan sandbox'ta yüklenebilir; DOM kullanan metotlar test edilmez.
 - Doğrulananlar: 34 karakterin veri bütünlüğü, her `kind`'in en az bir karakterde kullanımı, her karakterin `useSkill` ile hatasız çalışması, cooldown, `Entity.damage` (zırh + kalkan + hasar azaltma), zehir, `applyAreaDamage` menzili, `drawCharExtras` çizimleri, geliştirme build'i, ödül döngüsü ve hikâye modunun durum makinesi/maç entegrasyonu (kupa haritası → sahne → robot seçimi → brifing → maç → ilerleme yazımı).
 - `tests/progression.js` saf ekonomi/profil testleridir: seviye eşikleri, ödül matrisi, 12 yetenek adaptörü, profil doğrulama ve satın alma önkoşulları.
-- `tests/story.js` hikâye verisini, kilit grafiğini ve profil v2 göçünü doğrular: görev/kanıt kimlikleri, `mapId↔zoneId` eşleşmesi, dokuz bölge, profil v1→v2 göçü, bozuk `story`'de ekonomi korunması ve Bakım Puanı formülü. Kural listesinin kaynağı `docs/story-mode-lock.md` §14'tür.
+- `tests/story.js` hikâye verisini, kilit grafiğini ve profil göçünü doğrular: görev/kanıt kimlikleri, `mapId↔zoneId` eşleşmesi, dokuz bölge, profil v1→v4 göçü, bozuk `story`/`ammo`'da ekonomi korunması ve Bakım Puanı formülü. Kural listesinin kaynağı `docs/story-mode-lock.md` §14'tür.
+- `tests/market.js` cephane ekonomisidir: fiyat tablosu ve yedek fiyat, ortak depo doğrulama (bilinmeyen/sınırsız silah, üst sınır), satın alma önkoşulları (depo dolu / Hurda yetersiz / kısmi alım), maça yükleme ve harcananı düşme, robot depolarının ortak depoya taşındığı v3→v4 göçü, pazar ekranı/satın alma akışı ve maç entegrasyonu. **Parça testleri** de burada: katalog bütünlüğü, `buyPart` benzersizliği, `equipPart` takma/sökme/taşıma + sahiplik, çakışma çözümü, v4→v5 göçü, `resolveRobotBuild` parça etkileri (düz + çarpımsal, kırpma sınırları).
 
-**Karakter/yetenek/silah/hasar mantığını değiştirdiysen `node tests/run.js` çalıştır; ekonomi/profil mantığını değiştirdiysen `node tests/progression.js` de çalıştır; hikâye verisi/kilidi değiştiyse `node tests/story.js` de çalıştır.** Yeni karakter/yetenek eklerken testlerin geçtiğinden emin ol.
+**Karakter/yetenek/silah/hasar mantığını değiştirdiysen `node tests/run.js` çalıştır; ekonomi/profil mantığını değiştirdiysen `node tests/progression.js` de çalıştır; cephane/pazar mantığını değiştirdiysen `node tests/market.js` de çalıştır; hikâye verisi/kilidi değiştiyse `node tests/story.js` de çalıştır.** Yeni karakter/yetenek eklerken testlerin geçtiğinden emin ol.
 
 ## Bilinen durum / dikkat
 

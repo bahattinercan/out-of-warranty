@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <title>Parça donanımları — robot üzerinde görsel doğrulama</title>
+  <style>
+    body { margin: 0; background: #05080c; }
+    canvas { position: fixed; left: 0; width: 960px; }
+    #c1 { top: 0; height: 560px; }
+    #c2 { top: 560px; height: 1180px; }
+  </style>
+</head>
+<body>
+  <canvas id="c1" width="960" height="560"></canvas>
+  <canvas id="c2" width="960" height="1180"></canvas>
+  <script src="js/audio.js"></script>
+  <script src="js/characters.js"></script>
+  <script src="js/progression.js"></script>
+  <script src="js/profile.js"></script>
+  <script src="js/parts.js"></script>
+  <script src="js/market.js"></script>
+  <script src="js/maps.js"></script>
+  <script src="js/story-data.js"></script>
+  <script src="js/skills.js"></script>
+  <script src="js/skill-fx.js"></script>
+  <script src="js/robots.js"></script>
+  <script src="js/terrain.js"></script>
+  <script src="js/weapons.js"></script>
+  <script src="js/entity.js"></script>
+  <script src="js/projectile.js"></script>
+  <script src="js/ai.js"></script>
+  <script src="js/story.js"></script>
+  <script src="js/game.js"></script>
+  <script>
+    const CEF = CHARACTERS[0]; // FIX-8 (insansı rig)
+    const SLOT_TR = { helmet: "KASK", body: "GÖVDE", tool: "APARAT", feet: "AYAK" };
+
+    function wear(spec) {
+      // Tek yuvalı loadout: parçayı yalnız kendi yuvasına takar.
+      const lo = { helmet: null, body: null, tool: null, feet: null };
+      if (spec) lo[spec.slot] = spec.id;
+      return lo;
+    }
+
+    // 1) MAÇ ÖLÇEĞİ (r=14): 24 parça tek tek — okunabilirlik sınavı
+    const c1 = document.getElementById("c1").getContext("2d");
+    c1.fillStyle = "#0b1017"; c1.fillRect(0, 0, 960, 560);
+    c1.fillStyle = "#ffe45e"; c1.font = '700 17px "Chakra Petch", sans-serif';
+    c1.textAlign = "center"; c1.textBaseline = "top";
+    c1.fillText("MAÇ ÖLÇEĞİ (r = 14) — her parça ROBOTTA nasıl görünür", 480, 10);
+
+    const COLS = 6, CW = 158, CH = 122, X0 = 14, Y0 = 40;
+    PARTS.forEach((p, i) => {
+      const col = i % COLS, row = (i / COLS) | 0;
+      const x = X0 + col * CW, y = Y0 + row * CH;
+      c1.strokeStyle = "#1f2a36";
+      c1.lineWidth = 1;
+      c1.strokeRect(x, y, CW - 8, CH - 10);
+      drawRobot(c1, {
+        cx: x + 40, cy: y + 74, r: 14, facing: 1, charDef: CEF, timeMs: 600,
+        motion: { vx: 0, vy: 0, onGround: true }, parts: wear(p),
+      });
+      c1.textAlign = "left"; c1.textBaseline = "top";
+      c1.fillStyle = "#7f93a5"; c1.font = '9px "Chakra Petch", sans-serif';
+      c1.fillText(SLOT_TR[p.slot] + " · " + p.price + " Hurda", x + 82, y + 50);
+      c1.fillStyle = "#eef5ff"; c1.font = '700 11px "Chakra Petch", sans-serif';
+      c1.fillText(p.label, x + 82, y + 64, CW - 92);
+    });
+
+    // 2) BÜYÜK ÖNİZLEME (r=30): aileler yan yana — detay kontrolü
+    const c2 = document.getElementById("c2").getContext("2d");
+    c2.fillStyle = "#0b1017"; c2.fillRect(0, 0, 960, 1180);
+    c2.fillStyle = "#ffe45e"; c2.font = '700 17px "Chakra Petch", sans-serif';
+    c2.textAlign = "center"; c2.textBaseline = "top";
+    c2.fillText("ÖNİZLEME ÖLÇEĞİ (r = 30) — şekil aileleri", 480, 10);
+
+    const groups = [
+      { title: "Parçasız", items: [null] },
+      { title: "KASK", items: ["nisan_mercegi", "termal_vizor", "denge_sensoru", "zirh_kaski"] },
+      { title: "GÖVDE", items: ["lehim_yamasi", "kompozit_plaka", "sogutucu_radyator"] },
+      { title: "APARAT", items: ["takviye_bobini", "yedek_yukleyici", "hassas_ayar_civtasi", "zamanlayici_cip"] },
+      { title: "AYAK", items: ["denge_jiroskobu", "yay_takozlari", "turbo_palet", "sicrama_yayi"] },
+      { title: "TAM DONANIM", items: ["tam"] },
+    ];
+    let gy = 40;
+    groups.forEach((g) => {
+      c2.textAlign = "left"; c2.textBaseline = "middle";
+      c2.fillStyle = "#7f93a5"; c2.font = '700 11px "Chakra Petch", sans-serif';
+      c2.fillText(g.title, 14, gy + 46);
+      c2.strokeStyle = "#1f2a36"; c2.lineWidth = 1;
+      c2.beginPath(); c2.moveTo(14, gy + 62); c2.lineTo(946, gy + 62); c2.stroke();
+
+      g.items.forEach((id, i) => {
+        const cx = 210 + i * 180;
+        let parts = null, label = "—";
+        if (id === "tam") {
+          parts = { helmet: "nisan_mercegi", body: "kompozit_plaka", tool: "takviye_bobini", feet: "turbo_palet" };
+          label = "kask + gövde + aparat + ayak";
+        } else if (id) {
+          const spec = partById(id);
+          parts = wear(spec);
+          label = spec.label;
+        } else {
+          label = "parçasız";
+        }
+        drawRobot(c2, {
+          cx, cy: gy + 44, r: 30, facing: 1, charDef: CEF, timeMs: 600,
+          motion: { vx: 0, vy: 0, onGround: true }, parts,
+        });
+        c2.textAlign = "center"; c2.textBaseline = "top";
+        c2.fillStyle = "#9fb6c9"; c2.font = '9px "Chakra Petch", sans-serif';
+        c2.fillText(label, cx, gy + 78);
+      });
+      gy += 126;
+    });
+
+    // 3) FARKLI GÖVDE TİPLERİ: tam donanım, sırt topu/paletli/küçük gövdede
+    // tıkullanma ve oran kontrolü (aynı anda 4 parça).
+    const VARIETY = [
+      { id: "ayi", label: "BOM-12 (sırt topu, paletli)" },
+      { id: "kedi", label: "MIK-0 (hafif, bilyeli)" },
+      { id: "suaygiri", label: "KEPÇE-8 (geniş gövde)" },
+      { id: "tavsan", label: "ZIP (küçük, yaylı)" },
+      { id: "yeti", label: "KRİYO-7 (ağır, paletli)" },
+    ];
+    const FULL = { helmet: "zirh_kaski", body: "cift_kat_plaka", tool: "zamanlayici_cip", feet: "cift_turbo" };
+    c2.fillStyle = "#ffe45e"; c2.font = '700 11px "Chakra Petch", sans-serif';
+    c2.textAlign = "left"; c2.textBaseline = "middle";
+    c2.fillText("FARKLI GÖVDELER — tam donanım", 14, gy + 46);
+    c2.strokeStyle = "#1f2a36";
+    c2.beginPath(); c2.moveTo(14, gy + 62); c2.lineTo(946, gy + 62); c2.stroke();
+    VARIETY.forEach((v, i) => {
+      const cx = 210 + i * 180;
+      drawRobot(c2, {
+        cx, cy: gy + 44, r: 30, facing: 1, charDef: CHARACTERS.find((c) => c.id === v.id), timeMs: 600,
+        motion: { vx: 0, vy: 0, onGround: true }, parts: FULL,
+      });
+      c2.textAlign = "center"; c2.textBaseline = "top";
+      c2.fillStyle = "#9fb6c9"; c2.font = '9px "Chakra Petch", sans-serif';
+      c2.fillText(v.label, cx, gy + 78);
+    });
+    gy += 126;
+
+    // 4) İKİ DONANIM (v6): her yuvada iki parça — ikinci donanım yuvanın KENDİ
+    // anatomik çapası çevresinde küçültülür (kask→kafa, aparat→karşı omuz) ve
+    // bağlı olduğu bölgede kalır; üst üste binmez, gövdeden kopmaz.
+    const PAIRS = [
+      { label: "Kask: mercek + zırh kaskı", lo: { helmet: ["nisan_mercegi", "zirh_kaski"] } },
+      { label: "Gövde: yama + plaka", lo: { body: ["lehim_yamasi", "kompozit_plaka"] } },
+      { label: "Aparat: bobin + çip", lo: { tool: ["takviye_bobini", "zamanlayici_cip"] } },
+      { label: "Ayak: turbo + sıçrama yayı", lo: { feet: ["turbo_palet", "sicrama_yayi"] } },
+      { label: "TAM ÇİFT DONANIM (8 parça)", lo: {
+          helmet: ["nisan_mercegi", "zirh_kaski"], body: ["lehim_yamasi", "kompozit_plaka"],
+          tool: ["takviye_bobini", "zamanlayici_cip"], feet: ["turbo_palet", "sicrama_yayi"] } },
+    ];
+    c2.fillStyle = "#ffe45e"; c2.font = '700 11px "Chakra Petch", sans-serif';
+    c2.textAlign = "left"; c2.textBaseline = "middle";
+    c2.fillText("İKİ DONANIM — sol: tek parça · sağ: çift parça", 14, gy + 46);
+    c2.strokeStyle = "#1f2a36";
+    c2.beginPath(); c2.moveTo(14, gy + 62); c2.lineTo(946, gy + 62); c2.stroke();
+    PAIRS.forEach((row, i) => {
+      const cy = gy + 44 + i * 1; // satırlar tek sırada, robotlar yan yana
+    });
+    // Tek satırda karşılaştırma: her senaryo iki robot (tek/çift)
+    c2.textAlign = "center"; c2.textBaseline = "top";
+    PAIRS.forEach((row, i) => {
+      const cx = 130 + i * 180;
+      drawRobot(c2, { cx, cy: gy + 150, r: 26, facing: 1, charDef: CEF, timeMs: 600, motion: { vx: 0, vy: 0, onGround: true }, parts: row.lo });
+      c2.fillStyle = "#9fb6c9"; c2.font = '9px "Chakra Petch", sans-serif';
+      c2.fillText(row.label, cx, gy + 184);
+    });
+    // Orta satır: TAM ÇİFT büyük önizleme
+    drawRobot(c2, { cx: 840, cy: gy + 130, r: 40, facing: 1, charDef: CEF, timeMs: 600, motion: { vx: 0, vy: 0, onGround: true }, parts: PAIRS[4].lo });
+  </script>
+</body>
+</html>

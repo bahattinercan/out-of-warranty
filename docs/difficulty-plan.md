@@ -20,7 +20,7 @@ Bilgisayara karşı modunda oyuncunun zorluk seçebilmesini sağlamak. Botun ni�
   `refineFactors` tam isabet (0) içermez — sapma her zaman uygulanır.
 - Güvenli bir atış bulunduğunda bot **her zaman ateş eder**; pas yalnız hiçbir güvenli
   aday yoksa verilir (eskiden zayıf skorda tur boşa geçiyordu).
-- Zorluk seviyesi botun çıkış gücünü de ölçekler (`damageMult`); insan robotu ×1 kalır.
+- Zorluk seviyesi botun hasar gücünü de ölçekler (`damageMult`); insan robotu ×1 kalır.
 
 ## Zorluk seviyeleri
 
@@ -33,7 +33,7 @@ Bilgisayara karşı modunda oyuncunun zorluk seçebilmesini sağlamak. Botun ni�
 | `baseError` | 0.03 | ±1.7° nişan sapması |
 | `refineFactors` | `[1, 0.6]` | Sapma güvenlik denemeleri (0 yok) |
 | `settleTime` | 0.5 | Uzun bekleme |
-| `damageMult` | 0.8 | Bot çıkış gücü ölçeği (insan etkilenmez) |
+| `damageMult` | 0.8 | Bot hasar gücü ölçeği (insan etkilenmez) |
 | `passScore` | 3 | Skor < 3 → pas (hiç iyi atış yok) |
 | `selfDamageWeight` | 3.0 | Kendi hasarını çok cezalandır → pasif |
 | `shieldValue` | 10 | Kalkan değeri düşük |
@@ -57,7 +57,7 @@ Bilgisayara karşı modunda oyuncunun zorluk seçebilmesini sağlamak. Botun ni�
 | `baseError` | 0.025 | ±1.4° nişan sapması |
 | `refineFactors` | `[1, 0.6, 0.3]` | Sapma güvenlik denemeleri (0 yok) |
 | `settleTime` | 0.25 | Mevcut bekleme |
-| `damageMult` | 1.0 | Bot çıkış gücü ölçeği (insan etkilenmez) |
+| `damageMult` | 1.0 | Bot hasar gücü ölçeği (insan etkilenmez) |
 | `passScore` | 3 | Skor < 3 → pas |
 | `selfDamageWeight` | 2.4 | Mevcut ağırlık |
 | `shieldValue` | 14 | Mevcut değer |
@@ -81,7 +81,7 @@ Bilgisayara karşı modunda oyuncunun zorluk seçebilmesini sağlamak. Botun ni�
 | `baseError` | 0.015 | ±0.9° nişan sapması |
 | `refineFactors` | `[1, 0.7, 0.4, 0.2]` | Sapma güvenlik denemeleri (0 yok) |
 | `settleTime` | 0.15 | Hızlı tepki |
-| `damageMult` | 1.1 | Bot çıkış gücü ölçeği (insan etkilenmez) |
+| `damageMult` | 1.1 | Bot hasar gücü ölçeği (insan etkilenmez) |
 | `passScore` | 5 | Skor < 5 → pas |
 | `selfDamageWeight` | 1.8 | Kendi hasarını az cezalandır → agresif |
 | `shieldValue` | 18 | Kalkan değeri yüksek |
@@ -105,7 +105,7 @@ Bilgisayara karşı modunda oyuncunun zorluk seçebilmesini sağlamak. Botun ni�
 | `baseError` | 0.008 | ±0.5° nişan sapması |
 | `refineFactors` | `[1, 0.8, 0.6, 0.4, 0.2]` | Sapma güvenlik denemeleri (0 yok) |
 | `settleTime` | 0.1 | Neredeyse anında |
-| `damageMult` | 1.2 | Bot çıkış gücü ölçeği (insan etkilenmez) |
+| `damageMult` | 1.2 | Bot hasar gücü ölçeği (insan etkilenmez) |
 | `passScore` | 10 | Skor < 10 → pas |
 | `selfDamageWeight` | 1.2 | Kendi hasarını çok az cezalandır |
 | `shieldValue` | 22 | Maks kalkan değeri |
@@ -145,7 +145,7 @@ Hasarın kendisi de zorluğa göre ölçeklenir. Bot kararı ve gerçek oyun ayn
 
 ```js
 // game.js — patlama ve doğrudan isabet
-dmgMult = shooter.dmgMult                      // taban robot çıkış gücü
+dmgMult = shooter.dmgMult                      // taban robot hasar gücü
         * (shotIsSkill ? 1 : weaponDamageMult) // çekirdek dalı (insanda)
         * shooter.aiDamageMult;                // zorluk ölçeği (botta)
 ```
@@ -402,7 +402,7 @@ const AI_DIFFICULTY = {
 - [x] Zorluk değiştirince botun eski kararı iptal olur.
 - [x] `lastPositions` her tur sonunda güncellenir.
 - [x] `tests/run.js > "Bot isabet kalitesi ve zorluk merdiveni"` bu sözleşmeyi doğrular.
-- [x] `tests/run.js > "Zorluğa göre bot hasar ölçeği"` ölçek atamasını, çıkış çarpanını ve nükleer tercihini doğrular.
+- [x] `tests/run.js > "Zorluğa göre bot hasar ölçeği"` ölçek atamasını, hasar çarpanını ve nükleer tercihini doğrular.
 
 ### Tarayıcı kontrolleri
 
@@ -431,7 +431,7 @@ açıkça monotondur. Gerçek silahlarla Orta ve üzeri ~%94'e doygunlaşır ç�
 el bombası sekmesi/fitili bazukadan çok daha bağışlayıcıdır; Zor ile Ustalık
 arasındaki fark artık hasar ölçeği, silah erişimi ve yetenek kullanımıdır.
 
-**İlk tur hasarı** 100 bütünlüklü sabit hedefe karşı yapılan maç benzetimindendir;
+**İlk tur hasarı** 100 canlı sabit hedefe karşı yapılan maç benzetimindendir;
 hedef hareket etmez, bu yüzden üst sınır değil eğilim gösterir. İsabet oranı ise
 patlamanın hedefi gerçekten kapsayıp kapsamadığına göre sayılır (hasar zırh ya da
 yuvarlama ile 0'a düşse bile ıska sayılmaz).

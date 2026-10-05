@@ -4,7 +4,7 @@
 
 Her robot dört katmanla tanımlanır:
 
-1. **Gövde ailesi:** Temel oran, can ve kaplama beklentisini anlatır.
+1. **Gövde ailesi:** Temel oran, can ve zırh beklentisini anlatır.
 2. **Hareket sistemi:** Teker, yay, palet, ayak, pervane veya mıknatıs.
 3. **Görev aparatı:** Özel yeteneği görsel olarak açıklayan araç.
 4. **Kişilik kusuru:** Arızalı lamba, fazla güçlü motor veya sürekli gevşeyen vida gibi küçük hikâye detayı.
@@ -46,7 +46,7 @@ Bu beşli dikey prototipin kesin kadrosudur: **FIX-8, MIK-0, ZIP, TEK-8 ve PRES-
 - Rol: Dayanıklı kendi kendine onarım robotu.
 - Silüet: Yuvarlatılmış takım kutusu gövdesi, iki küçük teker ve yana katlanan kaynak kolu.
 - Yüz: İki yeşil durum LED'i.
-- Dahili modül: **Acil Onarım** — 25 bütünlük geri kazanır.
+- Dahili modül: **Acil Onarım** — 25 can geri kazanır.
 - Görsel efekt: Kaynak kolu gövdeye döner, kısa kıvılcım yayı ve yama plakası görünür.
 - Kişilik: Gevşek gördüğü her vidayı, rakibin üzerindekiler dâhil, sıkmaya çalışır.
 
@@ -122,7 +122,7 @@ Bu beşli dikey prototipin kesin kadrosudur: **FIX-8, MIK-0, ZIP, TEK-8 ve PRES-
 | `kanguru` | ZIP-X | Yaylı | Aşırı Gerilmiş Yay | jump |
 | `yarasa` | VIZIR | Uçan | Acil Pervane | glide |
 | `armadillo` | MAT-6 | Kazıcı | Derinlik Burgusu | dig |
-| `hamster` | ZIRH-2 | Ağır iş | Kaplama Kilidi | damageReduce |
+| `hamster` | ZIRH-2 | Ağır iş | Zırh Kilidi | damageReduce |
 | `bukalemun` | HAYALET-4 | Deneysel | Optik Saptırıcı | shield |
 | `ejderha` | FIRIN-3 | Deneysel | Cüruf Küresi | spit: fireball |
 | `penguen` | SOĞUT-2 | Deneysel | Soğutucu Kapsüller | spit: fish |
@@ -165,7 +165,7 @@ Sprite dosyası kullanılmadan Canvas üzerinde şu ikincil hareketler üretileb
 - Zıplama: hareket sistemi sıkışması ve açılması.
 - Nişan: görev aparatının hedefe dönmesi; gövdenin ters yönde hafif tepki vermesi.
 - Hasar: kısa beyaz flaş, gevşek vida parçacığı ve gövde sarsıntısı.
-- Düşük bütünlük: aralıklı kıvılcım veya ince duman; aşırı görsel gürültü yaratmamalı.
+- Düşük can: aralıklı kıvılcım veya ince duman; aşırı görsel gürültü yaratmamalı.
 - Devre dışı kalma: enerji ışığının sönmesi ve aparatın düşmesi.
 
 ## 8. Denge ilkesi
@@ -217,25 +217,49 @@ Her veri değeri artık kendi siluetini çizer; robotlar aynı gövdenin renk va
 
 ### Alt takım animasyonu
 
-Ayak/bacak animasyonu `Entity` durumundan türetilir (`motion = { vx, vy, onGround, walk }`,
-`timeMs`); çizici `Date.now()` çağırmaz. **`walk` alanı zorunludur:** yerde
-yürüme `Entity.x`'i doğrudan adımlar, `vx` kullanmaz (vx yalnız havada kontrol ve
-savrulma içindir). Bu yüzden `Entity.walk()` her başarılı adımda `walkAnim = ±1`
-kurar, `Entity.update()` her karede `0.82` ile söndürür; çizici de genliği bu
-sinyalle ölçekler. `vx` yine okunur (hücum/kayma gibi itmelerde de bacaklar
-çalışsın).
+Ayak/bacak animasyonu `Entity` durumundan türetilir
+(`motion = { vx, vy, onGround, walk, walkAmp, walkPhase, rollPhase }`, `timeMs`);
+çizici `Date.now()` çağırmaz. **`walk` ve `walkPhase` alanları zorunludur:**
+yerde yürüme `Entity.x`'i doğrudan adımlar, `vx` kullanmaz (vx yalnız havada
+kontrol ve savrulma içindir). Bu yüzden `Entity.walk()` her başarılı adımda
+`walkAnim = ±1` kurar, `Entity.update()` her karede `0.82` ile söndürür
+(`walkBlend` bu sinyali yumuşak takip eder); `vx` yine okunur (hücum/kayma gibi
+itmelerde de bacaklar çalışsın).
+
+Adım **fazı** ise zamana değil **kat edilen mesafeye** kilitlidir:
+`Entity.advanceStride(dx)` her başarılı adımda ve her `vx` yer değiştirmesinde
+`walkPhase`/`rollPhase` açısını `dx` ile ilerletir. Böylece yürüyüş hızı artınca
+adım frekansı da artar, yavaşlayınca düşer, duvara dayanınca tamamen durur ve
+ayak yere basarken gövdeye göre geriye akar. Sabit zaman temposu bir kez yaşandı
+(bacaklar 2 rad/s'de sallanıyordu, neredeyse hiç kıpırdamıyordu); `tests/run.js`
+içindeki "Yürüyüş fazı mesafeye kilitli" ve "Yürüyüş geometrisi ve kayma"
+grupları bunu korur.
+
+**Ölçülen kayma payı (r=14, adım 18.2px):** ayak yere basarken 15.68px geriye
+kayar → adım başına 2.5px (%14) kayma kalır. Temas kenarlarında ayak gövdeye
+göre durakladığı için anlık kayma kare başına en fazla ~1.6px'e çıkar, temas
+ortasında işaretli net kayma ~0.1px/kare (gövde hızının %4'ü). Hiçbir karede
+ayak gövdeyle birlikte aynı yöne kaymaz (anlık kayma < gövde hızı 2.2px/kare).
 
 | Durum | Davranış |
 |---|---|
-| Yürüme (`motion.walk` dolu) | Adım frekansı sabittir, genlik adım sinyaliyle artar/söner (tuş bırakılınca bacak nötre döner). Bacaklar zıt fazda; `lift = max(0, cos)` ayağın havada olduğu bölüm. |
+| Yürüme (`motion.walkAmp`) | Adım frekansı **mesafeye** kilitlidir: adım uzunluğu `r × 1.3`, tam döngü iki adım. Genlik `walkAmp` zarfıyla kademeli artar/söner; bacaklar zıt fazda, `lift = max(0, cos)` ayağın havada olduğu bölüm. |
+| Gövde salınımı | Her adımda gövde hafifçe yükselir (`-|cos|·0.045r`), bacaklar ayrıkken çöker (`+|sin|·0.018r`) ve iki adımda bir yana kayar (`sin·0.022r`). Ayaklar yere basılıyken faz mesafeye kilitli olduğu için salınım adımlarla senkron kalır. |
+| Adım kesilmesi | Zarf sönerken `walkPhase` en yakın nötr poza (`π` katı) kapanır; bacaklar havada asılı kalmaz. |
 | Ayak yuvarlanması | Ayak bilekten döner: önde burun kalkar (`-0.16·stride`), arkada itiş (`+0.26·|stride|`), salınımda hafif aşağı (`+0.14·lift`). |
-| Geri yürüme | `vx·facing < 0` ise faz ters döner; ayaklar gövdeye göre doğru yönde savrulur. |
+| Geri yürüme | Faz gövde-yereldir (`dx · facing`): yüz tersken ilerlemek fazı geri sarar; ayaklar gövdeye göre doğru yönde savrulur. |
 | İtiş anı | İtilen ayağın arkasında çok soluk toz lekesi (`alpha ≤ 0.20`) — adım okunurluğu. |
-| Boşta | Ağırlık kayması + hafif ayak tıklatması (`sin(timeMs/900)`, tepe `0.14r`; yaylı ailede `0.36r`). |
+| Boşta | Ağırlık kayması + hafif ayak tıklatması (`sin(timeMs/900)`, tepe `0.14r`; yaylı ailede `0.36r`) ve çok hafif gövde nefesi (`±0.012r`). |
 | Havada | `vy` ile: yükselirken bacaklar toplanır, düşerken aşağı uzanır; ayak burun ucu döner ve hafif salınır. |
-| Teker/bilye | `wheel` mono teker diş blokları + jant kolları, `wheels` paten göbekleri ve `ball` küre yay çizgisi gerçekten döner (açı `timeMs` ve hızdan türetilir). |
+| Teker/bilye/palet | `wheel` mono teker diş blokları + jant kolları, `wheels` paten göbekleri, `ball` küre yay çizgisi ve `tracks` bant deseni **mesafeye kilitli** `rollPhase` ile döner/kayar (görsel yarıçap temas yarıçapından büyüktür; küçük makara gerçek yarıçapıyla dönerse kare başına 60°'yi aşıp ters dönüyormuş gibi görünür). Havada boşa dönmez. |
 | Kollar | Yürürken bacaklara ters salınır (denge); boşta ve nişanda sabit. |
 
 Animasyon tamamen deterministiktir: aynı `(id, timeMs, motion)` her zaman aynı
-kareyi üretir (test ve tekrar üretilebilirlik). Sinyalin kaybolması durumunda
-`tests/run.js` içindeki "Yürüyüş animasyonu sinyali" grubu hatayı yakalar.
+kareyi üretir (test ve tekrar üretilebilirlik). `tests/run.js` üç grupla korur:
+"Yürüyüş animasyonu sinyali", "Yürüyüş fazı mesafeye kilitli" ve "Yürüyüş
+geometrisi ve kayma" (sonuncusu çizicinin GERÇEK `translate → rotate →
+translate` komutlarından ayak konumunu okuyup zıt fazı, ayak salınımını, kayma
+payını ve zaman bağımsızlığını ölçer). Görsel doğrulama için (oyuna dâhil
+değildir): `_walk_probe.html` faz döngüsünü, ayak izi tablosunu (temas = dikey
+sıra → kayma = eğik sıra) ve durum karşılaştırmasını çizer; `_walk_battle_probe.html`
+gerçek maç döngüsünde yürüyen robotu donmuş karede 3× yakınlaştırır.

@@ -11,7 +11,7 @@ const fs = require("fs");
 const path = require("path");
 
 const JS_DIR = path.join(__dirname, "..", "js");
-const FILES = ["characters.js", "progression.js", "profile.js", "maps.js", "story-data.js", "story.js"];
+const FILES = ["characters.js", "progression.js", "profile.js", "parts.js", "market.js", "maps.js", "story-data.js", "story.js"];
 const bundle =
   FILES.map((f) => fs.readFileSync(path.join(JS_DIR, f), "utf8")).join("\n;\n") +
   "\n;globalThis.__P = { CHARACTERS, SERVICE_LEVELS, MAX_SERVICE_XP, MAX_TIER, START_SCRAP, BRANCHES, BRANCH_LABELS, TIER_COSTS, TIER_LEVEL_GATES, REWARD_BASE, DIFFICULTY_MULTIPLIER, levelForXp, xpForLevel, nextLevelXp, levelUpMessage, calculateMatchReward, resolveRobotBuild, upgradeEffectText, robotUpgradeSummary, totalTiers, sanitizeUpgrades, nextUpgradeStep, toSafeInt, defaultProfile, defaultRobotProgress, normalizeProfile, loadProfile, saveProfile, getRobotProgress, grantMatchReward, purchaseUpgrade, PROFILE_KEY, CLAIMED_MATCH_LIMIT, createSessionId, " +
@@ -144,8 +144,8 @@ group("Türetilmiş build ve yetenek adaptörleri");
 
   // Sınırlar
   const capped = P.resolveRobotBuild({ id: "x", hp: 100, armor: 0.39, dmgMult: 1, skill: syntheticDef("heal", { amount: 10 }).skill }, { upgrades: { chassis: 2, module: 0, core: 0 } }, { upgradesEnabled: true });
-  check("kaplama mutlak %40 ile sınırlanır", capped.armor === 0.40);
-  check("Kademe III bütünlük %5+%5 üst üste eklenmez", P.resolveRobotBuild(heal, full, { upgradesEnabled: true }).maxHp === Math.round(heal.hp * 1.10));
+  check("zırh mutlak %40 ile sınırlanır", capped.armor === 0.40);
+  check("Kademe III can %5+%5 üst üste eklenmez", P.resolveRobotBuild(heal, full, { upgradesEnabled: true }).maxHp === Math.round(heal.hp * 1.10));
   const cd3 = P.resolveRobotBuild(syntheticDef("heal", { amount: 10 }, 3), { upgrades: { chassis: 0, module: 3, core: 0 } }, { upgradesEnabled: true });
   check("cooldown alt sınırın (2) altına inmez", cd3.skill.cooldown === 2);
   const cd2 = P.resolveRobotBuild(syntheticDef("heal", { amount: 10 }, 2), { upgrades: { chassis: 0, module: 3, core: 0 } }, { upgradesEnabled: true });
@@ -252,7 +252,7 @@ group("Profil şeması ve doğrulama");
 {
   const fresh = P.defaultProfile();
   check("yeni profil 200 Hurda ile başlar", fresh.scrap === 200);
-  check("yeni profil şema sürümü taşır", fresh.version === P.PROFILE_SCHEMA_VERSION && P.PROFILE_SCHEMA_VERSION === 2);
+  check("yeni profil şema sürümü taşır", fresh.version === P.PROFILE_SCHEMA_VERSION && P.PROFILE_SCHEMA_VERSION === 6);
   check("varsayılan profil round-trip", JSON.stringify(P.normalizeProfile(fresh)) === JSON.stringify(fresh));
   check("varsayılan hikâye alanı hazır", fresh.story.currentMissionId === P.firstMissionId() && fresh.story.completedMissions.length === 0);
 

@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <title>Parçalar — ikon ve aksesuar sayfası (görsel doğrulama)</title>
+  <style>
+    body { margin: 0; background: #05080c; }
+    canvas { position: fixed; left: 0; width: 960px; height: 470px; }
+    #c1 { top: 0; } #c2 { top: 470px; }
+  </style>
+</head>
+<body>
+  <canvas id="c1" width="960" height="470"></canvas>
+  <canvas id="c2" width="960" height="460"></canvas>
+  <script src="js/audio.js"></script>
+  <script src="js/characters.js"></script>
+  <script src="js/progression.js"></script>
+  <script src="js/profile.js"></script>
+  <script src="js/parts.js"></script>
+  <script src="js/market.js"></script>
+  <script src="js/maps.js"></script>
+  <script src="js/story-data.js"></script>
+  <script src="js/skills.js"></script>
+  <script src="js/skill-fx.js"></script>
+  <script src="js/robots.js"></script>
+  <script src="js/terrain.js"></script>
+  <script src="js/weapons.js"></script>
+  <script src="js/entity.js"></script>
+  <script src="js/projectile.js"></script>
+  <script src="js/ai.js"></script>
+  <script src="js/story.js"></script>
+  <script src="js/game.js"></script>
+  <script>
+    // 1) TÜM PARÇA İKONLARI — 24 parça (yuva başına 6), yuva ve etki etiketiyle.
+    const c1 = document.getElementById("c1").getContext("2d");
+    c1.fillStyle = "#0b1017"; c1.fillRect(0, 0, 960, 470);
+    c1.fillStyle = "#ffe45e"; c1.font = '700 19px "Chakra Petch", sans-serif';
+    c1.textAlign = "center"; c1.textBaseline = "top";
+    c1.fillText("PARÇA İKONLARI (24) — yuva ve etki", 480, 12);
+
+    const COLS = 6, CW = 152, CH = 96, X0 = 18, Y0 = 46;
+    PARTS.forEach((p, i) => {
+      const col = i % COLS, row = (i / COLS) | 0;
+      const x = X0 + col * CW, y = Y0 + row * CH;
+      c1.strokeStyle = "#2a3848"; c1.lineWidth = 1.5;
+      c1.strokeRect(x + 4, y + 4, CW - 12, CH - 14);
+      c1.fillStyle = "#141c26";
+      c1.fillRect(x + 4, y + 4, CW - 12, CH - 14);
+      c1.save();
+      c1.translate(x + 26, y + 18);
+      drawPartIcon(c1, p, 52);
+      c1.restore();
+      c1.textAlign = "left";
+      c1.fillStyle = "#eef5ff"; c1.font = '700 12px "Chakra Petch", sans-serif';
+      c1.fillText(p.label, x + 16, y + 74, CW - 28);
+      c1.fillStyle = "#8fd9c4"; c1.font = '10px "Chakra Petch", sans-serif';
+      c1.fillText(`${SLOT_LABELS[p.slot]} • ${p.price} Hurda`, x + 16, y + 58);
+    });
+
+    // 2) AKSESUARLAR — aynı robot, farklı loadout'larla yan yana.
+    const c2 = document.getElementById("c2").getContext("2d");
+    c2.fillStyle = "#0b1017"; c2.fillRect(0, 0, 960, 460);
+    c2.fillStyle = "#ffe45e"; c2.font = '700 19px "Chakra Petch", sans-serif';
+    c2.textAlign = "center"; c2.textBaseline = "top";
+    c2.fillText("ROBOT AKSESUARLARI — takılı parçalar siluete işler", 480, 12);
+
+    const defs = [
+      { ch: CHARACTERS[0], parts: null, label: "Parçasız" },
+      { ch: CHARACTERS[0], parts: { body: "lehim_yamasi" }, label: "Gövde plakası" },
+      { ch: CHARACTERS[0], parts: { helmet: "nisan_mercegi", tool: "yedek_yukleyici" }, label: "Kask optic + sırt hücresi" },
+      { ch: CHARACTERS[0], parts: { helmet: "termal_vizor", body: "kompozit_plaka", tool: "takviye_bobini", feet: "denge_jiroskobu" }, label: "Tam donanım (4/4)" },
+      { ch: CHARACTERS[8], parts: { body: "kompozit_plaka", feet: "yay_takozlari" }, label: "KEPÇE-8: plaka + taban" },
+      { ch: CHARACTERS[23], parts: { helmet: "denge_sensoru", tool: "yedek_yukleyici" }, label: "ZIRH-2: sensör + yükleyici" },
+      { ch: CHARACTERS[3], parts: { helmet: "nisan_mercegi", body: "lehim_yamasi", tool: "takviye_bobini", feet: "turbo_palet" }, label: "ZIP: Turbo Palet dahil 4/4" },
+      { ch: CHARACTERS[18], parts: { feet: "turbo_palet" }, label: "KRİYO-7: yalnız Turbo Palet" },
+    ];
+    defs.forEach((d, i) => {
+      const col = i % 3, row = (i / 3) | 0;
+      const cx = 160 + col * 320, cy = 92 + row * 118;
+      drawRobot(c2, {
+        cx, cy, r: 26, facing: 1, charDef: d.ch, timeMs: 800,
+        motion: { vx: 0, vy: 0, onGround: true }, parts: d.parts,
+      });
+      c2.fillStyle = "#9fb6c9"; c2.font = '10px "Chakra Petch", sans-serif';
+      c2.textAlign = "center";
+      c2.fillText(`${d.label}`, cx, cy + 48);
+    });
+  </script>
+</body>
+</html>

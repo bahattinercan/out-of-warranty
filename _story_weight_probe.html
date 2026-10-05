@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<title>Gövde ağırlığı — önce/sonra</title>
+<link rel="stylesheet" href="css/style.css">
+<style>body { margin:0; background:#07090b; } canvas{display:block; margin:6px 0} .cap{font:12px "Segoe UI"; color:#ffd166; padding:2px 6px}</style>
+</head>
+<body>
+<div class="cap">ÖNCE — hikâye diyaloğu Chakra Petch 400 (ince/geniş): panelin 700 etiketleriyle aynı aile gibi okunmuyor</div>
+<canvas id="c0" width="1437" height="197"></canvas>
+<div class="cap">SONRA — gövde varsayılanı Chakra Petch 600 (SemiBold): etiketler 700 kalır, gövde tek ses</div>
+<canvas id="c1" width="1437" height="197"></canvas>
+<script src="js/audio.js"></script>
+<script src="js/characters.js"></script>
+<script src="js/progression.js"></script>
+<script src="js/profile.js"></script>
+  <script src="js/parts.js"></script>
+<script src="js/market.js"></script>
+<script src="js/maps.js"></script>
+<script src="js/story-data.js"></script>
+<script src="js/skills.js"></script>
+<script src="js/skill-fx.js"></script>
+<script src="js/robots.js"></script>
+<script src="js/terrain.js"></script>
+<script src="js/weapons.js"></script>
+<script src="js/entity.js"></script>
+<script src="js/projectile.js"></script>
+<script src="js/ai.js"></script>
+<script src="js/story.js"></script>
+<script src="js/game.js"></script>
+<script>
+// Kullanıcının bildirdiği sahne (scene_warehouse_weight_of_proof_intro, PRES-4
+// satırı) kullanıcının penceresiyle aynı en-boy oranı ve ölçekle çizilir.
+const S = 1.543;
+function fake() {
+  const f = Object.create(Game.prototype);
+  f.W = 1242; f.H = 540;
+  f.storySceneId = "scene_warehouse_weight_of_proof_intro";
+  f.storySceneIndex = 1;
+  f.storySceneChars = 1e9;
+  f.renderTimeMs = 0;
+  f.storySceneStartMs = 1;
+  f.input = { mouseX: -1, mouseY: -1 };
+  f.storyMissionId = "warehouse_weight_of_proof";
+  f.storyMission = getMissionById("warehouse_weight_of_proof");
+  f.profile = { story: { seenScenes: [], completedMissions: [], currentMissionId: "warehouse_weight_of_proof", endingSeen:false, difficulty:"normal", selectedRobotId:"kopek" }, scrap: 0 };
+  return f;
+}
+function draw(id) {
+  const ctx = document.getElementById(id).getContext("2d");
+  ctx.save();
+  ctx.scale(S, S);
+  ctx.translate(0, -400);
+  fake().renderStoryScene(ctx);
+  ctx.restore();
+}
+const realText = uiTextFont;
+Promise.all([
+  document.fonts.load('16px "Russo One"'),
+  document.fonts.load('600 16px "Chakra Petch"'),
+  document.fonts.load('bold 16px "Chakra Petch"'),
+]).then(() => document.fonts.ready).then(() => {
+  const c = document.createElement("canvas").getContext("2d");
+  const w = (f) => { c.font = f; return Math.round(c.measureText("Şu raflardaki parçalar hepimize lazım.").width); };
+  console.log("CHECK " + JSON.stringify({
+    w400: w('400 15px "Chakra Petch"'),
+    w600: w('600 15px "Chakra Petch"'),
+    w700: w('700 15px "Chakra Petch"'),
+    has400: document.fonts.check('400 15px "Chakra Petch"'),
+    has600: document.fonts.check('600 15px "Chakra Petch"'),
+    has700: document.fonts.check('700 15px "Chakra Petch"'),
+    faces: [...document.fonts].map(f => f.family + "|" + f.weight + "|" + f.status),
+  }, null, 1));
+  window.uiTextFont = (px, wt) => realText(px, px === 15 ? 400 : wt);  // önce: 400
+  draw("c0");
+  window.uiTextFont = realText;                                        // sonra: 600
+  draw("c1");
+  document.title = "ready";
+});
+</script>
+</body>
+</html>

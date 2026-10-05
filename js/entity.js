@@ -10,9 +10,11 @@ const AIR_MAX_VX = 3.2;        // havadayken maksimum yatay hız
 
 // ── Yürüyüş animasyonunun zamanlama sabitleri ──────────────────────────────
 // Adım fazı ZAMANA değil kat edilen MESAFEYE bağlıdır: yürüyüş hızı artınca
-// adım frekansı da kendiliğinden artar ve ayak yere basılıyken kaymaz. Aynı
-// mekanizma hücum/patlama savrulmasını (`vx`) de kapsar.
+// adım frekansı da kendiliğinden artar ve ayak yere basarken gövdeye göre
+// geriye akar (adım başına ~%14 kayma payı). Aynı mekanizma hücum/patlama
+// savrulmasını (`vx`) de kapsar.
 const WALK_STRIDE_UNIT = 1.3;  // bir adımın uzunluğu (r birimi)
+const WALK_SPEED = 2.2;        // temel yürüme adımı (px); parça bunu çarpanla ölçekler
 // Faz açısını kare başına sınırla: hücum savrulmasında faz çok hızlı dönerse
 // bacaklar/teker göz kırpar (aliasing). ~1.8× yürüyüş hızına karşılık gelir.
 const MAX_STRIDE_DX = 4.5;     // kare başına faza giren maksimum yatay mesafe
@@ -55,7 +57,7 @@ class Entity {
     this.hp         = this.maxHp;
     this.displayHp  = this.hp;
     this.armor      = build ? build.armor : (charDef ? charDef.armor : 0);
-    this.dmgMult    = charDef ? charDef.dmgMult : 1.0;  // yalnız taban çıkış gücü
+    this.dmgMult    = charDef ? charDef.dmgMult : 1.0;  // yalnız taban hasar gücü
     // Zorluk seviyesinin bot hasar ölçeği (insan robotlarında her zaman 1).
     // Patlama ve doğrudan isabet hesabı `Game._shooterDamageMult` üzerinden
     // okur; bot kararı da aynı alanı tahmininde kullanır.
@@ -65,6 +67,14 @@ class Entity {
     this.weaponDamageMult = build ? build.weaponDamageMult : 1;
     this.knockbackTakenMult = build ? build.knockbackTakenMult : 1;
     this.resolvedSkill = build ? build.skill : null;
+    // Takılı parçalar (v5): maç içi aksesuar çizimi için build'den taşınır;
+    // botlar/yerel maçlar build almaz (parçasız görünür — kilit kuralı).
+    this.partLoadout = build ? build.parts : null;
+    // Yürüme hızı çarpanı (v5 parça ekseni): parça yoksa 1 — davranış aynen.
+    // Yürüme hızı çarpanı (v5 parça ekseni): parça yoksa 1 — davranış aynen.
+    this.moveSpeedMult = build && build.moveSpeedMult ? build.moveSpeedMult : 1;
+    // Sıçrama gücü çarpanı (v5 parça ekseni): parça yoksa 1.
+    this.jumpPowerMult = build && build.jumpPowerMult ? build.jumpPowerMult : 1;
     this.shieldStaminaRefund = build && build.skill ? build.skill.shieldStaminaRefund : 0;
     this.glideGravityMult = build && build.skill && build.skill.glideGravityMult != null
       ? build.skill.glideGravityMult : 0.35;
@@ -94,6 +104,9 @@ class Entity {
     // Silah durumu
     this.weapon = 0;   // seçili silah indeksi (WEAPONS içinde)
     this.ammo = {};    // id -> kalan adet; Game.startGame() doldurur
+    // Cephane Pazarı deposundan bu maça yüklenen ek mermi (id -> adet).
+    // Maç sonunda harcanmayan kısım envantere geri yazılır (_settleAmmoDepot).
+    this.ammoDepot = null;
   }
 
   // Seçili silahın spec'i
@@ -112,9 +125,15 @@ class Entity {
   }
 
   get muzzle() {
-    // Namlu ucu: gövde merkezinden nişan yönünde
+    // Namlu ucu: ÇİZİLEN namlunun ağzı (robots.js > robotMuzzlePoint). Nişan
+    // çizgisi, son-atış çizgisi ve mermi çıkışı hep bu noktayı kullanır; böylece
+    // hiza silahın ağzından çıkar. Çizici yoksa (legacy daire çizimi) eski
+    // gövde-merkezi yaklaşımına düşülür.
     const cx = this.x;
     const cy = this.y - this.r;
+    if (typeof robotMuzzlePoint === "function") {
+      return robotMuzzlePoint(cx, cy, this.r, this.facing, this.aim);
+    }
     return {
       x: cx + Math.cos(this.aim) * (this.r + 12),
       y: cy + Math.sin(this.aim) * (this.r + 12),
@@ -157,7 +176,9 @@ class Entity {
     }
 
     if (this.stamina <= 0) return;  // yorgun: stamina bitince yürüyemez
-    const speed = 2.2;
+    // Turbo Palet gibi parçalar adım uzunluğunu çarpanla artırır. Yürüyüş fazı
+    // MESAFEYE kilitli olduğu için (advanceStride) hız artışı ayakları kaydırmaz.
+    const speed = WALK_SPEED * this.moveSpeedMult;
     const maxStep = 16; // tırmanılabilir maksimum basamak yüksekliği
     const from = this.x;
     const nx = this.x + dir * speed;
@@ -195,7 +216,8 @@ class Entity {
   jump() {
     if (!this.onGround) return false;
     if (this.stamina < JUMP_STAMINA_COST) return false;
-    this.vy = JUMP_VELOCITY;
+    // Sıçrama Yayı gibi parçalar impulsu çarpanla ölçekler (parça yoksa 1).
+    this.vy = JUMP_VELOCITY * this.jumpPowerMult;
     this.onGround = false;
     this.stamina = Math.max(0, this.stamina - JUMP_STAMINA_COST);
     return true;
@@ -309,6 +331,8 @@ class Entity {
       },
       // Aparat III hazırken aparatta hafif vurgu ışığı (yalnız görsel seçenek).
       upgradeVisuals: { attachmentGlow: this.apparatusGlow && this.skillCooldown === 0 },
+      // Takılı parça aksesuarları (yuva→id); yoksa çizici hiçbir şey eklemez.
+      parts: this.partLoadout,
     });
     if (!drewRobot) {
       ctx.beginPath();

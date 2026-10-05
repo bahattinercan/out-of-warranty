@@ -245,10 +245,11 @@ function aiCreateCandidate(game, shooterIdx, angle, power, spec) {
   angle = aiClamp(angle, -Math.PI + 0.02, -0.02);
   power = aiClamp(power, 0.08, 1);
   const cx = shooter.x, cy = shooter.y - shooter.r;
-  const muzzle = {
-    x: cx + Math.cos(angle) * (shooter.r + 12),
-    y: cy + Math.sin(angle) * (shooter.r + 12),
-  };
+  // Namlu ağzı çizimle aynı geometriden gelmeli; yoksa bot "kendi" namlusunun
+  // olmadığı bir noktadan ateş etmiş gibi hesaplar ve insan atışıyla sapar.
+  const muzzle = typeof robotMuzzlePoint === "function"
+    ? robotMuzzlePoint(cx, cy, shooter.r, Math.cos(angle) >= 0 ? 1 : -1, angle)
+    : { x: cx + Math.cos(angle) * (shooter.r + 12), y: cy + Math.sin(angle) * (shooter.r + 12) };
   const speed = spec.baseSpeed + power * spec.speedMul;
   return {
     angle, power, complete: false, steps: 0,

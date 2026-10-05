@@ -10,7 +10,6 @@
   <div id="app">
     <div id="stage">
       <header id="hud">
-        <div id="players"></div>
         <div class="center">
           <div id="turn-banner">Sıra: -</div>
           <div id="wind-indicator" role="status" aria-live="polite">Rüzgar: -</div>
@@ -57,6 +56,35 @@
 
       <div id="storage-warning" class="hidden" role="status" aria-live="polite"></div>
 
+      <!-- Savaş alt paneli (Wild Ones düzeni): solda robot kartları (can +
+           sıra), sağda silah değiştirme + seçili silah / modül / ışınlanma /
+           kanca yuvaları. Mesajlaşma ve sipariş (order snack) yuvaları
+           bilinçli olarak yok. -->
+      <footer id="battle-bar" class="hidden">
+        <div id="players" role="list" aria-label="Robotlar"></div>
+        <div id="battle-actions">
+          <button id="weapon-toggle" type="button" title="Silah listesini aç/kapat (1–9)">
+            <span>SİLAH</span><span>DEĞİŞTİR</span>
+          </button>
+          <button class="act-slot" id="slot-weapon" type="button" data-slot="weapon" title="Seçili silah">
+            <canvas class="slot-icon" width="44" height="44"></canvas>
+            <span class="slot-count"></span><span class="slot-name"></span>
+          </button>
+          <button class="act-slot" id="slot-skill" type="button" data-slot="skill" title="Dahili modül (Q)">
+            <canvas class="slot-icon" width="44" height="44"></canvas>
+            <span class="slot-count"></span><span class="slot-name"></span>
+          </button>
+          <button class="act-slot" id="slot-teleport" type="button" data-slot="teleport" title="Işınlanma Topu">
+            <canvas class="slot-icon" width="44" height="44"></canvas>
+            <span class="slot-count"></span><span class="slot-name"></span>
+          </button>
+          <button class="act-slot" id="slot-hook" type="button" data-slot="hook" title="Kanca">
+            <canvas class="slot-icon" width="44" height="44"></canvas>
+            <span class="slot-count"></span><span class="slot-name"></span>
+          </button>
+        </div>
+      </footer>
+
       <div id="weapon-panel" class="hidden">
         <div id="weapon-bar"></div>
         <div id="weapon-desc"></div>
@@ -64,18 +92,6 @@
 
     </div>
 
-    <footer id="controls">
-      <span><b>A / D</b> veya <b>← →</b> hareket et (enerji harcar)</span>
-      <span><b>W</b> veya <b>↑</b> sıçra (enerji harcar)</span>
-      <span><b>Fare</b> nişan al</span>
-      <span><b>Sol tık (basılı tut)</b> güç doldur, <b>bırak</b> ateş et</span>
-      <span><b>Sağ tık / Esc</b> atışı iptal et</span>
-      <span><b>Esc / ⏏ Çıkış</b> menüye dön</span>
-      <span><b>M</b> sesi aç/kapat</span>
-      <span><b>Q</b> dahili modülü kullan <em>(hasar veren modüller o turun atış hakkını doldurur)</em></span>
-      <span><b>1–9 / fare tekerleği</b> silah seç</span>
-      <span><b>⏱ Süre</b> dolunca sıra geçer • <b>Enerji</b> her turda yenilenir</span>
-    </footer>
   </div>
 
   <!-- Klasik scriptler: file:// üzerinden çift tıklayınca çalışır -->
@@ -83,6 +99,7 @@
   <script src="js/characters.js"></script>
   <script src="js/progression.js"></script>
   <script src="js/profile.js"></script>
+  <script src="js/parts.js"></script>
   <script src="js/market.js"></script>
   <script src="js/maps.js"></script>
   <script src="js/story-data.js"></script>

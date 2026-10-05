@@ -107,9 +107,9 @@ Mevcut `arena`, `vertical`, `open`, `thick`, `lane` ve `bastion` arazi şekiller
 |---|---|
 | Karakter seç | Robotunu seç |
 | Karakter yeteneği | Dahili modül |
-| Can | Bütünlük |
-| Zırh | Kaplama |
-| Hasar | Çıkış gücü |
+| Can | Can (sade terim korunur) |
+| Zırh | Zırh (sade terim korunur) |
+| Hasar | Hasar (sade terim korunur) |
 | Oyuncu | Operatör |
 | Harita seç | Fabrika bölgesi seç |
 | Tur | Vardiya sırası veya Tur |
@@ -117,6 +117,8 @@ Mevcut `arena`, `vertical`, `open`, `thick`, `lane` ve `bastion` arazi şekiller
 | Elendi | Devre dışı kaldı |
 
 “Tur” ve “Oyuncu” gibi çok anlaşılır kelimeler yalnızca tema uğruna zorla değiştirilmeyebilir. Öncelik okunabilirliktir; kurgu terimleri ikincil etiketlerde kullanılmalıdır.
+
+**Stat terimleri sade bırakılır:** “bütünlük”, “kaplama” ve “çıkış gücü” oyuncuya anlaşılması zor geldiği için okunabilirlik gereği sade karşılıkları kullanılır — **Can**, **Zırh** ve **Hasar**.
 
 ## 7. İsimlendirme kuralları
 
@@ -164,4 +166,4 @@ Sesler karakteri tanımlamalı ancak topçu atışlarının okunabilirliğini ba
 - HP çubuğu `cy - r - 12` yüksekliğinde kalır; kask, hale ve baş üstü donanımı bu çizgiyi aşmamalıdır.
 - Her `body` ve `locomotion` değeri kendi siluetini çizer (aynı gövdenin renk varyantı yasak). Biçim/ayak envanteri `02_KARAKTER_SISTEMI.md` §9'dadır.
 - Görsel zenginlik gradyan yerine katmanlı düz dolgu, omuz pedi, uyluk plakası/dizlik ve aileye göre kask donanımıyla kurulur.
-- Alt takım canlı olmalı: yürüyüşte bacaklar zıt fazda sallanır ve ayak bilekten yuvarlanır (topuk → taban → burun), boşta hafif ağırlık kayması olur, havada ayaklar `vy`'ye göre toplanır/uzanır, teker ve bilye ayaklar gerçekten döner. Animasyon `motion { vx, vy, onGround, walk }` + `timeMs`'den türetilir. **`walk` sinyali `Entity`'nin sorumluluğundadır:** yerde yürüme `vx` kullanmadığı için `walk()` adımda `walkAnim` kurar, `update()` söndürür; sinyal çiziciye geçmezse robotlar ayaklarını oynatmaz.
+- Alt takım canlı olmalı: yürüyüşte bacaklar zıt fazda sallanır ve ayak bilekten yuvarlanır (topuk → taban → burun), gövde hafifçe yükselip yana kayar, boşta hafif ağırlık kayması olur, havada ayaklar `vy`'ye göre toplanır/uzanır, teker ve bilye ayaklar gerçekten döner. Animasyon `motion { vx, vy, onGround, walk, walkAmp, walkPhase, rollPhase }` + `timeMs`'den türetilir. **`walk`/`walkPhase` sinyalleri `Entity`'nin sorumluluğundadır:** yerde yürüme `vx` kullanmadığı için `walk()` adımda `walkAnim` kurar, `update()` söndürür; adım fazı ise **kat edilen mesafeden** ilerler, böylece animasyon yürüyüş hızına kilitlenir. Sinyaller çiziciye geçmezse robotlar ayaklarını oynatmaz.

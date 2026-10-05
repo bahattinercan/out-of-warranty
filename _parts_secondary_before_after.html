@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <title>2. alt yuva — ÖNCE / SONRA</title>
+  <style>
+    body { margin: 0; background: #05080c; }
+    canvas { position: fixed; left: 0; top: 0; }
+  </style>
+</head>
+<body>
+  <canvas id="c" width="960" height="560"></canvas>
+  <script src="js/audio.js"></script>
+  <script src="js/characters.js"></script>
+  <script src="js/progression.js"></script>
+  <script src="js/profile.js"></script>
+  <script src="js/parts.js"></script>
+  <script src="js/market.js"></script>
+  <script src="js/maps.js"></script>
+  <script src="js/story-data.js"></script>
+  <script src="js/skills.js"></script>
+  <script src="js/skill-fx.js"></script>
+  <script src="js/robots.js"></script>
+  <script src="js/terrain.js"></script>
+  <script src="js/weapons.js"></script>
+  <script src="js/entity.js"></script>
+  <script src="js/projectile.js"></script>
+  <script src="js/ai.js"></script>
+  <script src="js/story.js"></script>
+  <script src="js/game.js"></script>
+  <script>
+    const CEF = CHARACTERS[0]; // FIX-8 — kullanıcının ekran görüntüsündeki robot
+    const MOTION = { vx: 0, vy: 0, onGround: true };
+    // Yeni (çapa tabanlı) yerleşimin kopyası: ÖNCE'yi kurmak için geçici kullanılır.
+    const AFTER = JSON.parse(JSON.stringify(_RB_PART_SECONDARY));
+    const BEFORE = {
+      helmet: { ax: 0, ay: 0, mirror: 1, dx: 0.36, dy: 0.12, scale: 0.62 },
+      body: { ax: 0, ay: 0, mirror: 1, dx: -0.44, dy: 0.26, scale: 0.50 },
+      tool: { ax: 0, ay: 0, mirror: 1, dx: -0.02, dy: 0.32, scale: 0.64 },
+      feet: { ax: 0, ay: 0, mirror: 1, dx: 0.36, dy: 0.02, scale: 0.48 },
+    };
+    const lo = (o) => Object.assign({ helmet: [null, null], body: [null, null], tool: [null, null], feet: [null, null] }, o);
+
+    const c = document.getElementById("c").getContext("2d");
+    c.fillStyle = "#0b1017"; c.fillRect(0, 0, 960, 560);
+    c.font = '700 13px "Chakra Petch", sans-serif';
+    c.textAlign = "center"; c.textBaseline = "middle";
+    c.fillStyle = "#ff9b9b"; c.fillText("ÖNCE (sabit köşe kaydırması)", 240, 16);
+    c.fillStyle = "#63e6be"; c.fillText("SONRA (yuva çapasına bağlı)", 720, 16);
+
+    const CASES = [
+      { t: "Atölye: Kask 2. yuva = Zırh Kaskı (r=21)", r: 21, lo: { helmet: [null, "zirh_kaski"] } },
+      { t: "Kask: mercek + zırh kaskı (r=21)", r: 21, lo: { helmet: ["nisan_mercegi", "zirh_kaski"] } },
+      { t: "Gövde: yama + plaka (r=21)", r: 21, lo: { body: ["lehim_yamasi", "kompozit_plaka"] } },
+      { t: "Aparat: bobin + çip (r=21)", r: 21, lo: { tool: ["takviye_bobini", "zamanlayici_cip"] } },
+      { t: "Ayak: turbo + sıçrama yayı (r=21)", r: 21, lo: { feet: ["turbo_palet", "sicrama_yayi"] } },
+      { t: "TAM ÇİFT DONANIM (r=21)", r: 21, lo: { helmet: ["nisan_mercegi", "zirh_kaski"], body: ["lehim_yamasi", "kompozit_plaka"], tool: ["takviye_bobini", "zamanlayici_cip"], feet: ["turbo_palet", "sicrama_yayi"] } },
+      { t: "TAM ÇİFT DONANIM — maç ölçeği r=14", r: 14, lo: { helmet: ["nisan_mercegi", "zirh_kaski"], body: ["lehim_yamasi", "kompozit_plaka"], tool: ["takviye_bobini", "zamanlayici_cip"], feet: ["turbo_palet", "sicrama_yayi"] } },
+    ];
+    CASES.forEach((cs, i) => {
+      const cy = 60 + i * 72;
+      c.strokeStyle = "#1f2a36"; c.beginPath(); c.moveTo(6, cy + 34); c.lineTo(954, cy + 34); c.stroke();
+      c.textAlign = "left"; c.fillStyle = "#7f93a5"; c.font = '700 9px "Chakra Petch", sans-serif';
+      c.fillText(cs.t, 8, cy + 44);
+      c.textAlign = "center";
+      // ÖNCE
+      Object.assign(_RB_PART_SECONDARY, BEFORE);
+      drawRobot(c, { cx: 240, cy, r: cs.r, facing: 1, charDef: CEF, timeMs: 600, motion: MOTION, parts: lo(JSON.parse(JSON.stringify(cs.lo))) });
+      // SONRA
+      Object.assign(_RB_PART_SECONDARY, AFTER);
+      drawRobot(c, { cx: 720, cy, r: cs.r, facing: 1, charDef: CEF, timeMs: 600, motion: MOTION, parts: lo(JSON.parse(JSON.stringify(cs.lo))) });
+    });
+  </script>
+</body>
+</html>

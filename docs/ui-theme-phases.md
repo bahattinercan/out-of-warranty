@@ -21,7 +21,7 @@ icat etmez, yalnız uygular**. Yeni yazılacak her UI kodu bu kurallara uyar.
 
 | Kural | Açıklama |
 | --- | --- |
-| K-FONT | Canvas yazısı asla doğrudan `ctx.font` alamaz; `uiTitleFont(px)` (Russo One — başlık/buton ≥14px) veya `uiTextFont(px, weight?)` (Chakra Petch — gövde; ≤13px etiketler `700`) kullanır. `"Segoe UI"` yalnız bu iki yardımcının fallback'inde geçer. |
+| K-FONT | Canvas yazısı asla doğrudan `ctx.font` alamaz; `uiTitleFont(px)` (Russo One — başlık/buton ≥14px) veya `uiTextFont(px, weight?)` (Chakra Petch — gövde varsayılanı **600 SemiBold**, etiket/buton/vurgu `700`) kullanır. `"Segoe UI"` yalnız bu iki yardımcının fallback'inde geçer. |
 | K-FIT | Kart/panel içi metinler `_fitTextLines(ctx, metin, maxGenişlik, punto, fontFn, maxSatır, minPunto)` ile sığdırılır. Sabit genişlikli kartlarda fillText'e güvenilmez (Russo One geniş font). |
 | K-PANEL | Menü kartı/butonu/paneli `_csPanel(ctx, x, y, w, h, opts)` ile çizilir: kesik köşe + metal gradyan + perçin + isteğe bağlı `hazardTop`. `_csRoundRect` yalnız küçük iç öğelerde (mühimmat baloncuğu, skill şeridi, satır pill'i) kalır. |
 | K-HOVER | Hover: 2px yukarı kayma + kenar `#ffe45e` + `_csGlow`. Dokunma alanı (`_xxxRects`) hiçbir zaman değişmez. |
@@ -64,6 +64,15 @@ Test komutları: `node tests/run.js` (her fazda), `node tests/audio.js` (yalnız
 | 20 | Depolama uyarısı (DOM) | `#storage-warning` | ✅ Faz 4 |
 | 21 | Güç barı (DOM) | `#power-bar` | ✅ Faz 4 |
 | 22 | Oyun içi canvas yazıları | hasar sayıları, yetenek yazıları (`skills.js`) | ✅ font Faz 1; punto cillası Faz 5 |
+| 23 | Savaş alt paneli (DOM) | `#battle-bar`, `#battle-actions`, `.act-slot` | ✅ Faz 6 |
+
+**Faz 6 — Savaş alt paneli (Wild Ones düzeni, 4 Ekim 2026).** Maç içi HUD
+alt panele taşındı: solda robot kartları (portre + sıra rozeti + can barı),
+sağda SİLAH DEĞİŞTİR + seçili silah / modül / Işınlanma / Kanca yuvaları.
+Karabina paneli (`#weapon-panel`) kalıcı şerit olmaktan çıkıp `.open` ile
+açılan listeye döndü; canvas'taki modül kartı kaldırıldı (modül artık kendi
+yuvasında). `#hud` üst bantta yalnız sıra/süre, rüzgâr ve ekran düğmelerini
+taşır. Mesajlaşma ve sipariş yuvaları eklenmedi.
 
 Ölü CSS tespiti: `#setup`, `.setup-label`, `#count-options` kuralları
 `index.html`'de karşılıksız (oyuncu sayısı seçimi canvas'a taşındı) → Faz 4'te silinir.

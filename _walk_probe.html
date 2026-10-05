@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <title>Yürüyüş animasyonu doğrulama (oyuna dâhil değil)</title>
+  <style>
+    html, body { margin: 0; background: #10161a; }
+    canvas { display: block; margin: 0 auto; }
+  </style>
+</head>
+<body>
+<!-- Dev doğrulama sayfası: gerçek drawRobot/Entity kodunu kullanır.
+     1) faz adımları, 2) ilerleyen yürüyüş izi, 3) ayak yörüngesi (kayma
+     ölçümü), 4) durum karşılaştırması. Konsola sayısal kayma dökümü yazar. -->
+<canvas id="probe" width="1180" height="1460"></canvas>
+
+<script src="js/characters.js"></script>
+<script src="js/weapons.js"></script>
+<script src="js/robots.js"></script>
+<script src="js/entity.js"></script>
+<script>
+window.addEventListener("DOMContentLoaded", () => {
+  const ctx = document.getElementById("probe").getContext("2d");
+  const FONT = '13px "Segoe UI", system-ui, sans-serif';
+
+  // Ölçüm için düz zemin taklidi (gerçek Terrain sınıfı gerekmiyor).
+  function flatTerrain(w, h, groundY) {
+    const solid = new Uint8Array(w * h);
+    for (let y = groundY; y < h; y++) for (let x = 0; x < w; x++) solid[y * w + x] = 1;
+    return {
+      w, h, solid, version: 0,
+      isSolid(x, y) { x |= 0; y |= 0; return x >= 0 && x < w && y >= 0 && y < h && solid[y * w + x] === 1; },
+      surfaceBelow(x, fromY) {
+        x |= 0;
+        for (let y = Math.max(0, fromY | 0); y < h; y++) if (this.isSolid(x, y)) return y;
+        return h;
+      },
+      destroy() { this.version++; },
+    };
+  }
+
+  const pick = (locomotion) => CHARACTERS.find((c) => c.locomotion === locomotion) || CHARACTERS[0];
+  const makeEntity = (def, x, y) => {
+    const e = new Entity(x, y, def.color, def.label, def);
+    e.onGround = true;
+    return e;
+  };
+
+  function label(text, x, y, color, size) {
+    ctx.font = (size || 13) + 'px "Segoe UI", system-ui, sans-serif';
+    ctx.fillStyle = color || "#8ea3b0";
+    ctx.fillText(text, x, y);
+  }
+  function ground(x, y, w) {
+    ctx.strokeStyle = "#2c3a43";
+    ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(x, y + 0.5); ctx.lineTo(x + w, y + 0.5); ctx.stroke();
+  }
+
+  // Çizicinin bacak formülü: yere basan ayağın gövdeye göre yerel x'i.
+  const STRIDE = 0.56; // _rbLegs footX katsayısı
+  const HIP = 0.20;    // _rbLegs hipX katsayısı
+  const footLocalX = (r, phase, side) =>
+    side * r * HIP + Math.sin(phase + (side > 0 ? 0 : Math.PI)) * r * STRIDE;
+  const planted = (phase, side) => Math.cos(phase + (side > 0 ? 0 : Math.PI)) <= 0;
+
+  ctx.fillStyle = "#10161a";
+  ctx.fillRect(0, 0, 1180, 1460);
+
+  // ── 1) Adım döngüsü: 12 faz adımı ──────────────────────────────────────
+  label("1) Adım döngüsü — walkPhase 0…2π (12 kare), dört alt takım ailesi", 20, 22, "#dbe7ee", 14);
+  ["legs", "wheel", "tracks", "spring"].forEach((loc, row) => {
+    const def = pick(loc);
+    const cy = 72 + row * 92;
+    label(`${loc} — ${def.label}`, 20, cy + 6, "#5f7480");
+    ground(150, cy + def.r, 1010);
+    for (let i = 0; i < 12; i++) {
+      const e = makeEntity(def, 180 + i * 82, cy + def.r);
+      e.walkBlend = 1;
+      e.walkPhase = (i / 12) * Math.PI * 2;
+      e.draw(ctx, false, 0);
+    }
+  });
+
+  // ── 2) Gerçek Entity ile yürüyüş → ayak izi tablosu ────────────────────
+  // Grafik gerçek simülasyondan beslenir: yatay = ayağın dünya x'i, dikey =
+  // kare (zaman aşağı). Yere basan ayak DİKEY sıra bırakır; eğik sıra = kayma.
+  const N = 40;
+  const rowY = 430;
+  const walkDef = pick("legs");
+  const terrain = flatTerrain(1180, 1460, rowY + 40);
+  const walker = makeEntity(walkDef, 30, rowY + 40);
+  const samples = [];
+  const prevBySide = { 1: null, "-1": null };
+  const slips = [];
+  for (let f = 0; f < N; f++) {
+    walker.update(terrain);   // fizik + zarf (oyun sırası)
+    walker.walk(1, terrain);  // adım
+    const rec = { f, body: walker.x, phase: walker.walkPhase, feet: [] };
+    for (const side of [1, -1]) {
+      const contact = planted(walker.walkPhase, side);
+      const wx = walker.x + walker.facing * footLocalX(walkDef.r, walker.walkPhase, side);
+      rec.feet.push({ side, wx, contact });
+      const pf = prevBySide[side];
+      if (pf && pf.contact && contact && walker.onGround) slips.push(wx - pf.wx);
+      prevBySide[side] = { wx, contact };
+    }
+    samples.push(rec);
+  }
+  const avg = slips.length ? slips.reduce((a, b) => a + b, 0) / slips.length : 0;
+  const mx = slips.length ? Math.max.apply(null, slips.map(Math.abs)) : 0;
+
+  label("2) Ayak izi tablosu — gerçek Entity simülasyonu (40 kare). Yere basan ayak DİKEY sıra bırakır.", 20, 560, "#dbe7ee", 14);
+  label("   Sıra eğikleşirse ayak kayıyordur. Yatay eksen = dünya x (px), dikey = kare.", 20, 578, "#8ea3b0");
+  const fx0 = 60, fy0 = 606, fu = 5.6, cell = 5.6;   // px birim başına / kare başına
+  const span = 2.2 * N + walkDef.r * 1.4;
+  const fpx = (v) => fx0 + v * fu;
+  const fpy = (f) => fy0 + f * cell;
+  ctx.strokeStyle = "#1d262c"; ctx.lineWidth = 1;
+  ctx.strokeRect(fx0, fy0 - 4, span * fu, N * cell + 8);
+  for (let f = 0; f <= N; f += 5) {
+    ctx.beginPath(); ctx.moveTo(fx0, fpy(f)); ctx.lineTo(fx0 + span * fu, fpy(f)); ctx.stroke();
+    if (f % 10 === 0) label(String(f), fx0 - 18, fpy(f) + 4, "#40525d");
+  }
+  for (const rec of samples) {
+    ctx.strokeStyle = "#222d34";
+    ctx.beginPath(); ctx.moveTo(fpx(rec.body), fpy(rec.f)); ctx.lineTo(fpx(rec.body), fpy(rec.f + 1)); ctx.stroke();
+    for (const ft of rec.feet) {
+      ctx.fillStyle = ft.side > 0 ? (ft.contact ? "#63e6be" : "#2f6f5c") : (ft.contact ? "#ff9f6b" : "#7a4b32");
+      ctx.beginPath();
+      ctx.arc(fpx(ft.wx), fpy(rec.f), ft.contact ? 2.4 : 1.4, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+  label("koyu gri dikey çizgi = gövde yolu", fx0 + span * fu + 14, fy0 + 20, "#5f7480");
+  label("dolu = temas, soluk = salınım", fx0 + span * fu + 14, fy0 + 40, "#5f7480");
+  label(`temas sırasında ayak kayması: net ${avg.toFixed(2)} px/kare (gövdenin %${(Math.abs(avg) / 2.2 * 100).toFixed(1)}'i) · en kötü anlık ${mx.toFixed(2)} px/kare · gövde hızı 2.20 px/kare`,
+    fx0, fy0 + N * cell + 34, "#63e6be");
+
+  // ── 3) Ayak yörüngesi: gövdeye göre yerel konum ────────────────────────
+  // Temas sırasında ayak gövdeye göre geriye kaymalıdır (gövde ilerlediği
+  // için); bu eğri düz değilse adım okunmaz.
+  const chX = 46, chY = 960, chW = 900, chH = 120;
+  const stride = walkDef.r * 1.3;
+  const dph = Math.PI * 2.2 / stride;
+  label("3) Ayağın gövdeye göre yerel konumu (bir tam döngü). Temas = alçak/uzun kol: gövde ilerlerken ayak geriye akar.", 20, chY - 34, "#dbe7ee", 14);
+  const lx = (f) => chX + (f / N) * chW;
+  const ly = (v) => chY + chH / 2 - v * 6;
+  ctx.strokeStyle = "#1d262c"; ctx.lineWidth = 1;
+  ctx.strokeRect(chX, chY, chW, chH);
+  ctx.strokeStyle = "#2a363d";
+  ctx.beginPath(); ctx.moveTo(chX, ly(0)); ctx.lineTo(chX + chW, ly(0)); ctx.stroke();
+  for (const side of [1, -1]) {
+    const color = side > 0 ? "#63e6be" : "#ff9f6b";
+    for (const contact of [false, true]) {
+      ctx.strokeStyle = color; ctx.lineWidth = contact ? 2.5 : 1; ctx.globalAlpha = contact ? 1 : 0.4;
+      ctx.beginPath();
+      let started = false;
+      for (let f = 0; f <= N; f++) {
+        if (planted(f * dph, side) !== contact) { started = false; continue; }
+        const v = footLocalX(walkDef.r, f * dph, side);
+        if (!started) { ctx.moveTo(lx(f), ly(v)); started = true; } else ctx.lineTo(lx(f), ly(v));
+      }
+      ctx.stroke(); ctx.globalAlpha = 1;
+    }
+  }
+  label(`temas: ayak ±${(walkDef.r * STRIDE).toFixed(1)}px salınır · adım ${stride.toFixed(1)}px · tempo ${(2.2 / stride * 60).toFixed(1)} adım/s`,
+    chX + chW + 14, chY + 24, "#5f7480");
+
+  // ── 4) Durum karşılaştırması (2× büyütülmüş) ──────────────────────────
+  const s4 = 1200;
+  label("4) Durumlar (2× ölçek): duruş · yürüme · geri yürüme · havada (yükselme/düşme) · yuvarlanan takımlar", 20, s4 - 70, "#dbe7ee", 14);
+  const states = [
+    { name: "duruş", amp: 0, phase: 0, air: false, vy: 0 },
+    { name: "yürüme", amp: 1, phase: 1.1, air: false, vy: 0 },
+    { name: "geri", amp: 1, phase: -1.1, air: false, vy: 0 },
+    { name: "havada ↑", amp: 1, phase: 1.1, air: true, vy: -5 },
+    { name: "havada ↓", amp: 1, phase: 1.1, air: true, vy: 6 },
+  ];
+  states.forEach((st, i) => {
+    const big = walkDef.r * 2;
+    const x = 90 + i * 205;
+    label(st.name, x - 26, s4 - 52, "#5f7480");
+    ground(x - 55, s4 + big, 170);
+    const e = makeEntity(walkDef, x, s4 + big);
+    e.r = big;
+    e.walkBlend = st.amp;
+    e.walkPhase = st.phase;
+    e.onGround = !st.air;
+    e.vy = st.vy;
+    e.draw(ctx, false, 0);
+  });
+  ["wheel", "wheels", "ball", "tracks"].forEach((loc, i) => {
+    const def = pick(loc);
+    const big = def.r * 2;
+    const x = 160 + i * 260;
+    label(`${loc} rollPhase=0.9`, x - 45, s4 + 86, "#5f7480");
+    const e = makeEntity(def, x, s4 + 140 + big);
+    e.r = big;
+    e.walkBlend = 1;
+    e.walkPhase = 1.1;
+    e.rollPhase = 0.9;
+    e.draw(ctx, false, 0);
+  });
+
+  console.log("MEASURE slip avg=" + avg.toFixed(3) + " max=" + mx.toFixed(3) +
+    " stride=" + stride.toFixed(1) + " phasePerFrame=" + dph.toFixed(3) +
+    " cadence=" + (2.2 / stride * 60).toFixed(2) + " steps/s");
+});
+</script>
+</body>
+</html>

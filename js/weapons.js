@@ -14,6 +14,9 @@
  *   drill / drillFrames          -> araziyi delip ilerleyip sonra patlama (Matkap)
  *   mine / armFrames / trigger   -> yere bırakılıp yaklaşanı vuran mayın (turlar arası kalıcı)
  *   napalm / fireCount / fireLife / fireDamage -> patlayınca yanan alan bırakma (Napalm)
+ *   teleport / passPlayers       -> değdiği noktanın üstüne atıcıyı ışınlar; hasarsız (Işınlanma Topu)
+ *   hook / drag / passPlayers    -> yerçekimsiz düz uçar, tutununca atıcıyı ankraja çeker (Kanca);
+ *                                   `drag` kare başına hız kaybıdır, güç => fırlatma menzili
  *
  * Gösterim: stats {dmg,speed,radius} 1–5 arası puan (açıklama panelindeki ● göstergeleri).
  *
@@ -34,7 +37,7 @@ const WEAPONS = [
     desc: "Dengeli roket. Çarptığı yerde patlar.",
     baseSpeed: 6, speedMul: 16, gravity: 0.9, windFactor: 0.02,
     radius: 38, damage: 46, knockback: 9, ammo: Infinity,
-    stats: { dmg: 3, speed: 3, radius: 3 }, special: "Dengeli",
+    special: "Dengeli",
     trailColor: "rgba(255,180,60,", ballColor: "#2b2b2b", ringColor: "#ffb347",
     look: { shape: "rocket", orient: "vel", tail: "flame", accent: "#fff2c4", glow: "#ffb347" },
   },
@@ -44,7 +47,7 @@ const WEAPONS = [
     baseSpeed: 5, speedMul: 14, gravity: 1.0, windFactor: 0.015,
     radius: 46, damage: 40, knockback: 11, ammo: 3,
     bounce: true, restitution: 0.55, bounceFriction: 0.86, fuse: 110, // ~1.8 sn @60fps
-    stats: { dmg: 3, speed: 2, radius: 4 }, special: "Sekiyor • fitil",
+    battleMax: 5, special: "Sekiyor • fitil",
     trailColor: "rgba(120,200,120,", ballColor: "#2e4d2e", ringColor: "#6fdc6f",
     look: { shape: "grenade", orient: "spin", spin: 0.06, tail: "smoke", accent: "#c8ccd4", fuseFx: true },
   },
@@ -53,7 +56,7 @@ const WEAPONS = [
     desc: "Çok hızlı ve düz uçar; isabet edene ağır hasar.",
     baseSpeed: 14, speedMul: 22, gravity: 0.25, windFactor: 0.005,
     radius: 16, damage: 30, knockback: 6, directHitDamage: 40, ammo: 2,
-    stats: { dmg: 5, speed: 5, radius: 1 }, special: "Hızlı • delici",
+    battleMax: 3, special: "Hızlı • delici",
     trailColor: "rgba(255,90,90,", ballColor: "#5a1414", ringColor: "#ff6b6b",
     look: { shape: "needle", orient: "vel", tail: "spark", accent: "#ffe6e6", glow: "#ff6b6b" },
   },
@@ -63,7 +66,7 @@ const WEAPONS = [
     baseSpeed: 9, speedMul: 16, gravity: 0.7, windFactor: 0.015,
     radius: 18, damage: 16, knockback: 4, ammo: 2,
     pellets: 5, spread: 0.5, speedJitter: 0.12,
-    stats: { dmg: 4, speed: 4, radius: 2 }, special: "5 saçma",
+    battleMax: 4, special: "5 saçma",
     trailColor: "rgba(255,210,120,", ballColor: "#4a3a1a", ringColor: "#ffd27a",
     look: { shape: "pellet", orient: "spin", spin: 0.45, tail: "none", accent: "#ffe9b0" },
   },
@@ -79,7 +82,7 @@ const WEAPONS = [
       trailColor: "rgba(200,150,255,", ballColor: "#3a2a4d", ringColor: "#c89bff",
       look: { shape: "bomblet", orient: "spin", spin: 0.25, tail: "smoke", accent: "#e0c8ff" },
     },
-    stats: { dmg: 4, speed: 3, radius: 4 }, special: "Havada bölünür",
+    battleMax: 3, special: "Havada bölünür",
     trailColor: "rgba(200,150,255,", ballColor: "#3a2a4d", ringColor: "#c89bff",
     look: { shape: "canister", orient: "spin", spin: 0.12, tail: "smoke", accent: "#e0c8ff" },
   },
@@ -89,7 +92,7 @@ const WEAPONS = [
     baseSpeed: 7, speedMul: 16, gravity: 0.85, windFactor: 0.02,
     radius: 30, damage: 28, knockback: 7, ammo: 2,
     pellets: 3, spread: 0.32, speedJitter: 0.05,
-    stats: { dmg: 4, speed: 3, radius: 3 }, special: "3 roket • yelpaze",
+    battleMax: 4, special: "3 roket • yelpaze",
     trailColor: "rgba(255,160,80,", ballColor: "#3a2410", ringColor: "#ff9a4d",
     look: { shape: "rocket", orient: "vel", tail: "flame", accent: "#fff2c4", glow: "#ff9a4d" },
   },
@@ -99,7 +102,7 @@ const WEAPONS = [
     baseSpeed: 6, speedMul: 15, gravity: 0.85, windFactor: 0.018,
     radius: 44, damage: 44, knockback: 10, ammo: 2,
     sticky: true, stickFuse: 55, // yapıştıktan ~0.9 sn sonra patlar
-    stats: { dmg: 4, speed: 3, radius: 4 }, special: "Yapışır • fitil",
+    battleMax: 4, special: "Yapışır • fitil",
     trailColor: "rgba(120,230,120,", ballColor: "#1f5c1f", ringColor: "#7CFF6B",
     look: { shape: "blob", orient: "spin", spin: 0.05, tail: "drip", accent: "#d6ffcf", fuseFx: true },
   },
@@ -111,7 +114,7 @@ const WEAPONS = [
     baseSpeed: 6, speedMul: 15, gravity: 0.9, windFactor: 0.02,
     radius: 40, damage: 34, knockback: 10, ammo: 3,
     bounce: true, restitution: 0.85, bounceFriction: 0.94, fuse: 150,
-    stats: { dmg: 3, speed: 3, radius: 3 }, special: "Çok seker • fitil",
+    battleMax: 6, special: "Çok seker • fitil",
     trailColor: "rgba(190,120,255,", ballColor: "#3a1f5c", ringColor: "#b97cff",
     look: { shape: "rubber_ball", orient: "spin", spin: 0.3, tail: "none", accent: "#e6d4ff" },
   },
@@ -122,7 +125,7 @@ const WEAPONS = [
     radius: 32, damage: 24, knockback: 8, ammo: 2,
     pellets: 3, spread: 0.5, speedJitter: 0.08,
     bounce: true, restitution: 0.8, bounceFriction: 0.92, fuse: 130,
-    stats: { dmg: 4, speed: 3, radius: 3 }, special: "3 sekzıp",
+    battleMax: 4, special: "3 sekzıp",
     trailColor: "rgba(170,120,235,", ballColor: "#33205a", ringColor: "#a98cf0",
     look: { shape: "rubber_ball", orient: "spin", spin: 0.3, tail: "none", accent: "#d9c6ff" },
   },
@@ -133,7 +136,7 @@ const WEAPONS = [
     radius: 36, damage: 28, knockback: 9, ammo: 2,
     pellets: 3, spread: 0.42,
     bounce: true, restitution: 0.5, bounceFriction: 0.86, fuse: 100,
-    stats: { dmg: 4, speed: 2, radius: 3 }, special: "3 bomba • fitil",
+    battleMax: 4, special: "3 bomba • fitil",
     trailColor: "rgba(120,200,120,", ballColor: "#2e4d2e", ringColor: "#6fdc6f",
     look: { shape: "grenade", orient: "spin", spin: 0.06, tail: "smoke", accent: "#c8ccd4", fuseFx: true },
   },
@@ -149,7 +152,7 @@ const WEAPONS = [
       trailColor: "rgba(255,170,90,", ballColor: "#4d2f0a", ringColor: "#ffb347",
       look: { shape: "bomblet", orient: "spin", spin: 0.25, tail: "smoke", accent: "#ffd9a0", size: 1.1 },
     },
-    stats: { dmg: 5, speed: 3, radius: 5 }, special: "8 parçacık",
+    battleMax: 2, special: "8 parçacık",
     trailColor: "rgba(255,170,90,", ballColor: "#4d2f0a", ringColor: "#ffb347",
     look: { shape: "canister", orient: "spin", spin: 0.12, tail: "smoke", accent: "#ffd9a0", size: 1.15 },
   },
@@ -158,7 +161,7 @@ const WEAPONS = [
     desc: "Devasa patlama. Yavaş ama yıkıcı.",
     baseSpeed: 5, speedMul: 13, gravity: 0.95, windFactor: 0.018,
     radius: 84, damage: 80, knockback: 18, ammo: 1,
-    stats: { dmg: 5, speed: 2, radius: 5 }, special: "Devasa patlama",
+    battleMax: 2, special: "Devasa patlama",
     trailColor: "rgba(180,255,140,", ballColor: "#1f3a0f", ringColor: "#9bff5c",
     look: { shape: "nuke", orient: "spin", spin: 0.03, tail: "smoke", accent: "#e8ffb0", glow: "#9bff5c" },
   },
@@ -168,7 +171,7 @@ const WEAPONS = [
     baseSpeed: 8, speedMul: 16, gravity: 0.85, windFactor: 0.02,
     radius: 26, damage: 22, knockback: 6, ammo: 1,
     pellets: 5, spread: 0.7, speedJitter: 0.06,
-    stats: { dmg: 5, speed: 3, radius: 2 }, special: "5 roket",
+    battleMax: 3, special: "5 roket",
     trailColor: "rgba(255,140,60,", ballColor: "#3a2410", ringColor: "#ff8c1a",
     look: { shape: "rocket", orient: "vel", tail: "flame", accent: "#fff2c4", glow: "#ff8c1a" },
   },
@@ -184,7 +187,7 @@ const WEAPONS = [
       trailColor: "rgba(120,200,255,", ballColor: "#1f3a5c", ringColor: "#7cc0ff",
       look: { shape: "bomblet", orient: "spin", spin: 0.25, tail: "smoke", accent: "#dff0ff" },
     },
-    stats: { dmg: 4, speed: 3, radius: 4 }, special: "Tepede bölünür",
+    battleMax: 3, special: "Tepede bölünür",
     trailColor: "rgba(120,200,255,", ballColor: "#1f3a5c", ringColor: "#7cc0ff",
     look: { shape: "mirv", orient: "vel", tail: "smoke", accent: "#dff0ff" },
   },
@@ -194,7 +197,7 @@ const WEAPONS = [
     baseSpeed: 6, speedMul: 14, gravity: 1.0, windFactor: 0.01,
     radius: 30, damage: 24, knockback: 7, ammo: 1,
     airdrop: true, airdropCount: 6, airdropSpread: 90,
-    stats: { dmg: 5, speed: 4, radius: 3 }, special: "Gökten saldırı",
+    battleMax: 2, special: "Gökten saldırı",
     trailColor: "rgba(255,120,120,", ballColor: "#3a1010", ringColor: "#ff6b6b",
     look: { shape: "bomb", orient: "vel", tail: "smoke", accent: "#d8dde6" },
   },
@@ -204,7 +207,7 @@ const WEAPONS = [
     baseSpeed: 11, speedMul: 18, gravity: 0.6, windFactor: 0.008,
     radius: 30, damage: 34, knockback: 8, ammo: 2,
     drill: true, drillFrames: 14,
-    stats: { dmg: 4, speed: 4, radius: 3 }, special: "Delici",
+    battleMax: 4, special: "Delici",
     trailColor: "rgba(200,200,210,", ballColor: "#3a3a40", ringColor: "#cfcfd6",
     look: { shape: "drill", orient: "vel", tail: "spark", accent: "#f0f0f5" },
   },
@@ -214,7 +217,7 @@ const WEAPONS = [
     baseSpeed: 5, speedMul: 13, gravity: 1.0, windFactor: 0.015,
     radius: 40, damage: 42, knockback: 11, ammo: 2,
     mine: true, armFrames: 40, trigger: 34,
-    stats: { dmg: 4, speed: 2, radius: 4 }, special: "Yaklaşınca patlar",
+    battleMax: 5, special: "Yaklaşınca patlar",
     trailColor: "rgba(255,90,90,", ballColor: "#3a0f0f", ringColor: "#ff5e5e",
     look: { shape: "mine", orient: "none", tail: "smoke", accent: "#ffb3b3" },
   },
@@ -224,11 +227,86 @@ const WEAPONS = [
     baseSpeed: 6, speedMul: 15, gravity: 0.9, windFactor: 0.02,
     radius: 30, damage: 26, knockback: 7, ammo: 1,
     napalm: true, fireCount: 10, fireLife: 150, fireDamage: 4, fireSpread: 44,
-    stats: { dmg: 4, speed: 3, radius: 5 }, special: "Yanan alan",
+    battleMax: 3, special: "Yanan alan",
     trailColor: "rgba(255,140,40,", ballColor: "#4d1f08", ringColor: "#ff8c1a",
     look: { shape: "napalm", orient: "vel", tail: "flame", accent: "#ffd27a" },
   },
+  // ── Yardımcı cephaneler: hasar vermez, konum değiştirir ──────────────────
+  {
+    id: "teleportball", name: "Işınlanma Topu", icon: "🔮",
+    desc: "Topun değdiği yerin üstüne ışınlanırsın; hasar vermez.",
+    baseSpeed: 6, speedMul: 15, gravity: 0.95, windFactor: 0.02,
+    radius: 12, damage: 0, knockback: 0, ammo: 2,
+    teleport: true, passPlayers: true,
+    projRadius: 5,
+    battleMax: 5, special: "Işınlanır",
+    trailColor: "rgba(150,120,255,", ballColor: "#2a1f4d", ringColor: "#a97cff",
+    look: { shape: "teleport_ball", orient: "spin", spin: 0.35, tail: "mist", accent: "#e6d4ff", glow: "#b97cff" },
+  },
+  {
+    id: "hook", name: "Kanca", icon: "🪝",
+    desc: "Düz uçar, tutunduğu noktaya seni çeker; hasar vermez.",
+    baseSpeed: 12, speedMul: 22, gravity: 0, windFactor: 0,
+    radius: 12, damage: 0, knockback: 0, ammo: 2,
+    hook: true, passPlayers: true, drag: 0.05, // sürtünme: güç -> menzil
+    projRadius: 5,
+    battleMax: 5, special: "Çekiş",
+    trailColor: "rgba(200,205,225,", ballColor: "#3a3a44", ringColor: "#cfcfd6",
+    look: { shape: "hook", orient: "vel", tail: "spark", accent: "#f0f0f5" },
+  },
 ];
+
+/* ── Gösterim puanları (elle yazılmaz) ─────────────────────────────────────
+ * Puanlar silahın GERÇEK sayılarından türetilir; böylece pazar/açıklama
+ * noktaları ile denge tablosu asla çelişmez. Tavan alanı `battleMax` ise
+ * maçta kullanılabilecek en fazla atıştır (taban mühimmat dâhil); depo ne
+ * kadar dolu olursa olsun bu sınırı aşamaz (bkz. market.js > battleLoad).
+ */
+const WEAPON_RATING_DMG = [17, 34, 51, 76];   // puan üst sınırları
+const WEAPON_RATING_RADIUS = [18, 29, 39, 55];
+const WEAPON_RATING_SPEED = [4, 6, 9, 13];
+
+function _ratingFor(value, thresholds) {
+  const v = Number.isFinite(value) ? value : 0;
+  for (let i = 0; i < thresholds.length; i++) if (v <= thresholds[i]) return i + 1;
+  return 5;
+}
+
+/* Tek atışta tek hedefe "gerçekçi" hasar. Çoklu mermilerin hepsi isabet etmez:
+ * saçma/yelpaze mermilerinde ilk mermi tam, kalanı yarım; parçacıklarda
+ * (cluster) her parçacık yarım; gökten yağmada ilk bomba tam, kalanı yarım.
+ * Mayın tetiklenmeye bağlı olduğu için alan cezası alır. */
+function weaponPowerScore(spec) {
+  if (!spec) return 0;
+  const dmg = toSafeInt(spec.damage, 0);
+  if (dmg <= 0) return 0;                       // hasarsız yardımcı cephane
+  let extra = 0;
+  if (Number.isFinite(spec.pellets) && spec.pellets > 1) {
+    extra = (spec.pellets - 1) * dmg * 0.5;
+  } else if (spec.cluster && spec.clusterSpec && Number.isFinite(spec.clusterCount)) {
+    // Parçacık hasarı ana gövdeden farklıdır (clusterSpec.damage).
+    extra = spec.clusterCount * toSafeInt(spec.clusterSpec.damage, 0) * 0.5;
+  } else if (spec.airdrop && Number.isFinite(spec.airdropCount)) {
+    extra = (spec.airdropCount - 1) * dmg * 0.5;
+  }
+  let p = dmg + extra;
+  if (Number.isFinite(spec.directHitDamage)) p += spec.directHitDamage * 0.5;
+  if (spec.napalm && Number.isFinite(spec.fireDamage) && Number.isFinite(spec.fireCount)) {
+    p += spec.fireDamage * spec.fireCount * 0.5;
+  }
+  if (spec.mine) p *= 0.8;
+  return Math.round(p);
+}
+
+// Açıklama panelindeki ● göstergeleri: { dmg, speed, radius } 0–5.
+function weaponStats(spec) {
+  const p = weaponPowerScore(spec);
+  return {
+    dmg: p <= 0 ? 0 : _ratingFor(p, WEAPON_RATING_DMG),
+    speed: _ratingFor(spec && spec.baseSpeed, WEAPON_RATING_SPEED),
+    radius: _ratingFor(spec && spec.radius, WEAPON_RATING_RADIUS),
+  };
+}
 
 // Yeni bir oyun için mühimmat sayacı (id -> kalan adet).
 function initialAmmo() {

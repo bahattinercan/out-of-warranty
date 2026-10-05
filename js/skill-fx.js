@@ -301,7 +301,7 @@ function sfxDualLoad(ctx, fx) {
 }
 
 // ── Aile: damageReduce ─────────────────────────────────────────────────────
-// Kaplama kilidi: dört zırh plakası köşelerden kapanır.
+// Zırh kilidi: dört zırh plakası köşelerden kapanır.
 function sfxPlateLock(ctx, fx) {
   const R = fx.r, p = sfxP(fx), a = sfxA(fx);
   const k = sfxOut(sfxClamp01(p * 2));
@@ -840,7 +840,8 @@ function spawnSkillFx(entity, game, def) {
     aim: Number.isFinite(entity.aim) ? entity.aim : -Math.PI / 4,
     tint: (spec && spec.tint) || entity.color || "#ffd166",
     accent: (spec && spec.accent) || (charDef && charDef.accent) || "#ffffff",
-    label: spec && spec.label === false ? null : def.label,
+    // Modül adı etiketi kaldırıldı: arayüz sade kalsın diye cast yazısı çizilmiyor
+    // (fx.label artık üretilmiyor; testler yalnız shape/çizim çağrısına bakar).
     params: def.params || {},
     t: 0, life: entry.life || 28, dead: false,
     seed: sfxHash((charDef && charDef.id ? charDef.id : "?") + "|" + shape + "|" +
@@ -860,29 +861,6 @@ function updateSkillFx(game) {
   }
 }
 
-// Modül adı bandı: cast anında robotun üstünde kısa süre süzülür.
-function sfxLabel(ctx, fx) {
-  if (!fx.label || fx.t > fx.life * 0.6) return;
-  const p = fx.t / (fx.life * 0.6);
-  const alpha = Math.min(1, p * 6) * (1 - p);
-  if (!(alpha > 0.02)) return;
-  const font = typeof uiTextFont === "function" ? uiTextFont(10, 700) : "700 13px sans-serif";
-  ctx.globalAlpha = alpha * 0.95;
-  ctx.font = font;
-  ctx.textAlign = "center"; ctx.textBaseline = "middle";
-  const w = (ctx.measureText ? ctx.measureText(fx.label).width : fx.label.length * 6) + 14;
-  const y = fx.y - fx.r * 2.3 - p * 12;
-  if (typeof _roundRect === "function") {
-    ctx.globalAlpha = alpha * 0.72;
-    ctx.fillStyle = "#0b1016";
-    _roundRect(ctx, fx.x - w / 2, y - 9, w, 17, 5);
-    ctx.fill();
-  }
-  ctx.globalAlpha = alpha;
-  ctx.fillStyle = fx.accent;
-  ctx.fillText(fx.label, fx.x, y);
-}
-
 function drawSkillFx(ctx, game) {
   const list = game && game.skillFx;
   if (!list || !list.length) return;
@@ -895,7 +873,6 @@ function drawSkillFx(ctx, game) {
     ctx.scale(fx.facing, 1);
     entry.draw(ctx, fx);
     ctx.restore();
-    sfxLabel(ctx, fx);
   }
 }
 

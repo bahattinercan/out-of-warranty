@@ -13,10 +13,13 @@
  *   SFX.shoot(spec)      — silah ateşi (spec'e göre tını)
  *   SFX.explosion(radius)— patlama (yarıçapa göre boyut/derinlik)
  *   SFX.jump()           — zıplama
+ *   SFX.teleport()       — ışınlanma (Işınlanma Topu varış)
+ *   SFX.hook()           — kanca tutunma/atma (Kanca)
  *   SFX.skill(kind)      — karakter yeteneği (türüne göre)
  *   SFX.hit()            — isabet/hasar
  *   SFX.eliminate()      — bir oyuncu elendi
  *   SFX.weaponSwitch()   — silah değiştir
+ *   SFX.partMount()      — parça tak/sök (metal klik)
  *   SFX.uiClick()        — menü tıklaması
  *   SFX.turn()           — sıra yeni oyuncuya geçti
  *   SFX.windChange(a, b) — rüzgâr yönü/şiddeti değişti
@@ -344,6 +347,20 @@ const SFX = (() => {
       tone({ type: "sine", freq: 260, freqEnd: 540, dur: 0.16, gain: 0.22, attack: 0.004 });
     },
 
+    // Işınlanma: hızla yükselen iki tonlu "zap" + hışırtı
+    teleport() {
+      tone({ type: "sine", freq: 220, freqEnd: 880, dur: 0.18, gain: 0.2, attack: 0.003 });
+      tone({ type: "triangle", freq: 660, freqEnd: 1320, dur: 0.14, gain: 0.12, delay: 0.06 });
+      noise({ filter: "highpass", freq: 2200, dur: 0.12, gain: 0.1 });
+    },
+
+    // Kanca: fırlatma "tık"ı + metalik tutunma çınlaması
+    hook() {
+      tone({ type: "square", freq: 520, freqEnd: 180, dur: 0.1, gain: 0.16 });
+      noise({ filter: "highpass", freq: 1500, dur: 0.08, gain: 0.12 });
+      tone({ type: "triangle", freq: 1180, freqEnd: 900, dur: 0.14, gain: 0.14, delay: 0.06 });
+    },
+
     // Karakter yeteneği — türüne göre ayrı karakter.
     skill(kind) {
       switch (kind) {
@@ -404,6 +421,14 @@ const SFX = (() => {
     // Menü tıklaması.
     uiClick() {
       tone({ type: "triangle", freq: 880, freqEnd: 1100, dur: 0.06, gain: 0.13, attack: 0.002 });
+    },
+
+    // Parça montajı — metal klik + kısa yay "tık-klik"i. Silah değiştirme
+    // tıkından ayrıdır: takma/sökme eyleminin duyulur imzası olsun.
+    partMount() {
+      tone({ type: "square", freq: 520, dur: 0.04, gain: 0.11, attack: 0.002 });
+      tone({ type: "square", freq: 300, freqEnd: 240, dur: 0.07, gain: 0.12, attack: 0.002, delay: 0.045 });
+      tone({ type: "triangle", freq: 1200, freqEnd: 1500, dur: 0.05, gain: 0.06, attack: 0.003, delay: 0.055 });
     },
 
     // Sahne konuşmacısı bipli (plan §10.5): her karakterin kendi tınısı

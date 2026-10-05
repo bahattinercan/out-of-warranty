@@ -2,6 +2,17 @@
  * Durumlar: AIMING -> PROJECTILE -> SETTLE -> (sıra değiş) ... -> GAMEOVER
  */
 const TURN_DURATION = 25;        // saniye: bir oyuncunun nişan/hamle süresi
+const TUTORIAL_TURN_DURATION = 45; // öğretici maçında acele yok: yarı süresiz nişan
+
+// Öğretici maçının rehber adımları: sırayla tamamlanan görevler. 4 zorunlu
+// adım bitince "serbest" adıma geçilir ve maç normal kurallarla sürer.
+const TUTORIAL_COACH_STEPS = [
+  "A / D veya ← → ile yürü (enerji harcar)",
+  "W veya ↑ ile sıçra (enerji harcar)",
+  "Fareyle nişan al — çizgiyi çevir",
+  "Sol tık basılı tut → güç dolsun → bırak ve ateş et",
+  "Serbest! Rakibi devir — Q modülü, 1–9 silahları da dene",
+];
 const FPS = 60;
 const FRAME_TIME = 1000 / FPS;    // ms: bir karenin süresi (60 FPS sabit)
 const WIND_MIN_TURNS = 2;          // rüzgâr en az bu kadar tamamlanmış tur sabit kalır
@@ -28,14 +39,51 @@ const WS_COLS = 4;
 const WS_ROWS = 3;
 const WS_PANEL_H = 440;
 const WS_FX_DURATION = 0.6; // satın alma sonrası montaj parıltısı (saniye)
+const WS_NOTICE_DURATION = 2.2; // takma/sökme geri bildirim yazısı (saniye)
 
-// Cephane Pazarı: soldaki robot grid'i Atölye ile aynı (4×3 = 12), sağda
-// 2 sütun × 5 satır mühimmat kartı (sayfa başına 10).
-const MK_COLS = 2;
+// Cephane Pazarı: ortak depo için tek ızgara — 3 sütun × 5 satır (sayfa
+// başına 15 kart). Kart genişliği pencere genişliğine göre hesaplanır.
+const MK_COLS = 3;
 const MK_ROWS = 5;
-const MK_PANEL_H = 440;
+const MK_CARD_H = 62;
+const MK_MAX_GRID_W = 912;    // kartlar çok geniş ekranda aşırı yayılmasın
 const MK_FX_DURATION = 0.6;   // satın alma sonrası kart parıltısı (saniye)
 const MK_NOTICE_DURATION = 2.2; // geri bildirim yazısının ekranda kalma süresi
+const MK_TAB_W = 104;         // sekme düğmesi genişliği (5 sekme: cephane + 4 yuva)
+const MK_TAB_H = 26;
+const MK_TAB_GAP = 6;
+// Sekme bandı, başlığın ALTINDA kendi satırında: geri butonu y 16..48'de
+// biter, bant 4px boşlukla y=52'den başlar ve DOM ses denetimi alanının
+// (AUDIO_SAFE y 8..36) altında kalır.
+const MK_TAB_Y = 52;
+// Bilgi satırı (Hurda + sekme özeti) sekme bandının altında; soldan başlar.
+const MK_INFO_Y = 88;
+// Izgara başlangıcı: başlık (14) + sekme (52..78) + bilgi (88) altında.
+// Alt bant (navY = 104+5*62+4*12+6 = 468): düğmeler 468..498 → bitişten 8 px
+// nefes payıyla kapsam notu (506..518), altında bildirim (522..535) → 540'a sığar.
+const MK_GRID_Y = 104;
+const MK_FOOT_NOTE_DY = 38;   // kapsam notu: navY + bu (düğme bitişi navY+30 → 8 px boşluk)
+const MK_FOOT_NOTICE_DY = 54; // geri bildirim: navY + bu
+
+// Üst-sağ köşe DOM ses denetimine aittir (CSS #audio-control: top 8px, yükseklik
+// 36px, sağda ~224px — CSS tarafındaki `--audio-reserve` ile aynı kural).
+// Canvas ekranları bu kutuya YAZI ÇİZMEZ; pazar başlık satırı ve hikâye
+// ilerletme ipucu bu yüzden bu alanın dışına taşındı (kullanıcı bildirimi).
+const AUDIO_SAFE = { x: 726, y: 8, w: 224, h: 36 };
+
+// Pazar sekmeleri: cephane + dört parça yuvası. "PARÇALAR" diye tek sekme
+// yoktur — yuva adları doğrudan sekmedir (kullanıcı isteği: kasklar, gövdeler
+// sayfa sayfa ayrılsın).
+const MARKET_TABS = [
+  { id: "ammo", label: "CEPHANE" },
+  { id: "helmet", label: "KASK" },
+  { id: "body", label: "GÖVDE" },
+  { id: "tool", label: "APARAT" },
+  { id: "feet", label: "AYAK" },
+];
+// Hikâye sahnesindeki "İlerlet" ipucunun y'si: ses denetimi alanının (h=36)
+// ALTINDA kalır. Sabit olarak tutulur ve testle denetlenir (kullanıcı bildirimi).
+const STORY_HINT_Y = 52;
 
 // Skill arketipinin kartta görünen kısa etiketi (arazinin neyi öne çıkardığı)
 const ARCH_LABELS = {
@@ -54,10 +102,16 @@ class Game {
     this.H = canvas.height;
     this._scaleX = 1;
     this._scaleY = 1;
-    // Modül kartının alt çapası: DOM silah paneli yüksekliğinin mantıksal
-    // karşılığı. Panel mermi önizlemesiyle birlikte büyüyebildiği için sabit
-    // sayı yerine ölçülür (syncBottomHud); 124 eski davranışın değeridir.
+    // Alt savaş panelinin mantıksal yüksekliği (CSS px -> dünya px). Ekran
+    // ölçeği resize'da değiştiği için sabit sayı yerine syncBottomHud ölçer;
+    // 124 eski davranışın değeridir. Modül kartı çizicisi (skills.js >
+    // drawSkillHud) hâlâ bu inset'i beşinci argüman olarak okuyabilir.
     this.hudBottomInset = 124;
+    // Açılır silah listesinin mantıksal sınırları; syncBottomHud liste açıkken
+    // doldurur (yerleşim/telemetri), kapalıyken null olur.
+    this.hudPanelRect = null;
+    // Alt paneldeki silah listesi açılır panel mi açık? (SİLAH DEĞİŞTİR)
+    this.weaponMenuOpen = false;
 
     this.input = { left: false, right: false, mouseX: 0, mouseY: 0, charging: false, power: 0 };
 
@@ -78,9 +132,9 @@ class Game {
     this.workshopSelectedId = null;
     this.workshopBranch = BRANCHES[0];
     this.workshopFx = null;      // satın alma sonrası kısa montaj parıltısı
-    this.marketPage = 0;         // Cephane Pazarı: robot sayfası
     this.marketWeaponPage = 0;   // Cephane Pazarı: mühimmat sayfası
-    this.marketSelectedId = null;
+    this.marketPartPage = 0;     // Parçalar sekmesi: parça sayfası
+    this.marketTab = "ammo";     // açık sekme: "ammo" | yuva id'si (helmet/body/tool/feet)
     this.marketFx = null;        // satın alma sonrası kart parıltısı
     this.marketNotice = null;    // kısa geri bildirim (eksik Hurda / dolu depo)
     // Hikâye modu çalışma alanları: kupa haritası, sahne oynatıcı, saha robotu
@@ -114,6 +168,7 @@ class Game {
     this.damagePopups = [];
     this.mines = [];          // kalıcı mayınlar (turlar arası yaşar)
     this.fires = [];          // napalm yanan alanları
+    this.tether = null;       // kanca çekme durumu (Kanca tutununca kurulur)
     this.shooterIdx = null;
     this.shotMod = null;      // aktif salvonun nextShot modifikatörü (nextShot yeteneği)
     this.charPage = 0;        // karakter seçim ekranı sayfası
@@ -131,6 +186,7 @@ class Game {
     this.windChangeFx = null;
     this.state = "MODE_SELECT"; // önce oyun modu seçilir
     this._weaponKey = null;
+    this.weaponMenuOpen = false;
     hideOverlay();
     updatePowerBar(0, false);
     this.updateHud();
@@ -141,6 +197,9 @@ class Game {
     // "Tekrar Oyna" yalnız startGame()'i çağırdığı için kart açık kalıyor,
     // maç arkada yeniden başlarken ekranda aynı menü duruyordu (F2-11).
     hideOverlay();
+    // Önceki maçtan kalan yüklenmiş cephane varsa envantere geri yaz (normalde
+    // maç sonunda yapılır; bu çağrı yarıda kesilen akışlara karşı güvenlik ağı).
+    this._settleAmmoDepot();
     this.matchId++;
     this.turnId = 1;
     this.bot.resetMatch();
@@ -172,10 +231,25 @@ class Game {
       ent.aim = x < this.W / 2 ? -Math.PI / 4 : -Math.PI + Math.PI / 4;
       ent.weapon = 0;            // başlangıç silahı: Bazuka
       ent.ammo = initialAmmo();  // mühimmat sayacı
+      // Ortak depo: tüm robotlar aynı profildelik depodan beslenir (profile.ammo).
+      // Depo profilde olduğu gibi kalır (maç sonunda harcanmayan kısım geri
+      // yazılır); bu yüzden maç ortasında sayfa yenilenirse satın alınan mermi
+      // kaybolmaz. Yalnız tek oyunculu ilerleme modlarında ve insan robotunda
+      // geçerlidir; botlar ve yerel maçlar taban mühimmatla oynar.
+      if (upgradesOn && ctrl !== "bot") {
+        const depot = getAmmoDepot(this.profile);
+        if (ammoDepotTotal(depot) > 0) {
+          // Savaş tavanı uygulanır; iade snapshot'ı deponun tamamı değil,
+          // GERÇEKTEN yüklenen dilimdir (depo 999 olsa da maça tavan kadar girer).
+          const load = battleLoad(ent.ammo, depot);
+          ent.ammo = load.ammo;
+          ent.ammoDepot = load.loaded;
+        }
+      }
       ent.control = ctrl;
       return ent;
     });
-    // Zorluk seviyesi botun çıkış gücünü de ölçekler (Kolay zayıf, Ustalık
+    // Zorluk seviyesi botun hasar gücünü de ölçekler (Kolay zayıf, Ustalık
     // sert); insan robotu ve yerel maçlar etkilenmez.
     aiAssignDamageScale(this.players, this.difficulty);
 
@@ -199,11 +273,13 @@ class Game {
     this.damagePopups = [];
     this.mines = [];
     this.fires = [];
+    this.tether = null; // yeni salvo: kanca çekme durumunu temizle
+    this.weaponMenuOpen = false; // yeni maç: açılır silah listesi kapalı başlar
     this.wind = randWind();
     this.windTurnsRemaining = randWindDuration();
     this.windChangeFx = null;
     this.settleTimer = 0;
-    this.turnTimer = TURN_DURATION;
+    this.turnTimer = this.mode === "tutorial" ? TUTORIAL_TURN_DURATION : TURN_DURATION;
     this.lastShot = null;
     this.shooterIdx = null;
     this.input.charging = false;
@@ -231,66 +307,84 @@ class Game {
 
   renderModeSelect(ctx) {
     const W = this.W, H = this.H;
-    drawClouds(ctx, W);
-    ctx.fillStyle = "#000000bb"; ctx.fillRect(0, 0, W, H);
-    ctx.fillStyle = "#ffe45e"; ctx.font = uiTitleFont(32);
+    // Bulutlar arka planda kalır, üstüne çelik gradyan + parıltı + vinyet
+    // biner (_msBackdrop): düz siyah perde yerine dökümhane salonu derinliği.
+    drawClouds(ctx, W, "rgba(190,215,240,0.14)");
+    _msBackdrop(ctx, W, H);
     ctx.textAlign = "center"; ctx.textBaseline = "top";
-    ctx.fillText("DÖKÜMHANE-9", W / 2, H / 2 - 145);
-    ctx.fillStyle = "#cfe0ee"; ctx.font = uiTitleFont(18);
-    ctx.fillText("Arena tahsis protokolünü başlat", W / 2, H / 2 - 92);
+    // Başlık: koyu gölge kopyası + sarı üst kopya — hafif derinlik
+    ctx.fillStyle = "#000000aa"; ctx.font = uiTitleFont(34);
+    ctx.fillText("DÖKÜMHANE-9", W / 2 + 2, H / 2 - 164);
+    ctx.fillStyle = "#ffe45e"; ctx.font = uiTitleFont(34);
+    ctx.fillText("DÖKÜMHANE-9", W / 2, H / 2 - 166);
+    ctx.fillStyle = "#cfe0ee"; ctx.font = uiTextFont(15);
+    ctx.fillText("Arena tahsis protokolünü başlat", W / 2, H / 2 - 112);
     // Başlık altı tehlike şeridi: endüstriyel imza detayı (Faz 2 pilot)
-    _csHazardStrip(ctx, W / 2 - 130, H / 2 - 64, 260, 5);
+    _csHazardStrip(ctx, W / 2 - 130, H / 2 - 86, 260, 5);
     const scrap = this.profile ? this.profile.scrap : START_SCRAP;
-    // Pazar kartının alt yazısı için tüm robotların deposu toplanır (34 küçük
-    // nesne taraması; menü karesi başına maliyeti önemsizdir).
-    const depotTotal = CHARACTERS.reduce((n, c) => n + ammoDepotTotal(getRobotAmmo(this.profile, c.id)), 0);
+    // Ortak depo: robot başına ayrı depo yok; pazar kartının alt yazısı için
+    // tek depo sayacı yeterlidir.
+    const depotTotal = ammoDepotTotal(getAmmoDepot(this.profile));
     // Hikâye kartının alt yazısı kayıta göre değişir: boş kampanyada haritaya,
     // ilerleme varsa "Devam Et", bitmiş devrede "Yeni Kupa" davetine (D-09).
     const story = this.profile ? this.profile.story : null;
     const storySub = !story || !story.completedMissions.length
       ? "Dokuz Bölge Kupası"
       : story.endingSeen ? "Yeni Kupa Devresi • Arşiv" : "Devam Et • Kupa Haritası";
+    // Her kart kendi imza rengini ve vektör ikonunu taşır: kenarlık, ikon
+    // plakası ve hover parıltısı aynı accent'ten türetilir — menü tek bakışta
+    // bölme bölme okunur (kupa/robot/ikili/dişli/mermi/soru glifleri).
     const items = [
-      { action: "story", title: "HİKÂYE MODU", sub: storySub },
-      { action: "computer", title: "Otomatik Birimlere Karşı", sub: "1 operatör ve 1–3 fabrika robotu" },
-      { action: "local", title: "Yerel Operatörler", sub: "Aynı cihazda 2–6 oyuncu" },
-      { action: "workshop", title: "ATÖLYE", sub: `Robotlarını kalibre et • ${scrap} Hurda` },
-      { action: "market", title: "CEPHANE PAZARI", sub: depotTotal > 0 ? `Depoda ${depotTotal} mermi • ${scrap} Hurda` : `Robotuna mühimmat al • ${scrap} Hurda` },
+      { action: "story", icon: "kupa", accent: "#c89bff", title: "HİKÂYE MODU", sub: storySub },
+      { action: "computer", icon: "robot", accent: "#ff7b7b", title: "Otomatik Birimlere Karşı", sub: "1 operatör ve 1–3 fabrika robotu" },
+      { action: "local", icon: "ikili", accent: "#7baeff", title: "Yerel Operatörler", sub: "Aynı cihazda 2–6 oyuncu" },
+      { action: "workshop", icon: "dişli", accent: "#d8a72f", title: "ATÖLYE", sub: `Robotlarını kalibre et • ${scrap} Hurda` },
+      { action: "market", icon: "mermi", accent: "#3fae8c", title: "CEPHANE PAZARI", sub: depotTotal > 0 ? `Depoda ${depotTotal} mermi • ${scrap} Hurda` : `Ortak mühimmat deposu • ${scrap} Hurda` },
+      { action: "tutorial", icon: "soru", accent: "#4fc3f7", title: "NASIL OYNANIR", sub: "Kontroller ve tur kuralları" },
     ];
-    // Beş kart dar tarayıcı görünümünde taşmasın diye genişlik kart sayısına
-    // göre uyarlanır (kilit belgesi D-08); sığmayan pencerede kartlar birlikte daralır.
-    const gap = 16, bh = 88;
+    // Kart sayısı ve pencere genişliği ne olursa olsun taşmasın diye genişlik
+    // kart sayısına göre uyarlanır (kilit belgesi D-08); sığmayan pencerede
+    // kartlar birlikte daralır.
+    const gap = 14, bh = 132;
     const bw = Math.min(200, Math.floor((W - (items.length + 1) * gap) / items.length));
     const totalW = items.length * bw + (items.length - 1) * gap;
-    const startX = (W - totalW) / 2, y = H / 2 - 44;
+    const startX = (W - totalW) / 2, y = H / 2 - 38;
     this._modeRects = [];
     for (let i = 0; i < items.length; i++) {
       const x = startX + i * (bw + gap), it = items[i];
       const hovered = this.input.mouseX >= x && this.input.mouseX <= x + bw && this.input.mouseY >= y && this.input.mouseY <= y + bh;
       this._modeRects.push({ x, y, w: bw, h: bh, action: it.action });
-      // Hover'da kart 2px yukarı kayar (dokunma alanı _modeRects'te değişmez)
-      const hy = y + (hovered ? -2 : 0);
-      // Atölye ve pazar kartları yeşil/altın kenar + üst tehlike şeridiyle
-      // "servis bölmesi" gibi okunur (endüstriyel imza detay).
-      const isService = it.action === "workshop" || it.action === "market";
+      // Hover'da kart 3px yukarı kayar (dokunma alanı _modeRects'te değişmez)
+      const hy = y + (hovered ? -3 : 0);
+      // Tehdit şeridi (eski "servis bölmesi" imzası) kaldırıldı: kartlar
+      // yalnız kendi iz rengi ve ikon plakasıyla ayrışır — başlık tipografisi
+      // ve dikey ritim tüm bölmelerde aynı olsun diye tek punto kullanılır.
       _csPanel(ctx, x, hy, bw, bh, {
-        accent: hovered ? "#ffe45e" : it.action === "workshop" ? "#d8a72f" : it.action === "market" ? "#3fae8c" : "#3b526b",
+        // Kenarlık kartın kendi renginde: boşta soluk, hover'da tam doygun
+        accent: hovered ? it.accent : _hexA(it.accent, 0.5),
         hover: hovered, glow: true,
-        hazardTop: isService,
+        // Kart gövdesine iz renginin çok soluk tonu: kartlar birbirinden ayrılır
+        fillTop: hovered ? _hexA(it.accent, 0.17) : _hexA(it.accent, 0.055),
       });
+      // İkon plakası: kartın üstünde kesik köşeli mini bölme + vektör glif
+      _msIcon(ctx, it.icon, x + bw / 2, hy + 31, it.accent, hovered);
       // Başlık/alt yazı kart genişliğine sığdırılır (satır bölme + punto küçültme);
       // 2 satırlık başlıkta alt yazı birkaç piksel aşağı kayar.
       ctx.textBaseline = "middle";
-      const titleFit = _fitTextLines(ctx, it.title, bw - 14, isService ? 18 : 17, uiTitleFont, 2, 11);
-      const subFit = _fitTextLines(ctx, it.sub, bw - 12, 12, (p) => uiTextFont(p), 2, 9);
+      const titleFit = _fitTextLines(ctx, it.title, bw - 14, 17, uiTitleFont, 2, 11);
+      const subFit = _fitTextLines(ctx, it.sub, bw - 12, 11, (p) => uiTextFont(p), 2, 9);
       ctx.fillStyle = "#eef5ff";
       const tGap = titleFit.px + 1;
-      const titleY = titleFit.lines.length === 1 ? hy + 31 : hy + 23;
+      const titleY = titleFit.lines.length === 1 ? hy + 72 : hy + 65;
       for (let j = 0; j < titleFit.lines.length; j++) ctx.fillText(titleFit.lines[j], x + bw / 2, titleY + j * tGap);
       ctx.fillStyle = "#9fb6c9";
-      const subY = titleFit.lines.length === 1 ? hy + 58 : hy + 61;
+      const subY = titleFit.lines.length === 1 ? hy + 104 : hy + 108;
       for (let j = 0; j < subFit.lines.length; j++) ctx.fillText(subFit.lines[j], x + bw / 2, subY + j * 12);
     }
+    // Alt bilgi: sessiz yardımcı ipucu — sayfanın altını boş bırakmamak için
+    ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    ctx.fillStyle = "#5e7488"; ctx.font = uiTextFont(11);
+    ctx.fillText("Fare ile bir bölme seç", W / 2, H - 26);
   }
 
   // ── Zorluk seçimi (DIFFICULTY_SELECT) ────────────────────────────────────
@@ -424,6 +518,15 @@ class Game {
     this.workshopPage = this._workshopPageOf(this.workshopSelectedId);
     this.workshopBranch = BRANCHES[0];
     this.workshopFx = null;
+    this.workshopNotice = null;
+    // Mod hatırlanır (GELİŞTİRME/Parçalar); yuva paneli her açılışta kapalı
+    // başlar ki oyuncu önce yuvaları görsün.
+    this.workshopMode = this.workshopMode === "parts" ? "parts" : "upgrades";
+    this.workshopSlot = PART_SLOTS.includes(this.workshopSlot) ? this.workshopSlot : PART_SLOTS[0];
+    this.workshopSlotIndex = this.workshopSlotIndex === 1 ? 1 : 0; // alt yuva (0|1)
+    this.workshopSlotOpen = false;
+    this.workshopPartCursor = 0;
+    this.workshopPartPage = 0;
     // Maç sonu overlay'inden gelinmiş olabilir: overlay ve bekleyen girdi kapanır.
     hideOverlay();
     this.clearTurnInput();
@@ -433,6 +536,8 @@ class Game {
 
   closeWorkshop() {
     this.workshopFx = null;
+    this.workshopNotice = null;
+    this.workshopSlotOpen = false;
     // Maç sonu Atölye düğmesinden gelindiyse (hikâye/festival bağlamı) haritaya dön.
     if (this.mode === "story" || this.mode === "festival") { this.openStoryMap(); return; }
     this.state = "MODE_SELECT";
@@ -444,11 +549,17 @@ class Game {
     return idx >= 0 ? Math.floor(idx / (WS_COLS * WS_ROWS)) : 0;
   }
 
-  // Satın alma sonrası kısa "metal montaj" parıltısı her karede söner.
+  // Satın alma/takma sonrası kısa "metal montaj" parıltısı ve geri bildirim
+  // yazısı her karede söner.
   updateWorkshopFx(dt) {
-    if (!this.workshopFx) return;
-    this.workshopFx.t += dt;
-    if (this.workshopFx.t > WS_FX_DURATION) this.workshopFx = null;
+    if (this.workshopFx) {
+      this.workshopFx.t += dt;
+      if (this.workshopFx.t > WS_FX_DURATION) this.workshopFx = null;
+    }
+    if (this.workshopNotice) {
+      this.workshopNotice.t += dt;
+      if (this.workshopNotice.t > WS_NOTICE_DURATION) this.workshopNotice = null;
+    }
   }
 
   // Seçili dal için geliştirmeyi satın al. Önkoşullar profile.js'te doğrulanır;
@@ -468,8 +579,157 @@ class Game {
     this.updateHud();
   }
 
+  // Mod değiştir (GELİŞTİRME ↔ PARÇALAR). Açık yuva listesi kapanır; montaj
+  // efekti modlar arasında taşınmaz (yanlış panele bağlanmasın).
+  switchWorkshopMode(mode) {
+    const next = mode === "parts" ? "parts" : "upgrades";
+    if (next === (this.workshopMode === "parts" ? "parts" : "upgrades")) return;
+    SFX.uiClick();
+    this.workshopMode = next;
+    this.workshopSlotOpen = false;
+    this.workshopSlotIndex = 0;
+    this.workshopPartCursor = 0;
+    this.workshopFx = null;
+  }
+
+  // Alt yuva seçimi (sol/sağ tuşları): yuva başına PARTS_PER_SLOT hücre.
+  selectWorkshopSlotIndex(dir) {
+    const next = dir < 0 ? 0 : PARTS_PER_SLOT - 1;
+    if (next === (this.workshopSlotIndex || 0)) return;
+    SFX.uiClick();
+    this.workshopSlotIndex = next;
+    this.workshopPartCursor = 0;
+  }
+
+  // Parça modunda yuva seçimi (\u2191/\u2193 tuşları ve tıklama).
+  selectWorkshopSlot(dir) {
+    const i = PART_SLOTS.indexOf(this.workshopSlot);
+    const next = PART_SLOTS[(i + dir + PART_SLOTS.length) % PART_SLOTS.length];
+    if (next === this.workshopSlot) return;
+    SFX.uiClick();
+    this.workshopSlot = next;
+    this.workshopPartCursor = 0;
+  }
+
+  // Seçili robotun bir yuvasındaki SAHİP OLUNAN parçalar (katalog sırası).
+  workshopSlotParts(slot) {
+    const owned = getOwnedParts(this.profile);
+    return PARTS.filter((p) => p.slot === slot && owned.includes(p.id));
+  }
+
+  // Yuva listesi satırları: sahip olunan parçalar + her zaman son "Boş bırak".
+  _workshopSlotRows(slot) {
+    const rows = this.workshopSlotParts(slot).map((p) => ({ partId: p.id, part: p }));
+    rows.push({ partId: null, part: null });
+    return rows;
+  }
+
+  openWorkshopSlot(slot, index) {
+    if (!PART_SLOTS.includes(slot)) return;
+    SFX.uiClick();
+    this.workshopSlot = slot;
+    this.workshopSlotIndex = index === 1 ? 1 : 0;
+    this.workshopSlotOpen = true;
+    this.workshopPartCursor = 0;
+    this.workshopPartPage = 0;
+  }
+
+  closeWorkshopSlot() {
+    SFX.uiClick();
+    this.workshopSlotOpen = false;
+    this.workshopPartCursor = 0;
+    this.workshopPartPage = 0;
+  }
+
+  // Liste sayfa boyu: yuva başına 6 parça + "Boş bırak" = 7 satır; panel
+  // alanına 4 satır sığdığı için liste sayfalanır (imleç sayfayı da kaydırır).
+  _workshopPartPageSize() { return 4; }
+
+  _moveWorkshopPartCursor(dir) {
+    const rows = this._workshopSlotRows(this.workshopSlot);
+    const next = Math.max(0, Math.min((this.workshopPartCursor || 0) + dir, rows.length - 1));
+    if (next === this.workshopPartCursor) return;
+    SFX.uiClick();
+    this.workshopPartCursor = next;
+    this.workshopPartPage = Math.floor(next / this._workshopPartPageSize());
+  }
+
+  _workshopNotice(text, color) {
+    this.workshopNotice = { text, color, t: 0 };
+  }
+
+  // Parçayı seçili robotun seçili yuvasına tak / sök (partId null → sökme).
+  // Kurallar parts.js'te (equipPart) doğrulanır; parça başka robottaysa tek
+  // adımda taşınır ve bildirim bunu söyler.
+  applyWorkshopPart(partId) {
+    const id = this.workshopSelectedId;
+    const slot = this.workshopSlot;
+    const slotIndex = this.workshopSlotIndex || 0;
+    if (!id || !PART_SLOTS.includes(slot)) return;
+    const res = equipPart(this.profile, id, slot, partId, { index: slotIndex });
+    if (!res.ok) {
+      let msg = "Takma başarısız";
+      if (res.reason === "NOT_OWNED") msg = "Bu parça envanterde yok";
+      else if (res.reason === "SLOT_MISMATCH") msg = "Parça bu yuvaya uymuyor";
+      else if (res.reason === "INVALID_INDEX") msg = "Geçersiz alt yuva";
+      this._workshopNotice(msg, "#ff9b9b");
+      SFX.uiClick();
+      return;
+    }
+    if (res.changed) {
+      this.profile = res.profile;
+      this.workshopFx = { slot, t: 0 };
+      SFX.partMount(); // parça montaj imzası (metal klik + yay)
+      if (!res.persisted) notifyStorageFailure();
+      // Parçalar robota kilitli değildir: başka robotlarda takılı kalır.
+      const where = `${SLOT_LABELS[slot]} ${slotIndex + 1}`;
+      const msg = partId ? `${partById(partId).label} takıldı (${where})` : `${where} yuvası boşaltıldı`;
+      this._workshopNotice(msg, "#8affc0");
+      this.updateHud();
+    }
+    this.workshopSlotOpen = false;
+    this.workshopPartCursor = 0;
+  }
+
   handleWorkshopKey(e) {
     if (this.state !== "WORKSHOP") return false;
+    const mode = this.workshopMode === "parts" ? "parts" : "upgrades";
+    // Mod değiştirme: 1/2 (pazar sekmeleriyle aynı dil) veya Tab.
+    if (e.key === "1") { this.switchWorkshopMode("upgrades"); return true; }
+    if (e.key === "2") { this.switchWorkshopMode("parts"); return true; }
+    if (e.key === "Tab") { e.preventDefault(); this.switchWorkshopMode(mode === "parts" ? "upgrades" : "parts"); return true; }
+    if (mode === "parts") {
+      // Açık listede \u2191/\u2193 imleci gezer, kapalıyken yuva seçer.
+      if (e.key === "ArrowUp" || e.key === "w" || e.key === "W") {
+        if (this.workshopSlotOpen) this._moveWorkshopPartCursor(-1); else this.selectWorkshopSlot(-1);
+        return true;
+      }
+      if (e.key === "ArrowDown" || e.key === "s" || e.key === "S") {
+        if (this.workshopSlotOpen) this._moveWorkshopPartCursor(1); else this.selectWorkshopSlot(1);
+        return true;
+      }
+      if (e.key === "ArrowLeft" || e.key === "a" || e.key === "A") {
+        if (!this.workshopSlotOpen) this.selectWorkshopSlotIndex(-1);
+        return true;
+      }
+      if (e.key === "ArrowRight" || e.key === "d" || e.key === "D") {
+        if (!this.workshopSlotOpen) this.selectWorkshopSlotIndex(1);
+        return true;
+      }
+      if (e.key === "Enter" || e.code === "Space") {
+        e.preventDefault();
+        if (this.workshopSlotOpen) {
+          const rows = this._workshopSlotRows(this.workshopSlot);
+          const row = rows[Math.max(0, Math.min(this.workshopPartCursor || 0, rows.length - 1))];
+          this.applyWorkshopPart(row ? row.partId : null);
+        } else {
+          this.openWorkshopSlot(this.workshopSlot, this.workshopSlotIndex || 0);
+        }
+        return true;
+      }
+      return false;
+    }
+    // Geliştirme modu: mevcut harita aynen.
     if (e.key === "ArrowLeft" || e.key === "a" || e.key === "A") { this.changeWorkshopPage(-1); return true; }
     if (e.key === "ArrowRight" || e.key === "d" || e.key === "D") { this.changeWorkshopPage(1); return true; }
     if (e.key === "ArrowUp" || e.key === "w" || e.key === "W") { this.selectWorkshopBranch(-1); return true; }
@@ -507,7 +767,9 @@ class Game {
     ctx.fillText("ATÖLYE", W / 2, 20);
     ctx.fillStyle = "#9fb6c9";
     ctx.font = uiTextFont(12);
-    ctx.fillText("Robotlarını kalibre et — geliştirmeler yalnız bilgisayara karşı maçta etkindir", W / 2, 48);
+    ctx.fillText(this.workshopMode === "parts"
+      ? "Parça tak — parçalar geliştirmelerle aynı maç kapsamında etkindir"
+      : "Robotlarını kalibre et — geliştirmeler yalnız bilgisayara karşı maçta etkindir", W / 2, 48);
 
     const scrap = this.profile ? this.profile.scrap : START_SCRAP;
     const perPage = WS_COLS * WS_ROWS;
@@ -546,6 +808,7 @@ class Game {
         cx: cx + cardW / 2, cy: cyv + 30, r: 15, facing: 1, charDef: ch,
         timeMs: this.renderTimeMs || 0, motion: { vx: 0, vy: 0, onGround: true },
         upgradeVisuals: { attachmentGlow: sanitizeUpgrades(up).module >= 3 },
+        parts: up.loadout,
       });
 
       ctx.fillStyle = ch.color;
@@ -598,6 +861,7 @@ class Game {
       cx: rx + rw / 2, cy: gy + 62, r: def.r * 1.5, facing: 1, charDef: def,
       timeMs: this.renderTimeMs || 0, motion: { vx: 0, vy: 0, onGround: true },
       upgradeVisuals: { attachmentGlow: sanitizeUpgrades(up).module >= 3 },
+      parts: up.loadout,
     });
     ctx.fillStyle = "#eef5ff";
     ctx.font = uiTitleFont(18);
@@ -626,52 +890,72 @@ class Game {
       ctx.fillText(`Maç ${up.stats.matches} • Galibiyet ${up.stats.wins}`, rx + rw / 2, barY + 36);
     }
 
-    this._workshopBranchRects = [];
-    const panelH = 58, panelGap = 6;
-    let py = barY + (level >= 4 ? 54 : 36);
-    for (const branch of BRANCHES) {
-      const rect = { x: rx, y: py, w: rw, h: panelH, branch };
-      this._workshopBranchRects.push(rect);
-      this._drawWorkshopBranch(ctx, rect, def, up, level, branch, mx, my);
-      py += panelH + panelGap;
+    // Mod sekmeleri (sağ panelin tepesi): GELİŞTİRME ↔ PARÇALAR. İki modda da
+    // görünür; pazar sekmeleriyle aynı dil (1/2 ve Tab tuşları da çalışır).
+    this._renderWorkshopModeTabs(ctx, rx, gy, rw, mx, my);
+
+    if (this.workshopMode === "parts") {
+      this._renderWorkshopParts(ctx, rx, rw, gy, barY, level, def, up, mx, my);
+    } else {
+      this._workshopBranchRects = [];
+      const panelH = 58, panelGap = 6;
+      let py = barY + (level >= 4 ? 54 : 36);
+      for (const branch of BRANCHES) {
+        const rect = { x: rx, y: py, w: rw, h: panelH, branch };
+        this._workshopBranchRects.push(rect);
+        this._drawWorkshopBranch(ctx, rect, def, up, level, branch, mx, my);
+        py += panelH + panelGap;
+      }
+
+      // ── Eylem düğmesi: seçili dalın sonraki kademesini satın alır ─────
+      const step = nextUpgradeStep(up, this.workshopBranch);
+      const btn = { x: rx, y: py + 4, w: rw, h: 42 };
+      this._workshopActionRect = btn;
+      let label, enabled = false, reason = "";
+      if (!step.ok) {
+        label = "Tam Kalibrasyon";
+        reason = "Bu dal tamamlandı";
+      } else if (level < step.requiredLevel) {
+        label = `${BRANCH_LABELS[this.workshopBranch]} ${romanTier(step.nextTier)} — kilitli`;
+        reason = `Servis Seviyesi ${step.requiredLevel} gerekli`;
+      } else if (scrap < step.cost) {
+        label = `${BRANCH_LABELS[this.workshopBranch]} ${romanTier(step.nextTier)} — ${step.cost} Hurda`;
+        reason = `${step.cost - scrap} Hurda eksik`;
+      } else {
+        label = `${BRANCH_LABELS[this.workshopBranch]} ${romanTier(step.nextTier)} geliştir — ${step.cost} Hurda`;
+        enabled = true;
+      }
+      const hovBtn = mx >= btn.x && mx <= btn.x + btn.w && my >= btn.y && my <= btn.y + btn.h;
+      // Etkin: yeşil çelik; kilitli: gri panel + üst tehlike şeridi
+      // ("kilitli bölme" okunurluğu — doz plan §5 F3C-04).
+      _csPanel(ctx, btn.x, btn.y, btn.w, btn.h, {
+        accent: enabled ? "#63e6be" : "#3b4650",
+        hover: enabled && hovBtn, glow: enabled && hovBtn,
+        hazardTop: !enabled,
+        fillTop: enabled ? (hovBtn ? "#1f513c" : "#173a2a") : "#161b20",
+        fillBottom: enabled ? (hovBtn ? "#142f24" : "#0f241c") : "#0e1216",
+      });
+      ctx.fillStyle = enabled ? "#d8fff1" : "#8b9aa5";
+      ctx.font = uiTitleFont(14);
+      ctx.textAlign = "center"; ctx.textBaseline = "middle";
+      ctx.fillText(label, btn.x + btn.w / 2, btn.y + (reason ? 15 : btn.h / 2));
+      if (reason) {
+        ctx.fillStyle = "#8fa8ba";
+        ctx.font = uiTextFont(10);
+        ctx.fillText(reason, btn.x + btn.w / 2, btn.y + 30);
+      }
     }
 
-    // ── Eylem düğmesi: seçili dalın sonraki kademesini satın alır ─────
-    const step = nextUpgradeStep(up, this.workshopBranch);
-    const btn = { x: rx, y: py + 4, w: rw, h: 42 };
-    this._workshopActionRect = btn;
-    let label, enabled = false, reason = "";
-    if (!step.ok) {
-      label = "Tam Kalibrasyon";
-      reason = "Bu dal tamamlandı";
-    } else if (level < step.requiredLevel) {
-      label = `${BRANCH_LABELS[this.workshopBranch]} ${romanTier(step.nextTier)} — kilitli`;
-      reason = `Servis Seviyesi ${step.requiredLevel} gerekli`;
-    } else if (scrap < step.cost) {
-      label = `${BRANCH_LABELS[this.workshopBranch]} ${romanTier(step.nextTier)} — ${step.cost} Hurda`;
-      reason = `${step.cost - scrap} Hurda eksik`;
-    } else {
-      label = `${BRANCH_LABELS[this.workshopBranch]} ${romanTier(step.nextTier)} geliştir — ${step.cost} Hurda`;
-      enabled = true;
-    }
-    const hovBtn = mx >= btn.x && mx <= btn.x + btn.w && my >= btn.y && my <= btn.y + btn.h;
-    // Etkin: yeşil çelik; kilitli: gri panel + üst tehlike şeridi
-    // ("kilitli bölme" okunurluğu — doz plan §5 F3C-04).
-    _csPanel(ctx, btn.x, btn.y, btn.w, btn.h, {
-      accent: enabled ? "#63e6be" : "#3b4650",
-      hover: enabled && hovBtn, glow: enabled && hovBtn,
-      hazardTop: !enabled,
-      fillTop: enabled ? (hovBtn ? "#1f513c" : "#173a2a") : "#161b20",
-      fillBottom: enabled ? (hovBtn ? "#142f24" : "#0f241c") : "#0e1216",
-    });
-    ctx.fillStyle = enabled ? "#d8fff1" : "#8b9aa5";
-    ctx.font = uiTitleFont(14);
-    ctx.textAlign = "center"; ctx.textBaseline = "middle";
-    ctx.fillText(label, btn.x + btn.w / 2, btn.y + (reason ? 15 : btn.h / 2));
-    if (reason) {
-      ctx.fillStyle = "#8fa8ba";
-      ctx.font = uiTextFont(10);
-      ctx.fillText(reason, btn.x + btn.w / 2, btn.y + 30);
+    // Geri bildirim (takma / sökme / taşıma sonucu) panel tabanına yakın söner.
+    if (this.workshopNotice) {
+      const n = this.workshopNotice;
+      const a = Math.min(1, (WS_NOTICE_DURATION - n.t) / 0.35);
+      ctx.globalAlpha = Math.max(0, a);
+      ctx.fillStyle = n.color;
+      ctx.font = uiTextFont(11, 700);
+      ctx.textAlign = "center"; ctx.textBaseline = "bottom";
+      ctx.fillText(n.text, rx + rw / 2, gy + WS_PANEL_H - 8);
+      ctx.globalAlpha = 1;
     }
 
     // Geri butonu (Esc ile aynı işlev)
@@ -727,6 +1011,179 @@ class Game {
     ctx.fillText(status, rect.x + 10, rect.y + 39, rect.w - 20);
   }
 
+  // Mod sekmeleri (sağ panel tepesi). İki modda da çizilir; aktif sekme sarı,
+  // pasif gri. Tıklama alanları _workshopModeRects'te toplanır.
+  _renderWorkshopModeTabs(ctx, rx, gy, rw, mx, my) {
+    const mode = this.workshopMode === "parts" ? "parts" : "upgrades";
+    const tabs = [{ id: "upgrades", label: "GELİŞTİRME" }, { id: "parts", label: "PARÇALAR" }];
+    const w = 118, h = 22, gap = 8, y = gy + 7;
+    const x0 = rx + (rw - (w * 2 + gap)) / 2;
+    this._workshopModeRects = [];
+    tabs.forEach((t, i) => {
+      const x = x0 + i * (w + gap);
+      this._workshopModeRects.push({ x, y, w, h, mode: t.id });
+      const active = mode === t.id;
+      const hov = mx >= x && mx <= x + w && my >= y && my <= y + h;
+      _csPanel(ctx, x, y, w, h, {
+        accent: active ? "#ffe45e" : hov ? "#7f93a5" : "#2a3848",
+        hover: !active && hov, glow: active, rivets: false,
+        fillTop: active ? "#2b2717" : null, fillBottom: active ? "#1a170d" : null,
+      });
+      ctx.fillStyle = active ? "#ffe45e" : "#9fb6c9";
+      ctx.font = uiTextFont(11, 700);
+      ctx.textAlign = "center"; ctx.textBaseline = "middle";
+      ctx.fillText(t.label, x + w / 2, y + h / 2);
+    });
+  }
+
+  // ── Parçalar modu: 4 yuva paneli + açık listede seçim ──────────────────
+  // Yuva paneli takılı parçayı ve envanterdeki seçenek sayısını gösterir.
+  // Yuvaya tıklanınca (veya Enter) liste açılır: sahip olunan parçalar (etki
+  // önizlemesiyle) + "Boş bırak". Seçim anında uygulanır ve liste kapanır.
+  // ── Parçalar modu: 4 yuva × PARTS_PER_SLOT alt yuva ─────────────────────
+  // Her yuvanın İKİ alt yuvası vardır (şema v6): robot başına 8 parça. Yuva
+  // satırında alt yuvalar yan yana hücrelerdir; hücreye tıklanınca (veya Enter)
+  // O ALT YUVANIN listesi açılır. Liste, yuvanın sahip olunan parçalarını +
+  // "Boş bırak" satırını gösterir ve bir parçanın hangi alt yuvada takılı
+  // olduğunu yazar (aynı parça iki alt yuvada birden duramaz).
+  _renderWorkshopParts(ctx, rx, rw, gy, barY, level, def, up, mx, my) {
+    const panelH = 46, panelGap = 6;
+    let py = barY + (level >= 4 ? 54 : 36);
+    const loadout = sanitizeLoadoutShape(up.loadout);
+    const inside = (r) => mx >= r.x && mx <= r.x + r.w && my >= r.y && my <= r.y + r.h;
+    this._workshopSlotRects = [];
+    this._workshopPartRects = [];
+    this._workshopSlotBackRect = null;
+
+    if (this.workshopSlotOpen) {
+      // ── Açık liste (sayfalı: 4 satır) ──────────────────────────────────
+      const slot = this.workshopSlot;
+      const slotIndex = this.workshopSlotIndex || 0;
+      const rowsAll = this._workshopSlotRows(slot);
+      const perPage = this._workshopPartPageSize();
+      const totalPages = Math.max(1, Math.ceil(rowsAll.length / perPage));
+      this.workshopPartPage = Math.max(0, Math.min(Math.floor((this.workshopPartCursor || 0) / perPage), totalPages - 1));
+      const pageStart = this.workshopPartPage * perPage;
+      const rows = rowsAll.slice(pageStart, pageStart + perPage);
+      const equippedHere = loadout[slot][slotIndex] || null;
+
+      // Başlık: yuva + ALT YUVA numarası + sayfa göstergesi + "‹ Geri"
+      _csPanel(ctx, rx, py, rw, panelH, { accent: "#63e6be", rivets: false, fillTop: "#18251d", fillBottom: "#101a14" });
+      ctx.textAlign = "left"; ctx.textBaseline = "middle";
+      ctx.fillStyle = "#8affc0"; ctx.font = uiTextFont(12, 700);
+      ctx.fillText(`${SLOT_LABELS[slot]} ${slotIndex + 1} — parça seç`, rx + 10, py + panelH / 2);
+      const backW = 74, backH = 26;
+      const back = { x: rx + rw - backW - 8, y: py + (panelH - backH) / 2, w: backW, h: backH };
+      this._workshopSlotBackRect = back;
+      if (totalPages > 1) {
+        ctx.textAlign = "right"; ctx.textBaseline = "middle";
+        ctx.fillStyle = "#8fa8ba"; ctx.font = uiTextFont(10);
+        ctx.fillText(`${this.workshopPartPage + 1}/${totalPages}`, back.x - 10, py + panelH / 2);
+      }
+      const hovBack = inside(back);
+      _csPanel(ctx, back.x, back.y, back.w, back.h, { accent: hovBack ? "#ffe45e" : "#2a3848", hover: hovBack, glow: hovBack, rivets: false });
+      ctx.textAlign = "center"; ctx.textBaseline = "middle";
+      ctx.fillStyle = "#cfe0ee"; ctx.font = uiTextFont(12, 700);
+      ctx.fillText("‹ Geri", back.x + back.w / 2, back.y + back.h / 2);
+      py += panelH + panelGap;
+
+      // Bu yuvada hiç parça yoksa yönlendirme (Boş bırak satırı yine çizilir).
+      if (rowsAll.length === 1) {
+        ctx.textAlign = "left"; ctx.textBaseline = "middle";
+        ctx.fillStyle = "#8fa8ba"; ctx.font = uiTextFont(10);
+        ctx.fillText(`${SLOT_LABELS[slot]} parçası envanterde yok — Pazar'dan al`, rx + 10, py + panelH / 2 - 8);
+      }
+
+      for (let i = 0; i < rows.length; i++) {
+        const row = rows[i];
+        const globalIndex = pageStart + i;
+        const rect = { x: rx, y: py, w: rw, h: panelH, partId: row.partId, index: globalIndex };
+        this._workshopPartRects.push(rect);
+        const isCursor = globalIndex === (this.workshopPartCursor || 0);
+        // Parça bu yuvanın hangi alt yuvasında? (-1 = hiçbirinde)
+        const inSlotIdx = row.partId ? loadout[slot].indexOf(row.partId) : -1;
+        const isEquippedHere = row.partId ? inSlotIdx === slotIndex : !equippedHere;
+        const isElsewhere = row.partId ? inSlotIdx >= 0 && inSlotIdx !== slotIndex : false;
+        const hov = inside(rect);
+        _csPanel(ctx, rx, py, rw, panelH, {
+          accent: isEquippedHere ? "#63e6be" : isCursor || hov ? "#ffe45e" : isElsewhere ? "#3f6e57" : "#242f3b",
+          hover: hov, glow: hov, selected: isEquippedHere, rivets: false,
+          fillTop: isEquippedHere ? "#18251d" : null, fillBottom: isEquippedHere ? "#101a14" : null,
+        });
+
+        if (row.part) {
+          ctx.save();
+          ctx.translate(rx + 8, py + 4);
+          drawPartIcon(ctx, row.part, 38);
+          ctx.restore();
+        }
+        ctx.textAlign = "left"; ctx.textBaseline = "top";
+        ctx.fillStyle = row.part ? "#eef5ff" : "#9fb6c9";
+        ctx.font = uiTextFont(12, 700);
+        ctx.fillText(row.part ? row.part.label : "Boş bırak", rx + 52, py + 6);
+        ctx.fillStyle = "#8fd9c4"; ctx.font = uiTextFont(10);
+        // Zaten bu alt yuvada takılı parçada fark "X → X" olurdu; onun yerine
+        // açıklamayı göster (etiketler durumu zaten söylüyor).
+        const detail = row.part
+          ? (isEquippedHere ? row.part.desc : (partEffectText(def, up, row.partId, slotIndex) || row.part.desc))
+          : "Bu alt yuvayı boşalt";
+        ctx.fillText(detail, rx + 52, py + 23, rw - 150);
+
+        let badge = "", badgeColor = "#63e6be";
+        if (isEquippedHere) badge = "✓ burada";
+        else if (isElsewhere) { badge = `✓ ${inSlotIdx + 1}. yuvada`; badgeColor = "#8fd9c4"; }
+        if (badge) {
+          ctx.textAlign = "right"; ctx.textBaseline = "middle";
+          ctx.fillStyle = badgeColor; ctx.font = uiTextFont(11, 700);
+          ctx.fillText(badge, rx + rw - 10, py + panelH / 2);
+        }
+        py += panelH + panelGap;
+      }
+      return;
+    }
+
+    // ── Yuva satırları: solda yuva adı, sağda alt yuva hücreleri ─────────
+    const labelW = 74;
+    const cellGap = 6;
+    const cellW = Math.floor((rw - labelW - cellGap * (PARTS_PER_SLOT - 1)) / PARTS_PER_SLOT);
+    const cursorIndex = this.workshopSlotIndex || 0;
+    for (const slot of PART_SLOTS) {
+      const rowY = py;
+      _csPanel(ctx, rx, rowY, rw, panelH, { accent: "#242f3b", rivets: false });
+      ctx.textAlign = "left"; ctx.textBaseline = "middle";
+      ctx.fillStyle = "#9fb6c9"; ctx.font = uiTextFont(10, 700);
+      ctx.fillText(SLOT_LABELS[slot].toUpperCase(), rx + 10, rowY + panelH / 2);
+
+      for (let i = 0; i < PARTS_PER_SLOT; i++) {
+        const cx = rx + labelW + i * (cellW + cellGap);
+        const rect = { x: cx, y: rowY + 5, w: cellW, h: panelH - 10, slot, index: i };
+        this._workshopSlotRects.push(rect);
+        const part = partById(loadout[slot][i]);
+        const isCursor = slot === this.workshopSlot && i === cursorIndex;
+        const hov = inside(rect);
+        _csPanel(ctx, rect.x, rect.y, rect.w, rect.h, {
+          accent: part ? "#63e6be" : isCursor ? "#ffe45e" : hov ? "#ffe45e" : "#1c2530",
+          hover: hov, glow: hov, rivets: false,
+        });
+        if (part) {
+          ctx.save();
+          ctx.translate(rect.x + 5, rect.y + (rect.h - 26) / 2);
+          drawPartIcon(ctx, part, 26);
+          ctx.restore();
+        }
+        ctx.textAlign = "left"; ctx.textBaseline = "middle";
+        ctx.fillStyle = part ? "#eef5ff" : "#5f6d78"; ctx.font = uiTextFont(11, 700);
+        ctx.fillText(part ? part.label : "Boş", rect.x + (part ? 35 : 10), rect.y + rect.h / 2, rect.w - 42);
+      }
+      py += panelH + panelGap;
+    }
+
+    // İpucu satırı: ne yapılacağını yazıyla söyler.
+    ctx.textAlign = "center"; ctx.textBaseline = "top";
+    ctx.fillStyle = "#6d7f8d"; ctx.font = uiTextFont(10);
+    ctx.fillText(`Hücreye tıkla → parça seç • yuva başına ${PARTS_PER_SLOT} parça • sökme ücretsiz`, rx + rw / 2, py + 6);
+  }
+
   handleWorkshopClick(mx, my) {
     if (this.hitBackButton(mx, my)) { SFX.uiClick(); this.closeWorkshop(); return; }
     for (const b of this._workshopPageRects || []) {
@@ -742,6 +1199,38 @@ class Game {
         this.workshopFx = null;
         return;
       }
+    }
+    // Mod sekmeleri (GELİŞTİRME ↔ PARÇALAR) — ızgaradan sonra, panel içeriğinden
+    // önce: aynı y bileti paylaşmazlar ama sıra okunurluğu netleştirir.
+    for (const m of this._workshopModeRects || []) {
+      if (mx >= m.x && mx <= m.x + m.w && my >= m.y && my <= m.y + m.h) {
+        this.switchWorkshopMode(m.mode);
+        return;
+      }
+    }
+    if (this.workshopMode === "parts") {
+      // Liste açıkken satırlar ve "‹ Geri" tıklanır.
+      if (this.workshopSlotOpen) {
+        for (const r of this._workshopPartRects || []) {
+          if (mx >= r.x && mx <= r.x + r.w && my >= r.y && my <= r.y + r.h) {
+            this.workshopPartCursor = r.index;
+            this.applyWorkshopPart(r.partId);
+            return;
+          }
+        }
+        const back = this._workshopSlotBackRect;
+        if (back && mx >= back.x && mx <= back.x + back.w && my >= back.y && my <= back.y + back.h) {
+          this.closeWorkshopSlot();
+        }
+        return;
+      }
+      for (const r of this._workshopSlotRects || []) {
+        if (mx >= r.x && mx <= r.x + r.w && my >= r.y && my <= r.y + r.h) {
+          this.openWorkshopSlot(r.slot, r.index || 0);
+          return;
+        }
+      }
+      return;
     }
     for (const r of this._workshopBranchRects || []) {
       if (mx >= r.x && mx <= r.x + r.w && my >= r.y && my <= r.y + r.h) {
@@ -763,26 +1252,250 @@ class Game {
         if (r.action === "story") this.openStoryResume();
         else if (r.action === "workshop") this.openWorkshop();
         else if (r.action === "market") this.openMarket();
+        else if (r.action === "tutorial") this.openTutorial();
         else this.beginMode(r.action);
         return;
       }
     }
   }
 
-  // ── Cephane Pazarı (MARKET) ─────────────────────────────────────────
-  // Atölye ile aynı "robot seç → sağda işlem yap" kurgusu; sağda geliştirme
-  // yerine satın alınabilir mühimmat kartları vardır. Alınan mermi robotun
-  // deposuna (envanter) yazılır ve maç başında mermilere yüklenir; maç sonunda
-  // harcanmayan kısım depoya döner (bkz. js/market.js).
-  openMarket() {
-    if (!this.marketSelectedId || !CHARACTERS.some((c) => c.id === this.marketSelectedId)) {
-      const humanId = this.selectedChars && this.selectedChars[0] ? this.selectedChars[0].id : null;
-      this.marketSelectedId = humanId || CHARACTERS[0].id;
+  // ── Nasıl Oynanır (TUTORIAL) ─────────────────────────────────────────
+  // Ana menüden açılan eğitim ekranı: kontroller, tur akışı ve kurallar
+  // burada öğretilir; maç içi alt şerit yerine tek başvuru kaynağıdır.
+  openTutorial() {
+    hideOverlay();
+    this.clearTurnInput();
+    this.state = "TUTORIAL";
+    this.updateHud();
+  }
+
+  // Eğitim ekranı: 2×2 bilgi paneli + tur akışı şeridi. Paneller _csPanel ile
+  // çizilir; her satır [tuş, açıklama] ikilisidir, açıklama kutuya sarılır.
+  renderTutorial(ctx) {
+    const W = this.W, H = this.H;
+    drawClouds(ctx, W);
+    ctx.fillStyle = "#000000bb"; ctx.fillRect(0, 0, W, H);
+    ctx.textAlign = "left"; ctx.textBaseline = "top";
+    ctx.fillStyle = "#ffe45e"; ctx.font = uiTitleFont(26);
+    ctx.textAlign = "center";
+    ctx.fillText("NASIL OYNANIR", W / 2, 12);
+    _csHazardStrip(ctx, W / 2 - 100, 48, 200, 4);
+
+    const KEY_COL = 116;          // tuş sütunu genişliği
+    const ROW_FONT = 12, ROW_GAP = 14;
+    const panels = [
+      {
+        title: "SIRA SENDE — ATIŞ", accent: "#ffe45e", keyColor: "#ffe45e",
+        rows: [
+          ["Fare", "Nişan al — nişan çizgisi fareyi izler"],
+          ["Sol tık", "Basılı tut → güç çubuğu dolar, bırak → ateş et"],
+          ["Sağ tık / Esc", "Atışı iptal et"],
+        ],
+      },
+      {
+        title: "HAREKET", accent: "#8ee7ff", keyColor: "#8ee7ff",
+        rows: [
+          ["A / D  ← →", "Yürü (enerji harcar)"],
+          ["W / ↑", "Sıçra (enerji harcar)"],
+          ["⚡ Enerji", "Her turda yenilenir — kısa sürede biter"],
+        ],
+      },
+      {
+        title: "SİLAHLAR VE MODÜLLER", accent: "#ff8f5e", keyColor: "#ff8f5e",
+        rows: [
+          ["1–9 / Tekerlek", "Silah seç (mühimmat sınırlıdır)"],
+          ["Q", "Dahili modülü kullan — hasar verenler o turun atış hakkını doldurur"],
+          ["Alt panel", "Seçili silahın açıklaması ekranın altında görünür"],
+        ],
+      },
+      {
+        title: "KURALLAR VE İPUÇLARI", accent: "#63e6be", keyColor: "#63e6be",
+        rows: [
+          ["⏱ 25 sn", "Süre dolunca sıra rakibe geçer"],
+          ["🌀 Rüzgâr", "Mermiyi saptırır — üstteki göstergeyi izle"],
+          ["M • Esc / ⏏", "Sesi aç/kapat • maçtan çık, menüye dön"],
+        ],
+      },
+    ];
+
+    const gap = 14;
+    const pw = Math.min(440, Math.floor((W - 3 * gap) / 2));
+    // Panel yüksekliği: başlık bölgesi + en uzun satır kümesine göre hesaplanır.
+    const ph = 118;
+    const startX = Math.max(8, (W - (2 * pw + gap)) / 2);
+    const startY = 64;
+
+    for (let i = 0; i < panels.length; i++) {
+      const col = i % 2, row = (i / 2) | 0;
+      const x = startX + col * (pw + gap);
+      const y = startY + row * (118 + gap);
+      _csPanel(ctx, x, y, pw, ph, { accent: panels[i].accent });
+      // Panel başlığı: aksan rengiyle, ince tehlike şeridi solda
+      _csHazardStrip(ctx, x + 10, y + 9, 14, 3);
+      ctx.fillStyle = panels[i].accent;
+      ctx.font = uiTitleFont(12);
+      ctx.textAlign = "left"; ctx.textBaseline = "middle";
+      ctx.fillText(panels[i].title, x + 30, y + 11);
+
+      let ry = y + 28;
+      for (const [key, desc] of panels[i].rows) {
+        ctx.textAlign = "left"; ctx.textBaseline = "top";
+        ctx.fillStyle = panels[i].keyColor;
+        ctx.font = uiTextFont(12, 700);
+        ctx.fillText(key, x + 10, ry + 1);
+        ctx.fillStyle = "#cfe0ee";
+        ctx.font = uiTextFont(12);
+        const lines = _wrapCanvasText(ctx, desc, pw - 24 - KEY_COL);
+        for (let j = 0; j < lines.length; j++) ctx.fillText(lines[j], x + 14 + KEY_COL, ry + j * ROW_GAP);
+        ry += Math.max(18, lines.length * ROW_GAP + 5);
+      }
     }
-    this.marketPage = this._workshopPageOf(this.marketSelectedId);
+
+    // Tur akışı şeridi: iki panel sütunu kadar geniş, altta özet
+    const stripW = 2 * pw + gap, stripX = startX, stripY = startY + 2 * 118 + gap + 6;
+    _csPanel(ctx, stripX, stripY, stripW, 44, { accent: "#3b526b" });
+    ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    ctx.fillStyle = "#eef5ff"; ctx.font = uiTextFont(13, 700);
+    ctx.fillText("Bir tur: hareket et → nişan al → gücü doldur → ateş et", stripX + stripW / 2, stripY + 15);
+    ctx.fillStyle = "#9fb6c9"; ctx.font = uiTextFont(12);
+    ctx.fillText("Atış çözümlenince veya süre dolunca sıra sıradaki robota geçer — son ayakta kalan kazanır", stripX + stripW / 2, stripY + 32);
+
+    // Öğreticiyi oyna butonu: basit rehberli bölümü başlatır (yeşil = başlat)
+    const bw = Math.min(320, stripW), bx = stripX + (stripW - bw) / 2, by = stripY + 58, bh = 42;
+    const playHover = this.hitRect({ x: bx, y: by, w: bw, h: bh }, this.input.mouseX, this.input.mouseY);
+    this._tutPlayRect = { x: bx, y: by, w: bw, h: bh };
+    _csPanel(ctx, bx, by, bw, bh, {
+      accent: playHover ? "#ffe45e" : "#4aff4a",
+      hover: playHover, glow: playHover,
+      fillTop: "#1e3a26", fillBottom: "#12251a",
+    });
+    ctx.fillStyle = playHover ? "#ffe45e" : "#8aff8a";
+    ctx.font = uiTitleFont(15);
+    ctx.fillText("▶ ÖĞRETİCİYİ OYNA", bx + bw / 2, by + bh / 2);
+    ctx.fillStyle = "#9fb6c9"; ctx.font = uiTextFont(11);
+    ctx.fillText("Basit bölüm: 1v1, rüzgârsız, adım adım rehberli", bx + bw / 2, by + bh + 12);
+
+    // Geri: ana menüye dönüş (Esc ile aynı rota)
+    this.drawBackButton(ctx, "‹ Ana Menü");
+  }
+
+  handleTutorialClick(mx, my) {
+    // Öğreticiyi oyna: basit rehberli bölümü başlat
+    if (this.hitRect(this._tutPlayRect, mx, my)) { SFX.uiClick(); this.beginTutorial(); return; }
+    if (this.hitBackButton(mx, my)) { SFX.uiClick(); this.state = "MODE_SELECT"; this.updateHud(); return; }
+  }
+
+  // ── Öğretici maçı (mode: "tutorial") ──────────────────────────────────
+  // Nasıl Oynanır ekranındaki "Öğreticiyi Oyna" ile başlar: basit düz harita,
+  // 1v1 kolay bot, rüzgârsız ve uzun tur süresi. İnsan oyuncu adım adım
+  // görevlerle temel hareketi öğrenir; adımlar bitince maç normal sürer.
+  beginTutorial() {
+    this.mode = "tutorial";                 // ödül/geliştirme kapalı (ilerleme modu değil)
+    this.difficulty = "easy";
+    this.playerControls = ["human", "bot"];
+    this.selectedChars = [
+      CHARACTERS.find((c) => c.id === "kopek"), // FIX-8: onarım modüllü, affedici başlangıç robotu
+      CHARACTERS.find((c) => c.id === "tavsan"),
+    ];
+    this.selectedMap = getMapById("gergedan"); // uzun düz saha: yürüme/atış pratiği için
+    this.bots = [new BotController()];
+    this.tutorial = { step: 0, done: [false, false, false, false], flash: 0, baseX: 0, baseAim: 0 };
+    hideOverlay();
+    this.clearTurnInput();
+    this.startGame();
+    // Eğitim ayarları: sabit sakın rüzgâr + uzun nişan süresi (startGame
+    // rastgele rüzgâr ve kısa süre atadığı için burada ezilir).
+    this.wind = 0;
+    this.windTurnsRemaining = 9999;
+    this.windChangeFx = null;
+    this.turnTimer = TUTORIAL_TURN_DURATION;
+    this._tutTurnStart();
+    this.updateHud();
+  }
+
+  // Rehber adımları: n işaretle, adımı ilk eksik göreve ilerlet.
+  _tutComplete(n) {
+    const t = this.tutorial;
+    if (!t || t.done[n]) return;
+    t.done[n] = true;
+    t.step = t.done.findIndex((d) => !d);
+    if (t.step < 0) t.step = TUTORIAL_COACH_STEPS.length - 1;
+    t.flash = 1.0;
+    SFX.uiClick();
+  }
+
+  // Her insan turunun başında yürüme/nişan taban çizgisi güncellenir.
+  _tutTurnStart() {
+    const t = this.tutorial;
+    if (!t || !this.active) return;
+    t.baseX = this.active.x;
+    t.baseAim = this.active.aim;
+  }
+
+  // Kare başı rehber denetimi: flash geri sayımı + yürüme/nişan adımlarının
+  // tamamlanma testi (sıçrama ve ateş kendi giriş noktalarından işaretlenir).
+  _tutUpdate(dt) {
+    const t = this.tutorial;
+    if (!t) return;
+    if (t.flash > 0) t.flash = Math.max(0, t.flash - dt);
+    if (this.state === "AIMING" && this.isHumanTurn()) {
+      const a = this.active;
+      if (!t.done[0] && Math.abs(a.x - t.baseX) > 40) this._tutComplete(0);
+      if (!t.done[2] && Math.abs(a.aim - t.baseAim) > 0.18) this._tutComplete(2);
+    }
+  }
+
+  // Eğitim maçının koç paneli: turun tepesinde adım metni + ilerleme noktaları.
+  drawTutorialCoach(ctx) {
+    const t = this.tutorial;
+    if (!t || this.state === "GAMEOVER") return;
+    const W = this.W;
+    const pw = Math.min(430, W - 140), px = (W - pw) / 2, py = 58, ph = 48;
+    const humanTurn = this.isHumanTurn();
+    const stepIdx = Math.min(t.step, TUTORIAL_COACH_STEPS.length - 1);
+    let text, color = "#eef5ff";
+    if (this.state !== "AIMING") {
+      text = "Atış çözümleniyor…";
+    } else if (!humanTurn) {
+      text = "Sıra rakipte — izle ve öğren";
+      color = "#9fb6c9";
+    } else if (t.flash > 0) {
+      text = "✓ Tamam! Sıradaki adım…";
+      color = "#8aff8a";
+    } else {
+      text = TUTORIAL_COACH_STEPS[stepIdx];
+    }
+    _csPanel(ctx, px, py, pw, ph, { accent: "#ffe45e" });
+    ctx.textBaseline = "middle";
+    // Başlık satırı: ÖĞRETİCİ + ilerleme noktaları (tamamlanan yeşil)
+    ctx.textAlign = "left";
+    ctx.fillStyle = "#ffe45e"; ctx.font = uiTitleFont(10);
+    ctx.fillText("ÖĞRETİCİ", px + 12, py + 12);
+    for (let i = 0; i < 4; i++) {
+      ctx.fillStyle = t.done[i] ? "#5fdc6b" : "#2c3a4c";
+      ctx.beginPath(); ctx.arc(px + pw - 16 - (3 - i) * 14, py + 12, 3.5, 0, 6.28); ctx.fill();
+    }
+    // Adım metni
+    ctx.textAlign = "center";
+    ctx.font = uiTextFont(14, 700);
+    ctx.fillStyle = color;
+    ctx.fillText(text, px + pw / 2, py + 33);
+  }
+
+  // ── Pazar (MARKET): Cephane + Parçalar sekmeleri ────────────────────
+  // İki sekme tek ekranda: CEPHANE (ortak mühimmat deposu; alınan mermi maç
+  // başında insan robotuna yüklenir, artanı maç sonunda depoya döner — bkz.
+  // js/market.js) ve PARÇALAR (robotlara takılan kalıcı donanım; satın alma
+  // burada, TAKMA Atölye'de — bkz. js/parts.js). Depo tüm robotların ortak
+  // malıdır; parçalar tek adettir ve tek bir robotun yuvasında durur.
+  // Bazuka sınırsız olduğu için pazarda hiç görünmez.
+  openMarket() {
     this.marketWeaponPage = 0;
+    this.marketPartPage = 0;
     this.marketFx = null;
     this.marketNotice = null;
+    // marketTab bilinçli olarak SIFIRLANMAZ: oyuncu son baktığı sekmeye döner
+    // (ilk açılışta kurucu "ammo" atar).
     hideOverlay();
     this.clearTurnInput();
     this.state = "MARKET";
@@ -792,7 +1505,9 @@ class Game {
   closeMarket() {
     this.marketFx = null;
     this.marketNotice = null;
-    // Maç sonu Atölye düğmesinden gelinmiş olabilir (hikâye/festival bağlamı)
+    // Atölye ile aynı rota kuralı: hikâye/festival bağlamında menüye değil kupa
+    // haritasına dönülür (pazar şu an yalnız ana menüden açılıyor; kural ileride
+    // maç sonu ekranından açılırsa da doğru kalır).
     if (this.mode === "story" || this.mode === "festival") { this.openStoryMap(); return; }
     this.state = "MODE_SELECT";
     this.updateHud();
@@ -810,15 +1525,13 @@ class Game {
     }
   }
 
-  // Seçili robot için mühimmat al. Önkoşullar market.js'te doğrulanır; arayüz
+  // Ortak depoya mühimmat al. Önkoşullar market.js'te doğrulanır; arayüz
   // doğrudan bakiyeye/depoya dokunmaz. Başarısızlık sessiz kalmaz: nedeni kısa
   // bir yazıyla gösterilir.
   purchaseMarketAmmo(weaponId, qty) {
-    const id = this.marketSelectedId;
-    if (!id) return;
     const spec = weaponById(weaponId);
     const label = spec ? spec.name : "Cephane";
-    const res = buyAmmo(this.profile, id, weaponId, qty || 1);
+    const res = buyAmmo(this.profile, weaponId, qty || 1);
     if (!res.ok) {
       let msg = "Satın alma başarısız";
       if (res.reason === "DEPOT_FULL") msg = `${label} deposu dolu (üst sınır ${AMMO_DEPOT_CAP})`;
@@ -840,14 +1553,6 @@ class Game {
     this.marketNotice = { text, color, t: 0 };
   }
 
-  changeMarketPage(dir) {
-    const totalPages = Math.max(1, Math.ceil(CHARACTERS.length / (WS_COLS * WS_ROWS)));
-    const next = this.marketPage + dir;
-    if (next < 0 || next > totalPages - 1) return;
-    SFX.uiClick();
-    this.marketPage = next;
-  }
-
   changeMarketWeaponPage(dir) {
     const totalPages = Math.max(1, Math.ceil(sellableWeapons().length / (MK_COLS * MK_ROWS)));
     const next = this.marketWeaponPage + dir;
@@ -856,6 +1561,44 @@ class Game {
     this.marketWeaponPage = next;
   }
 
+  // Sekme değiştir (Cephane + dört yuva). Son sekme alanda hatırlanır; parıltı
+  // ve bildirim sekmeler arasında taşınmaz (yanlış karta bağlanmasın).
+  switchMarketTab(tab) {
+    const next = MARKET_TABS.some((t) => t.id === tab) ? tab : "ammo";
+    if (next === (this.marketTab || "ammo")) return;
+    SFX.uiClick();
+    this.marketTab = next;
+    this.marketFx = null;
+    this.marketNotice = null;
+    this.marketPartPage = 0;
+  }
+
+  changeMarketPartPage(dir) {
+    const totalPages = Math.max(1, Math.ceil(this._marketSlotParts().length / (MK_COLS * MK_ROWS)));
+    const next = (this.marketPartPage || 0) + dir;
+    if (next < 0 || next > totalPages - 1) return;
+    SFX.uiClick();
+    this.marketPartPage = next;
+  }
+
+  // Aktif sekmenin parçaları (cephane sekmesinde boş dizi).
+  _marketSlotParts() {
+    const slot = this.marketTab;
+    if (!PART_SLOTS.includes(slot)) return [];
+    return PARTS.filter((p) => p.slot === slot);
+  }
+
+  // Tekerlek ve sayfa düğmeleri sekmeye göre yönlenir (tek giriş noktası).
+  changeMarketPage(dir) {
+    if (PART_SLOTS.includes(this.marketTab)) this.changeMarketPartPage(dir);
+    else this.changeMarketWeaponPage(dir);
+  }
+
+  // ── Pazar kabuğu: başlık + sekme çubuğu + paylaşılan ızgara yerleşimi ──
+  // Sekmeler tek durum (MARKET) altında çalışır: yeni bir state eklemek
+  // girdi/Esc/updateHud kablolarını üç yerde daha büyütürdü (marketTab alanı
+  // bu listelere hiç dokunmaz). Izgara geometrisi iki sekmede de aynıdır ve
+  // eski alt yazı satırı sekme bandına dönüştüğü için gridY=84 KAYMAZ.
   renderMarket(ctx) {
     const W = this.W, H = this.H;
     drawClouds(ctx, W);
@@ -866,137 +1609,112 @@ class Game {
     ctx.textAlign = "center";
     ctx.textBaseline = "top";
     ctx.fillStyle = "#ffe45e";
-    ctx.font = uiTitleFont(26);
-    ctx.fillText("CEPHANE PAZARI", W / 2, 20);
-    ctx.fillStyle = "#9fb6c9";
-    ctx.font = uiTextFont(12);
-    ctx.fillText("Robotuna mühimmat al — depo maç başında mermilere yüklenir, artanı maç sonunda geri döner", W / 2, 48);
+    ctx.font = uiTitleFont(22);
+    ctx.fillText("PAZAR", W / 2, 14);
+    this._renderMarketTabs(ctx, scrap);
 
+    const gap = 12;
+    const gridW = Math.min(W - 48, MK_MAX_GRID_W);
+    const L = {
+      gridX: (W - gridW) / 2,
+      gridY: MK_GRID_Y,
+      gridW,
+      gap,
+      cardW: Math.floor((gridW - (MK_COLS - 1) * gap) / MK_COLS),
+      scrap,
+    };
+    if (PART_SLOTS.includes(this.marketTab)) this._renderMarketParts(ctx, L);
+    else this._renderMarketAmmo(ctx, L);
+
+    this.drawBackButton(ctx, "‹ Ana Menü");
+  }
+
+  // Sekme çubuğu + Hurda + sekme başına özet satırı. Tıklama alanları
+  // _marketTabRects'te toplanır; handleMarketClick ilk olarak bunlara bakar.
+  _renderMarketTabs(ctx, scrap) {
+    const W = this.W;
     const mx = this.input.mouseX, my = this.input.mouseY;
-    const perPage = WS_COLS * WS_ROWS;
-    const totalPages = Math.max(1, Math.ceil(CHARACTERS.length / perPage));
-    this.marketPage = Math.max(0, Math.min(this.marketPage, totalPages - 1));
-    const pageStart = this.marketPage * perPage;
-    const pageChars = CHARACTERS.slice(pageStart, pageStart + perPage);
+    const activeTab = MARKET_TABS.some((t) => t.id === this.marketTab) ? this.marketTab : "ammo";
 
-    // ── Sol: sayfalı robot grid'i (Atölye yerleşimiyle aynı) ───────────
-    const gx = 24, gy = 66, gridW = 452, gap = 8;
-    const cardW = Math.floor((gridW - (WS_COLS - 1) * gap) / WS_COLS);
-    const cardH = 88;
-    this._marketCardRects = [];
-
-    for (let i = 0; i < pageChars.length; i++) {
-      const ch = pageChars[i];
-      const col = i % WS_COLS, row = (i / WS_COLS) | 0;
-      const cx = gx + col * (cardW + gap);
-      const cy = gy + row * (cardH + gap);
-      this._marketCardRects.push({ x: cx, y: cy, w: cardW, h: cardH, ch });
-      const up = getRobotProgress(this.profile, ch.id);
-      const depotN = ammoDepotTotal(up.ammo);
-      const selected = ch.id === this.marketSelectedId;
-      const hovered = mx >= cx && mx <= cx + cardW && my >= cy && my <= cy + cardH;
-
-      const cyv = cy + (hovered ? -2 : 0);
-      _csPanel(ctx, cx, cyv, cardW, cardH, {
-        accent: selected ? "#63e6be" : hovered ? "#ffe45e" : "#2a3848",
-        hover: hovered, glow: hovered, selected,
-        fillTop: selected ? "#1b2b1f" : null, fillBottom: selected ? "#122015" : null,
+    const totalW = MARKET_TABS.length * MK_TAB_W + (MARKET_TABS.length - 1) * MK_TAB_GAP;
+    const x0 = (W - totalW) / 2;
+    this._marketTabRects = [];
+    MARKET_TABS.forEach((t, i) => {
+      const x = x0 + i * (MK_TAB_W + MK_TAB_GAP);
+      this._marketTabRects.push({ x, y: MK_TAB_Y, w: MK_TAB_W, h: MK_TAB_H, tab: t.id });
+      const active = activeTab === t.id;
+      const hov = mx >= x && mx <= x + MK_TAB_W && my >= MK_TAB_Y && my <= MK_TAB_Y + MK_TAB_H;
+      _csPanel(ctx, x, MK_TAB_Y, MK_TAB_W, MK_TAB_H, {
+        accent: active ? "#ffe45e" : hov ? "#7f93a5" : "#2a3848",
+        hover: !active && hov, glow: active, rivets: false,
+        fillTop: active ? "#2b2717" : null, fillBottom: active ? "#1a170d" : null,
       });
-
-      drawRobot(ctx, {
-        cx: cx + cardW / 2, cy: cyv + 30, r: 15, facing: 1, charDef: ch,
-        timeMs: this.renderTimeMs || 0, motion: { vx: 0, vy: 0, onGround: true },
-        upgradeVisuals: { attachmentGlow: sanitizeUpgrades(up).module >= 3 },
-      });
-
-      ctx.fillStyle = ch.color;
+      ctx.fillStyle = active ? "#ffe45e" : "#9fb6c9";
       ctx.font = uiTextFont(12, 700);
       ctx.textAlign = "center";
-      ctx.textBaseline = "top";
-      ctx.fillText(ch.label, cx + cardW / 2, cyv + 58, cardW - 10);
-      // Alt satır servis seviyesi yerine cephane deposunu gösterir: bu ekranda
-      // oyuncunun aradığı bilgi "bu robotta ne kadar mermi var"dır.
-      ctx.fillStyle = depotN > 0 ? "#8affc0" : "#9fb6c9";
-      ctx.font = uiTextFont(9);
-      ctx.fillText(depotN > 0 ? `Cephane ${depotN}` : "Cephane yok", cx + cardW / 2, cyv + 72);
-    }
+      ctx.textBaseline = "middle";
+      ctx.fillText(t.label, x + MK_TAB_W / 2, MK_TAB_Y + MK_TAB_H / 2);
+    });
 
-    // Robot sayfası gezinmesi
-    this._marketPageRects = [];
-    const navY = gy + WS_ROWS * cardH + (WS_ROWS - 1) * gap + 16, navW = 96, navH = 30;
-    const prev = { x: gx, y: navY, w: navW, h: navH, dir: -1 };
-    const next = { x: gx + gridW - navW, y: navY, w: navW, h: navH, dir: 1 };
-    this._marketPageRects = [prev, next];
-    for (const b of this._marketPageRects) {
-      const canUse = (b.dir < 0 && this.marketPage > 0) || (b.dir > 0 && this.marketPage < totalPages - 1);
-      const hov = canUse && mx >= b.x && mx <= b.x + b.w && my >= b.y && my <= b.y + b.h;
-      ctx.globalAlpha = canUse ? 1 : 0.35;
-      _csPanel(ctx, b.x, b.y, b.w, b.h, { accent: hov ? "#ffe45e" : "#2a3848", hover: hov, glow: hov, rivets: false });
-      ctx.fillStyle = "#cfe0ee";
-      ctx.font = uiTextFont(13, 700);
-      ctx.textAlign = "center"; ctx.textBaseline = "middle";
-      ctx.fillText(b.dir < 0 ? "‹ Geri" : "İleri ›", b.x + b.w / 2, b.y + b.h / 2);
-      ctx.globalAlpha = 1;
+    // Bilgi satırı: soldan başlar — Hurda (sarı) + sekme özeti (gri). Sağ uç
+    // bilinçli olarak BOŞtur: üst-sağ köşe DOM ses denetimine ayrılmıştır
+    // (AUDIO_SAFE) — eskiden Hurda (W-24, 18)'e çiziliyordu (kullanıcı bildirimi).
+    const pulse = this.marketFx ? Math.max(0, 1 - this.marketFx.t / MK_FX_DURATION) : 0;
+    let summary;
+    if (activeTab === "ammo") {
+      const depot = getAmmoDepot(this.profile);
+      summary = `Ortak depo: ${ammoDepotTotal(depot)} mermi • ${Object.keys(depot).length} silah`;
+    } else {
+      const slotParts = PARTS.filter((p) => p.slot === activeTab);
+      const owned = this.profile ? getOwnedParts(this.profile) : [];
+      const have = slotParts.filter((p) => owned.includes(p.id)).length;
+      summary = `${SLOT_LABELS[activeTab]} yuvası: ${have}/${slotParts.length} parça • takma Atölye'de`;
     }
-    ctx.fillStyle = "#9fb6c9";
-    ctx.font = uiTextFont(13, 700);
-    ctx.textAlign = "center"; ctx.textBaseline = "middle";
-    ctx.fillText(`Sayfa ${this.marketPage + 1} / ${totalPages}`, gx + gridW / 2, navY + navH / 2);
-
-    // ── Sağ: seçili robotun mühimmat kartları ─────────────────────────
-    const rx = 496, rw = W - rx - 24;
-    const def = CHARACTERS.find((c) => c.id === this.marketSelectedId) || CHARACTERS[0];
-    const depot = getRobotAmmo(this.profile, def.id);
-    const depotN = ammoDepotTotal(depot);
-    _csPanel(ctx, rx, gy, rw, MK_PANEL_H, { accent: "#2a3848", hazardTop: true });
 
     ctx.textAlign = "left";
-    ctx.textBaseline = "top";
-    ctx.fillStyle = "#eef5ff";
-    ctx.font = uiTitleFont(16);
-    ctx.fillText(`${def.label} · ${def.role}`, rx + 14, gy + 12);
-    ctx.fillStyle = "#8fa8ba";
-    ctx.font = uiTextFont(11);
-    ctx.fillText(`Depo: ${depotN} / ${sellableWeapons().length * AMMO_DEPOT_CAP} mermi`, rx + 14, gy + 34);
-    // Hurda bakiyesi: satın alma sonrası kısa süre parlar.
-    const pulse = this.marketFx ? Math.max(0, 1 - this.marketFx.t / MK_FX_DURATION) : 0;
-    ctx.textAlign = "right";
+    ctx.textBaseline = "middle";
     ctx.fillStyle = `rgba(255,228,94,${0.8 + 0.2 * pulse})`;
-    ctx.font = uiTitleFont(Math.round(14 + 3 * pulse));
-    ctx.fillText(`Hurda: ${scrap}`, rx + rw - 14, gy + 20);
-    // Alt sınır çizgisi: başlık ile kart ızgarasını ayırır.
-    ctx.fillStyle = "#24313f";
-    ctx.fillRect(rx + 12, gy + 54, rw - 24, 1);
+    ctx.font = uiTitleFont(Math.round(13 + 3 * pulse));
+    const scrapText = `Hurda: ${scrap}`;
+    ctx.fillText(scrapText, 24, MK_INFO_Y);
+    const scrapW = ctx.measureText(scrapText).width;
+    ctx.fillStyle = "#9fb6c9";
+    ctx.font = uiTextFont(11);
+    ctx.fillText(summary, 24 + scrapW + 22, MK_INFO_Y, W - 24 - scrapW - 46);
+  }
 
+  // ── Cephane sekmesi: mevcut mühimmat ızgarası (davranış değişmedi) ──────
+  _renderMarketAmmo(ctx, L) {
+    const gap = L.gap, gridX = L.gridX, gridY = L.gridY, cardW = L.cardW, scrap = L.scrap;
+    const mx = this.input.mouseX, my = this.input.mouseY;
+    const depot = getAmmoDepot(this.profile);
     const weapons = sellableWeapons();
-    const wPerPage = MK_COLS * MK_ROWS;
-    const wPages = Math.max(1, Math.ceil(weapons.length / wPerPage));
-    this.marketWeaponPage = Math.max(0, Math.min(this.marketWeaponPage, wPages - 1));
-    const wStart = this.marketWeaponPage * wPerPage;
-    const wPage = weapons.slice(wStart, wStart + wPerPage);
 
-    const cellGap = 8, gridX = rx + 12, gridY = gy + 66;
-    const cw = Math.floor((rw - 24 - (MK_COLS - 1) * cellGap) / MK_COLS);
-    const chh = 58;
+    const perPage = MK_COLS * MK_ROWS;
+    const totalPages = Math.max(1, Math.ceil(weapons.length / perPage));
+    this.marketWeaponPage = Math.max(0, Math.min(this.marketWeaponPage || 0, totalPages - 1));
+    const pageStart = this.marketWeaponPage * perPage;
+    const pageWeapons = weapons.slice(pageStart, pageStart + perPage);
+
     this._marketWeaponRects = [];
-
-    for (let i = 0; i < wPage.length; i++) {
-      const spec = wPage[i];
+    this._marketPartRects = []; // sekme değişince bayat parça alanı kalmaz
+    for (let i = 0; i < pageWeapons.length; i++) {
+      const spec = pageWeapons[i];
       const col = i % MK_COLS, row = (i / MK_COLS) | 0;
-      const cx = gridX + col * (cw + cellGap);
-      const cy = gridY + row * (chh + cellGap);
-      this._marketWeaponRects.push({ x: cx, y: cy, w: cw, h: chh, spec });
+      const cx = gridX + col * (cardW + gap);
+      const cy = gridY + row * (MK_CARD_H + gap);
+      this._marketWeaponRects.push({ x: cx, y: cy, w: cardW, h: MK_CARD_H, spec });
 
       const price = ammoPriceFor(spec);
       const have = depot[spec.id] || 0;
+      const battleMax = weaponBattleMax(spec);
       const full = have >= AMMO_DEPOT_CAP;
       const affordable = scrap >= price;
-      const hovered = mx >= cx && mx <= cx + cw && my >= cy && my <= cy + chh;
+      const hovered = mx >= cx && mx <= cx + cardW && my >= cy && my <= cy + MK_CARD_H;
       const flashing = !!(this.marketFx && this.marketFx.weaponId === spec.id);
       const cyv = cy + (hovered ? -2 : 0);
-      const enabled = !full && affordable;
 
-      _csPanel(ctx, cx, cyv, cw, chh, {
+      _csPanel(ctx, cx, cyv, cardW, MK_CARD_H, {
         accent: flashing ? "#8affc0" : hovered ? "#ffe45e" : full ? "#3b4650" : "#2a3848",
         hover: hovered, glow: hovered,
         rivets: false,
@@ -1008,45 +1726,183 @@ class Game {
         ctx.globalAlpha = a;
         ctx.strokeStyle = "#d8fff1";
         ctx.lineWidth = 3;
-        _csRoundRect(ctx, cx + 2, cyv + 2, cw - 4, chh - 4, 7);
+        _csRoundRect(ctx, cx + 2, cyv + 2, cardW - 4, MK_CARD_H - 4, 7);
         ctx.stroke();
         ctx.restore();
       }
 
       // Mermi tasarımı: HUD ile aynı çizici (Projectile.drawIcon)
       ctx.save();
-      ctx.translate(cx + 4, cyv + 9);
+      ctx.translate(cx + 6, cyv + 11);
       Projectile.drawIcon(ctx, spec, 40, { tail: false });
       ctx.restore();
 
-      const tx = cx + 50, tw = cw - 58;
+      const tx = cx + 52;
       ctx.textAlign = "left";
       ctx.textBaseline = "top";
       ctx.fillStyle = full ? "#8b9aa5" : "#eef5ff";
-      ctx.font = uiTextFont(12, 700);
-      ctx.fillText(spec.name, tx, cyv + 8, tw);
-      ctx.fillStyle = full ? "#ffb347" : "#8fa8ba";
-      ctx.font = uiTextFont(10);
-      ctx.fillText(`Taban ${spec.ammo} • Depo ${have}/${AMMO_DEPOT_CAP}`, tx, cyv + 26, tw);
+      ctx.font = uiTextFont(13, 700);
+      ctx.fillText(spec.name, tx, cyv + 7, cardW - 124);
+      // Fiyat sağda: depo dolduysa yerine "Dolu", bakiye yetmiyorsa kırmızı.
+      ctx.textAlign = "right";
       ctx.fillStyle = full ? "#8b9aa5" : affordable ? "#ffd166" : "#ff9b9b";
-      ctx.font = uiTextFont(11, 700);
-      ctx.fillText(full ? "Dolu" : `${price} Hurda ×1`, tx, cyv + 40, tw - 34);
+      ctx.font = uiTextFont(12, 700);
+      ctx.fillText(full ? "Dolu" : `${price} Hurda`, cx + cardW - 10, cyv + 8);
+
+      ctx.textAlign = "left";
+      ctx.fillStyle = "#8fd9c4";
+      ctx.font = uiTextFont(10);
+      ctx.fillText(spec.special, tx, cyv + 26, cardW - 70);
+
+      ctx.fillStyle = full ? "#ffb347" : "#8fa8ba";
+      ctx.fillText(`Taban ${spec.ammo} • Savaş ≤${battleMax} • Depo ${have}/${AMMO_DEPOT_CAP}`, tx, cyv + 43, cardW - 112);
       if (!full) {
+        ctx.textAlign = "right";
         ctx.fillStyle = "#6d7f8d";
         ctx.font = uiTextFont(9);
-        ctx.textAlign = "right";
-        ctx.fillText(`Shift ×${AMMO_BULK_QTY}`, cx + cw - 8, cyv + 42);
+        ctx.fillText(`Shift ×${AMMO_BULK_QTY}`, cx + cardW - 10, cyv + 45);
       }
     }
 
-    // Mühimmat sayfası gezinmesi
-    this._marketWeaponPageRects = [];
-    const wnavY = gridY + MK_ROWS * chh + (MK_ROWS - 1) * cellGap + 12;
-    const wprev = { x: gridX, y: wnavY, w: 104, h: 30, dir: -1 };
-    const wnext = { x: rx + rw - 12 - 104, y: wnavY, w: 104, h: 30, dir: 1 };
-    this._marketWeaponPageRects = [wprev, wnext];
-    for (const b of this._marketWeaponPageRects) {
-      const canUse = (b.dir < 0 && this.marketWeaponPage > 0) || (b.dir > 0 && this.marketWeaponPage < wPages - 1);
+    // Alt bant sayfadaki SATIR sayısına göre konumlanır: 6 parçalık bir yuva
+    // sayfasında ızgaranın altında kocaman boşluk kalmaz (cephane sayfası
+    // 5 satır olduğu için konum değişmez).
+    const rowsUsed = Math.max(1, Math.ceil(pageWeapons.length / MK_COLS));
+    const navY = gridY + rowsUsed * MK_CARD_H + (rowsUsed - 1) * gap + 6;
+    this._renderMarketNav(ctx, navY, weapons.length, this.marketWeaponPage, perPage);
+    // Kapsam notu: depo, geliştirmelerle aynı maç türlerinde geçerlidir.
+    ctx.fillStyle = "#6d7f8d";
+    ctx.font = uiTextFont(10);
+    ctx.textAlign = "center";
+    ctx.textBaseline = "top";
+    ctx.fillText(`Depo ${AMMO_DEPOT_CAP}'a kadar birikir; maça yalnız savaş tavanı kadar yüklenir, artanı maç sonunda geri döner • Shift ×${AMMO_BULK_QTY} / Ctrl ×${AMMO_BULK_QTY_BIG}`, this.W / 2, navY + MK_FOOT_NOTE_DY);
+    this._renderMarketNotice(ctx, navY + MK_FOOT_NOTICE_DY);
+  }
+
+  // ── Parça sekmeleri (KASK/GÖVDE/APARAT/AYAK): o yuvanın parçaları ─────
+  // Her yuva ayrı bir sekmedir; kart durumları: sahipsiz (fiyat) →
+  // sahipli-takılı değil (Alındı) → sahipli-takılı ("Takılı → FIX-8" /
+  // "Takılı → 3 robotta"). Satın alma tek tıklama; TAKMA Atölye'nin işidir.
+  _renderMarketParts(ctx, L) {
+    const gap = L.gap, gridX = L.gridX, gridY = L.gridY, cardW = L.cardW, scrap = L.scrap;
+    const slot = this.marketTab;
+    const mx = this.input.mouseX, my = this.input.mouseY;
+    const owned = getOwnedParts(this.profile);
+    const equipMap = this._marketEquippedMap(); // partId → [robotId, ...]
+    const slotParts = this._marketSlotParts();
+
+    const perPage = MK_COLS * MK_ROWS;
+    const totalPages = Math.max(1, Math.ceil(slotParts.length / perPage));
+    this.marketPartPage = Math.max(0, Math.min(this.marketPartPage || 0, totalPages - 1));
+    const pageStart = this.marketPartPage * perPage;
+    const pageParts = slotParts.slice(pageStart, pageStart + perPage);
+
+    this._marketPartRects = [];
+    this._marketWeaponRects = []; // sekme değişince bayat mühimmat alanı kalmaz
+    for (let i = 0; i < pageParts.length; i++) {
+      const part = pageParts[i];
+      const col = i % MK_COLS, row = (i / MK_COLS) | 0;
+      const cx = gridX + col * (cardW + gap);
+      const cy = gridY + row * (MK_CARD_H + gap);
+      this._marketPartRects.push({ x: cx, y: cy, w: cardW, h: MK_CARD_H, part });
+
+      const isOwned = owned.includes(part.id);
+      const wearers = equipMap[part.id] || [];
+      const affordable = scrap >= part.price;
+      const hovered = mx >= cx && mx <= cx + cardW && my >= cy && my <= cy + MK_CARD_H;
+      const flashing = !!(this.marketFx && this.marketFx.partId === part.id);
+      const cyv = cy + (hovered ? -2 : 0);
+
+      _csPanel(ctx, cx, cyv, cardW, MK_CARD_H, {
+        accent: flashing ? "#8affc0" : isOwned ? "#3b4650" : hovered ? "#ffe45e" : "#2a3848",
+        hover: hovered, glow: hovered, rivets: false,
+        fillTop: isOwned ? "#161b20" : null, fillBottom: isOwned ? "#0e1216" : null,
+      });
+      if (flashing) {
+        const a = Math.max(0, 1 - this.marketFx.t / MK_FX_DURATION);
+        ctx.save();
+        ctx.globalAlpha = a;
+        ctx.strokeStyle = "#d8fff1";
+        ctx.lineWidth = 3;
+        _csRoundRect(ctx, cx + 2, cyv + 2, cardW - 4, MK_CARD_H - 4, 7);
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      // Parça ikonu: parts.js'teki saf çizici (spec.icon → drawPartIcon).
+      ctx.save();
+      ctx.translate(cx + 6, cyv + 11);
+      drawPartIcon(ctx, part, 40);
+      ctx.restore();
+
+      const tx = cx + 52;
+      ctx.textAlign = "left";
+      ctx.textBaseline = "top";
+      ctx.fillStyle = isOwned ? "#8b9aa5" : "#eef5ff";
+      ctx.font = uiTextFont(13, 700);
+      ctx.fillText(part.label, tx, cyv + 7, cardW - 132);
+
+      // Sağ üst: fiyat ya da "Alındı"; sahipsizken bakiye yetmiyorsa kırmızı.
+      ctx.textAlign = "right";
+      ctx.fillStyle = isOwned ? "#8b9aa5" : affordable ? "#ffd166" : "#ff9b9b";
+      ctx.font = uiTextFont(12, 700);
+      ctx.fillText(isOwned ? "Alındı" : `${part.price} Hurda`, cx + cardW - 10, cyv + 8);
+
+      // Sağ alt: yuva rozeti — parçanın nereye takıldığını söyler.
+      ctx.fillStyle = isOwned ? "#5f6d78" : "#8fa8ba";
+      ctx.font = uiTextFont(9, 700);
+      ctx.fillText(SLOT_LABELS[part.slot].toUpperCase(), cx + cardW - 10, cyv + 45);
+
+      // Etki satırı (ad + kısa açıklama + durum).
+      ctx.textAlign = "left";
+      ctx.fillStyle = isOwned ? "#6f8a80" : "#8fd9c4";
+      ctx.font = uiTextFont(10);
+      ctx.fillText(part.desc, tx, cyv + 26, cardW - 132);
+
+      let status, statusColor;
+      if (isOwned && wearers.length === 1) {
+        const owner = CHARACTERS.find((c) => c.id === wearers[0]);
+        status = `Takılı → ${owner ? owner.label : wearers[0]}`;
+        statusColor = "#8affc0";
+      } else if (isOwned && wearers.length > 1) {
+        status = `Takılı → ${wearers.length} robotta`;
+        statusColor = "#8affc0";
+      } else if (isOwned) {
+        status = "Envanterde • Atölye'den tak";
+        statusColor = "#ffd166";
+      } else {
+        status = `${SLOT_LABELS[part.slot]} yuvası • her robota takılır`;
+        statusColor = "#8fa8ba";
+      }
+      ctx.fillStyle = isOwned ? statusColor : "#6d7f8d";
+      ctx.font = uiTextFont(10);
+      ctx.fillText(status, tx, cyv + 43, cardW - 120);
+    }
+
+    const rowsUsed = Math.max(1, Math.ceil(pageParts.length / MK_COLS));
+    const navY = gridY + rowsUsed * MK_CARD_H + (rowsUsed - 1) * gap + 6;
+    this._renderMarketNav(ctx, navY, slotParts.length, this.marketPartPage, perPage);
+    ctx.fillStyle = "#6d7f8d";
+    ctx.font = uiTextFont(10);
+    ctx.textAlign = "center";
+    ctx.textBaseline = "top";
+    ctx.fillText(`${SLOT_LABELS[slot]} parçaları tek seferlik alınır • aynı parça her robota takılabilir (kopya gerekmez) • takma Atölye'de`, this.W / 2, navY + MK_FOOT_NOTE_DY);
+    this._renderMarketNotice(ctx, navY + MK_FOOT_NOTICE_DY);
+  }
+
+  // Sayfa gezinme düğmeleri + sayaç (iki sekme paylaşır). Düğme alanları
+  // _marketPageRects'e yazılır; handleMarketClick sekmeden bağımsız okur.
+  _renderMarketNav(ctx, navY, totalItems, page, perPage) {
+    const mid = this.W / 2;
+    const mx = this.input.mouseX, my = this.input.mouseY;
+    const navW = 104, navH = 30;
+    const totalPages = Math.max(1, Math.ceil(totalItems / perPage));
+    this._marketPageRects = [
+      { x: mid - 170 - navW, y: navY, w: navW, h: navH, dir: -1 },
+      { x: mid + 170, y: navY, w: navW, h: navH, dir: 1 },
+    ];
+    for (const b of this._marketPageRects) {
+      const canUse = (b.dir < 0 && page > 0) || (b.dir > 0 && page < totalPages - 1);
       const hov = canUse && mx >= b.x && mx <= b.x + b.w && my >= b.y && my <= b.y + b.h;
       ctx.globalAlpha = canUse ? 1 : 0.35;
       _csPanel(ctx, b.x, b.y, b.w, b.h, { accent: hov ? "#ffe45e" : "#2a3848", hover: hov, glow: hov, rivets: false });
@@ -1056,54 +1912,103 @@ class Game {
       ctx.fillText(b.dir < 0 ? "‹ Önceki" : "Sonraki ›", b.x + b.w / 2, b.y + b.h / 2);
       ctx.globalAlpha = 1;
     }
+    const pageStart = page * perPage;
     ctx.fillStyle = "#9fb6c9";
     ctx.font = uiTextFont(13, 700);
     ctx.textAlign = "center"; ctx.textBaseline = "middle";
-    ctx.fillText(`${wStart + 1}–${Math.min(weapons.length, wStart + wPerPage)} / ${weapons.length}`, rx + rw / 2, wnavY + 15);
-
-    // Geri bildirim satırı (eksik Hurda / dolu depo / başarılı satın alma)
-    if (this.marketNotice) {
-      const n = this.marketNotice;
-      const a = Math.min(1, (MK_NOTICE_DURATION - n.t) / 0.35);
-      ctx.globalAlpha = Math.max(0, a);
-      ctx.fillStyle = n.color;
-      ctx.font = uiTextFont(12, 700);
-      ctx.textAlign = "center"; ctx.textBaseline = "middle";
-      ctx.fillText(n.text, rx + rw / 2, wnavY + 48);
-      ctx.globalAlpha = 1;
-    }
-
-    this.drawBackButton(ctx, "‹ Ana Menü");
+    ctx.fillText(`${pageStart + 1}–${Math.min(totalItems, pageStart + perPage)} / ${totalItems}`, mid, navY + navH / 2);
   }
 
-  handleMarketClick(mx, my, shift) {
+  // Geri bildirim satırı (eksik Hurda / dolu depo / başarılı satın alma).
+  // Süre sonunda söner; iki sekmede de aynı yerde çizilir.
+  _renderMarketNotice(ctx, y) {
+    if (!this.marketNotice) return;
+    const n = this.marketNotice;
+    const a = Math.min(1, (MK_NOTICE_DURATION - n.t) / 0.35);
+    ctx.globalAlpha = Math.max(0, a);
+    ctx.fillStyle = n.color;
+    ctx.font = uiTextFont(12, 700);
+    ctx.textAlign = "center";
+    ctx.textBaseline = "top";
+    ctx.fillText(n.text, this.W / 2, y);
+    ctx.globalAlpha = 1;
+  }
+
+  // Parça → takılı olduğu robot id'LERİ (kart "Takılı → FIX-8" / "N robotta"
+  // yazar). Parçalar robota kilitli olmadığı için liste birden çok robot
+  // içerebilir.
+  _marketEquippedMap() {
+    const map = {};
+    const robots = this.profile && this.profile.robots ? this.profile.robots : {};
+    for (const rid of Object.keys(robots)) {
+      const raw = robots[rid] && robots[rid].loadout ? robots[rid].loadout : null;
+      if (!raw) continue;
+      const lo = sanitizeLoadoutShape(raw);
+      for (const slot of PART_SLOTS) {
+        for (const pid of lo[slot]) {
+          if (!pid) continue;
+          if (!map[pid]) map[pid] = [];
+          if (!map[pid].includes(rid)) map[pid].push(rid);
+        }
+      }
+    }
+    return map;
+  }
+
+  // Parça satın al: önkoşullar parts.js'te doğrulanır (benzersiz parça); arayüz
+  // bakiye/envantere doğrudan dokunmaz. Başarısızlık sessiz kalmaz.
+  purchaseMarketPart(partId) {
+    const part = partById(partId);
+    const label = part ? part.label : "Parça";
+    const res = buyPart(this.profile, partId);
+    if (!res.ok) {
+      let msg = "Satın alma başarısız";
+      if (res.reason === "ALREADY_OWNED") msg = `${label} zaten envanterinde — Atölye'den tak`;
+      else if (res.reason === "SCRAP_REQUIRED") msg = `${label} için ${res.cost} Hurda gerekli`;
+      else if (res.reason === "INVALID_PART") msg = "Bilinmeyen parça";
+      this._marketNotice(msg, "#ff9b9b");
+      SFX.uiClick();
+      return;
+    }
+    this.profile = res.profile;
+    this.marketFx = { partId, t: 0 };
+    this._marketNotice(`${label} alındı (−${res.cost} Hurda) — Atölye'den bir robota tak`, "#8affc0");
+    SFX.partMount(); // parça alımı: montaj klik'i
+    if (!res.persisted) notifyStorageFailure();
+    this.updateHud();
+  }
+
+  handleMarketClick(mx, my, shift, big) {
     if (this.hitBackButton(mx, my)) { SFX.uiClick(); this.closeMarket(); return; }
+    // 1) Sekmeler — ızgaradan ve sayfa düğmelerinden önce (üst bant).
+    for (const t of this._marketTabRects || []) {
+      if (mx >= t.x && mx <= t.x + t.w && my >= t.y && my <= t.y + t.h) {
+        this.switchMarketTab(t.tab);
+        return;
+      }
+    }
+    // 2) Sayfa gezinme (aktif sekmeye yönlenir).
     for (const b of this._marketPageRects || []) {
       if (mx >= b.x && mx <= b.x + b.w && my >= b.y && my <= b.y + b.h) {
         this.changeMarketPage(b.dir);
         return;
       }
     }
-    for (const b of this._marketWeaponPageRects || []) {
-      if (mx >= b.x && mx <= b.x + b.w && my >= b.y && my <= b.y + b.h) {
-        this.changeMarketWeaponPage(b.dir);
-        return;
-      }
-    }
-    for (const r of this._marketCardRects || []) {
-      if (mx >= r.x && mx <= r.x + r.w && my >= r.y && my <= r.y + r.h) {
-        if (this.marketSelectedId !== r.ch.id) {
-          SFX.uiClick();
-          this.marketSelectedId = r.ch.id;
-          this.marketFx = null;
+    // 3) Kartlar: sekmeye göre satın alma yolu.
+    if (PART_SLOTS.includes(this.marketTab)) {
+      for (const r of this._marketPartRects || []) {
+        if (mx >= r.x && mx <= r.x + r.w && my >= r.y && my <= r.y + r.h) {
+          this.purchaseMarketPart(r.part.id);
+          return;
         }
-        return;
       }
+      return;
     }
     for (const r of this._marketWeaponRects || []) {
       if (mx >= r.x && mx <= r.x + r.w && my >= r.y && my <= r.y + r.h) {
-        // Shift ile toplu alım (kartta da yazar: "Shift ×5").
-        this.purchaseMarketAmmo(r.spec.id, shift ? AMMO_BULK_QTY : 1);
+        // Shift → toplu, Ctrl/Alt → büyük toplu (depo 999 olabildiği için).
+        const qty = big ? AMMO_BULK_QTY_BIG : shift ? AMMO_BULK_QTY : 1;
+        this.purchaseMarketAmmo(r.spec.id, qty);
         return;
       }
     }
@@ -1124,6 +2029,8 @@ class Game {
 
   // Oyun bitince aynı kadro + haritayla hızlı rövanş; kadro yoksa menüye düşer.
   replay() {
+    // Öğretici maçı: koç adımları sıfırlansın diye aynı kurulumla yeniden başlar
+    if (this.mode === "tutorial") { this.beginTutorial(); return; }
     if (this.selectedChars.length && this.selectedChars.every(Boolean) && this.selectedMap) {
       this.cancelCharge();
       this.startGame();
@@ -1216,14 +2123,30 @@ class Game {
     window.addEventListener("keydown", (e) => {
       // Kaydırıcının ok tuşları ve butonun Space/Enter girdileri oyuna geçmez.
       if (e.target.closest?.("#audio-control") && !["m", "M", "Escape"].includes(e.key)) return;
+      // Alt panel butonları odaktayken Space/Enter tarayıcının tıklamasına
+      // bırakılır (ateş/güç doldurma tetiklenmesin).
+      if (e.target.closest?.("#battle-actions") && (e.code === "Space" || e.key === "Enter")) return;
       // Esc: bağlama göre geri/iptal — atışı iptal et, seçim ekranında geri git,
       // oyun içindeyse menüye dön.
-      if (e.key === "Escape") { e.preventDefault(); this.goBack(); return; }
+      if (e.key === "Escape") {
+        e.preventDefault();
+        // Açık silah listesi varsa önce onu kapat (menüye dönmeden).
+        if (this.weaponMenuOpen && this.state === "AIMING") { this.weaponMenuOpen = false; this.updateHud(); return; }
+        this.goBack(); return;
+      }
       // Hikâye ekranları: sahne ilerletme ve menü gezinme tamamen klavyeyle.
       if (this.state === "STORY_SCENE" && this.storySceneId && (e.key === "Enter" || e.code === "Space")) { e.preventDefault(); this.advanceStoryScene(); return; }
       if (this.handleStoryMenuKey(e)) return;
       // Atölye: ok tuşları sayfa/dal gezinir, Enter/Space satın alır.
       if (this.state === "WORKSHOP" && this.handleWorkshopKey(e)) return;
+      // Pazar: 1..5 sekmeler (cephane + dört yuva).
+      if (this.state === "MARKET") {
+        const idx = Number(e.key) - 1;
+        if (Number.isInteger(idx) && idx >= 0 && idx < MARKET_TABS.length) {
+          this.switchMarketTab(MARKET_TABS[idx].id);
+          return;
+        }
+      }
       if (this.state === "CHAR_SELECT") {
         if (e.key === "ArrowLeft" || e.key === "a" || e.key === "A") this.changeCharPage(-1);
         if (e.key === "ArrowRight" || e.key === "d" || e.key === "D") this.changeCharPage(1);
@@ -1237,17 +2160,13 @@ class Game {
       if (e.code === "Space") { e.preventDefault(); this.startCharge(); }
       if (e.key === "w" || e.key === "W" || e.key === "ArrowUp") {
         e.preventDefault();
-        if (this.state === "AIMING" && this.isHumanTurn() && this.active.jump()) SFX.jump();
+        if (this.state === "AIMING" && this.isHumanTurn() && this.active.jump()) {
+          SFX.jump();
+          if (this.mode === "tutorial") this._tutComplete(1); // rehber adımı: sıçrama
+        }
       }
       if ((e.key === "q" || e.key === "Q") && this.state === "AIMING" && this.isHumanTurn()) {
-        const kind = this.active.skillKind;
-        if (useSkill(this.active, this)) {
-          SFX.skill(kind);
-          // Hasar veren modül turun atış hakkını doldurur: bu tur artık ateş
-          // edilemez, sıra fizik yatıştıktan sonra biter.
-          if (skillConsumesShot(kind)) this.spendSkillShot(this.active);
-        }
-        this.updateHud();
+        this.usePlayerSkill();
       }
       if ((e.key === "m" || e.key === "M") && !e.repeat) this.toggleMute();
       // Silah seçimi: 1-5 sayı tuşları
@@ -1273,9 +2192,10 @@ class Game {
         return;
       }
       if (this.state === "MARKET") {
-        this.handleMarketClick(this.input.mouseX, this.input.mouseY, e.shiftKey);
+        this.handleMarketClick(this.input.mouseX, this.input.mouseY, e.shiftKey, e.ctrlKey || e.altKey || e.metaKey);
         return;
       }
+      if (this.state === "TUTORIAL") { this.handleTutorialClick(this.input.mouseX, this.input.mouseY); return; }
       if (this.state === "STORY_SCENE") { this.handleStorySceneClick(this.input.mouseX, this.input.mouseY); return; }
       if (this.state === "STORY_MAP") { this.handleStoryMapClick(this.input.mouseX, this.input.mouseY); return; }
       if (this.state === "STORY_ROBOT_SELECT") { this.handleStoryRobotSelectClick(this.input.mouseX, this.input.mouseY); return; }
@@ -1324,9 +2244,8 @@ class Game {
       }
       if (this.state === "MARKET") {
         e.preventDefault();
-        // Tekerlek hangi yarıdaysa o listeyi kaydırır: sol robotlar, sağ cephane.
-        if (this.input.mouseX < 480) this.changeMarketPage(Math.sign(e.deltaY) || 1);
-        else this.changeMarketWeaponPage(Math.sign(e.deltaY) || 1);
+        // Tek liste değil iki sekme: tekerlek AKTİF sekmeyi sayfalar.
+        this.changeMarketPage(Math.sign(e.deltaY) || 1);
         return;
       }
       if (this.state === "CHAR_SELECT") {
@@ -1363,6 +2282,39 @@ class Game {
         wbar.scrollLeft += e.deltaY;
       }, { passive: false });
     }
+
+    // Alt panel (Wild Ones düzeni): SİLAH DEĞİŞTİR açılır listeyi açar/kapatır;
+    // hızlı yuvalar modül kullanır, Işınlanma Topu / Kanca'yı doğrudan seçer.
+    const toggleBtn = document.getElementById("weapon-toggle");
+    if (toggleBtn) {
+      toggleBtn.addEventListener("click", () => {
+        if (this.state !== "AIMING" || !this.isHumanTurn()) return;
+        this.weaponMenuOpen = !this.weaponMenuOpen;
+        toggleBtn.blur(); // Space/Q/1–9 kısayolları odakta takılmasın
+        SFX.uiClick();
+        this.updateHud();
+      });
+    }
+    const actions = document.getElementById("battle-actions");
+    if (actions) {
+      actions.addEventListener("click", (e) => {
+        const slot = e.target.closest && e.target.closest(".act-slot");
+        if (!slot || this.state !== "AIMING" || !this.isHumanTurn()) return;
+        slot.blur(); // klavye kısayolları (Space/Q/1–9) odağı çalmasın
+        const kind = slot.dataset.slot;
+        if (kind === "weapon") {
+          this.weaponMenuOpen = !this.weaponMenuOpen;
+          SFX.uiClick();
+          this.updateHud();
+          return;
+        }
+        if (kind === "skill") { this.usePlayerSkill(); return; }
+        const id = kind === "teleport" ? "teleportball" : kind === "hook" ? "hook" : null;
+        if (!id) return;
+        const idx = WEAPONS.findIndex((w) => w.id === id);
+        if (idx >= 0) this.selectWeapon(idx);
+      });
+    }
   }
 
   // Silah seçimi (yalnız AIMING). Mühimmatı olmayan silah atlanır.
@@ -1372,6 +2324,20 @@ class Game {
     if (!a || i < 0 || i >= WEAPONS.length || !a.hasAmmo(i)) return;
     if (a.weapon !== i) SFX.weaponSwitch();
     a.weapon = i;
+    this.weaponMenuOpen = false; // seçim yapıldı: açılır liste kapanır
+    this.updateHud();
+  }
+
+  // Dahili modülü kullan (Q tuşu ve alt paneldeki modül yuvası aynı yolu kullanır).
+  usePlayerSkill() {
+    if (this.state !== "AIMING" || !this.isHumanTurn()) return;
+    const kind = this.active.skillKind;
+    if (useSkill(this.active, this)) {
+      SFX.skill(kind);
+      // Hasar veren modül turun atış hakkını doldurur: bu tur artık ateş
+      // edilemez, sıra fizik yatıştıktan sonra biter.
+      if (skillConsumesShot(kind)) this.spendSkillShot(this.active);
+    }
     this.updateHud();
   }
 
@@ -1386,11 +2352,15 @@ class Game {
       i = (i + dir + n) % n;
       if (a.hasAmmo(i)) { if (a.weapon !== i) SFX.weaponSwitch(); a.weapon = i; break; }
     }
+    this.weaponMenuOpen = false;
     this.updateHud();
   }
 
   startCharge() {
     if (this.state !== "AIMING" || !this.isHumanTurn()) return;
+    // Açık silah listesi varsa ilk tıklama yalnız listeyi kapatır: oyuncu
+    // listeyi gezerken yanlışlıkla ateş başlamasın.
+    if (this.weaponMenuOpen) { this.weaponMenuOpen = false; this.updateHud(); return; }
     this.input.charging = true;
   }
 
@@ -1450,18 +2420,49 @@ class Game {
     this.clearTurnInput();
     this.bot.cancel();
     for (const b of this.bots) b.cancel();
+    // Yarıda bırakılan maçta da yüklenmiş cephane envantere geri döner.
+    this._settleAmmoDepot();
     this.reset();
     if (storyContext) this.openStoryMap();
+  }
+
+  // Cephane deposunu maç sonucuna göre günceller: yüklenen ek mermiden
+  // harcanan kısım ortak depodan (profile.ammo) düşülür; harcanmayan kısım
+  // zaten depoda olduğu için yeniden eklenmez ve profil kaydedilir. Snapshot
+  // taşıyan oyuncu yoksa (yerel maç, bot, ya da zaten çözülmüş maç) hiçbir
+  // şey yapmaz — bu yüzden birden çok kez çağrılması güvenlidir.
+  _settleAmmoDepot() {
+    if (!this.profile || !this.players) return;
+    const depot = getAmmoDepot(this.profile);
+    let dirty = false;
+    for (const ent of this.players) {
+      const loaded = ent.ammoDepot;
+      if (!loaded) continue;
+      ent.ammoDepot = null;
+      // spent = yüklenen − harcanmayan (iade); ortak depodan yalnız harcanan düşer.
+      const settled = settleDepot(loaded, ent.ammo);
+      for (const id of Object.keys(loaded)) {
+        const spent = toSafeInt(loaded[id]) - toSafeInt(settled[id]);
+        if (spent > 0) { depot[id] = Math.max(0, toSafeInt(depot[id]) - spent); dirty = true; }
+      }
+    }
+    if (dirty) {
+      setAmmoDepot(this.profile, depot);
+      if (!saveProfile(this.profile)) notifyStorageFailure();
+    }
   }
 
   // Bağlama duyarlı "geri/iptal": önce atış iptali, sonra ekranlar arası geri,
   // oyun içindeyse menüye dön. (Esc tuşu buraya bağlı.)
   goBack() {
     if (this.cancelCharge()) return;
+    // Atölye: açık parça listesi varsa önce listeden çıkılır (ekran kapanmaz).
+    if (this.state === "WORKSHOP" && this.workshopSlotOpen) { this.closeWorkshopSlot(); return; }
     if (this.state === "MAP_SELECT") { this.mapBack(); return; }
     if (this.state === "CHAR_SELECT") { this.charBack(); return; }
     if (this.state === "WORKSHOP") { this.closeWorkshop(); return; }
     if (this.state === "MARKET") { this.closeMarket(); return; }
+    if (this.state === "TUTORIAL") { this.state = "MODE_SELECT"; this.updateHud(); return; }
     // Hikâye ekranları hep kupa haritasına döner; haritadan çıkış menüye gider.
     if (this.state === "STORY_SCENE") { this.abortStoryScene(); return; }
     if (this.state === "STORY_ROBOT_SELECT" || this.state === "STORY_BRIEFING" || this.state === "STORY_ARCHIVE") { this.openStoryMap(); return; }
@@ -1503,6 +2504,7 @@ class Game {
     this.shooterIdx = this.turn;
     this.shotIsSkill = false; // normal silah atışı: Çekirdek bonusu geçerli
     this._noteHumanShot(a);
+    if (this.mode === "tutorial") this._tutComplete(3); // rehber adımı: ateş
     const spec = a.weaponSpec;
     a.consumeAmmo(); // mühimmatı düş (bitince Bazuka'ya döner); spec yukarıda alındı
 
@@ -1567,7 +2569,7 @@ class Game {
     if (mp && mp.pendingHumanShot) { mp.humanShotsResolved++; mp.pendingHumanShot = false; }
   }
 
-  // Bir atıcının güncel çıkış çarpanı: taban robot gücü × (normal silahta)
+  // Bir atıcının güncel hasar çarpanı: taban robot gücü × (normal silahta)
   // çekirdek dalı bonusu × zorluk seviyesinin bot hasar ölçeği. Patlama ve
   // doğrudan isabet aynı çarpanı kullanır ki hasar iki yolda tutarlı kalsın.
   // Çekirdek bonusu yalnız normal silahta uygulanır; aparat yetenek mermileri
@@ -1760,6 +2762,9 @@ class Game {
     if (alive.length <= 1) {
       this.state = "GAMEOVER";
       SFX.win();
+      // Maç bitti: kullanılmayan satın alınmış mermi envantere geri yazılır
+      // (ödül yazımından önce; ikisi de aynı profil nesnesini güncelliyor).
+      this._settleAmmoDepot();
       const winner = alive[0];
       // Sonuç yalnız burada belirlenir; ödül de yalnız burada ve bir kez yazılır.
       // showOverlay ödül hesaplamaz, yalnız hazır sonuç modelini gösterir.
@@ -1770,6 +2775,18 @@ class Game {
         // Hikâye akışı: ilerleme yalnız burada yazılır, sonra sonuç sahnesi
         // (varsa) ve overlay gösterilir.
         this.finishStoryMatch(result, reward);
+        return;
+      }
+      if (this.mode === "tutorial") {
+        // Öğretici maç: ödül yok, sonucu rehber diliyle anlat.
+        const won = winner && winner === this.players[humanIdx];
+        showOverlay(
+          won ? "Öğretici tamamlandı! 🎓" : winner ? "Öğretici maçını kaybettin" : "Berabere!",
+          won ? "Artık hazırsın — Ana Menü'den gerçek maçlara çıkabilirsin."
+              : "Endişelenme — 'Tekrar Oyna' ile aynı bölümü yeniden dene.",
+          null
+        );
+        this.updateHud();
         return;
       }
       if (this.mode === "festival") {
@@ -1799,11 +2816,14 @@ class Game {
 
     const windChanged = this.advanceWind();
     this.turnId++;
-    this.turnTimer = TURN_DURATION;
+    // Yeni tur: açık silah listesi kapanır.
+    this.weaponMenuOpen = false;
     this.active.refreshStamina();
+    this.turnTimer = this.mode === "tutorial" ? TUTORIAL_TURN_DURATION : TURN_DURATION;
     this.state = "AIMING";
     SFX.turn();
     if (windChanged) SFX.windChange(windChanged.from, windChanged.to);
+    if (this.mode === "tutorial") this._tutTurnStart();
     this.updateHud();
   }
 
@@ -1857,7 +2877,7 @@ class Game {
     // DOM katmanı burada da senkronlanır (updateHud sahne geçişinde bir kez
     // çağrılır; kaçan bir geçiş silah panelini sahnede bırakmasın).
     if (this.state === "STORY_SCENE") { this.updateStoryScene(dt); this.updateWeaponHud(); return; }
-    if (this.state === "MODE_SELECT" || this.state === "DIFFICULTY_SELECT" || this.state === "BOT_COUNT_SELECT" || this.state === "CHAR_SELECT" || this.state === "COUNT_SELECT" || this.state === "MAP_SELECT" || this.state === "WORKSHOP" || this.state === "MARKET" || this.state === "STORY_MAP" || this.state === "STORY_ROBOT_SELECT" || this.state === "STORY_BRIEFING" || this.state === "STORY_ARCHIVE") {
+    if (this.state === "MODE_SELECT" || this.state === "DIFFICULTY_SELECT" || this.state === "BOT_COUNT_SELECT" || this.state === "CHAR_SELECT" || this.state === "COUNT_SELECT" || this.state === "MAP_SELECT" || this.state === "WORKSHOP" || this.state === "MARKET" || this.state === "TUTORIAL" || this.state === "STORY_MAP" || this.state === "STORY_ROBOT_SELECT" || this.state === "STORY_BRIEFING" || this.state === "STORY_ARCHIVE") {
       if (this.state === "WORKSHOP") this.updateWorkshopFx(dt);
       if (this.state === "MARKET") this.updateMarketFx(dt);
       // Menülerde updateHud yalnız geçiş anında çağrıldığından, yarıda kalan ya
@@ -1867,6 +2887,9 @@ class Game {
       this.updateWeaponHud();
       return;
     }
+
+    // Öğretici rehberi: adım tamamlama + flash geri sayımı yalnız eğitim maçında
+    if (this.mode === "tutorial") this._tutUpdate(dt);
 
     if (this.windChangeFx) {
       this.windChangeFx.age += dt;
@@ -1937,6 +2960,8 @@ class Game {
     }
 
     if (this.state === "PROJECTILE") {
+      // Kanca çekme: mermiler boşaldıktan sonra da ip bağlıyken salvo sürer
+      if (this.tether) this.updateTether();
       // Anlık kopyayı işle; hayatta kalanları + patlamanın eklediği misket
       // parçacıklarını yeni diziye topla (döngü sırasında push güvenli olsun diye).
       const current = this.projectiles;
@@ -1952,8 +2977,10 @@ class Game {
         // Mermi–karakter çarpışması. Yalnız varış noktasına bakmak yerine
         // katedilen doğru parçası sınanır (bkz. Projectile.sweepHit); patlama
         // noktası da yoldaki temas noktasıdır ki doğrudan isabet doğru yere yazılsın.
+        // passPlayers'lı yardımcı mermiler (ışınlanma topu, kanca) robotlardan
+        // geçer: hasarsızdır, robot üzerinde takılıp kalmamalı.
         let hitPlayer = null, hitAt = null;
-        if (!offScreen) {
+        if (!offScreen && !pr.spec.passPlayers) {
           for (const p of this.players) {
             if (!p.alive) continue;
             const hit = Projectile.sweepHit(x0, y0, pr.x, pr.y, p.x, p.y - p.r, p.r + pr.r);
@@ -1973,6 +3000,10 @@ class Game {
 
         if (res) {
           if (res.hit) {
+            // Yardımcı cephaneler patlamaz: top değdiği yere ışınlar,
+            // kanca tutunup atıcıyı kendine çeker.
+            if (pr.spec.teleport) { this.teleportShooter(res.x, res.y); continue; }
+            if (pr.spec.hook) { this.startHookPull(res.x, res.y); continue; }
             if (pr.spec.mine) this.placeMine(res.x, res.y, pr.spec); // mayın: patlama yerine yerleş
             else this.explode(res.x, res.y, pr.spec);
           }
@@ -1981,8 +3012,9 @@ class Game {
         this.projectiles.push(pr); // hayatta kalan
       }
 
-      // Tüm mermiler (ve misket parçacıkları) bitince yerleşmeyi bekle
-      if (this.projectiles.length === 0) {
+      // Tüm mermiler (ve misket parçacıkları) bitince ve kanca ipi çözülünce
+      // yerleşmeyi bekle
+      if (this.projectiles.length === 0 && !this.tether) {
         // İnsanın salvosu tamamen çözümlendi: ödül uygunluk sayacı artar.
         this._resolveHumanShot();
         this.state = "SETTLE";
@@ -2030,7 +3062,7 @@ class Game {
     // genişliğini doldursun. Arazi/oyuncular sabitlenmesin diye genişlik yalnız
     // menülerde (henüz arazi yokken) güncellenir; maç boyunca kilitli kalır.
     const inMatch = this.terrain &&
-      this.state !== "MODE_SELECT" && this.state !== "COUNT_SELECT" && this.state !== "CHAR_SELECT" && this.state !== "MAP_SELECT" && this.state !== "WORKSHOP";
+      this.state !== "MODE_SELECT" && this.state !== "COUNT_SELECT" && this.state !== "CHAR_SELECT" && this.state !== "MAP_SELECT" && this.state !== "WORKSHOP" && this.state !== "MARKET" && this.state !== "TUTORIAL";
     if (!inMatch) {
       const aspect = Math.max(1.2, Math.min(3.0, pxW / pxH));
       this.W = Math.round(this.H * aspect);
@@ -2039,23 +3071,42 @@ class Game {
     this._scaleY = pxH / this.H;
   }
 
-  // Pencere boyutu değişince alt HUD çapaları yeniden hesaplanır (inset tuval
-  // ölçeğine bağlı olduğu için resize'da güncellenmeli).
+  // Pencere boyutu değişince alt panel çapaları yeniden hesaplanır: güç barı ve
+  // açılır silah listesi alt savaş panelinin üstünde durur (panel yüksekliği
+  // CSS'te sabit olsa da tuval ölçeği resize'da değişir).
   syncBottomHud() {
-    const panel = document.getElementById("weapon-panel");
-    if (!panel || panel.classList.contains("hidden")) return;  // gizliyken ölçüm 0 döner
-    const cssH = this.canvas.clientHeight || 0;
-    if (!cssH) return;
-    const panelCss = panel.offsetHeight;
-    if (!panelCss) return;
-    // DOM güç barı + uyarı şeridi panelin üstünde dursun
-    const above = panelCss + 18 + "px";
-    const bar = document.getElementById("power-bar");
-    if (bar) bar.style.bottom = above;
+    const battleBar = document.getElementById("battle-bar");
+    const barCss = battleBar && battleBar.classList && !battleBar.classList.contains("hidden") ? battleBar.offsetHeight : 0;
+    const canvas = this.canvas;
+    const cssH = canvas ? (canvas.clientHeight || 0) : 0;
+    const base = (barCss || 108) + 8;
+    // DOM güç barı + uyarı şeridi panelin hemen üstünde dursun.
+    const power = document.getElementById("power-bar");
+    if (power) power.style.bottom = base + "px";
     const warn = document.getElementById("storage-warning");
-    if (warn) warn.style.bottom = above;
-    // Modül kartı (canvas) için mantıksal inset: CSS px -> dünya px
-    this.hudBottomInset = panelCss * (this.H / cssH) + 14;
+    if (warn) warn.style.bottom = base + "px";
+    // Açılır silah listesi güç barının da üstünde açılır.
+    const panel = document.getElementById("weapon-panel");
+    if (panel) panel.style.bottom = base + 24 + "px";
+    // Modül kartı çizicisi (skills.js) için mantıksal alt inset: CSS px -> dünya px.
+    if (cssH && barCss) this.hudBottomInset = barCss * (this.H / cssH) + 14;
+
+    // Açılır liste açıkken mantıksal sınırlarını ölç (yerleşim/telemetri).
+    if (panel && panel.classList && panel.classList.contains("open") && canvas) {
+      const pr = panel.getBoundingClientRect();
+      const cr = canvas.getBoundingClientRect();
+      if (pr.width && cr.width && cr.height) {
+        const sx = this.W / cr.width;
+        const sy = this.H / cr.height;
+        this.hudPanelRect = {
+          left: (pr.left - cr.left) * sx,
+          top: (pr.top - cr.top) * sy,
+          bottom: (pr.bottom - cr.top) * sy,
+        };
+      }
+    } else {
+      this.hudPanelRect = null;
+    }
   }
 
   render() {
@@ -2100,6 +3151,10 @@ class Game {
       this.renderModeSelect(ctx);
       return;
     }
+    if (this.state === "TUTORIAL") {
+      this.renderTutorial(ctx);
+      return;
+    }
     if (this.state === "DIFFICULTY_SELECT") {
       this.renderDifficultySelect(ctx);
       return;
@@ -2137,13 +3192,18 @@ class Game {
       this.drawLastAngle(ctx);
       this.drawAim(ctx);
       if (this.active.weaponSpec.airdrop) this.drawAirdropTarget(ctx);
-      drawSkillHud(ctx, this.active, this.W, this.H, this.hudBottomInset);
+      // Modül kartı artık canvas'a değil alt paneldeki modül yuvasına çizilir
+      // (skills.js > drawSkillHud tek başına kullanılabilir bir çizici olarak durur).
     }
 
     for (const pr of this.projectiles) pr.draw(ctx);
+    this.drawTether(ctx); // kanca ipi: mermilerin üstünde, patlamaların altında
     for (const ex of this.explosions) ex.draw(ctx);
     this.drawDamagePopups(ctx);
     this.drawWindChangeFx(ctx);
+
+    // Öğretici koç paneli: turun tepesinde, vignette'in altında
+    if (this.mode === "tutorial") this.drawTutorialCoach(ctx);
 
     // Sinematik vignette — tüm sahnenin üstüne, en son
     drawVignette(ctx, this.W, this.H);
@@ -2176,16 +3236,9 @@ class Game {
       ctx.stroke();
     }
 
-    const arrow = direction > 0 ? "→" : "←";
-    const label = `RÜZGÂR DEĞİŞTİ  ${arrow}  ${Math.abs(fx.to).toFixed(1)}`;
-    ctx.globalAlpha = alpha * 0.94;
-    ctx.font = uiTitleFont(18);
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-    const width = ctx.measureText(label).width + 34;
-    _csPanel(ctx, (this.W - width) / 2, 63, width, 38, { accent: "#9fe8ff", rivets: false });
-    ctx.fillStyle = "#e9fbff";
-    ctx.fillText(label, this.W / 2, 82);
+    // Merkez "RÜZGÂR DEĞİŞTİ" yazı paneli kaldırıldı: sağ üstteki rüzgar
+    // göstergesi değişim sırasında "Rüzgar değişti: ← x.x" yazdığı için merkezde
+    // ayrıca metne gerek yok — kayan çizgiler değişimi görsel olarak anlatır.
     ctx.restore();
   }
 
@@ -2288,6 +3341,9 @@ class Game {
         cx: pcx, cy: pcy, r: ch.r, facing: 1, charDef: ch,
         timeMs: this.renderTimeMs || 0,
         motion: { vx: 0, vy: 0, onGround: true },
+        // Karakter seçimi: takılı parçalar rozetle birlikte robotta da görünür
+        // (oyuncu ne aldığını seçim ekranında görsün).
+        parts: getRobotProgress(this.profile, ch.id).loadout,
       });
 
       // ── İsim + servis seviyesi ─────────────────────────────────
@@ -2311,6 +3367,12 @@ class Game {
       ctx.font = uiTextFont(9, 700);
       ctx.fillText(`Sv. ${levelForXp(up.xp)}`, cx + CARD_W - 12, cyv + 4);
 
+      // Takılı parça rozeti: 4 yuva noktası (dolu = takılı). Yerel maçta
+      // parçalar etkisiz olduğu için rozet de soluk gösterilir.
+      ctx.globalAlpha = upgradesOn ? 1 : 0.45;
+      _drawPartDots(ctx, cx + CARD_W - 12, cyv + 16, up.loadout);
+      ctx.globalAlpha = 1;
+
       ctx.globalAlpha = upgradesOn ? 1 : 0.45;
       ctx.textAlign = "center";
       ctx.fillStyle = "#8fd9c4";
@@ -2320,9 +3382,9 @@ class Game {
 
       // ── Stat çubukları ────────────────────────────────────────
       const sx = cx + 12, statW = CARD_W - 24;
-      _drawStatBar(ctx, sx, cyv + STAT_Y,             statW, "Bütünlük", `${ch.hp}`,                    ch.hp / 160,               "#5fdc6b");
-      _drawStatBar(ctx, sx, cyv + STAT_Y + STAT_GAP,  statW, "Kaplama",  `${(ch.armor * 100) | 0}%`,    ch.armor / 0.30,            "#4ad1ff");
-      _drawStatBar(ctx, sx, cyv + STAT_Y + STAT_GAP * 2, statW, "Çıkış", `×${ch.dmgMult.toFixed(1)}`, (ch.dmgMult - 0.7) / 0.5, "#ffaa33");
+      _drawStatBar(ctx, sx, cyv + STAT_Y,             statW, "Can",   `${ch.hp}`,                    ch.hp / 160,               "#5fdc6b");
+      _drawStatBar(ctx, sx, cyv + STAT_Y + STAT_GAP,  statW, "Zırh",  `${(ch.armor * 100) | 0}%`,    ch.armor / 0.30,            "#4ad1ff");
+      _drawStatBar(ctx, sx, cyv + STAT_Y + STAT_GAP * 2, statW, "Hasar", `×${ch.dmgMult.toFixed(1)}`, (ch.dmgMult - 0.7) / 0.5, "#ffaa33");
 
       // ── Ayraç ─────────────────────────────────────────────────
       ctx.strokeStyle = "#ffffff16";
@@ -2647,9 +3709,13 @@ class Game {
     if (!a.lastShot) return;
     const ang = a.lastShot.aim;
 
-    // Başlangıç noktası: SON atışın açısına göre namlu ucu (güncel nişandan bağımsız)
-    const ox = a.x + Math.cos(ang) * (a.r + 12);
-    const oy = (a.y - a.r) + Math.sin(ang) * (a.r + 12);
+    // Başlangıç noktası: SON atışın açısına göre namlu ağzı (güncel nişandan
+    // bağımsız). Güncel nişan çizgisiyle AYNI geometri kullanılır ki iki çizgi
+    // de silahın ağzından çıksın.
+    const origin = typeof robotMuzzlePoint === "function"
+      ? robotMuzzlePoint(a.x, a.y - a.r, a.r, a.facing, ang)
+      : { x: a.x + Math.cos(ang) * (a.r + 12), y: (a.y - a.r) + Math.sin(ang) * (a.r + 12) };
+    const ox = origin.x, oy = origin.y;
     // Güce göre uzunluk: güncel nişan oku ile aynı ölçek
     const len = 28 + a.lastShot.power * 70;
     const ex = ox + Math.cos(ang) * len;
@@ -2712,39 +3778,78 @@ class Game {
     // ortadaki büyük başlığı/butonları kapatıyor. Hikâye ekranları da aynı
     // kurala uyar: sahnenin "Enter/Space ile ilerlet" ipucu artık canvasa
     // çizilir (üst sağ) — DOM banner sahne başlığıyla çakışıyordu.
+    const menuState = this.state === "MODE_SELECT" || this.state === "DIFFICULTY_SELECT" || this.state === "BOT_COUNT_SELECT" || this.state === "COUNT_SELECT" || this.state === "CHAR_SELECT" || this.state === "MAP_SELECT" || this.state === "WORKSHOP" || this.state === "MARKET" || this.state === "TUTORIAL" ||
+      this.state === "STORY_MAP" || this.state === "STORY_SCENE" || this.state === "STORY_ROBOT_SELECT" || this.state === "STORY_BRIEFING" || this.state === "STORY_ARCHIVE";
     const hud = document.getElementById("hud");
-    if (hud) hud.classList.toggle("hidden",
-      this.state === "MODE_SELECT" || this.state === "DIFFICULTY_SELECT" || this.state === "BOT_COUNT_SELECT" || this.state === "COUNT_SELECT" || this.state === "CHAR_SELECT" || this.state === "MAP_SELECT" || this.state === "WORKSHOP" ||
-      this.state === "STORY_MAP" || this.state === "STORY_SCENE" || this.state === "STORY_ROBOT_SELECT" || this.state === "STORY_BRIEFING" || this.state === "STORY_ARCHIVE");
+    if (hud) hud.classList.toggle("hidden", menuState);
+    // Alt savaş paneli de aynı kurala uyar (menülerde oyuncu kartı anlamsız).
+    const battleBar = document.getElementById("battle-bar");
+    if (battleBar) battleBar.classList.toggle("hidden", menuState);
 
     const container = document.getElementById("players");
     if (container) {
-      // Panel sayısını oyuncu sayısına eşitle (2–6; daha az oyuncuyla fazlalıkları sil)
+      // Kart iskeleti BİR KEZ kurulur, sonra yerinde güncellenir: portre canvas'ı
+      // her karede yeniden oluşturulursa robot çizimi 60 FPS'te boşa tekrarlanır.
       while (container.children.length < this.players.length) {
         const div = document.createElement("div");
         div.className = "player-info";
+        div.setAttribute("role", "listitem");
+        div.innerHTML =
+          `<canvas class="p-avatar" width="44" height="44" aria-hidden="true"></canvas>` +
+          `<div class="p-body">` +
+            `<div class="p-top"><span class="p-order"></span><span class="name"></span></div>` +
+            `<div class="hpbar"><div class="hpfill"></div></div>` +
+            `<div class="p-hp"></div>` +
+          `</div>`;
+        div._refs = {
+          avatar: div.querySelector(".p-avatar"),
+          order: div.querySelector(".p-order"),
+          name: div.querySelector(".name"),
+          fill: div.querySelector(".hpfill"),
+          hp: div.querySelector(".p-hp"),
+        };
         container.appendChild(div);
       }
       while (container.children.length > this.players.length) {
         container.removeChild(container.lastChild);
       }
-      // Her oyuncunun panelini güncelle
+      // Her oyuncunun kartını güncelle (sıra rozeti + ad + can barı + portre).
       for (let i = 0; i < this.players.length; i++) {
         const p = this.players[i];
         const el = container.children[i];
         if (!el) continue;
-        const ready = p.skillCooldown === 0;
-        const skillLine = p.charDef
-          ? `<div class="skill-line ${ready ? "ready" : "cd"}">${p.charDef.skill.label}${ready ? " ✓" : ` (${p.skillCooldown}t)`}</div>`
-          : "";
+        const refs = el._refs || {};
         // Aktif geliştirmesi olan insan robotunda adın yanında anahtar simgesi.
         const up = this.profile && p.charDef ? getRobotProgress(this.profile, p.charDef.id) : null;
         const hasUpgrades = isSinglePlayerProgressionMode(this.mode) && p.control !== "bot" && up && totalTiers(up) > 0;
-        el.innerHTML =
-          `<span class="name" style="color:${p.playerTint || p.color}">${i + 1}. ${p.name}${p.control === "bot" ? " 🤖" : ""}${hasUpgrades ? " 🔧" : ""}${p.alive ? "" : " ☠"}</span>` +
-          `<div class="hpbar"><div class="hpfill" style="width:${Math.max(0, Math.min(100, p.hp / p.maxHp * 100))}%;background:${p.hp / p.maxHp > 0.4 ? "#5fdc6b" : "#ff6b6b"}"></div></div>` +
-          skillLine;
-        // Sıradaki oyuncuyu vurgula, eleneni soluklaştır
+        const nameTxt = `${p.name}${p.control === "bot" ? " 🤖" : ""}${hasUpgrades ? " 🔧" : ""}${p.alive ? "" : " ☠"}`;
+        if (refs.name) {
+          if (refs.name.textContent !== nameTxt) refs.name.textContent = nameTxt;
+          refs.name.style.color = p.playerTint || p.color;
+        }
+        if (refs.order && refs.order.textContent !== (i + 1) + ".") refs.order.textContent = (i + 1) + ".";
+        const ratio = p.maxHp > 0 ? Math.max(0, Math.min(1, p.hp / p.maxHp)) : 0;
+        if (refs.fill) {
+          const w = (ratio * 100).toFixed(1) + "%";
+          if (refs.fill.style.width !== w) refs.fill.style.width = w;
+          refs.fill.style.background = ratio > 0.4 ? "#5fdc6b" : "#ff6b6b";
+        }
+        if (refs.hp) {
+          const hpTxt = `${Math.max(0, Math.round(p.hp))}/${Math.round(p.maxHp)}`;
+          if (refs.hp.textContent !== hpTxt) refs.hp.textContent = hpTxt;
+        }
+        // Portre yalnız robot/parça değişince yeniden çizilir (maç boyunca sabit).
+        if (refs.avatar && p.charDef) {
+          if (p._avatarSig == null) {
+            p._avatarSig = p.charDef.id + "|" + Object.keys(p.partLoadout || {}).sort()
+              .map((k) => { const v = p.partLoadout[k]; return k + "=" + (Array.isArray(v) ? v.join("+") : v); }).join(",");
+          }
+          if (el._avatarSig !== p._avatarSig) {
+            el._avatarSig = p._avatarSig;
+            this.paintRobotPreview(refs.avatar, p.charDef, 44, p.partLoadout);
+          }
+        }
+        // Sıradaki oyuncuyu vurgula, eleneni soluklaştır.
         el.classList.toggle("active", i === this.turn && this.state !== "GAMEOVER");
         el.classList.toggle("dead", !p.alive);
       }
@@ -2772,6 +3877,12 @@ class Game {
       } else if (this.state === "WORKSHOP") {
         banner.textContent = "Atölye";
         banner.style.color = "#ffd166";
+      } else if (this.state === "MARKET") {
+        banner.textContent = "Cephane Pazarı";
+        banner.style.color = "#63e6be";
+      } else if (this.state === "TUTORIAL") {
+        banner.textContent = "Nasıl Oynanır — kontroller ve tur kuralları";
+        banner.style.color = "#fff";
       } else if (this.state === "STORY_MAP") {
         banner.textContent = this.profile.story.endingSeen
           ? "Kupa Festivali — yıllık stres testi"
@@ -2793,15 +3904,11 @@ class Game {
         banner.textContent = "Tahsis Tamamlandı";
         banner.style.color = "#fff";
       } else {
+        // Savaşta banner sade: yalnız sıra + süre. Bot durum yazıları ("nişan
+        // alıyor…" vb. ve botların birleşik dizisi) üst bandı yazıyla dolduruyordu;
+        // robotun ne yaptığını animasyon + ses zaten gösterdiği için kaldırıldı.
         const t = Math.ceil(this.turnTimer);
-        let statusText = this.active.control === "bot" && this.bot.status ? this.bot.status : "";
-        // Ek bot durumları
-        for (const b of this.bots) {
-          if (b.status) statusText += ` | ${b.status}`;
-        }
-        banner.textContent = statusText
-          ? `${statusText}  ⏱ ${t}s`
-          : `Sıra: ${this.active.name}  ⏱ ${t}s`;
+        banner.textContent = `Sıra: ${this.active.name}  ⏱ ${t}s`;
         banner.style.color = t <= 5 ? "#ff6b6b" : (this.active.playerTint || this.active.color);
       }
     }
@@ -2823,9 +3930,9 @@ class Game {
     this.updateWeaponHud();
   }
 
-  // Silah çubuğu + seçili silahın açıklama paneli.
-  // Kare başı maliyeti düşük tutmak için yalnızca (sıra|silah|durum|mühimmat)
-  // değişince yeniden kurar.
+  // Açılır silah listesi + seçili silahın açıklama paneli + alt panel yuvaları.
+  // Kare başı maliyeti düşük tutmak için yalnız (sıra|silah|durum|modül|mühimmat)
+  // değişince yeniden kurar; liste kapanıp açılması bu anahtara girmez.
   updateWeaponHud() {
     const panel = document.getElementById("weapon-panel");
     if (!panel) return;
@@ -2835,11 +3942,17 @@ class Game {
     const playing = this.players.length > 0 &&
       (this.state === "AIMING" || this.state === "PROJECTILE" || this.state === "SETTLE");
     panel.classList.toggle("hidden", !playing);
-    if (!playing) { this._weaponKey = null; return; }
+    if (!playing) { this._weaponKey = null; this.weaponMenuOpen = false; return; }
 
     const a = this.active;
     if (!a) return;
-    const key = this.turn + "|" + a.weapon + "|" + this.state + "|" +
+    // Açılır liste yalnız .open ile görünür: `hidden` sınıfı "savaş durumunda
+    // panel mevcut" anlamını korur (menü sızmasını denetleyen test bunu okur).
+    panel.classList.toggle("open", !!this.weaponMenuOpen);
+    const toggleBtn = document.getElementById("weapon-toggle");
+    if (toggleBtn) toggleBtn.classList.toggle("on", !!this.weaponMenuOpen);
+
+    const key = this.turn + "|" + a.weapon + "|" + this.state + "|" + a.skillCooldown + "|" +
                 WEAPONS.map((w) => a.ammo[w.id]).join(",");
     if (key === this._weaponKey) return;
     this._weaponKey = key;
@@ -2875,23 +3988,35 @@ class Game {
     const desc = document.getElementById("weapon-desc");
     if (desc) {
       const spec = a.weaponSpec;
+      const st = weaponStats(spec);
       const ammo = a.ammo[spec.id];
       const ammoTxt = ammo === Infinity ? "∞" : ammo;
+      // Depodan yüklenmiş mermi varsa kaynağı da yazılır; ayrıca maç tavanı
+      // hatırlatılır (depo 999 olsa bile bu sınır aşılamaz).
+      const depotN = a.ammoDepot ? (a.ammoDepot[spec.id] || 0) : 0;
+      const bMax = weaponBattleMax(spec);
+      const capTxt = Number.isFinite(bMax) ? ` • savaş tavanı ${bMax}` : "";
+      const ammoLine = depotN > 0
+        ? `Mühimmat: ${ammoTxt} (taban ${spec.ammo} + depo ${depotN})${capTxt}`
+        : `Mühimmat: ${ammoTxt}${capTxt}`;
       desc.innerHTML =
         `<div class="wd-title"><canvas class="wd-preview" width="48" height="48"></canvas>` +
           `<span class="wd-title-text">${spec.name}</span></div>` +
         `<div class="wd-text">${spec.desc}</div>` +
         `<div class="wd-stats">` +
-          statRow("Hasar", spec.stats.dmg) +
-          statRow("Hız", spec.stats.speed) +
-          statRow("Yarıçap", spec.stats.radius) +
+          statRow("Hasar", st.dmg) +
+          statRow("Hız", st.speed) +
+          statRow("Yarıçap", st.radius) +
         `</div>` +
         `<div class="wd-meta"><span class="wd-special">${spec.special}</span>` +
-        `<span class="wd-ammo">Mühimmat: ${ammoTxt}</span></div>`;
+        `<span class="wd-ammo">${ammoLine}</span></div>`;
       // Seçili silahın mermi önizlemesi (başlığın solunda)
       const previewCv = desc.querySelector("canvas.wd-preview");
       if (previewCv) this.paintProjectilePreview(previewCv, spec, 48);
     }
+
+    // Alt paneldeki hızlı yuvalar (seçili silah / modül / Işınlanma / Kanca).
+    paintBattleSlots(this, a);
   }
 
   /* Mermi önizlemesi — arayüzdeki küçük canvas'a oyun içi mermi çizicisini basar.
@@ -2913,6 +4038,42 @@ class Game {
       src.height = px;
       const sctx = src.getContext("2d");
       if (sctx) { sctx.scale(dpr, dpr); Projectile.drawIcon(sctx, spec, size); }
+      cache.set(key, src);
+    }
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.clearRect(0, 0, px, px);
+    ctx.drawImage(src, 0, 0);
+  }
+
+  /* Robot portresi — alt panel kartındaki küçük canvas'a oyun içi robot
+   * çizicisini basar. Portre (charDef + parça loadout) maç boyunca sabit
+   * olduğu için çağıran taraf yalnız imza değişince çağırır; çizim ayrıca
+   * (charDef|boyut|dpr|loadout) anahtarına göre `_robotPreviewCache` ile
+   * bir kez üretilip kopyalanır. */
+  paintRobotPreview(canvas, charDef, size, parts) {
+    if (!canvas || !charDef || !canvas.getContext) return;
+    const dpr = Math.min(2, Math.max(1, (typeof window !== "undefined" && window.devicePixelRatio) || 1));
+    const px = Math.round(size * dpr);
+    if (canvas.width !== px) { canvas.width = px; canvas.height = px; }
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    const partSig = parts ? Object.keys(parts).sort()
+      .map((k) => k + "=" + (Array.isArray(parts[k]) ? parts[k].join("+") : parts[k])).join(",") : "";
+    const key = charDef.id + "|" + size + "|" + dpr + "|" + partSig;
+    const cache = this._robotPreviewCache || (this._robotPreviewCache = new Map());
+    let src = cache.get(key);
+    if (!src) {
+      src = document.createElement("canvas");
+      src.width = px;
+      src.height = px;
+      const sctx = src.getContext("2d");
+      if (sctx && typeof drawRobot === "function") {
+        sctx.scale(dpr, dpr);
+        drawRobot(sctx, {
+          cx: size / 2, cy: size * 0.55, r: size * 0.37, facing: 1,
+          charDef, timeMs: 0, motion: { vx: 0, vy: 0, onGround: true }, parts,
+        });
+      }
       cache.set(key, src);
     }
     ctx.setTransform(1, 0, 0, 1, 0, 0);
@@ -2968,6 +4129,107 @@ class Game {
       }
     }
     this.mines = survivors;
+  }
+
+  // ── Yardımcı cephaneler: Işınlanma Topu + Kanca ───────────────────────
+
+  // Işınlanma Topu: merminin değdiği noktanın ÜSTÜNDEKİ açık alana atıcıyı
+  // taşır. Temas noktasından yukarı doğru ilk açık piksel taranır; duvar
+  // kenarına değen top bile robotu sütunun tepesine oturtur, içine gömmez.
+  // Hasarsızdır: patlama/krater oluşmaz, tur normal akışta SETTLE ile biter.
+  teleportShooter(x, y) {
+    const t = this.terrain;
+    const shooter = this.shooterIdx !== null ? this.players[this.shooterIdx] : null;
+    if (!shooter || !shooter.alive || !t) return;
+    // Temas noktasından yukarı doğru ilk açık pikseli bul (katı sütunun tepesi)
+    let ty = Math.max(2, Math.min(t.h - 2, y | 0));
+    let guard = t.h;
+    while (guard-- > 0 && t.isSolid(x, ty)) ty--;
+    if (ty <= 2) return; // ekranın tepesine taştı: ışınlanma iptal (mühimmat yanar)
+    // Varış efektleri: eski ve yeni konumda mor parıltı + "zap" sesi
+    this.explosions.push(new Explosion(shooter.x, shooter.y - shooter.r, 20, { r: 150, g: 90, b: 255 }));
+    shooter.x = Math.max(shooter.r, Math.min(t.w - shooter.r, x));
+    shooter.y = ty;
+    shooter.vx = 0;
+    shooter.vy = 0;
+    shooter.onGround = false; // yerleşmeyi fizik halleder (SETTLE bekler)
+    this.explosions.push(new Explosion(shooter.x, shooter.y - shooter.r, 20, { r: 150, g: 80, b: 255 }));
+    SFX.teleport();
+  }
+
+  // Kanca: tutunduğu noktadan atıcıyı kendine doğru çeker. Mermi ölür; çekme
+  // işlemi `this.tether` durumuna geçer ve tur, ip çözülünce (PROJECTILE ->
+  // SETTLE geçidi) kapanır.
+  startHookPull(ax, ay) {
+    const shooter = this.shooterIdx !== null ? this.players[this.shooterIdx] : null;
+    if (!shooter || !shooter.alive) return;
+    // Zaten yeterince yakınsa çekmeye gerek yok (boşa tur harcamaz, tur biter)
+    if (Math.hypot(ax - shooter.x, ay - (shooter.y - shooter.r)) < shooter.r + 8) return;
+    this.tether = { owner: shooter, ax, ay, speed: 7.5, life: 240, blocked: 0 };
+    // Tutunma anı: küçük beyaz çakma + metalik ses
+    this.explosions.push(new Explosion(ax, ay, 10, { r: 220, g: 220, b: 240 }));
+    SFX.hook();
+  }
+
+  // Her kare: gövdeyi ip boyunca ankraja sürükle. Gövde merkezi katı maddeye
+  // girmeden önce durur (duvara çekilirken kenarda takılır); ilerleme kilitlenince
+  // ya da ankraja varınca ip bırakılır ve fizik yerleşimi (SETTLE) devralır.
+  updateTether() {
+    const t = this.tether;
+    const p = t.owner;
+    t.life--;
+    if (!p.alive || t.life <= 0) { this.tether = null; return; }
+    const cx = p.x, cy = p.y - p.r; // gövde merkezi (ayak değil)
+    const dx = t.ax - cx, dy = t.ay - cy;
+    const dist = Math.hypot(dx, dy);
+    // Varış: gövde merkezi ankraja yeterince yaklaştıysa bırak
+    if (dist <= p.r + 6) {
+      this.tether = null;
+      p.vx = 0; p.vy = 0;
+      return;
+    }
+    const step = Math.min(t.speed, dist);
+    const ux = dx / dist, uy = dy / dist;
+    // Alt adımlarla ilerle; gövdenin ÖNDEKI kenarı (merkez + r) katı maddeye
+    // girecekse dur — gövde duvarın içinde kalmaz, kenarda takılıp kalır.
+    const fromX = p.x, fromY = p.y;
+    const sub = Math.max(1, Math.ceil(step / 2));
+    for (let i = 0; i < sub; i++) {
+      const sx = ux * (step / sub), sy = uy * (step / sub);
+      if (this.terrain.isSolid(p.x + sx + ux * p.r, p.y - p.r + sy + uy * p.r)) break;
+      p.x += sx;
+      p.y += sy;
+    }
+    p.x = Math.max(p.r, Math.min(this.terrain.w - p.r, p.x));
+    // İlerleme kilitlendiyse (ip gergin ama gövde takılı) kısa sürede bırak
+    const moved = Math.hypot(p.x - fromX, p.y - fromY);
+    if (moved < step * 0.4) t.blocked++;
+    else t.blocked = 0;
+    if (t.blocked > 8) { this.tether = null; p.vx = 0; p.vy = 0; return; }
+    // Çekim sırasında yerçekimi birikmesin: hız tamamen ip tarafından belirlenir
+    p.vx = 0;
+    p.vy = 0;
+    p.onGround = false;
+  }
+
+  // Kanca ipi: atıcıdan ankraja gergin ip + ucundaki kanca başı (yalnız görsel).
+  drawTether(ctx) {
+    const t = this.tether;
+    if (!t || !t.owner.alive) return;
+    const p = t.owner;
+    const cx = p.x, cy = p.y - p.r;
+    ctx.strokeStyle = "#cfcfd6";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.lineTo(t.ax, t.ay);
+    ctx.stroke();
+    // Ankrajda tutunan kanca başı (mermi kendisi öldüğü için burada çizilir)
+    projRing(ctx, t.ax, t.ay, 4, "#f0f0f5", 2);
+    ctx.beginPath();
+    ctx.arc(t.ax, t.ay, 3, 0, Math.PI * 2);
+    ctx.fillStyle = "#ffffff";
+    ctx.fill();
   }
 
   // Napalm: patlama noktasının çevresine yanan yamalar serp (zemine oturur)
@@ -3660,6 +4922,10 @@ class Game {
     ctx.fillText(name, tx, sheet.y + 12);
 
     const shown = line.text.slice(0, Math.floor(this.storySceneChars));
+    // Diyalog gövde metni: uiTextFont varsayılanı SemiBold (600). 400 iken bu
+    // satır panelin 700 etiketleriyle aynı aile gibi okunmuyor, sahne ekranı
+    // "başka bir yazı tipi" kullanıyormuş gibi görünüyordu (kullanıcı
+    // bildirimi); artık gövde metni oyunun her yerinde aynı kademede.
     ctx.fillStyle = "#eef5ff"; ctx.font = uiTextFont(15);
     const rows = _wrapCanvasText(ctx, shown, tw);
     rows.slice(0, STORY_SCENE_MAX_ROWS).forEach((r, i) => ctx.fillText(r, tx, sheet.y + 36 + i * 20, tw));
@@ -3697,7 +4963,9 @@ class Game {
     ctx.fillText(ctxLine, W / 2, 14);
     ctx.fillStyle = "#9fb6c9"; ctx.font = uiTextFont(11);
     ctx.textAlign = "right";
-    ctx.fillText("İlerlet: Enter / Space / tık", W - 24, 13);
+    // Üst-sağ köşe DOM ses denetimine ayrılmıştır; ipucu onun ALTINA çizilir
+    // (eskiden y=13'te ses denetiminin altında kalıyordu).
+    ctx.fillText("İlerlet: Enter / Space / tık", W - 24, STORY_HINT_Y);
     // Sahneden çıkış (Esc ile aynı rota). Sahne tıklaması metni ilerlettiği
     // için geri butonu ilerletmeden önce kontrol edilir.
     this.drawBackButton(ctx, "‹ Kupa Haritası");
@@ -3743,7 +5011,7 @@ class Game {
         fillTop: selected ? "#1b2b1f" : null, fillBottom: selected ? "#122015" : null,
       });
 
-      drawRobot(ctx, { cx: cx + cardW / 2, cy: cyv + 28, r: 15, facing: 1, charDef: ch, timeMs: this.renderTimeMs || 0, motion: { vx: 0, vy: 0, onGround: true } });
+      drawRobot(ctx, { cx: cx + cardW / 2, cy: cyv + 28, r: 15, facing: 1, charDef: ch, timeMs: this.renderTimeMs || 0, motion: { vx: 0, vy: 0, onGround: true }, parts: getRobotProgress(this.profile, ch.id).loadout });
       ctx.fillStyle = ch.color; ctx.font = uiTextFont(11, 700); ctx.textAlign = "center"; ctx.textBaseline = "top";
       ctx.fillText(ch.label, cx + cardW / 2, cyv + 52, cardW - 8);
       if (!allowed) {
@@ -3998,6 +5266,66 @@ function updatePowerBar(power, show, markerPct) {
   }
 }
 
+// ── Alt panel hızlı yuvaları (Wild Ones düzeni) ──────────────────────────
+// Seçili silah / dahili modül / Işınlanma Topu / Kanca. Mesajlaşma ve sipariş
+// (order snack) yuvaları bilinçli olarak yoktur. Serbest fonksiyon: `update()`
+// menülerde `updateWeaponHud`'u sahte bir nesne üzerinden de çağırabildiği için
+// (testler) metod çağrısına bağlı kalmadan yalnız DOM'u düzenler.
+function paintBattleSlots(game, a) {
+  if (!a || !a.charDef || !a.weaponSpec) return;
+  paintWeaponSlot(game, "weapon", a, a.weaponSpec, true);
+  paintSkillSlot(a, a.resolvedSkill || a.charDef.skill);
+  // Yardımcı cihaz adları kısa tutulur: yuva darlığında ellipsis'e düşmesin.
+  paintWeaponSlot(game, "teleport", a, WEAPONS.find((w) => w.id === "teleportball"), false, "Işınlanma");
+  paintWeaponSlot(game, "hook", a, WEAPONS.find((w) => w.id === "hook"), false, "Kanca");
+}
+
+// Silah/yardımcı yuvası: ikon (mermi çizicisi) + mühimmat sayacı + ad.
+function paintWeaponSlot(game, slotName, a, spec, isSelected, label) {
+  const el = document.getElementById("slot-" + slotName);
+  if (!el || !spec) return;
+  const cv = el.querySelector(".slot-icon");
+  if (cv && game) game.paintProjectilePreview(cv, spec, 44);
+  const left = a.ammo[spec.id];
+  const empty = left !== Infinity && !(left > 0);
+  setSlotText(el, ".slot-count", left === Infinity ? "∞" : String(left));
+  setSlotText(el, ".slot-name", label || spec.name);
+  el.classList.toggle("active", !!isSelected || a.weaponSpec === spec);
+  el.classList.toggle("locked", empty);
+}
+
+// Modül yuvası: cast efektinin ikonu + hazır/geri sayım.
+function paintSkillSlot(a, def) {
+  const el = document.getElementById("slot-skill");
+  if (!el || !def) return;
+  const cv = el.querySelector(".slot-icon");
+  if (cv && cv.getContext) {
+    const dpr = Math.min(2, Math.max(1, (typeof window !== "undefined" && window.devicePixelRatio) || 1));
+    const px = Math.round(44 * dpr);
+    if (cv.width !== px) { cv.width = px; cv.height = px; }
+    const ctx = cv.getContext("2d");
+    if (ctx) {
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.clearRect(0, 0, px, px);
+      ctx.save();
+      ctx.scale(dpr, dpr);
+      if (typeof drawSkillFxIcon === "function") drawSkillFxIcon(ctx, def, 44);
+      ctx.restore();
+    }
+  }
+  const ready = a.skillCooldown <= 0;
+  setSlotText(el, ".slot-count", ready ? "Q" : String(a.skillCooldown));
+  setSlotText(el, ".slot-name", def.label);
+  el.classList.toggle("ready", ready);
+  el.classList.toggle("cooling", !ready);
+  el.classList.toggle("active", false);
+}
+
+function setSlotText(el, sel, text) {
+  const node = el.querySelector(sel);
+  if (node && node.textContent !== text) node.textContent = text;
+}
+
 // ── UI yazı yardımcıları (ui-theme-plan.md §2.3) ────────────────────────
 // Tüm canvas yazıları fontu bu iki yardımcıdan alır; aile değişecekse tek yer
 // güncellenir. Başlık/buton = Russo One (tek kalınlıklı olduğundan "bold"
@@ -4009,7 +5337,11 @@ function uiTitleFont(px) {
   return `${px}px "Russo One", "Segoe UI", sans-serif`;
 }
 function uiTextFont(px, weight) {
-  return `${weight ? weight + " " : ""}${px}px "Chakra Petch", "Segoe UI", sans-serif`;
+  // Gövde varsayılanı SemiBold (600): Chakra Petch'in ince/geniş 400 kesimi
+  // 700 etiketlerin yanında "başka bir aile" gibi okunuyordu (kullanıcı
+  // bildirimi, 2026-09-25). Açıkça 700 verilen etiket/buton/vurgu yazıları
+  // kalır; gövde/açıklama/diyalog 600 olur.
+  return `${weight || 600} ${px}px "Chakra Petch", "Segoe UI", sans-serif`;
 }
 
 // Kart metni sığdırıcı: metni önce punto küçülterek, sonra satırlara bölerek
@@ -4147,6 +5479,147 @@ function _csPanel(ctx, x, y, w, h, opts) {
   }
 }
 
+// ── Ana menü (MODE_SELECT) görünüm yardımcıları ──────────────────────────
+// Menü yenilemesinde (kullanıcı isteği, 2026-02) eklenen üç parça:
+// _hexA saydamlık dönüşürü, _msBackdrop sahne arka planı, _msIcon kart ikonları.
+
+// "#rrggbb" → "rgba(r,g,b,a)": kenarlık/parıltı/dolgu saydamlıkları için
+function _hexA(hex, a) {
+  const h = String(hex || "").replace("#", "");
+  const full = h.length === 3 ? h.split("").map((c) => c + c).join("") : h;
+  const n = parseInt(full, 16) || 0;
+  return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${a})`;
+}
+
+// Ana menü arka planı: çelik gradyan + başlık arkası sıcak parıltı + seyrek
+// teknik nokta ızgarası + köşe vinyeti + endüstriyel köşe dirsekleri.
+// Düz siyah perdeyi değiştirir; bulutlar (drawClouds) altında kalır.
+function _msBackdrop(ctx, W, H) {
+  const grad = ctx.createLinearGradient(0, 0, 0, H);
+  grad.addColorStop(0, "#101c2ae8");
+  grad.addColorStop(0.55, "#0a111af0");
+  grad.addColorStop(1, "#060a10f7");
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, W, H);
+  // Başlık arkası sıcak parıltı: dökümhane kor ışıması (çok soluk tutulur)
+  const glow = ctx.createRadialGradient(W / 2, H / 2 - 150, 16, W / 2, H / 2 - 150, 330);
+  glow.addColorStop(0, "rgba(255,228,94,0.10)");
+  glow.addColorStop(1, "rgba(255,228,94,0)");
+  ctx.fillStyle = glow;
+  ctx.fillRect(0, 0, W, H);
+  // Teknik nokta ızgarası: mühendislik planı dokusu (soluk, kare başına 1 nokta)
+  ctx.fillStyle = "rgba(140,180,220,0.05)";
+  for (let gx = 24; gx < W; gx += 48) {
+    for (let gy = 24; gy < H; gy += 48) ctx.fillRect(gx, gy, 2, 2);
+  }
+  // Köşe vinyeti: kenarlar kararmış salon hissi — merkezi öne çıkarır
+  const vig = ctx.createRadialGradient(W / 2, H / 2, H * 0.42, W / 2, H / 2, H * 0.98);
+  vig.addColorStop(0, "rgba(0,0,0,0)");
+  vig.addColorStop(1, "rgba(0,0,0,0.52)");
+  ctx.fillStyle = vig;
+  ctx.fillRect(0, 0, W, H);
+  // Endüstriyel köşe dirsekleri: sahne çerçevesi imzası. Sağ üst köşeyi
+  // atlarız — ses denetimi widget'ı (DOM, z-index 7) o köşeyi kapatır.
+  ctx.strokeStyle = "rgba(255,228,94,0.22)";
+  ctx.lineWidth = 2;
+  const m = 14, L = 22;
+  ctx.beginPath();
+  ctx.moveTo(m, m + L); ctx.lineTo(m, m); ctx.lineTo(m + L, m);
+  ctx.moveTo(W - m, H - m - L); ctx.lineTo(W - m, H - m); ctx.lineTo(W - m - L, H - m);
+  ctx.moveTo(m + L, H - m); ctx.lineTo(m, H - m); ctx.lineTo(m, H - m - L);
+  ctx.stroke();
+}
+
+// Kart üstü ikon plakası: kesik köşeli mini bölme + vektör glif. Her mod kendi
+// imza ikonunu taşır; lit=true (hover) plakayı ve glifi parıltıyla yakar.
+// Glifler kartın kendi accent renginde çizilir — ikonsuz kart kalmaz.
+function _msIcon(ctx, kind, cx, cy, accent, lit) {
+  const col = lit ? accent : _hexA(accent, 0.85);
+  ctx.save();
+  // Plaka: kart gövdesinden hafif ayrılan kesik köşeli mini bölme
+  _panelPath(ctx, cx - 19, cy - 19, 38, 38, 5);
+  ctx.fillStyle = _hexA(accent, lit ? 0.22 : 0.09);
+  ctx.fill();
+  ctx.lineWidth = 1.2;
+  ctx.strokeStyle = _hexA(accent, lit ? 0.9 : 0.4);
+  ctx.stroke();
+  // Glif: hover'da yumuşak renk parıltısı eşlik eder
+  if (lit) { ctx.shadowColor = accent; ctx.shadowBlur = 9; }
+  ctx.strokeStyle = col;
+  ctx.fillStyle = col;
+  ctx.lineWidth = 2;
+  ctx.lineCap = "round";
+  ctx.lineJoin = "round";
+  if (kind === "kupa") {
+    // Hikâye modu: kupa — kase + kulplar + sap + kaide
+    ctx.beginPath();
+    ctx.moveTo(cx - 8, cy - 9);
+    ctx.lineTo(cx + 8, cy - 9);
+    ctx.quadraticCurveTo(cx + 8, cy - 1, cx + 3, cy);
+    ctx.lineTo(cx - 3, cy);
+    ctx.quadraticCurveTo(cx - 8, cy - 1, cx - 8, cy - 9);
+    ctx.stroke();
+    ctx.beginPath(); ctx.arc(cx - 8, cy - 5, 3.5, Math.PI / 2, Math.PI * 1.5); ctx.stroke();
+    ctx.beginPath(); ctx.arc(cx + 8, cy - 5, 3.5, -Math.PI / 2, Math.PI / 2); ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(cx, cy); ctx.lineTo(cx, cy + 6);
+    ctx.moveTo(cx - 5, cy + 8); ctx.lineTo(cx + 5, cy + 8);
+    ctx.stroke();
+  } else if (kind === "robot") {
+    // Otomatik birimler: fabrika robotu kafası — kafa + anten + gözler + ağız
+    _panelPath(ctx, cx - 10, cy - 7, 20, 16, 3); ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(cx, cy - 7); ctx.lineTo(cx, cy - 11);
+    ctx.stroke();
+    ctx.beginPath(); ctx.arc(cx, cy - 12.5, 1.6, 0, 6.28); ctx.fill();
+    ctx.beginPath(); ctx.arc(cx - 4.2, cy - 1, 1.8, 0, 6.28); ctx.fill();
+    ctx.beginPath(); ctx.arc(cx + 4.2, cy - 1, 1.8, 0, 6.28); ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(cx - 4.5, cy + 4); ctx.lineTo(cx + 4.5, cy + 4);
+    ctx.stroke();
+  } else if (kind === "ikili") {
+    // Yerel operatörler: iki person — baş + omuz yayı, sağdaki öne offsetli
+    ctx.beginPath(); ctx.arc(cx - 5.5, cy - 5, 3.4, 0, 6.28); ctx.stroke();
+    ctx.beginPath(); ctx.arc(cx - 5.5, cy + 7, 6.2, Math.PI, Math.PI * 2); ctx.stroke();
+    ctx.beginPath(); ctx.arc(cx + 5.5, cy - 3.5, 3.4, 0, 6.28); ctx.stroke();
+    ctx.beginPath(); ctx.arc(cx + 5.5, cy + 8.5, 6.2, Math.PI, Math.PI * 2); ctx.stroke();
+  } else if (kind === "dişli") {
+    // Atölye: dişli çark — 8 diş + gövde + merkez delik (kalibrasyon imgesi)
+    for (let i = 0; i < 8; i++) {
+      const a = i * Math.PI / 4 + Math.PI / 8;
+      ctx.beginPath();
+      ctx.moveTo(cx + Math.cos(a) * 7.2, cy + Math.sin(a) * 7.2);
+      ctx.lineTo(cx + Math.cos(a) * 11.4, cy + Math.sin(a) * 11.4);
+      ctx.stroke();
+    }
+    ctx.beginPath(); ctx.arc(cx, cy, 7.2, 0, 6.28); ctx.stroke();
+    ctx.beginPath(); ctx.arc(cx, cy, 2.6, 0, 6.28); ctx.stroke();
+  } else if (kind === "mermi") {
+    // Cephane pazarı: üç mermi fişeği — orta sıra daha uzun (depo imgesi)
+    const shell = (sx, h) => {
+      ctx.beginPath();
+      ctx.moveTo(sx - 2.6, cy + 9);
+      ctx.lineTo(sx - 2.6, cy + 9 - h);
+      ctx.quadraticCurveTo(sx - 2.6, cy + 3.5 - h, sx, cy + 2.5 - h);
+      ctx.quadraticCurveTo(sx + 2.6, cy + 3.5 - h, sx + 2.6, cy + 9 - h);
+      ctx.lineTo(sx + 2.6, cy + 9);
+      ctx.closePath();
+      ctx.stroke();
+    };
+    shell(cx - 7.5, 11);
+    shell(cx, 14);
+    shell(cx + 7.5, 11);
+  } else {
+    // Nasıl Oynanır: halka içinde soru işareti (bilgi bölmesi glifi)
+    ctx.beginPath(); ctx.arc(cx, cy, 10.5, 0, 6.28); ctx.stroke();
+    ctx.font = '700 14px "Chakra Petch", "Segoe UI", sans-serif';
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText("?", cx, cy + 0.5);
+  }
+  ctx.restore();
+}
+
 function _drawStatBar(ctx, x, y, w, label, value, frac, color) {
   // Etiket solda, değer sağda — her ikisi de textBaseline:"top"
   // (Faz 5 cilası: 9px → 10px, bar y+11'de 1px boşluk kalır)
@@ -4166,6 +5639,31 @@ function _drawStatBar(ctx, x, y, w, label, value, frac, color) {
   ctx.fillStyle = color;
   ctx.fillRect(x, barY, Math.min(w, Math.max(0, w * frac)), 5);
   // Toplam yükseklik: 11 (etiket) + 5 (bar) = 16px; STAT_GAP=18 → 2px ara
+}
+
+// Takılı parçaları 4 nokta olarak çizer (yuva sırası: kask → gövde → aparat →
+// ayak; sağX en sağdaki noktanın merkezidir). Dolu = o yuvada parça var; İÇİ
+// koyu göbek = o yuvada İKİ parça var (v6 çift donanım işareti). Bilinmeyen
+// parça id'si yok sayılır (sanitizeLoadoutShape).
+function _drawPartDots(ctx, rightX, y, loadout) {
+  const lo = sanitizeLoadoutShape(loadout);
+  const gap = 8, r = 2.7;
+  for (let i = 0; i < PART_SLOTS.length; i++) {
+    const list = lo[PART_SLOTS[i]];
+    const count = list.filter(Boolean).length;
+    const x = rightX - (PART_SLOTS.length - 1 - i) * gap;
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.fillStyle = count ? "#63e6be" : "#2b3844";
+    ctx.fill();
+    if (!count) { ctx.strokeStyle = "#4a5866"; ctx.lineWidth = 1; ctx.stroke(); }
+    if (count > 1) {
+      ctx.beginPath();
+      ctx.arc(x, y, r * 0.42, 0, Math.PI * 2);
+      ctx.fillStyle = "#12181d";
+      ctx.fill();
+    }
+  }
 }
 
 // Silah açıklama paneli için 5'lik puan satırı (0-5).

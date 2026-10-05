@@ -89,7 +89,7 @@ test("tüm efektler geçerli parametrelerle planlanır ve kaynaklar tamamlanınc
   const t = setup();
   for (const w of t.WEAPONS) { t.SFX.shoot(w); t.SFX.explosion(w.radius); }
   for (const k of ["heal", "shield", "damageReduce", "nextShot", "jump", "glide", "dash", "dig", "melee", "radial", "quake", "spit"]) t.SFX.skill(k);
-  for (const f of ["jump", "hit", "eliminate", "weaponSwitch", "uiClick", "turn", "win"]) t.SFX[f]();
+  for (const f of ["jump", "hit", "eliminate", "weaponSwitch", "partMount", "uiClick", "turn", "win"]) t.SFX[f]();
   t.SFX.windChange(-2, 3.5);
   t.SFX.windChange(3, -1.5);
   assert.equal(t.contexts.length, 1);
