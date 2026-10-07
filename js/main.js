@@ -31,11 +31,6 @@ window.addEventListener("DOMContentLoaded", () => {
     game.openWorkshop();
   });
 
-  // Hikâye zaferinden "Sonraki Etap": kayıtlı sıradaki görevin sahnesine gir.
-  document.getElementById("story-next-btn").addEventListener("click", () => {
-    game.storyNextMission();
-  });
-
   const app = document.getElementById("app");
   function toggleFullscreen() {
     if (!document.fullscreenElement) {

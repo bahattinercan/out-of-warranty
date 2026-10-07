@@ -221,7 +221,7 @@ Yardımcı silahlar (`damage === 0`) üç eksende de `0` gösterir ("hasarsız" 
   tavanlı; "bot taban mühimmatla oynar" korunur.
 - Yeni: `weaponRating` ↔ elle `stats` tutarlılık testi; her spec'te `battleMax ≥ baseAmmo`
   (Bazuka hariç) ve `battleMax` sonlu testi.
-- Zorunlu koşum: `node tests/run.js`, `node tests/market.js` (+ dokunulursa `progression.js`, `story.js`).
+- Zorunlu koşum: `node tests/run.js`, `node tests/market.js` (+ dokunulursa `progression.js`).
 
 ---
 
@@ -345,7 +345,7 @@ Formül: `fiyat = clamp(round(0.8 × P + 20), 30, 130)` (P = `weaponPowerScore`)
 ### 6.5 Doğrulama
 
 - `node tests/run.js` **1172/1172** · `node tests/market.js` **373/373** · `progression.js`
-  **165/165** · `story.js` **597/597** · `audio.js` **21/21**.
+  **165/165** · `audio.js` **21/21**.
 - `node --check js/*.js` temiz.
 - Pazar ekranı headless Chrome + `_market_probe.html` ile görsel doğrulandı: kart satırı
   `Taban 3 • Savaş ≤5 • Depo 3/999` sığıyor, fiyat ve `Shift ×10` yerleşimi bozulmuyor.

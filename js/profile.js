@@ -59,10 +59,6 @@ function defaultProfile() {
     parts: [],
     robots: {},
     claimedMatches: [],
-    // Hikâye durumu ayrı alanda tutulur (profil v2). defaultStoryProgress
-    // js/story.js'te tanımlıdır; buradan çalışma zamanında çağrıldığı için
-    // klasik script yükleme sırası bunu güvenli kılar.
-    story: defaultStoryProgress(),
     updatedAt: 0,
   };
 }
@@ -120,9 +116,8 @@ function migrateProfile(raw) {
     version = 1;
   }
   if (version < 2) {
-    // v1 → v2: yalnız şema sürümü yükseltilir. Hikâye alanı burada üretilmez;
-    // normalizeProfile içindeki normalizeStoryProgress() hem eksik alanları
-    // tamamlar hem bozuk veriyi sıfırlar — ekonomiye dokunulmaz.
+    // v1 → v2: yalnız şema sürümü yükseltilir. Eksik alanlar
+    // normalizeProfile içinde tamamlanır — ekonomiye dokunulmaz.
     data.version = 2;
     version = 2;
   }
@@ -142,7 +137,7 @@ function migrateProfile(raw) {
   }
   if (version < 5) {
     // v4 → v5: parça envanteri (parts) ve robot loadout'ları eklenir. Mevcut
-    // veri (scrap/ammo/robots/story) HİÇ taşınmaz ve değişmez; boş alanlar
+    // veri (scrap/ammo/robots) HİÇ taşınmaz ve değişmez; boş alanlar
     // normalizeProfile'da üretilir (ekonomiye dokunmayan göç).
     data.version = 5;
     version = 5;
@@ -190,9 +185,6 @@ function normalizeProfile(raw) {
     parts,
     robots,
     claimedMatches: claimed,
-    // Hikâye durumu ayrı alanda tutulur: bozuk/eksik story ekonomiyi ASLA
-    // sıfırlamaz, yalnız hikâyeyi ilk göreve döndürür (kilit §10).
-    story: normalizeStoryProgress(migrated.story),
     updatedAt: toSafeInt(migrated.updatedAt),
   };
 }

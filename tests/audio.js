@@ -257,28 +257,6 @@ for (const kind of ["yetenek", "zehir", "ateş"]) {
   });
 }
 
-test("sahne bipli: konuşmacı bazlı çalar, atlanınca iptal edilir", () => {
-  const t = setup(); // AudioContext taklidi aktif
-  t.SFX.sceneBip("kopek");
-  const first = t.sources.at(-1);
-  t.SFX.sceneBip("system");
-  const second = t.sources.at(-1);
-  assert.ok(first && second && first !== second, "her cümlede yeni bip düğümü");
-  // Bip kısa ve ileri tarihlidir; skip'ten önce yalnız programlı tek stop var.
-  assert.equal(first.stops.length, 1, "bipin planlı bitiş saati var");
-  t.SFX.stopSceneBips();
-  assert.ok(first.stops.length > 1 && second.stops.length > 1,
-    "atlanınca bekleyen bipler erken durdurulur");
-  t.SFX.stopSceneBips(); // ikinci çağrı hata atmamalı (zaten bitmiş olabilir)
-});
-
-test("sessizde sahne bipli çalmaz", () => {
-  const t = setup({ noWindow: true });
-  t.SFX.setVolume(0);
-  t.SFX.sceneBip("kedi");
-  assert.equal(t.sources.length, 0, "ses kapalıyken bip düğümü üretilmez");
-});
-
 test("müzik: durum eşlemesi tema değiştirir ve eskisini durdurur", () => {
   const t = setup();
   t.SFX.musicSync("MODE_SELECT");
@@ -299,16 +277,16 @@ test("müzik: durum eşlemesi tema değiştirir ve eskisini durdurur", () => {
 
 test("müzik: sessizde notaları keser, ses açılınca devam eder", async () => {
   const t = setup();
-  t.SFX.musicSync("STORY_MAP");
-  assert.equal(t.SFX.musicInfo().theme, "festival");
+  t.SFX.musicSync("MODE_SELECT");
+  assert.equal(t.SFX.musicInfo().theme, "menu");
   await new Promise((resolve) => setTimeout(resolve, 260)); // birkaç tick
   const before = t.sources.length;
-  assert.ok(before > 0, "festival notası zamanlandı");
+  assert.ok(before > 0, "menu notası zamanlandı");
   t.SFX.setVolume(0);
   const afterMute = t.sources.length;
   await new Promise((resolve) => setTimeout(resolve, 260));
   assert.equal(t.sources.length, afterMute, "sessizken yeni nota zamanlanmaz");
-  assert.equal(t.SFX.musicInfo().theme, "festival", "tema korunur, döngü canlı kalır");
+  assert.equal(t.SFX.musicInfo().theme, "menu", "tema korunur, döngü canlı kalır");
   t.SFX.toggleMute(); // sesi geri aç
   await new Promise((resolve) => setTimeout(resolve, 260));
   assert.ok(t.sources.length > afterMute, "ses açılınca müzik kaldığı yerden devam eder");

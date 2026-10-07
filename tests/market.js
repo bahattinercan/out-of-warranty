@@ -11,7 +11,7 @@ const fs = require("fs");
 const path = require("path");
 
 const JS_DIR = path.join(__dirname, "..", "js");
-const FILES = ["characters.js", "progression.js", "profile.js", "parts.js", "market.js", "weapons.js", "maps.js", "story-data.js", "story.js"];
+const FILES = ["characters.js", "progression.js", "profile.js", "parts.js", "market.js", "weapons.js", "maps.js"];
 const bundle =
   FILES.map((f) => fs.readFileSync(path.join(JS_DIR, f), "utf8")).join("\n;\n") +
   "\n;globalThis.__K = { CHARACTERS, WEAPONS, AMMO_DEPOT_CAP, AMMO_BULK_QTY, AMMO_BULK_QTY_BIG, AMMO_PRICES, AMMO_PRICE_K, AMMO_PRICE_MIN, AMMO_PRICE_MAX, ammoPriceFor, ammoBasePrice, weaponPowerScore, weaponStats, sellableWeapons, sanitizeAmmoDepot, getAmmoDepot, setAmmoDepot, mergeDepots, ammoDepotTotal, buyAmmo, mergeAmmoWithDepot, battleLoad, unspentDepot, settleDepot, weaponById, weaponBattleMax, isSellableWeapon, " +

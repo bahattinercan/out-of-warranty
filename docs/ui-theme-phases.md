@@ -19,16 +19,17 @@ flex düzeni) — bu katkılar korunarak tema üzerine entegre edildi.
 Bu kurallar Faz 2'de kuruldu ve kilitlendi; kalan fazlar bunları **tekrar
 icat etmez, yalnız uygular**. Yeni yazılacak her UI kodu bu kurallara uyar.
 
-| Kural | Açıklama |
-| --- | --- |
-| K-FONT | Canvas yazısı asla doğrudan `ctx.font` alamaz; `uiTitleFont(px)` (Russo One — başlık/buton ≥14px) veya `uiTextFont(px, weight?)` (Chakra Petch — gövde varsayılanı **600 SemiBold**, etiket/buton/vurgu `700`) kullanır. `"Segoe UI"` yalnız bu iki yardımcının fallback'inde geçer. |
-| K-FIT | Kart/panel içi metinler `_fitTextLines(ctx, metin, maxGenişlik, punto, fontFn, maxSatır, minPunto)` ile sığdırılır. Sabit genişlikli kartlarda fillText'e güvenilmez (Russo One geniş font). |
-| K-PANEL | Menü kartı/butonu/paneli `_csPanel(ctx, x, y, w, h, opts)` ile çizilir: kesik köşe + metal gradyan + perçin + isteğe bağlı `hazardTop`. `_csRoundRect` yalnız küçük iç öğelerde (mühimmat baloncuğu, skill şeridi, satır pill'i) kalır. |
-| K-HOVER | Hover: 2px yukarı kayma + kenar `#ffe45e` + `_csGlow`. Dokunma alanı (`_xxxRects`) hiçbir zaman değişmez. |
-| K-RENK | Palet korunur: zemin `#0f1720→#1a2430`, kenar `#3b526b`, vurgu `#ffe45e`, altın `#d8a72f`, olumlu `#63e6be`, olumsuz `#ff7b7b`. Seçili durumlarda mevcut renk anlamı (yeşil=seçili zorluk, kırmızı=alınmış/kısıntı) bozulmaz. |
-| K-DAV | Hiçbir adım davranış/state/akış değiştirmez; yalnız çizim. Her faz sonrası `node tests/run.js` geçer. |
+| Kural   | Açıklama                                                                                                                                                                                                                                                                             |
+| ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| K-FONT  | Canvas yazısı asla doğrudan `ctx.font` alamaz; `uiTitleFont(px)` (Russo One — başlık/buton ≥14px) veya `uiTextFont(px, weight?)` (Chakra Petch — gövde varsayılanı **600 SemiBold**, etiket/buton/vurgu `700`) kullanır. `"Segoe UI"` yalnız bu iki yardımcının fallback'inde geçer. |
+| K-FIT   | Kart/panel içi metinler `_fitTextLines(ctx, metin, maxGenişlik, punto, fontFn, maxSatır, minPunto)` ile sığdırılır. Sabit genişlikli kartlarda fillText'e güvenilmez (Russo One geniş font).                                                                                         |
+| K-PANEL | Menü kartı/butonu/paneli `_csPanel(ctx, x, y, w, h, opts)` ile çizilir: kesik köşe + metal gradyan + perçin + isteğe bağlı `hazardTop`. `_csRoundRect` yalnız küçük iç öğelerde (mühimmat baloncuğu, skill şeridi, satır pill'i) kalır.                                              |
+| K-HOVER | Hover: 2px yukarı kayma + kenar `#ffe45e` + `_csGlow`. Dokunma alanı (`_xxxRects`) hiçbir zaman değişmez.                                                                                                                                                                            |
+| K-RENK  | Palet korunur: zemin `#0f1720→#1a2430`, kenar `#3b526b`, vurgu `#ffe45e`, altın `#d8a72f`, olumlu `#63e6be`, olumsuz `#ff7b7b`. Seçili durumlarda mevcut renk anlamı (yeşil=seçili zorluk, kırmızı=alınmış/kısıntı) bozulmaz.                                                        |
+| K-DAV   | Hiçbir adım davranış/state/akış değiştirmez; yalnız çizim. Her faz sonrası `node tests/run.js` geçer.                                                                                                                                                                                |
 
 Ortak "bitti" tanımı (her faz için):
+
 1. `node tests/run.js` 644/644 geçiyor.
 2. `grep -n "Segoe UI" js/*.js` yalnız `uiTitleFont`/`uiTextFont` gövdelerini buluyor.
 3. Değişen ekranın tıklama alanları ve klavye akışı kod incelemesinde aynı.
@@ -40,31 +41,26 @@ Test komutları: `node tests/run.js` (her fazda), `node tests/audio.js` (yalnız
 
 ## 2. Yüzey envanteri (oyundaki her UI)
 
-| # | Yüzey | Konum | Durum |
-| --- | --- | --- | --- |
-| 1 | Mod seçimi | `game.js > renderModeSelect` | ✅ Faz 2 |
-| 2 | Zorluk seçimi | `renderDifficultySelect` | ✅ Faz 2 |
-| 3 | Rakip sayısı | `renderBotCountSelect` | ✅ Faz 2 |
-| 4 | Oyuncu sayısı | `renderCountSelect` | ✅ Faz 2 |
-| 5 | Karakter seçimi | `renderCharSelect` (~1710-1894) | ✅ Faz 3A |
-| 6 | Harita seçimi | `renderMapSelect` (~1941-2065) | ✅ Faz 3A |
-| 7 | Atölye | `renderWorkshop` + `_drawWorkshopBranch` (~452-672) | ✅ Faz 3B |
-| 8 | Kupa haritası | `renderStoryMap` (~2960-3085) | ✅ Faz 3C |
-| 9 | Hikâye sahnesi | `renderStoryScene` (~3086-3165) | ✅ Faz 3C |
-| 10 | Saha robotu seçimi | `renderStoryRobotSelect` (~3166-3217) | ✅ Faz 3C |
-| 11 | Görev brifingi | `renderStoryBriefing` (~3218-3318) | ✅ Faz 3C |
-| 12 | Hikâye arşivi | `renderStoryArchive` (~3319-3348) | ✅ Faz 3C |
-| 13 | Geri butonu (paylaşılan) | `drawBackButton` | ✅ Faz 2 |
-| 14 | Rüzgar değişti bandı | `game.js` rüzgar fx (~1800) | ✅ Faz 5 (font yeterli, ek çizim gerekmedi) |
-| 15 | HUD (DOM) | `index.html #hud`, `style.css` | ✅ Faz 4 |
-| 16 | Ses paneli (DOM) | `#audio-control` | ✅ Faz 4 (font Faz 1'de) |
-| 17 | Maç sonu overlay (DOM) | `#overlay .overlay-card` | ✅ Faz 4 |
-| 18 | Silah paneli (DOM) | `#weapon-panel`, `.weapon-chip` | ✅ Faz 4 (wd-preview katkısı korunarak) |
-| 19 | Alt kontrol şeridi (DOM) | `footer#controls` | ✅ Faz 4 (body font bağlandı) |
-| 20 | Depolama uyarısı (DOM) | `#storage-warning` | ✅ Faz 4 |
-| 21 | Güç barı (DOM) | `#power-bar` | ✅ Faz 4 |
-| 22 | Oyun içi canvas yazıları | hasar sayıları, yetenek yazıları (`skills.js`) | ✅ font Faz 1; punto cillası Faz 5 |
-| 23 | Savaş alt paneli (DOM) | `#battle-bar`, `#battle-actions`, `.act-slot` | ✅ Faz 6 |
+| #   | Yüzey                    | Konum                                               | Durum                                       |
+| --- | ------------------------ | --------------------------------------------------- | ------------------------------------------- |
+| 1   | Mod seçimi               | `game.js > renderModeSelect`                        | ✅ Faz 2                                    |
+| 2   | Zorluk seçimi            | `renderDifficultySelect`                            | ✅ Faz 2                                    |
+| 3   | Rakip sayısı             | `renderBotCountSelect`                              | ✅ Faz 2                                    |
+| 4   | Oyuncu sayısı            | `renderCountSelect`                                 | ✅ Faz 2                                    |
+| 5   | Karakter seçimi          | `renderCharSelect` (~1710-1894)                     | ✅ Faz 3A                                   |
+| 6   | Harita seçimi            | `renderMapSelect` (~1941-2065)                      | ✅ Faz 3A                                   |
+| 7   | Atölye                   | `renderWorkshop` + `_drawWorkshopBranch` (~452-672) | ✅ Faz 3B                                   |
+| 8   | Geri butonu (paylaşılan) | `drawBackButton`                                    | ✅ Faz 2                                    |
+| 9   | Rüzgar değişti bandı     | `game.js` rüzgar fx (~1800)                         | ✅ Faz 5 (font yeterli, ek çizim gerekmedi) |
+| 10  | HUD (DOM)                | `index.html #hud`, `style.css`                      | ✅ Faz 4                                    |
+| 11  | Ses paneli (DOM)         | `#audio-control`                                    | ✅ Faz 4 (font Faz 1'de)                    |
+| 12  | Maç sonu overlay (DOM)   | `#overlay .overlay-card`                            | ✅ Faz 4                                    |
+| 13  | Silah paneli (DOM)       | `#weapon-panel`, `.weapon-chip`                     | ✅ Faz 4 (wd-preview katkısı korunarak)     |
+| 14  | Alt kontrol şeridi (DOM) | `footer#controls`                                   | ✅ Faz 4 (body font bağlandı)               |
+| 15  | Depolama uyarısı (DOM)   | `#storage-warning`                                  | ✅ Faz 4                                    |
+| 16  | Güç barı (DOM)           | `#power-bar`                                        | ✅ Faz 4                                    |
+| 17  | Oyun içi canvas yazıları | hasar sayıları, yetenek yazıları (`skills.js`)      | ✅ font Faz 1; punto cillası Faz 5          |
+| 18  | Savaş alt paneli (DOM)   | `#battle-bar`, `#battle-actions`, `.act-slot`       | ✅ Faz 6                                    |
 
 **Faz 6 — Savaş alt paneli (Wild Ones düzeni, 4 Ekim 2026).** Maç içi HUD
 alt panele taşındı: solda robot kartları (portre + sıra rozeti + can barı),
@@ -81,15 +77,14 @@ taşır. Mesajlaşma ve sipariş yuvaları eklenmedi.
 
 ## 3. Faz haritası
 
-| Faz | Ad | Kapsam | Boyut | Bağımlılık |
-| --- | --- | --- | --- | --- |
-| 3A | Karakter + harita seçimi | Yüzey 5, 6 | M | — |
-| 3B | Atölye | Yüzey 7 | L | — |
-| 3C | Hikâye ekranları | Yüzey 8-12 | L | — |
-| 4 | DOM/CSS teması | Yüzey 15-22 | M | — |
-| 5 | Cilla, denetim, kabul | Tümü | S | 3A-3C, 4 |
+| Faz | Ad                       | Kapsam      | Boyut | Bağımlılık |
+| --- | ------------------------ | ----------- | ----- | ---------- |
+| 3A  | Karakter + harita seçimi | Yüzey 5, 6  | M     | —          |
+| 3B  | Atölye                   | Yüzey 7     | L     | —          |
+| 4   | DOM/CSS teması           | Yüzey 10-17 | M     | —          |
+| 5   | Cilla, denetim, kabul    | Tümü        | S     | 3A-3B, 4   |
 
-Faz 3A/3B/3C birbirinden bağımsız — sıra değiştirilebilir. Her faz sonunda
+Faz 3A/3B birbirinden bağımsız — sıra değiştirilebilir. Her faz sonunda
 ayrı görsel onay alınır.
 
 ---
@@ -160,68 +155,7 @@ butonu (yeşil etkin / gri kilitli + neden satırı), geri butonu.
 
 ---
 
-## 6. Faz 3C — Hikâye ekranları (5 ekran)
-
-Durum: **✅ Uygulandı (F3D-01..10; 714/714 test).** Not: kupa haritası ve
-brifing başlık bölgeleri metin dolu olduğu için şerit yalnız arşive eklendi;
-"Maçı Başla" butonuna `hazardTop` verildi. `_csHazardStrip` test sandbox
-uyumu sağlandı (document/createPattern yoksa düz sarı dolguya düşer) —
-atölye çizim testi bunu yakaladı.
-
-**Sonradan düzeltme (kullanıcı bildirimi — "yazılar üst üste"):** sahne
-oynatıcısında DOM HUD banner'ı ("Diyalog oynatılıyor…") canvas üst bağlam
-satırının üstüne biniyordu. Çözüm: HUD artık STORY_SCENE'de de gizli;
-ilerletme ipucu canvasa taşındı (üst sağ); görev—bölge satırı temalı mini
-çip panele alındı; "Sahneyi Atla" butonu panel dile geçti; maç içi
-"RÜZGÂR DEĞİŞTİ" bandı da panellerdi. İlgili iki test beklentisi yeni
-davranışa göre güncellendi (bilinen kural: davranış değişince test de değişir).
-
-### 6.1 Kupa haritası (yüzey 8)
-
-Envanter: başlık "DOKUZ BÖLGE KUPASI" + Bakım Puanı satırı, bölge boru
-hattı (3×3 kart arası çizgiler), bölge kartları (~292×132: bölge kodu,
-BP+📖 rozeti, bölge adı, korku metni, şampiyonlar, 1-2 görev satırı
-🔒/✓/▶ + kanıt 🧾), alt şerit (kanıt/Hurda sayacı), Arşiv ve Festival
-butonları, geri butonu.
-
-- **F3D-01** Bölge kartları `_csPanel` (kısıntıda `accent "#ff7b7b"` + `fillTop "#1a1013"`; normal `#3b526b`). Boru hattı çizgileri aynen.
-- **F3D-02** Görev satırı hover/odak pill'i `_csRoundRect` (küçük öğe) — yalnız dolgu tonu panel diline uyarlansın (`#1c2a3c`).
-- **F3D-03** Arşiv + Festival + geri butonları `_csPanel` (rivets:false, Festival `accent "#63e6be"`).
-- Kabul: kısıntı/kilit/done durumları renk+metin okunurluğu bozulmaz (kilit belgesi §18).
-
-### 6.2 Hikâye sahnesi (yüzey 9)
-
-Envanter: sahne arka planı (harita teması), alt diyalog sayfası (152px:
-portre çerçevesi + drawRobot veya MERKEZ monitörü, konuşmacı adı karakter
-rengiyle, typewriter metin, x/y göstergesi, ▼ pulse).
-
-- **F3D-04** Diyalog sayfası `_csPanel` (rivets açık, accent `#3b526b`); portre çerçevesi kesik köşeye uyumlu r=10 `_csRoundRect` kalır.
-- **F3D-05** Konuşmacı adı Russo (zaten uiTitleFont) — karakter rengi korunur; typewriter metin Chakra (zaten).
-- Kabul: fade-in, typewriter ve ilerletme davranışı bitişik kod olduğundan **dokunulmaz**; yalnız panel çizimi değişir.
-
-### 6.3 Saha robotu seçimi (yüzey 10)
-
-- **F3D-06** Robot kartları `_csPanel` (izin yoksa kırmızı accent + "Rakip 🔒" rozet pill); başlık bandı + uyarı satırı + back mevcut desene uyar.
-
-### 6.4 Görev brifingi (yüzey 11)
-
-Envanter: görev başlığı + bölge/arena/seviye satırı, rakip kadrosu
-(robotsuz kart yok — robotlar + isimler), "Vardiya zorluğu" 3 buton
-(seçili yeşil), hazırlık satırı, kanıt satırı, öğretici paketleri, Başla
-butonu, geri butonu.
-
-- **F3D-07** Zorluk butonları: Zorluk ekranıyla birebir aynı `_csPanel` deseni (selected yeşil tint) — ekranlar arası tutarlılık.
-- **F3D-08** "Maçı Başla ▶" büyük panel + `hazardTop: true` + hover glow — ekranın birincil eylemi vurgulanır.
-- **F3D-09** Öğretici/kanıt/hazırlık satırları yalnız punto/font (zaten çevrildi); ek çizim yok.
-- Kabul: brifing metinleri 560px sarması aynen; Başla butonu hit alanı aynı.
-
-### 6.5 Hikâye arşivi (yüzey 12)
-
-- **F3D-10** Satır hover pill'i `_csRoundRect` + panel tonu; boş durum mesajı punto zaten çevrildi; başlık bandına mini tehlike şeridi (başlık altı, tutarlılık).
-
----
-
-## 7. Faz 4 — DOM/CSS teması (css/style.css)
+## 6. Faz 4 — DOM/CSS teması (css/style.css)
 
 Durum: **✅ Uygulandı.** Kullanıcının eşzamanlı eklediği silah önizleme ikonları
 (`.wc-preview`, `.wd-preview`) ve `.wd-title` flex düzeni korunarak tema
@@ -244,7 +178,7 @@ perçin yerine köşe noktaları (pseudo-element), tehlike şeridi
 
 ---
 
-## 8. Faz 5 — Cilla, denetim ve kabul
+## 7. Faz 5 — Cilla, denetim ve kabul
 
 Durum: **F5-01..03 ✅; F5-04 kullanıcı kabulü bekleniyor.** Sapma notu: gelişim
 özeti satırı plandaki 10px yerine 9px'e alındı — 10px'te maxWidth sıkıştırması
@@ -253,24 +187,22 @@ Durum: **F5-01..03 ✅; F5-04 kullanıcı kabulü bekleniyor.** Sapma notu: geli
 - **F5-01** Punto cillası: karakter kartındaki 8px gelişim özeti ve `_drawStatBar` 9px etiketleri → 10px (Chakra 700); dar kartlarda `_fitTextLines` taşmayı önler. Diğer ≤9px yerler tek tek gözden geçirilir (hedef: en küçük punto 9).
 - **F5-02** Tutarlılık denetimi: `grep -n "Segoe UI" js/*.js` yalnız 2 yardımcı gövdesi; `grep -n "_csRoundRect" js/game.js` yalnız küçük iç öğelerde; `_csPanel` olmayan kart kalmadığı kod incelemesiyle doğrulanır.
 - **F5-03** `README.md`'ye kısa bölüm: `fonts/` klasörü, font değiştirme (iki yardımcı + @font-face), panel dilinin nasıl kullanılacağı (`_csPanel` opts tablosu).
-- **F5-04** Görsel kabul turu (kullanıcı): 12 canvas ekranı + maç sonu overlay + silah panelinin ekran görüntüleri; önce/sonra karşılaştırma; onay → plan kapanır.
+- **F5-04** Görsel kabul turu (kullanıcı): 7 canvas ekranı + maç sonu overlay + silah panelinin ekran görüntüleri; önce/sonra karşılaştırma; onay → plan kapanır.
 - **F5-05** Rüzgar bandı (yüzey 14) yalnız punto zaten çevrildi; görsel turda köşe stili panel diliyle uyumluysa dokunulmaz, değilse 1 satırlık kenar güncellemesi.
 
 ---
 
-## 9. Riskler ve notlar
+## 8. Riskler ve notlar
 
 1. **Test harness:** Bu planda yeni dosya/global açılmaz; `tests/run.js` FILES listesi ve script sırası değişmez (geçmiş ders).
 2. **Atölye yoğunluğu:** En çok hit alanı olan ekran; her panelde `opts` dışında hiçbir geometri değişmez, `workshopFx` parıltısı korunur.
-3. **Sahne ekranı hassasiyeti:** `renderStoryScene`'de fade/typewriter zamanlaması çizimle iç içe; yalnız panel çizim satırları değiştirilir, zamanlayıcı kod dokunulmaz.
-4. **Perçin eşiği:** `_csPanel` perçinleri w>56 && h>30 koşuluyla açılır; küçük butonlar `rivets:false` ile sade kalır (desen: gezinme/geri butonları).
-5. **Doz ayarı:** Perçin/şerit dozu Faz 2 pilot onayıyla kilitlenir; onay "fazla" gelirse `_csPanel` opts tek yerden (hazardTop kullanım listesi) kısalır — faz yeniden yapılmaz.
-6. **Geri alma:** Her faz bağımsız; Faz 3A-3C sıralaması serbest, tek ekran geri alınabilir (panel→eski çizim tek commit).
+3. **Perçin eşiği:** `_csPanel` perçinleri w>56 && h>30 koşuluyla açılır; küçük butonlar `rivets:false` ile sade kalır (desen: gezinme/geri butonları).
+4. **Doz ayarı:** Perçin/şerit dozu Faz 2 pilot onayıyla kilitlenir; onay "fazla" gelirse `_csPanel` opts tek yerden (hazardTop kullanım listesi) kısalır — faz yeniden yapılmaz.
+5. **Geri alma:** Her faz bağımsız; Faz 3A-3B sıralaması serbest, tek ekran geri alınabilir (panel→eski çizim tek commit).
 
-## 10. Uygulama sırası (öneri)
+## 9. Uygulama sırası (öneri)
 
 1. Faz 3A (karakter+harita) → görsel onay
 2. Faz 3B (atölye) → görsel onay
-3. Faz 3C (hikâye 5 ekran) → görsel onay
-4. Faz 4 (DOM) → maç sonu overlay kontrolü
-5. Faz 5 (cilla + denetim) → nihai kabul, plan kapanır
+3. Faz 4 (DOM) → maç sonu overlay kontrolü
+4. Faz 5 (cilla + denetim) → nihai kabul, plan kapanır

@@ -15,15 +15,15 @@ const path = require("path");
 
 // ── Kaynakları tek sandbox'ta yükle ─────────────────────────────────────────
 const JS_DIR = path.join(__dirname, "..", "js");
-const FILES = ["audio.js", "characters.js", "progression.js", "profile.js", "parts.js", "market.js", "maps.js", "story-data.js", "skills.js", "skill-fx.js", "robots.js", "terrain.js", "weapons.js", "entity.js", "projectile.js", "ai.js", "story.js", "game.js"];
+const FILES = ["audio.js", "characters.js", "progression.js", "profile.js", "parts.js", "market.js", "maps.js", "skills.js", "skill-fx.js", "robots.js", "terrain.js", "weapons.js", "entity.js", "projectile.js", "ai.js", "game.js"];
 const bundle =
   FILES.map((f) => fs.readFileSync(path.join(JS_DIR, f), "utf8")).join("\n;\n") +
   "\n;globalThis.__M = { CHARACTERS, MAPS, BIOMES, FACTORY_ZONES, PROP_DRAWERS, WEAPONS, SKILL_PROJECTILES, PROJECTILE_SHAPES, SHARED_SHAPES, PROJ_SUBSTEP, PROJ_MAX_SUBSTEPS, useSkill, drawCharExtras, drawRobot, robotMuzzlePoint, RB_GUN_PIVOT_X, RB_GUN_PIVOT_Y, RB_GUN_MUZZLE, Entity, Projectile, Explosion, GRAVITY, Game, BotController, AI_LIMITS, aiWorldKey, aiSimulateShot, aiCoarseCandidates, aiPathIsSafe, aiRandom, AI_DIFFICULTY, aiDamageMultiplier, aiAssignDamageScale, aiSelectWeapon, skillConsumesShot, SKILL_SHOT_KINDS, AI_SKILL_REPLACE_SCORE, " +
   "SKILL_FX_SHAPES, SKILL_FX_KIND_DEFAULT, SKILL_FX_EXTENT, spawnSkillFx, updateSkillFx, drawSkillFx, drawSkillFxIcon, drawSkillAura, SkillFx, " +
   "SERVICE_LEVELS, MAX_SERVICE_XP, MAX_TIER, START_SCRAP, BRANCHES, BRANCH_LABELS, TIER_COSTS, TIER_LEVEL_GATES, REWARD_BASE, DIFFICULTY_MULTIPLIER, levelForXp, xpForLevel, nextLevelXp, levelUpMessage, calculateMatchReward, resolveRobotBuild, upgradeEffectText, robotUpgradeSummary, totalTiers, sanitizeUpgrades, nextUpgradeStep, toSafeInt, defaultProfile, defaultRobotProgress, normalizeProfile, loadProfile, saveProfile, getRobotProgress, grantMatchReward, purchaseUpgrade, PROFILE_KEY, createSessionId, " +
   "AMMO_DEPOT_CAP, AMMO_BULK_QTY, AMMO_BULK_QTY_BIG, AMMO_PRICES, ammoPriceFor, ammoBasePrice, weaponPowerScore, weaponStats, sellableWeapons, sanitizeAmmoDepot, getAmmoDepot, setAmmoDepot, mergeDepots, ammoDepotTotal, buyAmmo, mergeAmmoWithDepot, battleLoad, unspentDepot, settleDepot, weaponById, weaponBattleMax, isSellableWeapon, initialAmmo, " +
-  "PARTS, PART_SLOTS, SLOT_LABELS, partById, sanitizeParts, sanitizeLoadoutShape, getOwnedParts, isPartOwned, buildPartsSummary, buyPart, equipPart, drawPartIcon, PART_ICON_SHAPES, partEffectText, PART_KNOCKBACK_MIN, _drawPartDots, PARTS_PER_SLOT, loadoutPartIds, AUDIO_SAFE, STORY_HINT_Y, _rbPartAccessories, _rbPartSpecs, _RB_PART_SECONDARY, MARKET_TABS, " +
-  "STORY_CAMPAIGN, STORY_ZONES, STORY_MISSIONS, STORY_SCENES, STORY_TUTORIALS, STORY_DIFFICULTIES, validateStoryData, getMissionById, missionsInOrder, firstMissionId, nextMissionId, missionPrerequisites, isMissionUnlocked, selectableRobotsForMission, defaultStoryProgress, normalizeStoryProgress, maintenancePoints, collectedEvidence, curtailedZones, resolveStoryDifficulty, missionsForZone, missionStatusOf, firstMissionRobotId, sceneById, sceneTotalLines, storySceneInfo, isSinglePlayerProgressionMode };";
+  "PARTS, PART_SLOTS, SLOT_LABELS, partById, sanitizeParts, sanitizeLoadoutShape, getOwnedParts, isPartOwned, buildPartsSummary, buyPart, equipPart, drawPartIcon, PART_ICON_SHAPES, partEffectText, PART_KNOCKBACK_MIN, _drawPartDots, PARTS_PER_SLOT, loadoutPartIds, AUDIO_SAFE, _rbPartAccessories, _rbPartSpecs, _RB_PART_SECONDARY, MARKET_TABS, " +
+  "isSinglePlayerProgressionMode };";
 
 const sandbox = { Math, Date, console, JSON, Set, Map, Array, Object };
 sandbox.globalThis = sandbox;
@@ -1517,14 +1517,14 @@ group("Mod seçimi ve bot turu entegrasyonu");
   try { M.Game.prototype.updateHud.call(menu); } catch (_) { menuHudSafe = false; }
   check("oyuncu oluşmadan rakip sayısı HUD'u güvenlidir", menuHudSafe && banner.textContent === "Rakip sayısı seçiliyor…");
 
-  // Önceki hikâye maçının oyuncuları bellekte kalsa bile silah paneli yalnız
-  // gerçek savaş durumlarında görünür olmalı. Menüleri tek tek dışlamak yeni
-  // STORY_* ekranları eklendiğinde panelin sızmasına yol açıyordu.
+  // Önceki maçın oyuncuları bellekte kalsa bile silah paneli yalnız gerçek
+  // savaş durumlarında görünür olmalı; menüleri tek tek dışlamak yerine
+  // durumdan türetmek panelin sızmasını önler.
   let weaponPanelHidden = true;
   const weaponPanel = { classList: { toggle: (_name, force) => { weaponPanelHidden = !!force; } } };
   const hudPlayer = { weapon: 0, ammo: Object.fromEntries(M.WEAPONS.map((w) => [w.id, w.ammo == null ? Infinity : w.ammo])) };
   const weaponHudGame = { players:[hudPlayer], active:hudPlayer, turn:0, _weaponKey:null };
-  const menuStates = ["MODE_SELECT", "STORY_MAP", "STORY_SCENE", "STORY_ROBOT_SELECT", "STORY_BRIEFING", "STORY_ARCHIVE"];
+  const menuStates = ["MODE_SELECT", "WORKSHOP", "MARKET", "TUTORIAL", "MAP_SELECT"];
   sandbox.document = { getElementById: (id) => id === "weapon-panel" ? weaponPanel : null };
   let allMenusHideWeapons = true;
   for (const state of menuStates) {
@@ -1532,7 +1532,7 @@ group("Mod seçimi ve bot turu entegrasyonu");
     M.Game.prototype.updateWeaponHud.call(weaponHudGame);
     if (!weaponPanelHidden) allMenusHideWeapons = false;
   }
-  check("önceki oyuncular kalsa da hikâye ve ana menüler silah panelini gizler", allMenusHideWeapons);
+  check("önceki oyuncular kalsa da menüler silah panelini gizler", allMenusHideWeapons);
   let combatStatesShowWeapons = true;
   for (const state of ["AIMING", "PROJECTILE", "SETTLE"]) {
     weaponHudGame.state = state;
@@ -1542,8 +1542,8 @@ group("Mod seçimi ve bot turu entegrasyonu");
   }
   check("silah paneli üç savaş durumunda görünür", combatStatesShowWeapons);
 
-  // HUD da aynı kurala uyar: hikâye menüleri büyük başlık çizer, açık kalan
-  // sıra/rüzgâr şeridi o başlığı kapatıyordu (STORY_ROBOT_SELECT ekran görüntüsü).
+  // HUD da aynı kurala uyar: menüler büyük başlık çizer, açık kalan
+  // sıra/rüzgâr şeridi o başlığı kapatıyordu.
   {
     let hudHidden = null;
     const hudEl = { classList: { toggle: (_name, force) => { hudHidden = !!force; } } };
@@ -1555,17 +1555,13 @@ group("Mod seçimi ve bot turu entegrasyonu");
       getElementById: (id) => id === "hud" ? hudEl : id === "players" ? playersEl : id === "turn-banner" ? bannerEl : id === "wind-indicator" ? windEl : null,
     };
     const hudGame = { players: [], mode: null, profile: M.normalizeProfile({ version: 2 }), turnTimer: 0, turn: 0, updateWeaponHud() {} };
-    let storyMenusHideHud = true;
-    for (const state of ["MODE_SELECT", "STORY_MAP", "STORY_SCENE", "STORY_ROBOT_SELECT", "STORY_BRIEFING", "STORY_ARCHIVE", "WORKSHOP", "MAP_SELECT"]) {
+    let menusHideHud = true;
+    for (const state of ["MODE_SELECT", "WORKSHOP", "MAP_SELECT", "MARKET", "TUTORIAL"]) {
       hudGame.state = state;
       M.Game.prototype.updateHud.call(hudGame);
-      if (!hudHidden) storyMenusHideHud = false;
+      if (!hudHidden) menusHideHud = false;
     }
-    check("HUD ana menü, hikâye menüleri ve sahnede gizlenir", storyMenusHideHud);
-    hudGame.state = "STORY_SCENE";
-    M.Game.prototype.updateHud.call(hudGame);
-    // Banner sahne başlığıyla çakışıyordu; ipucu artık canvasa çiziliyor.
-    check("HUD sahne oynatıcısında da gizlenir (ipucu canvasa taşındı)", hudHidden === true);
+    check("HUD menülerde gizlenir", menusHideHud);
     sandbox.document = prevDoc;
   }
 
@@ -2444,8 +2440,6 @@ group("Parça pazarı akışı");
     !!backRect2 && tabRects.length === 5 && tabRects.every((r) => !kapisir(r, backRect2)));
   check("pazar: bilgi satırı ses denetimi alanının altında",
     M.AUDIO_SAFE.y + M.AUDIO_SAFE.h < tabRects[0].y, `tabY=${tabRects[0] && tabRects[0].y}`);
-  check("hikâye ilerletme ipucu ses denetiminin altında",
-    M.STORY_HINT_Y > M.AUDIO_SAFE.y + M.AUDIO_SAFE.h, `y=${M.STORY_HINT_Y}`);
 
   // Parçaları kapatmak pazardan çıkışı bozmaz.
   pg.goBack();
@@ -2454,305 +2448,56 @@ group("Parça pazarı akışı");
   sandbox.document = prevDoc;
 }
 
-// ── Hikâye modu durum makinesi ve maç entegrasyonu ────────────────────────
-// Kupa haritası → sahne → robot seçimi → brifing → arena → ilerleme yazımı
-// zincirinin tamamı gerçek Game.prototype metotlarıyla, DOM olmadan kurulur.
-// DOM'a dokunan yardımcılar (clearTurnInput/updateHud/startGame) stub'lanır.
-group("Hikâye modu durum makinesi");
+// ── Maç sonu sonuç kartı ──────────────────────────────────────────────────
+// startGame() sonuç kartını her hâlükârda kapatmalı: "Tekrar Oyna" yalnız
+// startGame()'i çağırdığı için kart açık kalıp maç arkada yeniden başlarken
+// ekranda asılı duruyordu (F2-11).
+group("Maç sonu sonuç kartı");
 {
-  function makeStoryGame() {
-    const g = Object.create(M.Game.prototype);
-    g.profile = M.normalizeProfile({ version: 2, scrap: 500 });
-    g.players = [];
-    g.bots = [];
-    g.bot = { cancel() {}, resetMatch() {} };
-    g.selectedChars = [];
-    g.playerControls = [];
-    g.selectedMap = null;
-    g.difficulty = "normal";
-    g.mode = null;
-    g.state = "MODE_SELECT";
-    g.matchProgress = null;
-    g.storyMission = null;
-    g.storyMissionId = null;
-    g.input = { charging: false, mouseX: 0, mouseY: 0 };
-    g.clearTurnInput = () => {};
-    g.updateHud = () => {};
-    g.started = false;
-    g._simMatchId = 0;
-    // startGame stub: gerçek matchProgress davranışını (her maçta yeni anahtar)
-    // taklit eder ki rövanş/ödül testleri gerçek yolayı doğrulasın.
-    g.startGame = function () {
-      g.started = true;
-      g.state = "AIMING";
-      g._simMatchId++;
-      g.matchProgress = {
-        key: `sim:${g._simMatchId}`,
-        humanRobotId: g.selectedChars[0] ? g.selectedChars[0].id : null,
-        humanIndex: 0,
-        opponentCount: g.selectedChars.filter((c, i) => (g.playerControls[i] || "human") === "bot").length,
-        humanShotsResolved: 0,
-        pendingHumanShot: false,
-        rewardGranted: false,
-      };
-    };
-    return g;
-  }
-
-  const sg = makeStoryGame();
-  const FIRST = M.firstMissionId();
-
-  // Boş kayıt: menü kartı kupa haritasına yönlendirir.
-  sg.openStoryResume();
-  check("boş kayıtta Devam Et haritaya gider", sg.state === "STORY_MAP");
-
-  // Görev açılışı: giriş sahnesi oynatılır ve Arşiv'e işaretlenir.
-  sg.openStoryMission(FIRST);
-  check("görev kartı giriş sahnesini açar", sg.state === "STORY_SCENE" && sg.storySceneId === `scene_${FIRST}_intro`);
-  check("giriş sahnesi Arşive işaretlenir", sg.profile.story.seenScenes.includes(`scene_${FIRST}_intro`));
-  check("sahne kutu sayısı veriyle uyuşur", M.sceneTotalLines(`scene_${FIRST}_intro`) === M.STORY_SCENES[`scene_${FIRST}_intro`].lines.length);
-
-  // Kutu kutu ilerlet; yazı bitmemisse tek basışta tamamlanır.
-  for (let i = 0; i < 20 && sg.state === "STORY_SCENE"; i++) sg.advanceStoryScene();
-  check("sahne bitince robot seçimine geçilir", sg.state === "STORY_ROBOT_SELECT");
-
-  // Rakip robot geçici kapalı; geçerli seçim profile yazılır.
-  const opps = M.getMissionById(FIRST).opponents;
-  sg.selectStoryRobot(opps[0]);
-  check("rakip robot seçilemez", sg.profile.story.selectedRobotId === null);
-  sg.selectStoryRobot("tavsan");
-  check("geçerli robot seçimi profile yazılır", sg.profile.story.selectedRobotId === "tavsan");
-  check("robot seçimi brifinge gider", sg.state === "STORY_BRIEFING");
-
-  // Brifingden maç: kadro/harita/kontrol veriden gelir, startGame çağrılır.
-  sg.startStoryMission(FIRST);
-  check("hikâye maçı başlatılır", sg.started && sg.state === "AIMING");
-  check("mod story olur", sg.mode === "story");
-  check("kadro insan + rakip botlardır",
-    sg.selectedChars[0].id === "tavsan" &&
-    JSON.stringify(sg.selectedChars.slice(1).map((c) => c.id)) === JSON.stringify(opps));
-  check("kontroller insan/bot dağılımı uygundur",
-    sg.playerControls[0] === "human" && sg.playerControls.slice(1).every((c) => c === "bot"));
-  check("rakip sayısı kadar bot kurulur", sg.bots.length === opps.length);
-  check("arena görev haritasından gelir", sg.selectedMap.id === M.getMissionById(FIRST).mapId);
-
-  // Ödül kapısı hikâyede de açık: isSinglePlayerProgressionMode true.
-  check("hikâye modu ilerleme modu sayılır", M.isSinglePlayerProgressionMode("story") === true);
-  check("local hâlâ ilerleme modu değildir", M.isSinglePlayerProgressionMode("local") === false);
-  sg.mode = "story";
-  sg.matchProgress = { key: "s:h1", humanRobotId: "tavsan", humanIndex: 0, opponentCount: 1, humanShotsResolved: 1, rewardGranted: false };
-  const storyReward = M.Game.prototype.grantMatchReward.call(sg, "win");
-  check("hikâye maçında Hurda/XP ödülü yazılır", storyReward !== null && storyReward.ok === true && sg.profile.scrap > 500);
-  sg.matchProgress.rewardGranted = false;
-  check("öğreticiler görevden gelir", JSON.stringify(M.getMissionById(FIRST).tutorials) === JSON.stringify(["movement_aim"]));
-
-  // Zafer ilerlemesi: görev tamamlanır, sıradaki görev açılır, tekrar çoğaltmaz.
-  sg.started = false; sg.state = "AIMING";
-  sg.finishStoryMatch("win", null);
-  check("zafer görevi tamamlanır", sg.profile.story.completedMissions.includes(FIRST));
-  check("zaferden sonra kayıtlı görev sıradaki olur", sg.profile.story.currentMissionId === "assembly_magnet_objection");
-  check("zafer sahnesi Arşive düşer", sg.profile.story.seenScenes.includes(`scene_${FIRST}_win`));
-  sg.profile.story.completedMissions.push(FIRST); // yinelenen tamamlama
-  sg.finishStoryMatch("win", null);
-  check("tekrar tamamlama diziyi çoğaltmaz", sg.profile.story.completedMissions.filter((x) => x === FIRST).length === 1);
-  check("kupa haritası görevi TAMAM gösterir",
-    M.missionStatusOf(M.getMissionById(FIRST), sg.profile.story) === "done");
-  check("ikinci görev haritada AÇIK", M.missionStatusOf(M.getMissionById("assembly_magnet_objection"), sg.profile.story) === "open");
-  check("üçüncü görev hâlâ kilitli", M.missionStatusOf(M.getMissionById("cooling_frozen_shift"), sg.profile.story) === "locked");
-
-  // Yenilgi ilerlemeyi geri almaz; loss sahnesi yoksa doğrudan overlay'e düşer.
-  sg.state = "AIMING";
-  sg.finishStoryMatch("loss", null);
-  check("yenilgi tamamlanma listesini bozmaz", sg.profile.story.completedMissions.includes(FIRST));
-  check("yenilgi görevi sıradaki yapmaz", sg.profile.story.currentMissionId === "assembly_magnet_objection");
-
-  // Sonraki Etap: kayıtlı sıradaki görevin giriş sahnesine girer.
-  sg.storyNextMission();
-  check("Sonraki Etap ikinci görevi açar", sg.state === "STORY_SCENE" && sg.storySceneId === "scene_assembly_magnet_objection_intro");
-
-  // Hikâye bağlamında çıkış kupa haritasına döner.
-  sg.state = "AIMING";
-  sg.quitToMenu();
-  check("hikâye maçından çıkış kupa haritasına döner", sg.state === "STORY_MAP");
-
-  // Yenilgi sahnesi eksikken (görev 3+) akış overlay'e düşer: sahne yoksa
-  // finishStoryMatch çökmez (bu fazda görev 2'nin loss sahnesi var).
-  const sg2 = makeStoryGame();
-  sg2.storyMission = M.getMissionById("paint_right_to_color");
-  sg2.state = "AIMING";
-  M.Game.prototype.finishStoryMatch.call(sg2, "loss", null);
-  check("eksik sahneli görevde yenilgi güvenli", sg2.profile.story.completedMissions.length === 0);
-
-  // Kupa haritası satır sırası klavye gezinmesiyle aynıdır.
-  const rows = sg.storyRows();
-  const expected = M.STORY_CAMPAIGN.zoneOrder.flatMap((z) => M.missionsForZone(z).map((m) => m.id));
-  check("görev satırları bölge sırasıyla dizilir", JSON.stringify(rows.map((r) => r.missionId)) === JSON.stringify(expected));
-
-  // ── Tekrar oynama ve ilerleme imleci (F3-07) ──
-  const sg3 = makeStoryGame();
-  sg3.storyMission = M.getMissionById(FIRST);
-  sg3.state = "AIMING";
-  M.Game.prototype.finishStoryMatch.call(sg3, "win", null);
-  sg3.profile.story.currentMissionId = "assembly_magnet_objection";
-  // Oyuncu birinci görevin rövanşını oynayıp kazanır:
-  sg3.storyMission = M.getMissionById(FIRST);
-  sg3.finishStoryMatch("win", null);
-  check("rövanş kayıt imlecini geriye sarmaz", sg3.profile.story.currentMissionId === "assembly_magnet_objection");
-  check("rövanş tamamlanma listesini çoğaltmaz", sg3.profile.story.completedMissions.filter((x) => x === FIRST).length === 1);
-  check("rövanş kanıtı çoğaltmaz", M.collectedEvidence(sg3.profile.story).length === 1);
-  check("rövanş Bakım Puanını ikiye katlamaz", M.maintenancePoints(sg3.profile.story).total === 10);
-
-  // Rövanş yeni maç anahtarı üretir (ödül tekrar talep edilebilir).
-  const sg4 = makeStoryGame();
-  sg4.startStoryMission(FIRST);
-  const key1 = sg4.matchProgress.key;
-  sg4.startStoryMission(FIRST);
-  const key2 = sg4.matchProgress.key;
-  check("rövanş yeni matchKey üretir", key1 !== key2);
-
-  // Rövanş sonrası ödül kapısı hâlâ çalışır (her maç için ayrı anahtar).
-  sg4.matchProgress.humanShotsResolved = 1;
-  const replayReward = M.Game.prototype.grantMatchReward.call(sg4, "win");
-  check("rövanş maçında ödül yazılır", replayReward !== null && replayReward.ok === true);
-  check("ilk tamamlamada ek Hurda bonusu yok", sg4.profile.scrap === 500 + replayReward.scrap);
-
-  // Kupa haritası bölge verisi: kanıt/şampiyon/BP rozetleri veriden türer.
-  const doneStory = M.normalizeStoryProgress({
-    campaignId: "nine_zones_cup_v1",
-    completedMissions: ["scrapyard_open_service_slot"],
+  const ctxStub = Object.assign(mockCtx(), { drawImage() {}, clearRect() {} });
+  const mkEl = () => ({
+    classList: {
+      _s: new Set(),
+      add(c) { this._s.add(c); },
+      remove(c) { this._s.delete(c); },
+      contains(c) { return this._s.has(c); },
+      toggle(c, f) { if (f === undefined) f = !this.contains(c); f ? this.add(c) : this.remove(c); },
+    },
+    style: { setProperty() {} }, dataset: {}, textContent: "", innerHTML: "",
+    setAttribute() {}, addEventListener() {},
+    children: [],
+    appendChild(el) { this.children.push(el); },
+    removeChild(el) { const i = this.children.indexOf(el); if (i >= 0) this.children.splice(i, 1); },
+    querySelector: () => null, querySelectorAll: () => [],
+    scrollLeft: 0, offsetLeft: 0, clientWidth: 100, offsetWidth: 40,
+    width: 0, height: 0, getContext: () => ctxStub,
   });
-  const zoneEv = M.collectedEvidence(doneStory).filter((e) => e.zoneId === "scrapyard");
-  check("bölge kanıtı görevden türetilir", zoneEv.length === 1 && zoneEv[0].id === "scrapyard_recovery_capacity");
-  check("bölge BP tamamlanmadan 0", (M.maintenancePoints(M.defaultStoryProgress()).zones.scrapyard || 0) === 0);
-
-  // ── Klavye akışı (F5-04) ──
-  const sgk = makeStoryGame();
-  sgk.state = "STORY_MAP"; sgk.storyFocus = 0;
-  sgk.handleStoryMenuKey({ key: "ArrowRight", preventDefault() {} });
-  check("ok tuşu harita odağını ilerletir", sgk.storyFocus === 1);
-  sgk.handleStoryMenuKey({ key: "a", preventDefault() {} });
-  check("A tuşu odağı geri getirir", sgk.storyFocus === 0);
-  sgk.handleStoryMenuKey({ key: "Enter", preventDefault() {} });
-  check("Enter ilk açık görevin sahnesini açar",
-    sgk.state === "STORY_SCENE" && sgk.storySceneId === `scene_${FIRST}_intro`);
-  while (sgk.state === "STORY_SCENE") sgk.advanceStoryScene();
-  check("sahne klavye onayıyla robot seçimine geçer", sgk.state === "STORY_ROBOT_SELECT");
-  sgk.handleStoryMenuKey({ key: "Enter", preventDefault() {} });
-  check("Enter robot seçimini onaylar", sgk.state === "STORY_BRIEFING");
-  const diffBefore = sgk.profile.story.difficulty;
-  sgk.handleStoryMenuKey({ key: "ArrowRight", preventDefault() {} });
-  sgk.handleStoryMenuKey({ key: "ArrowLeft", preventDefault() {} });
-  check("brifingde zorluk klavyeyle döner", sgk.profile.story.difficulty === diffBefore);
-  sgk.handleStoryMenuKey({ key: "Enter", preventDefault() {} });
-  check("Enter brifingden maçı başlatır", sgk.started && sgk.state === "AIMING");
-
-  // Sahne atlama: yarım yazı önce tamamlanır, son basış sahneyi bitirir.
-  const sgs = makeStoryGame();
-  sgs.openStoryMission(FIRST);
-  for (let i = 0; i < 64 && sgs.state === "STORY_SCENE"; i++) sgs.advanceStoryScene();
-  check("sahne atlama robot seçimine ulaşır", sgs.state === "STORY_ROBOT_SELECT");
-
-  // ── Maç sonu overlay'i ve DOM katman sızıntısı ──
-  // Sahne bittiğinde overlay açılırken durum GAMEOVER'a çekilmezse, bir sonraki
-  // render() sahneyi boş görüp haritaya atlıyor ve kart haritanın üstünde asılı
-  // kalıyordu. Kupa haritasına dönüş de kartı her hâlükârda kapatmalıdır.
-  {
-    const mk = (id) => ({
-      id,
-      classList: {
-        _s: new Set(id === "overlay" ? ["hidden"] : []),
-        add(c) { this._s.add(c); },
-        remove(c) { this._s.delete(c); },
-        contains(c) { return this._s.has(c); },
-        toggle(c, f) { if (f === undefined) f = !this.contains(c); f ? this.add(c) : this.remove(c); },
-      },
-      textContent: "", dataset: {}, style: {},
-    });
-    const nodes = {};
-    const prevDoc = sandbox.document;
-    sandbox.document = { getElementById: (id) => (nodes[id] = nodes[id] || mk(id)) };
-    const ov = makeStoryGame();
-    ov.storyMission = M.getMissionById(FIRST);
-    ov.storyMissionId = FIRST;
-    ov.state = "STORY_SCENE";
-    M.Game.prototype.showStoryOverlay.call(ov, "win", null);
-    check("maç sonu overlay'i durumu GAMEOVER'a çeker", ov.state === "GAMEOVER");
-    check("maç sonu overlay'i görünür olur", !nodes["overlay"].classList.contains("hidden"));
-    ov.openStoryMap();
-    check("kupa haritasına dönüş overlay'i kapatır", nodes["overlay"].classList.contains("hidden"));
-    check("kupa haritasına dönüş STORY_MAP kurar", ov.state === "STORY_MAP");
-    sandbox.document = prevDoc;
-  }
-
-  // ── "Tekrar Oyna" sonuç kartını kapatır (kart asılı kalma hatası) ──
-  // Hikâye yenilgisinde "Tekrar Oyna" yalnız startGame()'i çağırıyordu; kart
-  // kapanmadığı için maç arkada yeniden başlarken ekranda aynı menü duruyor,
-  // oyuncu düğmeye bastıkça aynı kartı görüyordu (F2-11).
-  {
-    const ctxStub = Object.assign(mockCtx(), { drawImage() {}, clearRect() {} });
-    const mkEl = () => ({
-      classList: {
-        _s: new Set(),
-        add(c) { this._s.add(c); },
-        remove(c) { this._s.delete(c); },
-        contains(c) { return this._s.has(c); },
-        toggle(c, f) { if (f === undefined) f = !this.contains(c); f ? this.add(c) : this.remove(c); },
-      },
-      style: { setProperty() {} }, dataset: {}, textContent: "", innerHTML: "",
-      setAttribute() {}, addEventListener() {},
-      children: [],
-      appendChild(el) { this.children.push(el); },
-      removeChild(el) { const i = this.children.indexOf(el); if (i >= 0) this.children.splice(i, 1); },
-      querySelector: () => null, querySelectorAll: () => [],
-      scrollLeft: 0, offsetLeft: 0, clientWidth: 100, offsetWidth: 40,
-      width: 0, height: 0, getContext: () => ctxStub,
-    });
-    const nodes = {};
-    const prevDoc = sandbox.document;
-    sandbox.document = {
-      getElementById: (id) => (nodes[id] = nodes[id] || mkEl()),
-      createElement: () => mkEl(),
-      documentElement: { style: { setProperty() {} } },
-    };
-    const rg = makeStoryGame();
-    rg.startGame = M.Game.prototype.startGame; // gerçek maç kurulumu koşsun
-    rg.W = 960; rg.H = 540;
-    rg.mode = "story";
-    rg.selectedChars = [M.CHARACTERS[0], M.CHARACTERS[1]];
-    rg.playerControls = ["human", "bot"];
-    rg.selectedMap = M.MAPS[0];
-    rg.bots = [];
-    sandbox.document.getElementById("overlay").classList.remove("hidden"); // maç sonu kartı açık
-    rg.replay();
-    check("Tekrar Oyna maçı yeniden başlatır", rg.state === "AIMING" && rg.players.length === 2);
-    check("Tekrar Oyna sonuç kartını kapatır", nodes["overlay"].classList.contains("hidden"));
-    sandbox.document = prevDoc;
-  }
-
-  // ── Kupa Festivali (Faz A: epilog sonrası oynanış) ──
-  check("festival ilerleme modu sayılır", M.isSinglePlayerProgressionMode("festival") === true);
-  const sgf = makeStoryGame();
-  sgf.profile.story.endingSeen = true;
-  const festRow = sgf.storyRows().at(-1);
-  check("epilog sonrası haritaya festival satırı düşer", festRow && festRow.missionId === "__festival__");
-  const beforeStory = JSON.stringify(sgf.profile.story);
-  sgf.state = "STORY_MAP"; // klavye rota testiyle aynı ön koşul
-  sgf.storyFocus = sgf.storyRows().length - 1;
-  sgf.confirmStoryFocus();
-  check("festival satırı maçı kurar", sgf.mode === "festival" && sgf.started && sgf.state === "AIMING");
-  check("festival kadrosu insan + botlardır",
-    sgf.playerControls[0] === "human" && sgf.playerControls.slice(1).every((c) => c === "bot") && sgf.bots.length === sgf.selectedChars.length - 1);
-  check("festival rakipleri seçilen robotta olamaz",
-    sgf.selectedChars.slice(1).every((d) => d.id !== sgf.selectedChars[0].id));
-  check("festival ilerlemeye dokunmaz", JSON.stringify(sgf.profile.story) === beforeStory);
-  const festKey = sgf.matchProgress.key;
-  sgf.matchProgress.humanShotsResolved = 1;
-  const festReward = M.Game.prototype.grantMatchReward.call(sgf, "win");
-  check("festival maçında ödül yazılır", festReward !== null && festReward.ok === true);
-  const festKey2 = sgf.matchProgress.key;
-  check("festival ödülü tek kapıdan geçer (matchKey aynı)", festKey === festKey2);
-  sgf.quitToMenu();
-  check("festivalden çıkış kupa haritasına döner", sgf.state === "STORY_MAP");
+  const nodes = {};
+  const prevDoc = sandbox.document;
+  sandbox.document = {
+    getElementById: (id) => (nodes[id] = nodes[id] || mkEl()),
+    createElement: () => mkEl(),
+    documentElement: { style: { setProperty() {} } },
+  };
+  const rg = Object.create(M.Game.prototype);
+  rg.W = 960; rg.H = 540;
+  rg.profile = M.normalizeProfile({ version: 2 });
+  rg.mode = "computer";
+  rg.difficulty = "normal";
+  rg.selectedChars = [M.CHARACTERS[0], M.CHARACTERS[1]];
+  rg.playerControls = ["human", "bot"];
+  rg.selectedMap = M.MAPS[0];
+  rg.bot = { cancel() {}, resetMatch() {} };
+  rg.bots = [];
+  rg.input = { charging: false, mouseX: 0, mouseY: 0 };
+  rg.clearTurnInput = () => {};
+  rg.updateHud = () => {};
+  rg.startGame = M.Game.prototype.startGame; // gerçek maç kurulumu koşsun
+  sandbox.document.getElementById("overlay").classList.remove("hidden"); // maç sonu kartı açık
+  rg.replay();
+  check("Tekrar Oyna maçı yeniden başlatır", rg.state === "AIMING" && rg.players.length === 2);
+  check("Tekrar Oyna sonuç kartını kapatır", nodes["overlay"].classList.contains("hidden"));
+  sandbox.document = prevDoc;
 }
 
 // ── Özet ────────────────────────────────────────────────────────────────

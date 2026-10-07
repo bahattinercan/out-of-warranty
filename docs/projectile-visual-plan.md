@@ -1,7 +1,7 @@
 # Mermi Görsel Tasarım Planı (her cephane için ayrı mermi tasarımı + önizleme)
 
 Tarih: 26 Eylül 2026
-Durum: **Uygulandı (Faz 1–5).** Testler: `run.js` 691/691 · `progression.js` 165/165 · `story.js` 597/597 · `audio.js` 21/21 · `maps.js` 960/960.
+Durum: **Uygulandı (Faz 1–5).** Testler: `run.js` 691/691 · `progression.js` 165/165 · `audio.js` 21/21 · `maps.js` 960/960.
 Kullanıcı kararları: (a) benzersizlik testi **evet, tasarım aileleri istisnasıyla**; (b) önizleme **evet**. Sapmalar için bkz. §10.
 Dayanak: [`CLAUDE.md`](../CLAUDE.md) (klasik script, `file://`, veri-güdümlü tasarım), `js/weapons.js`, `js/projectile.js`, `js/game.js`, `js/skills.js`, `css/style.css`, `tests/run.js`.
 
@@ -188,7 +188,7 @@ Kural: bir shape'i birden fazla spec kullanıyorsa bu tabloda **tam olarak** o s
 **Faz 5 — Bütünleşme ve belge**
 1. `drawMines` (game.js) mayın gövdesini paylaşılan çiziciye bağla.
 2. `README.md > Silahlar`: mermi görseli paragrafı + silah tablosuna "Görsel" kolonu (aile adı).
-3. Tam test turu: `run.js`, `progression.js`, `story.js`, `audio.js`, `maps.js`.
+3. Tam test turu: `run.js`, `progression.js`, `audio.js`, `maps.js`.
 4. Bu plandaki durum satırı "uygulandı" olarak güncellenir; sapmalar buraya işlenir.
 
 ## 8. Riskler ve önlemler
@@ -216,7 +216,7 @@ Kural: bir shape'i birden fazla spec kullanıyorsa bu tabloda **tam olarak** o s
 6. **Fallback:** `look`'suz spec eski daireyi çiziyor (davranış korunuyor).
 7. Mevcut tüm testler geçiyor (fizik/AI/hasar değişmedi).
 
-**Diğer:** `node tests/progression.js`, `story.js`, `audio.js`, `maps.js` — etkilenmez, geçer.
+**Diğer:** `node tests/progression.js`, `audio.js`, `maps.js` — etkilenmez, geçer.
 
 **Elle (`start index.html`):** her silahla bir atış; mermi silueti, yönü ve izi ayırt edilebilir. El Bombası ile El Bombası Üçlüsü **aynı** görünür. Silah çubuğunda her çipin önizlemesi doğru mermiyi gösterir; açıklama paneli ve yetenek kartı önizlemeleri seçimle güncellenir. Mayın kurulunca düşen mermiyle aynı gövdeyi kullanır.
 

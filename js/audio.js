@@ -24,8 +24,6 @@
  *   SFX.turn()           — sıra yeni oyuncuya geçti
  *   SFX.windChange(a, b) — rüzgâr yönü/şiddeti değişti
  *   SFX.win()            — oyun bitti / kazanan
- *   SFX.sceneBip(id)     — sahne konuşmacısı bipli (karakter bazlı tını)
- *   SFX.stopSceneBips()  — sahne atlanınca bekleyen bipleri iptal et
  *   SFX.musicSync(state) — duruma göre arka plan müziğini aç/kapat/tema değiştir
  *   SFX.musicInfo()      — aktif müzik teması ve çalan nota sayısı (tanı/test)
  *   SFX.toggleMute()     — sesi aç/kapat (durumu döndürür)
@@ -42,7 +40,6 @@ const SFX = (() => {
   let disabled = false;
   let resuming = null;
   const sources = new Map(); // kaynak → bağlantıları temizleyen işlev
-  const sceneBips = new Set(); // sahne konuşmacısı bipleri (skip'te iptal için)
 
   // Mute tercihi (varsa) yükle — file:// üzerinde localStorage çoğu tarayıcıda çalışır
   try { muted = localStorage.getItem("nwo_muted") === "1"; } catch (e) { /* yoksay */ }
@@ -167,14 +164,9 @@ const SFX = (() => {
   let musicStep = 0;
   let musicNextTime = 0;
 
-  // Üç tını: festival (kupanın jinglesı), battle (sessiz nabız), menu (sakin pad).
+  // İki tını: battle (sessiz nabız), menu (sakin pad).
   // Frekanslar pentatonik C dizisinden; tüm desenler sabit, rastgele yok.
   const MUSIC_THEMES = {
-    festival: {
-      bpm: 112,
-      melody: [523.25, 659.25, 783.99, 880, 783.99, 659.25, 587.33, 523.25],
-      bass: { 0: 130.81, 4: 98.0 }, // her loopun 1. ve 5. adımında bas
-    },
     battle: {
       bpm: 132,
       melody: [null, null, null, null], // melodi yok: yalnız nabız
@@ -188,7 +180,7 @@ const SFX = (() => {
     },
   };
 
-  // Müzik notası: tek seferlik zarflı ton; sceneBip ile aynı kayıt düzeni.
+  // Müzik notası: tek seferlik zarflı ton; kaynak kaydı ortaktır.
   function musicNote(freq, time, opts) {
     if (freq == null) return;
     play(() => {
@@ -431,49 +423,11 @@ const SFX = (() => {
       tone({ type: "triangle", freq: 1200, freqEnd: 1500, dur: 0.05, gain: 0.06, attack: 0.003, delay: 0.055 });
     },
 
-    // Sahne konuşmacısı bipli (plan §10.5): her karakterin kendi tınısı
-    // speakerId'den sabit bir hash ile üretilir; aynı robot hep aynı sesi
-    // duyar. Bipler cümle başında bir kez çalar, her harfte değil. MERKEZ
-    // ("system") pes prosedür sesiyle ayırt edilir (K-06). Sessizde çalmaz:
-    // master kazancı zaten 0'dır; kaynak yine kayıtlıdır, atlanınca iptal olur.
-    sceneBip(speakerId) {
-      const id = String(speakerId || "");
-      let h = 0;
-      for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) >>> 0;
-      const base = id === "system" ? 196 : 280 + (h % 260);
-      play(() => {
-        const osc = ctx.createOscillator();
-        const g = ctx.createGain();
-        osc.type = "square";
-        osc.frequency.setValueAtTime(base, ctx.currentTime);
-        g.gain.setValueAtTime(0.0001, ctx.currentTime);
-        g.gain.exponentialRampToValueAtTime(0.08, ctx.currentTime + 0.004);
-        g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.07);
-        osc.connect(g).connect(master);
-        track(osc, [osc, g]);
-        sceneBips.add(osc); // skip'te bulabilmen için işaretle
-        osc.onended = () => sceneBips.delete(osc);
-        osc.start();
-        osc.stop(ctx.currentTime + 0.09);
-      });
-    },
-
-    // Sahne atlanınca çalan/bekleyen konuşmacı bipleri kalmamalı (plan §21).
-    stopSceneBips() {
-      for (const osc of sceneBips) {
-        try { osc.stop(); } catch (e) { /* zaten bitmiş olabilir */ }
-      }
-      sceneBips.clear();
-      // Kaynakların temizliği onended → track üzerinden otomatik yapılır.
-    },
-
     // Durum → müzik teması eşlemesi. Her kare render'dan çağrılır; tema
     // değişmemişse ucuz no-op. GAMEOVER müziği keser (zafer jingle'ı yeter).
     musicSync(state, mode) {
       let target = "menu"; // menüler, zorluk/oyuncu seçimi, atölye
-      if (state === "STORY_MAP" || state === "STORY_SCENE" || state === "STORY_ROBOT_SELECT" ||
-          state === "STORY_BRIEFING" || state === "STORY_ARCHIVE") target = "festival";
-      else if (state === "AIMING" || state === "PROJECTILE" || state === "SETTLE") target = "battle";
+      if (state === "AIMING" || state === "PROJECTILE" || state === "SETTLE") target = "battle";
       else if (state === "GAMEOVER") target = null;
       if (target !== musicTheme) {
         if (target) startMusic(target);

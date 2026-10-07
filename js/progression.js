@@ -11,7 +11,7 @@
 
 // ── Sabitler ────────────────────────────────────────────────────────────────
 
-const PROFILE_SCHEMA_VERSION = 6; // profile.js ile ortak kayıt şeması sürümü (v2: +story, v3: +ammo, v4: ortak ammo deposu, v5: +parçalar/loadout, v6: yuva başına 2 parça)
+const PROFILE_SCHEMA_VERSION = 6; // profile.js ile ortak kayıt şeması sürümü (v3: +ammo, v4: ortak ammo deposu, v5: +parçalar/loadout, v6: yuva başına 2 parça)
 
 // Servis seviyeleri: xp alanı KÜMÜLATİF eşiktir (levelForXp ile eşleşir).
 const SERVICE_LEVELS = [

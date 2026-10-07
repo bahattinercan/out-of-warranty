@@ -5,6 +5,8 @@ Terk edilmiş bir mega fabrikada küçük servis robotlarının yedek parça hak
 Tema dönüşümünün tasarım ve teknik kararları için [Robot Tema Dönüşümü — Ana Plan](./docs/robot-theme/README.md) belgesine bakın.
 Kalıcı ilerleme için hazırlanan ekonomi, atölye ve yükseltme tasarımı [Robot Geliştirme Sistemi Planı](./docs/robot-theme/06_ROBOT_GELISTIRME_SISTEMI.md) belgesindedir.
 
+Arkadaşlarla farklı bilgisayarlardan oynama için hazırlanan [Steam Multiplayer Planı](./docs/multiplayer-plan.md), Steam lobileri, arkadaş davetleri ve oyuncunun host olduğu yapıyı tanımlar. Bu sistem henüz plan aşamasındadır.
+
 ## Çalıştırma
 
 `index.html` dosyasını doğrudan tarayıcıda açın. Kod ES module kullanmadığından `file://` üzerinden çalışır.
@@ -51,7 +53,7 @@ kullanılır. Ayrıntı: [`docs/ui-theme-plan.md`](docs/ui-theme-plan.md) ve
 | Pazar'da `1`–`5` | Cephane / Kask / Gövde / Aparat / Ayak sekmesine geç |
 | Atölye'de `1` / `2` veya `Tab` | GELİŞTİRME / PARÇALAR modunu değiştir; `↑`/`↓` yuva (veya listede satır), `←`/`→` alt yuva seçer; `Enter` listeyi açar ve uygular |
 
-Ses düzeyi ve sessize alma denetimi sahnenin sağ üstünde sabittir; oyun sırasında olduğu gibi ana menü, zorluk/oyuncu sayısı, robot ve arena seçimi, atölye, kupa haritası, sahneler ve maç sonu ekranı dâhil her ekranda erişilebilir kalır.
+Ses düzeyi ve sessize alma denetimi sahnenin sağ üstünde sabittir; oyun sırasında olduğu gibi ana menü, zorluk/oyuncu sayısı, robot ve arena seçimi, atölye, pazar ve maç sonu ekranı dâhil her ekranda erişilebilir kalır.
 
 ## Savaş alt paneli
 
@@ -65,9 +67,8 @@ sipariş yuvaları bilinçli olarak yoktur):
 
 ## Oyun akışı
 
-- Ana menüden hikâye modu, otomatik birimlere karşı veya 2–6 kişilik yerel oyun seçilir; diğer kartlar Atölye, Pazar ve Nasıl Oynanır ekranlarını açar.
-- Bütün menülerde sol üstte geri butonu vardır (ana menü hariç, çünkü ana menüdür); `Esc` aynı rotayı izler. Oyuncu sayısı, robot seçimi, arena seçimi, atölye, kupa haritası ve sahneler dâhil her ekrandan fareyle geri dönülebilir.
-- Hikâye modunda **Dokuz Bölge Kupası** oynanır: kupa haritasından görev seçilir, giriş sahnesi oynatılır, saha robotu seçilir ve brifingden arena maçına girilir (bkz. `docs/story-mode-lock.md`). Kupa haritası kartları bölge kodu, görev durumu, ev sahibi şampiyonlar, toplanan teknik kanıt, Bakım Puanı ve arşiv işaretini gösterir; tamamlanan görevler yeniden oynanabilir.
+- Ana menüden otomatik birimlere karşı veya 2–6 kişilik yerel oyun seçilir; diğer kartlar Atölye, Pazar ve Nasıl Oynanır ekranlarını açar.
+- Bütün menülerde sol üstte geri butonu vardır (ana menü hariç, çünkü ana menüdür); `Esc` aynı rotayı izler. Oyuncu sayısı, robot seçimi, arena seçimi, atölye ve pazar dâhil her ekrandan fareyle geri dönülebilir.
 - Bilgisayara karşı modunda zorluk ve 1–3 rakip robot belirlenebilir. Zorluk yalnız bot zekâsını değil hasar gücünü de ölçekler (Kolay ×0.8, Orta ×1.0, Zor ×1.1, Ustalık ×1.2); insan robotu ve yerel maçlar etkilenmez.
 - Her operatör robotunu seçer, ardından ortak fabrika arenası belirlenir.
 - Her turda rüzgâr değişir ve mermilerin yatay hareketini etkiler. Sıra, kalan süre ve rüzgâr üst bantta; robot kartları alt panelde gösterilir.
@@ -117,7 +118,7 @@ Hurda karşılığında fazladan mühimmat almayı sağlar. Izgara 3 sütun × 5
 - **Savaş tavanı:** depo ne kadar dolu olursa olsun bir maçta o silahtan en fazla `battleMax` atış yapılır (taban dâhil). Maç başında depodan yalnız `tavan − taban` kadar yüklenir; fazlası sonraki maçlara kalır. Örnek: El Bombası taban 3, tavan 5 → depoda 999 olsa bile maçta en fazla 5 atış.
 - **Maça yükleme:** maç başında depo, o maçta oynayan insan robotunun mermi sayacına **tavanı aşmadan** eklenir. **Bazuka sınırsız olduğu için pazarda hiç görünmez, tavana bağlanmaz ve alınması gerekmez.** Taban mühimmat ücretsizdir ve **önce** tüketilir; depo mermisi ancak taban bitince harcanır.
 - **İade:** maç bitince (ya da maç yarıda bırakılınca) depodan yalnız **harcanan** mermi düşülür; kullanılmayan cephane yerinde kalır. Depo maç başında dosyaya yazılmadığı için maç ortasında sayfa yenilense bile satın alınan mermi kaybolmaz.
-- **Kapsam:** depo, geliştirmelerle aynı kurallara uyar — yalnız **bilgisayara karşı** ve **hikâye** maçlarında, yalnız insan robotunda etkindir; botlar ve yerel maçlar taban mühimmatla oynar.
+- **Kapsam:** depo, geliştirmelerle aynı kurallara uyar — yalnız **bilgisayara karşı** maçlarında, yalnız insan robotunda etkindir; botlar ve yerel maçlar taban mühimmatla oynar.
 - **Görünürlük:** maç içinde silah açıklaması `Mühimmat: 5 (taban 3 + depo 2) • savaş tavanı 5` satırıyla kaynağı ve tavanı gösterir; silah çubuğundaki rozet kalan mermiyi yazar. Ana menü kartı ve pazar başlığı depodaki toplam mermiyi ve dolu silah sayısını yazar.
 
 Fiyatlar `js/market.js > AMMO_PRICES` tablosunda ve tek atış gücünden türetilen formülde belirlenir (`round(0.8 × güç + 20)`, 30–130 Hurda; ucuz başlangıç cephanesi ve yardımcı silahlar bilinçli istisnadır). Gösterim puanları (`Hasar/Hız/Yarıçap`) silahın gerçek sayılarından türetilir, elle yazılmaz; tabloda olmayan yeni bir silah pazarda kendiliğinden doğru fiyatlanır.
@@ -133,7 +134,7 @@ Robotları güçlendiren **kalıcı ve tek adetlik** donanımlar satılır. Her 
 | Aparat | Yedek Yükleyici (95 — modül cooldown −1 tur) · Takviye Bobini (70 — modül gücü +%8) · Hassas Ayar Cıvatası (45 — silah hasarı +%4) · Aşırı Yük Bobini (110 — modül gücü +%12) · Namlu Aparatı (85 — silah hasarı +%7) · Zamanlayıcı Çip (125 — cooldown −1 tur, modül gücü +%4) |
 | Ayak | Denge Jiroskobu (55 — savrulma −%12) · Yay Takozları (50 — enerji +8) · Turbo Palet (90 — hareket hızı +%10) · Sıçrama Yayı (75 — sıçrama gücü +%10) · Kilitli Taban (95 — savrulma −%15) · Çift Turbo Palet (130 — hareket hızı +%16) |
 
-Kurallar: her parçadan yalnız **1 adet** satın alınır; buna karşılık parçalar robota **kilitli değildir** — satın alınan bir parça istenen her robota takılabilir ve **aynı anda birden çok robotta durabilir** (kopya gerekmez). Bir robotta **her yuvaya 2 parça** takılabilir (4 yuva × 2 = **8 parça**); aynı parça aynı robotta iki alt yuvada birden duramaz. Alt yuvaya yerleşen ikinci donanım robotta daha küçük bir **yardımcı modül** olarak, boş köşeye çizilir. Sökme ücretsizdir, geri satış yoktur. Parça etkileri geliştirme kademeleriyle **aynı maç kapsamında** işler (bilgisayara karşı + hikâye, insan robotu); karakter seçim kartında 4 noktalı rozet yuvaları özetler (içi koyu göbek = o yuvada iki parça). Fiyatlar `js/parts.js > PARTS` içinde tek kaynaktır (40–130 Hurda bandı).
+Kurallar: her parçadan yalnız **1 adet** satın alınır; buna karşılık parçalar robota **kilitli değildir** — satın alınan bir parça istenen her robota takılabilir ve **aynı anda birden çok robotta durabilir** (kopya gerekmez). Bir robotta **her yuvaya 2 parça** takılabilir (4 yuva × 2 = **8 parça**); aynı parça aynı robotta iki alt yuvada birden duramaz. Alt yuvaya yerleşen ikinci donanım robotta daha küçük bir **yardımcı modül** olarak, boş köşeye çizilir. Sökme ücretsizdir, geri satış yoktur. Parça etkileri geliştirme kademeleriyle **aynı maç kapsamında** işler (bilgisayara karşı, insan robotu); karakter seçim kartında 4 noktalı rozet yuvaları özetler (içi koyu göbek = o yuvada iki parça). Fiyatlar `js/parts.js > PARTS` içinde tek kaynaktır (40–130 Hurda bandı).
 
 **Robot üzerindeki görünüm:** her parça, ikon şekline göre **farklı bir donanım** olarak çizilir — kaskta tek mercekli optik (`lens`), tarama bandı + anten (`visor`), yan jiroskop diski (`gyro`), tac + yanak zırhı (`armorHelm`); gövdede lehim yaması, katmanlı zırh plakası, kanatçıklı radyatör; sırtta bobin/şarjör/basınç tankı/çip modülü; ayakta damper, yay takozu, itici lüle (turbo) ve sıçrama yayı. Donanımlar katmanlı düz dolgu + koyu kontur + üst parlaklıkla çizilir (gradyan/shadowBlur yok); doğrulama sayfası: `_parts_wearables.html`.
 
@@ -276,32 +277,6 @@ yeri değişebilir. Mıknatıs Köprüsü ve Üç Katlı Raf gerçek üst yollar
 Servis Tüneli gerçek maske boşlukları kullanır. Harita kartı gerçek maç profilini
 aynı veriden çizer. Tasarım ve denge hedefleri `docs/map-combat-layout-plan.md` içindedir.
 
-## Hikâye Modu — Dokuz Bölge Kupası
-
-Ana menüdeki **HİKÂYE MODU** kartı tek oyunculu kampanyayı açar: Atölye ekibi Fabrika Dokuz Bölge Kupası'nda yarışır, kaybeden bölgelerde kısıntılar başlar ve şampiyonluk finali bir stres testine dönüşür. Akış: kupa haritası → giriş sahnesi → saha robotu seçimi → brifing → arena maçı → sonuç sahnesi → ödül. Normatif sözleşme `docs/story-mode-lock.md`'dedir.
-
-Her maçta **Hurda** ve **Servis XP** normal kuralda kazandırır (ödül formülü zorluk çarpanı ve rakip sayısını kullanır; ilk tamamlamada ek bonus yoktur). Görevler **Bakım Puanı** (Perde I 10 / II 20 / III 30, maks 270) ve **teknik kanıt** biriktirir; kanıt ve puan kayıttan türetilir, tekil yazılır ve tekrar oynama çoğaltmaz.
-
-| # | Görev | Bölge / Arena | Rakipler | Önerilen | Kanıt |
-|---|---|---|---|---|---|
-| 1 | Açık Servis Kontenjanı | HS — Hurda Sahası | BİLYE-3 | 1 | Hurda geri kazanım kapasitesi |
-| 2 | Mıknatısın İtirazı | MH — Montaj Hattı | MIK-0, DÖNER-5 | 1 | Konveyörlerin boşta çalışma tüketimi |
-| 3 | Donmuş Vardiya | ST — Soğutma Tesisi | SOĞUT-2, KRİYO-7 | 2 | Gereksiz soğutma haritası |
-| 4 | Renk Hakkı | BA — Boya Atölyesi | ÇİFT-6, CİV-1 | 2 | Kaplama kaynaklı iletim kaybı |
-| 5 | Kimsenin İzlemediği Hat | AA — Atık Arıtma | SIZ-7, DALGA-2 | 3 | Isı ve malzeme geri kazanım oranı |
-| 6 | Ağırlığın Kanıtı | DR — Depo Rafları | PRES-4, BOM-12 | 4 | Ortak parça envanteri |
-| 7 | Kumun Altındaki Hat | KU — Kumlama Ünitesi | MAT-6, ZIP-X | 4 | Yenileme başına enerji tasarrufu |
-| 8 | Kapı Açık Kalsın | DY — Dış Yükleme | TEK-8, KES-9 | 5 | Mekanik enerji depolama kapasitesi |
-| 9 | Ocağı Söndürmeden | DO — Döküm Ocağı | FIRIN-3, ŞOK-9, EMP-80 | 5 | Minimum güvenli ocak yükü |
-| 10 | Dokuzuncu Ölçüm (yarı final) | HS — Bakım Arenası | KRİYO-7, SIZ-7, TEK-8 | 6 | Bölgeler arası senkronizasyon |
-| 11 | Final Vardiyası (final) | DR — Final Sahası | PRES-4 | 6 | Resmî Baş Bakım Yetkisi |
-| 12 | Ortak Vardiya | DO — Ana Bara Çukuru | FIRIN-3, KRİYO-7, EMP-80 | 7 | — |
-
-- **Öğreticiler:** görev 1 hareket/nişan/güç/ateş, görev 2 rüzgâr/mühimmat/silah değiştirme, görev 3 `Q` modülü/kalkan-alan/platformlar (yalnız brifingde gösterilir).
-- **Zorluk:** brifingde dört vardiya (Rahat/Standart/Yoğun/Usta); kadro değişmez, yalnız bot zekâsı değişir.
-- **Kupa Festivali:** epilog sonrası haritada açılır — rastgele arena ve 1–3 rakip ile yıllık stres testi; ödül normal formülle yazılır, kampanya ilerlemesine dokunulmaz. Klavye odağı da festival satırını gösterir.
-- **Arşiv:** izlenen giriş/zafer/yenilgi/ara sahnelari yeniden izleme ekranı; sahnelar fade-in ile açılır, konuşmacı bazlı biplerle çalar.
-
 ## Silahlar
 
 Bazuka sınırsız mühimmatlıdır; diğer silahlar sınırlıdır. Cephane bitince seçim otomatik olarak Bazuka'ya döner. Cephanelikte sekmeli, yapışkan, çoklu, parçalanan, delici, mayın ve alan bırakan mermi davranışları bulunur. Sınırlı her cephane Cephane Pazarı'ndan Hurda ile depolanabilir (bkz. “Cephane Pazarı ve envanter”). **Taban** ücretsiz mühimmatı, **tavan** ise depo dolu olsa bile bir maçta yapılabilecek en fazla atışı gösterir.
@@ -341,12 +316,11 @@ Her cephanenin **kendi mermi tasarımı** vardır: roket kanatlı, el bombası p
 node tests/run.js
 node tests/progression.js
 node tests/market.js
-node tests/story.js
 node tests/audio.js
 node tests/maps.js
 ```
 
-Ana test takımı robot veri sözleşmesini, 34 arena üretimini, dokuz fabrika bölgesini, bütün prop kayıtlarını, modüler çizimi, yetenekleri, bot karar sistemini (puanlama, güvenlik filtresi, hareket yolu, isabet kalitesi ve zorluk merdiveni) ve geliştirme sisteminin oyun entegrasyonunu doğrular. Harita testleri 34 benzersiz profili, 2–6 oyuncu doğuşlarını ve katmanlı köprü/raf/tünel maskelerini denetler. Hikâye testleri görev/kanıt kimliklerini, kilit grafiğini, dokuz bölge eşleşmesini ve profil göçünü (v1→v5; `story`, ortak `ammo` deposu ve parça alanlarında ekonomi korunmasını) denetler. Geliştirme testleri seviye eşiklerini, ödül formülünü, yetenek adaptörlerini, profil doğrulamasını ve satın alma önkoşullarını tarayıcısız denetler. Pazar testleri cephane fiyatlarını, ortak depo doğrulamasını (bilinmeyen/sınırsız silah ve üst sınır), satın alma önkoşullarını, maça yükleme ve harcanan mermiyi düşme döngüsünü, robot depolarının ortak depoya taşındığı v3→v4 göçünü ayrıca pazar ekranı/satın alma akışının oyun entegrasyonunu denetler. **Parça testleri** katalog bütünlüğünü (24 parça, yuva başına 6, etki eksenleri), benzersiz satın almayı, **yuva başına iki alt yuvayı** (indeksli takma, taşıma, kırpma, göç v5→v6), aynı parçanın birden çok robotta takılı olabilmesini, parçaların build'e etkilerini (düz toplamlar + çarpımsal güç/savrulma/hız/sıçrama, kırpma sınırları), pazar yuva sekmelerini, Atölye parça panelini (8 hücre + sayfalı liste) ve aksesuar çizimini denetler. Ses testleri Web Audio kaynak temizliğini, sessize alma davranışını, seviye kaydını ve hasar bildirimlerini denetler. Mermi görsel testleri 27 spec'in tasarım ailesi kuralını (paylaşım yalnız `SHARED_SHAPES` beyaz listesinde), shape'lerin birbirinden farklı çizim üretmesini, tüm spec'lerin hatasız çizilmesini ve önizleme çizicisini denetler. Yetenek efekti testleri her modülün kayıtlı ve benzersiz bir `fx.shape` taşıdığını, her türün varsayılan efektini, türetilmiş build'in görsel kimliği koruduğunu, 34 shape'in ömrü boyunca hatasız/farklı/deterministik çizildiğini, gradient-`shadowBlur` kullanılmadığını ve aura/ikon çizicilerini denetler.
+Ana test takımı robot veri sözleşmesini, 34 arena üretimini, dokuz fabrika bölgesini, bütün prop kayıtlarını, modüler çizimi, yetenekleri, bot karar sistemini (puanlama, güvenlik filtresi, hareket yolu, isabet kalitesi ve zorluk merdiveni) ve geliştirme sisteminin oyun entegrasyonunu doğrular. Harita testleri 34 benzersiz profili, 2–6 oyuncu doğuşlarını ve katmanlı köprü/raf/tünel maskelerini denetler. Geliştirme testleri seviye eşiklerini, ödül formülünü, yetenek adaptörlerini, profil doğrulamasını ve satın alma önkoşullarını tarayıcısız denetler. Pazar testleri cephane fiyatlarını, ortak depo doğrulamasını (bilinmeyen/sınırsız silah ve üst sınır), satın alma önkoşullarını, maça yükleme ve harcanan mermiyi düşme döngüsünü, robot depolarının ortak depoya taşındığı v3→v4 göçünü ayrıca pazar ekranı/satın alma akışının oyun entegrasyonunu denetler. **Parça testleri** katalog bütünlüğünü (24 parça, yuva başına 6, etki eksenleri), benzersiz satın almayı, **yuva başına iki alt yuvayı** (indeksli takma, taşıma, kırpma, göç v5→v6), aynı parçanın birden çok robotta takılı olabilmesini, parçaların build'e etkilerini (düz toplamlar + çarpımsal güç/savrulma/hız/sıçrama, kırpma sınırları), pazar yuva sekmelerini, Atölye parça panelini (8 hücre + sayfalı liste) ve aksesuar çizimini denetler. Ses testleri Web Audio kaynak temizliğini, sessize alma davranışını, seviye kaydını ve hasar bildirimlerini denetler. Mermi görsel testleri 27 spec'in tasarım ailesi kuralını (paylaşım yalnız `SHARED_SHAPES` beyaz listesinde), shape'lerin birbirinden farklı çizim üretmesini, tüm spec'lerin hatasız çizilmesini ve önizleme çizicisini denetler. Yetenek efekti testleri her modülün kayıtlı ve benzersiz bir `fx.shape` taşıdığını, her türün varsayılan efektini, türetilmiş build'in görsel kimliği koruduğunu, 34 shape'in ömrü boyunca hatasız/farklı/deterministik çizildiğini, gradient-`shadowBlur` kullanılmadığını ve aura/ikon çizicilerini denetler.
 
 ## Mimari
 
@@ -356,13 +330,11 @@ Ana test takımı robot veri sözleşmesini, 34 arena üretimini, dokuz fabrika 
 | `css/style.css` | Arayüz ve yerleşim |
 | `js/characters.js` | 34 robotun veri tanımları |
 | `js/progression.js` | Saf ekonomi: seviye eşikleri, ödül formülü, türetilmiş build ve yetenek adaptörleri |
-| `js/profile.js`   | Profil şeması (v5: `story`, **ortak** cephane deposu ve **parça/loadout**), doğrulama/migrasyon, kayıt ve satın alma cephesi   |
+| `js/profile.js`   | Profil şeması (v5: **ortak** cephane deposu ve **parça/loadout**), doğrulama/migrasyon, kayıt ve satın alma cephesi   |
 | `js/market.js` | Cephane pazarı ekonomisi: fiyatlar, ortak depo doğrulama, satın alma ve maç yükleme/harcama |
 | `js/parts.js` | Parça ekonomisi ve takma katmanı: katalog, benzersiz satın alma, `equipPart` (taşımalı), parça ikonları |
 | `js/robots.js` | Ortak modüler Canvas robot çizicisi |
 | `js/maps.js` | Fabrika bölgeleri, arena üretimi ve çevre çizimi |
-| `js/story-data.js` | Hikâye kampanyasının saf verisi: kampanya, 9 bölge, 12 görev, sahneler, öğreticiler |
-| `js/story.js`  | Hikâye kural katmanı: doğrulama, kilit grafiği, Bakım Puanı, türetilen durumlar |
 | `js/skills.js` | Dahili modül davranışları ve HUD |
 | `js/skill-fx.js` | Modül cast efektleri: `SKILL_FX_SHAPES` çizicileri, kalıcı auralar, kart ikonu (`drawSkillFxIcon`) |
 | `js/terrain.js` | Yıkılabilir arazi maskesi |

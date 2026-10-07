@@ -3,11 +3,14 @@
 Tarih: 24 Eylül 2026
 Durum: Plan aşaması — hiçbir adım uygulanmadı. Onay/karar bekleyenler `[?]`, öneriler `[öneri]` ile işaretli.
 
+8 Ekim 2026 multiplayer güncellemesi: Steam lobileri, arkadaş davetleri ve oyuncunun yetkili host olduğu yapı seçildi. Teknik aşamalar ve geçiş ölçütleri [Steam Multiplayer Planı](./multiplayer-plan.md) belgesindedir. Masaüstü için güncel öneri Electron'dur; native köprü, modern Steam Networking Sockets ve overlay uyumu S0 denemesinde doğrulanacaktır. Aşağıdaki tarihsel maliyet/pazar bilgileri yayın öncesi yeniden kontrol edilmelidir.
+
 ## 1. Amaç
 
 Mevcut HTML5 Canvas oyununu (`index.html` + klasik JS script'leri) masaüstü uygulamasına
-sarıp Steam üzerinden satışa çıkarmak. Web sürümünü etkilememesi hedeflenir: sarma
-yalnızca bir dağıtım paketi üretir, oyun kaynak kodu değişmez.
+sarıp Steam üzerinden satışa çıkarmak ve Steam arkadaşlarıyla çevrimiçi maç oynatmak.
+Paketleme yanında ortak oyun çekirdeği, Steam köprüsü ve host/istemci akışı geliştirilir;
+web sürümündeki çevrimdışı modlar aynı çekirdeği kullanmayı sürdürür.
 
 Özet rakamlar:
 
@@ -27,9 +30,9 @@ Sarma işini kolaylaştıran ve dikkat etmemizi gerektiren tespitler:
 | Ses | Tamamen WebAudio sentez (`js/audio.js`), harici mp3/ogg yok | Asset fetch sorunu yok; autoplay kilidi ilk kullanıcı jestini bekler (mevcut davranış korunur) |
 | Font | woff2 lokal (`fonts/`) | Fetch/CSS url'i lokal, sorun yok |
 | Tam ekran | `⛶ Tam Ekran` butonu + `F` kısayolu mevcut | Masaüstünde `requestFullscreen` aynen çalışır; Alt+Enter/F11 Steam standardı olarak ayrıca test edilecek |
-| Ağ | Tek oyunculu, sunucu yok | Çevrimdışı çalışır; Steam dağıtımı için ideal |
+| Ağ | Bilgisayara karşı ve aynı cihazda yerel oyun; çevrimiçi altyapı yok | Steam lobisi + modern P2P taşıma + yetkili oyuncu hostu planlandı |
 | Depo boyutu | Repo 6.5 MB (js+css+fonts ~1 MB) | Runtime (NW.js/Electron) ile birlikte ~100–200 MB depot |
-| Git | **Yok** | Sarma işine başlamadan önce `git init` + ilk commit `[öneri]` — paralel düzenleme riskine karşı (bkz. mermi-görsel oturum dersi) |
+| Git | Depo mevcut; çalışma ağacında başka değişiklikler var | Uygulama mevcut değişiklikleri koruyarak ilerlemeli |
 
 Başlık hâlâ "Dökümhane-9 — Arena Prototipi". Steam mağazasında prototip ibaresi
 kalıcı olamaz; ticari isim kararı gerekli `[?]` (bkz. §9 Açık sorular).
@@ -74,9 +77,13 @@ Oyun hiçbir Node API'si kullanmıyor; ikisi de aynen çalışır. Karar kriterl
 | Runtime boyutu | ~100–120 MB | ~150–200 MB |
 | Topluluk/bakım | Daha sakin | Çok daha büyük ekosistem |
 
-**Öneri:** NW.js — düz `index.html` yapısına en az dokunuş, daha küçük depot, Steam
-overlay geçmişi sağlam `[öneri]`. Elektron, kod imzalama/otomatik güncelleme ihtiyacı
-doğarsa ikinci turda değerlendirilir. **Karar henüz verilmedi `[?]`.**
+**Güncel öneri (8 Ekim 2026):** Electron — Steam köprüsü, sınırlı preload arayüzü
+ve çizimden bağımsız host simülasyonunu ayrı sorumluluklarla kurmak için.
+Tablodaki eski araç/sürüm değerlendirmeleri uyumluluk garantisi değildir.
+`steamworks.js` aday lobi/davet köprüsüdür; incelenen ağ yüzeyi eski P2P API'sini
+gösterdiği için modern Steam Networking Sockets erişimi ayrıca doğrulanır veya
+native köprüyle sağlanır. Electron/native modül/overlay sürümleri S0 denemesinden
+sonra kilitlenir; NW.js yalnız bu deneme engellenirse teknik alternatif olarak değerlendirilir.
 
 ## 5. Teknik fazlar
 
@@ -85,14 +92,13 @@ masaüstü paketinden **çıkarılır** ama geliştirme sırasında repoda kalı
 
 ### F1 — Paketleme PoC (Windows, Steam'siz)
 
-- [ ] `git init` + ilk commit `[öneri]`
+- [ ] Mevcut Git çalışma ağacını ve test sonuçlarını kaydet; diğer değişiklikleri koru
 - [ ] `dist/` üretim betiği (aşağıdaki dahil/hariç listesiyle kopyalama)
-- [ ] NW.js paket tanımı (package.json: `main: "index.html"`, `window` boyutu,
-      ikon) — Electron seçilirse `main.js` + electron-builder config
-- [ ] `nw-builder` (veya electron-builder) ile Windows `.exe` üretimi
+- [ ] Electron `main.js` + sınırlı `preload.js` + paket yapılandırması
+- [ ] Windows x64 `.exe` üretimi; ardından multiplayer planındaki S0 Steam bağlantı denemesi
 - [ ] **Doğrulama:** tüm UI akışı (MODE_SELECT → DIFFICULTY_SELECT → CHAR_SELECT →
-      MAP_SELECT → maç), ses aç/kapa, tam ekran `F`, `Esc` menüye dönüş, bot turu,
-      hikâye modu ekranları masaüstü penceresinde test edilir
+      MAP_SELECT → maç), ses aç/kapa, tam ekran `F`, `Esc` menüye dönüş ve bot turu
+      masaüstü penceresinde test edilir
 - [ ] Farklı pencere boyutlarında (100%, %125, %150 Windows ölçekleme) canvas
       ölçekleme kontrolü
 
@@ -113,8 +119,8 @@ masaüstü paketinden **çıkarılır** ama geliştirme sırasında repoda kalı
       stub'ıyla Steam istemcisi altında geliştirme
 - [ ] Steam Overlay doğrulaması (Shift+Tab)
 - [ ] Başarım seti tasarımı `[?]` — örn. "İlk zafer", "Bir maçta 3 robot", "Tüm
-      haritaları oynama", hikâye etaplarını tamamlama
-- [ ] Steam Cloud: hikâye ilerleme kaydı localStorage'da; Cloud'a taşıma `[sonra]`
+      haritaları oynama"
+- [ ] Steam Cloud: ilerleme kaydı localStorage'da; Cloud'a taşıma `[sonra]`
 
 ### F4 — Steam build hattı
 
@@ -170,8 +176,8 @@ kayıt sırasında 2× ölçek test edilir `[?]`).
 ```
 index.html
 css/  (tamamı)
-js/   (tamamı — audio, characters, progression, profile, maps, story-data,
-       skills, robots, terrain, weapons, entity, projectile, ai, story, game, main …)
+js/   (tamamı — audio, characters, progression, profile, maps,
+       skills, robots, terrain, weapons, entity, projectile, ai, game, main …)
 fonts/ (tamamı)
 ```
 
@@ -208,7 +214,7 @@ Araştırma bulgusu kaydı: "Dökümhane" adı Steam'de boşta; "Foundry" ailesi
 ad seçilirse "Foundry" kökünden kaçınılmalı. Benzer indie top/atış oyunlarının fiyat
 bandı $4.99–9.99 olarak gözlendi.
 
-- [?] **NW.js mi Electron mu** — §4 önerisi NW.js; PoC sonrası kesinleşir.
+- [öneri] **Electron** — §4 güncel önerisi; sürüm/native köprü uyumu multiplayer S0 denemesinde kesinleşir.
 - [?] **Ticari isim** — "Dökümhane-9" kalabilir mi, İngilizce alternatif (örn.
   "Foundry-9") gerekir mi? Steam'de benzer isim taraması yapılmalı. Arayüz dili
   Türkçe ağırlıklı; mağaza sayfası için İngilizce metin zorunlu.
@@ -217,8 +223,7 @@ bandı $4.99–9.99 olarak gözlendi.
 - [?] **Fiyat** ve lansman indirmesi.
 - [?] **Kod imzalama** sertifikası alınacak mı?
 - [?] **Bireysel mi şirket hesabı mı** — vergi görüşmesini etkiler.
-- [?] Next Fest demo'su yapılacak mı (hikâye modunun ilk 2–3 etabı iyi demo
-  adayı `[öneri]`)?
+- [?] Next Fest demo'su yapılacak mı `[öneri]`?
 
 ## 10. Paralel/alternatif kanallar
 

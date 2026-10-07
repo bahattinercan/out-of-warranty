@@ -7,14 +7,14 @@ Dayanak: [`CLAUDE.md`](../CLAUDE.md) kuralları, mevcut `css/style.css` ve `js/g
 
 ## 1. Kilitlenen kararlar (tartışma sonucu)
 
-| # | Karar | Seçim |
-| --- | --- | --- |
-| K1 | Yazı tipi stratejisi | **İkili eşleşme**: Başlık/buton = **Russo One**, gövde/açıklama = **Chakra Petch** |
-| K2 | Font dağıtımı | **Yerel dosya**: `fonts/*.woff2` + `@font-face`; Google Fonts CDN **kullanılmaz** (file:// offline kuralı) |
-| K3 | Menü görsel teması | **Endüstriyel fabrika paneli** (kesik köşeli çelik panel, perçin, sarı-siyah tehlike şeritleri) |
-| K4 | Kapsam | Tüm canvas menü ekranları + DOM (HUD/overlay/silah paneli) + oyun içi canvas yazıları |
-| K5 | Teknik yapı | 88 hardcode `ctx.font` yerine **ortak font yardımcıları** (`game.js` içinde); yeni dosya açılmaz |
-| K6 | Türkçe doğrulama | İki font da **latin-ext (Türkçe) destekli** — Google Fonts API'den 24 Eylül 2026'da doğrulandı. Orbitron gibi Türkçe'si olmayan fontlar kullanılmaz. |
+| #   | Karar                | Seçim                                                                                                                                                |
+| --- | -------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| K1  | Yazı tipi stratejisi | **İkili eşleşme**: Başlık/buton = **Russo One**, gövde/açıklama = **Chakra Petch**                                                                   |
+| K2  | Font dağıtımı        | **Yerel dosya**: `fonts/*.woff2` + `@font-face`; Google Fonts CDN **kullanılmaz** (file:// offline kuralı)                                           |
+| K3  | Menü görsel teması   | **Endüstriyel fabrika paneli** (kesik köşeli çelik panel, perçin, sarı-siyah tehlike şeritleri)                                                      |
+| K4  | Kapsam               | Tüm canvas menü ekranları + DOM (HUD/overlay/silah paneli) + oyun içi canvas yazıları                                                                |
+| K5  | Teknik yapı          | 88 hardcode `ctx.font` yerine **ortak font yardımcıları** (`game.js` içinde); yeni dosya açılmaz                                                     |
+| K6  | Türkçe doğrulama     | İki font da **latin-ext (Türkçe) destekli** — Google Fonts API'den 24 Eylül 2026'da doğrulandı. Orbitron gibi Türkçe'si olmayan fontlar kullanılmaz. |
 
 Faz 2 pilotunda doz kararı (perçin + tehlike şeridi ne kadar belirgin olsun)
 kullanıcıya ekran görüntüsüyle sorulur ve bu belgeye işlenir.
@@ -27,12 +27,12 @@ kullanıcıya ekran görüntüsüyle sorulur ve bu belgeye işlenir.
 Google Fonts CSS API'sinden alınır; Chrome User-Agent ile woff2 URL'leri
 çözülür):
 
-| Dosya | Aile | Kalınlık | Kullanım |
-| --- | --- | --- | --- |
-| `RussoOne-regular-latin.woff2` / `-latin-ext.woff2` | Russo One | 400 | Başlıklar, buton yazıları, büyük etiketler |
-| `ChakraPetch-semibold-latin.woff2` / `-latin-ext.woff2` | Chakra Petch | 600 | Gövde metin, açıklamalar, diyalog, HUD (varsayılan) |
-| `ChakraPetch-bold-latin.woff2` / `-latin-ext.woff2` | Chakra Petch | 700 | Etiket/buton, vurgulu gövde, istatistikler, hasar sayıları |
-| `ChakraPetch-regular-latin.woff2` / `-latin-ext.woff2` | Chakra Petch | 400 | Yalnız fallback (UI'da kullanılmıyor — gövde 600) |
+| Dosya                                                   | Aile         | Kalınlık | Kullanım                                                   |
+| ------------------------------------------------------- | ------------ | -------- | ---------------------------------------------------------- |
+| `RussoOne-regular-latin.woff2` / `-latin-ext.woff2`     | Russo One    | 400      | Başlıklar, buton yazıları, büyük etiketler                 |
+| `ChakraPetch-semibold-latin.woff2` / `-latin-ext.woff2` | Chakra Petch | 600      | Gövde metin, açıklamalar, diyalog, HUD (varsayılan)        |
+| `ChakraPetch-bold-latin.woff2` / `-latin-ext.woff2`     | Chakra Petch | 700      | Etiket/buton, vurgulu gövde, istatistikler, hasar sayıları |
+| `ChakraPetch-regular-latin.woff2` / `-latin-ext.woff2`  | Chakra Petch | 400      | Yalnız fallback (UI'da kullanılmıyor — gövde 600)          |
 
 Her aile için latin ve latin-ext ayrı dosya iner; `@font-face` içinde
 `unicode-range` ile ikisi de bildirilir (toplam ~90 KB).
@@ -43,7 +43,9 @@ Her aile için latin ve latin-ext ayrı dosya iner; `@font-face` içinde
 /* Yerel fontlar: file:// üzerinden çift tıkla çalışır; CDN yok (CLAUDE.md kuralı). */
 @font-face {
   font-family: "Russo One";
-  font-style: normal; font-weight: 400; font-display: swap;
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
   src: url("../fonts/RussoOne-regular-latin-ext.woff2") format("woff2");
   unicode-range: U+0100-024F, U+0259, ...; /* latin-ext */
 }
@@ -70,7 +72,9 @@ nedenle yüklenmezse oyun boş kutu yerine sistem fontuyla çalışır.
 // ── UI font yardımcıları ─────────────────────────────────────────────────
 // Tüm canvas yazıları bu iki yardımcıdan font alır; font ailesi tek yerden
 // değişir (K5). Russo One tek kalınlıklı olduğu için "bold" eklenmez.
-function uiTitleFont(px) { return `${px}px "Russo One", "Segoe UI", sans-serif`; }
+function uiTitleFont(px) {
+  return `${px}px "Russo One", "Segoe UI", sans-serif`;
+}
 function uiTextFont(px, weight) {
   return `${weight || 600} ${px}px "Chakra Petch", "Segoe UI", sans-serif`;
 }
@@ -78,7 +82,7 @@ function uiTextFont(px, weight) {
 
 **Ağırlık güncellemesi (25 Eyl 2026, kullanıcı bildirimi):** gövde varsayılanı
 400'den **600 (SemiBold)**'e alındı. Sebep: Chakra Petch'in 400 kesimi ince ve
-geniz; 700 etiketlerin yanında (özellikle hikâye sahnesindeki 15px diyalogda)
+geniz; 700 etiketlerin yanında (özellikle 15px diyalog metinlerinde)
 aynı aile gibi okunmuyor, ekran "başka bir yazı tipi" kullanıyormuş gibi
 görünüyordu. Artık üç kademe var: Russo One 400 (başlık) · Chakra Petch 700
 (etiket/buton/vurgu) · Chakra Petch 600 (gövde/diyalog/açıklama). DOM tarafı
@@ -115,13 +119,13 @@ güncellenir; bu satırlar yalnız ilk karedeki titremeyi önler.
 
 ### 3.1 Palet (mevcut değerler korunur, yenileri eklenir)
 
-| Rol | Değer | Not |
-| --- | --- | --- |
-| Panel dolgusu | `#0f1720` → `#1a2430` dikey gradyan | fırçalanmış metal hissi |
-| Panel kenarı | `#3b526b` (normal) / `#ffe45e` (hover) / `#d8a72f` (altın) | mevcut |
-| Vurgu sarısı | `#ffe45e` | tehlike şeritleri, seçili kart |
-| Perçin | `#54627a` gövde + `#9fb6c9` parlak nokta | panel köşeleri |
-| Tehlike şeridi | `#ffe45e` + `#11161c` 45° çizgiler | buton/kart altlığı |
+| Rol            | Değer                                                      | Not                            |
+| -------------- | ---------------------------------------------------------- | ------------------------------ |
+| Panel dolgusu  | `#0f1720` → `#1a2430` dikey gradyan                        | fırçalanmış metal hissi        |
+| Panel kenarı   | `#3b526b` (normal) / `#ffe45e` (hover) / `#d8a72f` (altın) | mevcut                         |
+| Vurgu sarısı   | `#ffe45e`                                                  | tehlike şeritleri, seçili kart |
+| Perçin         | `#54627a` gövde + `#9fb6c9` parlak nokta                   | panel köşeleri                 |
+| Tehlike şeridi | `#ffe45e` + `#11161c` 45° çizgiler                         | buton/kart altlığı             |
 
 ### 3.2 Çizim yardımcıları (game.js, `_csRoundRect` yanına)
 
@@ -150,13 +154,13 @@ canvas menülerde tıklama anında ekran zaten değişiyor.
 
 ## 4. Faz haritası
 
-| Faz | Ad | Çıktı | Ana dosyalar | Boyut |
-| --- | --- | --- | --- | --- |
-| 1 | Font sistemi | İki yeni font yüklü, 91 font satırı yardımcılarda | `fonts/`, `css/style.css`, `js/game.js`, `js/skills.js`, `js/main.js` | M |
-| 2 | Panel altyapısı + pilot | `_csPanel`/`_csHazardStrip` + 4 basit ekran yenilendi | `js/game.js` | M |
-| 3 | Tüm menüler | 12 canvas ekranın tamamı panel dilinde | `js/game.js` | L |
-| 4 | DOM teması | CSS: kart/buton/HUD/silah paneli panel dilinde | `css/style.css` | M |
-| 5 | Cila ve kabul | Küçük punto turu, tutarlılık, belgeler | `js/skills.js`, `README.md` | S |
+| Faz | Ad                      | Çıktı                                                 | Ana dosyalar                                                          | Boyut |
+| --- | ----------------------- | ----------------------------------------------------- | --------------------------------------------------------------------- | ----- |
+| 1   | Font sistemi            | İki yeni font yüklü, 91 font satırı yardımcılarda     | `fonts/`, `css/style.css`, `js/game.js`, `js/skills.js`, `js/main.js` | M     |
+| 2   | Panel altyapısı + pilot | `_csPanel`/`_csHazardStrip` + 4 basit ekran yenilendi | `js/game.js`                                                          | M     |
+| 3   | Tüm menüler             | 12 canvas ekranın tamamı panel dilinde                | `js/game.js`                                                          | L     |
+| 4   | DOM teması              | CSS: kart/buton/HUD/silah paneli panel dilinde        | `css/style.css`                                                       | M     |
+| 5   | Cila ve kabul           | Küçük punto turu, tutarlılık, belgeler                | `js/skills.js`, `README.md`                                           | S     |
 
 Her faz bağımsız "bitti" sayılabilir; Faz 2 sonunda kullanıcı görsel onayı
 verilmeden Faz 3'e geçilmez (doz kilidi).
@@ -212,13 +216,9 @@ Kabul: 4 ekran tutarlı; tıklama alanları (`_modeRects` vb.) ve akış değiş
   korur, panel dili yalnız kabukta).
 - **F3-03** `renderWorkshop` (en yoğun ekran: grid + detay + satın alma
   butonları; kilitli geliştirme kartının soluk hali korunur).
-- **F3-04** Story ekranları: `renderStoryMap`, `renderStoryScene` (diyalog
-  kutusu panel dili; konuşmacı adı Russo One), `renderStoryRobotSelect`,
-  `renderStoryBriefing`, `renderStoryArchive`.
-- **F3-05** `node tests/run.js` (story durum makinesi testleri özellikle
-  izlenir — görsel değişiklik akışı bozmamalı).
+- **F3-04** `node tests/run.js` (görsel değişiklik akışı bozmamalı).
 
-Kabul: 12 ekranın tamamı tek panel dilinde; hiçbir tıklama alanı kaymadı.
+Kabul: tüm ekranlar tek panel dilinde; hiçbir tıklama alanı kaymadı.
 
 ### Faz 4 — DOM teması (M)
 
@@ -244,7 +244,7 @@ Kabul: DOM ve canvas yüzeyleri aynı dilde; küçük HUD yazıları okunaklı.
 - **F5-03** `README.md`'ye kısa not: `fonts/` klasörü ve font değiştirme
   yönlendirmesi (uiTitleFont/uiTextFont).
 - **F5-04** Ekran görüntüsü turu (kullanıcı): mod seçimi, karakter seçimi,
-  atölye, hikâye sahnesi, maç sonu overlay — önce/sonra karşılaştırma.
+  atölye, maç sonu overlay — önce/sonra karşılaştırma.
 
 ## 6. Test ve doğrulama
 

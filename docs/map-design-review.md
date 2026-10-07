@@ -102,7 +102,7 @@ pervane ve sıvılar ilk uygulamada hareketli tehlike değildir; ayrı onay ve m
 - Her haritanın ayrı adı, büyük tanımlayıcı yapısı ve tanınabilir arazi silüeti var.
 - Renkler kapatıldığında da temel yerleşimler birbirinden ayrılıyor.
 - Aynı bölgenin haritaları aynı malzemeleri kullanabilir; yerleşimleri farklıdır.
-- Kart, brifing ve maç aynı yerleşim verisini kullanıyor.
+- Kart ve maç aynı yerleşim verisini kullanıyor.
 - Rastgelelik ana yolları ve başlangıç yüksekliğini değiştirmiyor.
 - Her oyuncu sayısı için güvenli başlangıç noktaları gerçek yerleşime göre seçiliyor.
 - Seçilen robotun yeteneği faydalı ama haritayı geçmenin tek yolu değil.
@@ -117,7 +117,7 @@ devam edilir. Başlangıç noktaları ve ortak önizleme üretimi bu ilk üç ha
 birlikte çözülmeli. 34 haritayı bir seferde yeniden boyamak, temel tekrar sorununu
 çözmez.
 
-Hikâyede aynı `mapId` tekrar kullanılabiliyor; örneğin PRES-4 etabı ve kupa finali
-aynı arenaya bağlı. Yeni tasarımda bu bilinçli bir geri dönüş olacaksa farklı
+Aynı `mapId` birden çok maçta tekrar kullanılabiliyor; örneğin PRES-4 maçı ve
+final aynı arenaya bağlı. Yeni tasarımda bu bilinçli bir geri dönüş olacaksa farklı
 turnuva süslemesi yeterli olabilir; farklı oynanış isteniyorsa ayrı bir yerleşim
 varyantı açıkça tanımlanmalı.

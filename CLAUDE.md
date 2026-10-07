@@ -47,8 +47,6 @@ Oyun `file://` üzerinden çift tıklayınca çalışmak zorunda. Bu yüzden:
 | `PARTS`, `buyPart`, `equipPart`, `getOwnedParts`, `drawPartIcon` | `parts.js` | Parça kataloğu, benzersiz satın alma, robota takma (taşımalı), parça ikonları |
 | `WEAPONS`, `SKILL_PROJECTILES`, `initialAmmo()`, `weaponStats`, `weaponPowerScore` | `weapons.js`    | Silah spec'leri (taban mühimmat + `battleMax` savaş tavanı) + türetilmiş gösterim puanları + yetenek mermileri |
 | `MAPS`, `getMapById()`, `BIOMES`, `drawSky()` … | `maps.js`       | Harita temaları + arka plan çizimi        |
-| `STORY_CAMPAIGN`, `STORY_MISSIONS`, `STORY_SCENES` | `story-data.js` | Hikâye kampanyası, görev ve sahne verileri |
-| `validateStoryData`, `isMissionUnlocked`, `maintenancePoints` | `story.js` | Hikâye doğrulama, kilit grafiği, türetilen durumlar |
 | `useSkill`, `drawCharExtras`                    | `skills.js`     | Yetenek davranışı + karakter çizim ekleri |
 | `Terrain`                                       | `terrain.js`    | Yıkılabilir arazi (piksel maskesi)        |
 | `Entity`, `GRAVITY`                             | `entity.js`     | Karakter fiziği/durumu                    |
@@ -63,15 +61,13 @@ Oyun `file://` üzerinden çift tıklayınca çalışmak zorunda. Bu yüzden:
 | `index.html`       | —      | Sahne, HUD, overlay, `<script>` yükleme sırası                                                                                                  |
 | `css/style.css`    | —      | Tüm stil                                                                                                                                        |
 | `js/main.js`       | 30     | Giriş noktası; `Game` örneğini kurar, butonları/fullscreen'i bağlar                                                                             |
-| `js/game.js`       | ~3350  | **En büyük dosya.** Durum makinesi (karakter seç → harita seç → savaş → bitiş + hikâye ekranları), sıra/rüzgar, girdi, render döngüsü, hasar uygulama yardımcıları |
+| `js/game.js`       | ~3350  | **En büyük dosya.** Durum makinesi (karakter seç → harita seç → savaş → bitiş), sıra/rüzgar, girdi, render döngüsü, hasar uygulama yardımcıları |
 | `js/characters.js` | ~53    | `CHARACTERS` (34 karakter): can/zırh/hasar + veri-güdümlü `skill`                                                                               |
 | `js/progression.js` | ~330  | Saf ekonomi: seviye eşikleri, ödül formülü, `resolveRobotBuild`, yetenek adaptörleri                                                            |
-| `js/profile.js`    | ~330   | Profil şeması (v6: `story` + **ortak** cephane deposu + **parça/loadout, yuva başına 2**), doğrulama/migrasyon, `loadProfile`/`saveProfile`, satın alma ve ödül cephesi                            |
+| `js/profile.js`    | ~330   | Profil şeması (v6: **ortak** cephane deposu + **parça/loadout, yuva başına 2**), doğrulama/migrasyon, `loadProfile`/`saveProfile`, satın alma ve ödül cephesi                            |
 | `js/market.js`     | ~250   | Cephane pazarı ekonomisi: fiyatlar (tablo + güç formülü), ortak depo doğrulama (999 stok), `buyAmmo`, savaş tavanlı maç yüklemesi (`battleLoad` / `weaponBattleMax`) ve harcananı düşme (`settleDepot`)                          |
 | `js/parts.js`      | ~700   | Parça ekonomisi/takma: `PARTS` kataloğu (yuva başına 6), `buyPart` (benzersiz), `equipPart` (yuva başına 2 alt yuva), sanitize, `drawPartIcon` + 15 ikon şekli                          |
 | `js/maps.js`       | ~781   | Harita temaları, biyomlar, çok katmanlı arka plan/önizleme çizimi                                                                               |
-| `js/story-data.js`   | ~790     | Hikâye kampanyasının SAF verisi: kampanya, 9 bölge, 12 görev, 39 sahne, öğreticiler — sıfır fonksiyon                                             |
-| `js/story.js`        | ~500     | Hikâye kural katmanı (DOM'suz): `validateStoryData`, kilit grafiği, Bakım Puanı, kanıt/kısıntı türetme, `story` normalizasyonu                    |
 | `js/skills.js`     | ~357   | `useSkill` (yetenek türlerine göre davranış) + `drawCharExtras`                                                                                 |
 | `js/terrain.js`    | ~266   | Offscreen canvas + piksel maskesiyle yıkılabilir arazi                                                                                          |
 | `js/weapons.js`    | ~243   | `WEAPONS` spec dizisi, mühimmat, `SKILL_PROJECTILES`                                                                                            |
@@ -93,14 +89,13 @@ Yeni içerik çoğunlukla **kod değil veri** eklemekle yapılır:
 
 `tests/run.js` bağımlılıksızdır: oyun kaynaklarını Node `vm` ile tek bir sandbox'ta bundle'layıp globalleri doğrular.
 
-- Yüklenen dosyalar sabittir: `audio.js, characters.js, progression.js, profile.js, parts.js, market.js, maps.js, story-data.js, skills.js, robots.js, terrain.js, weapons.js, entity.js, projectile.js, ai.js, story.js, game.js` (test ettiğin yeni dosya bu listede yoksa testte görünmez). `parts.js`, `run.js`/`progression.js`/`story.js`/`market.js` bundle'larının **hepsine** girer çünkü `profile.js` artık çalışma zamanında onu çağırır (`sanitizeParts`/`sanitizeLoadoutShape`).
+- Yüklenen dosyalar sabittir: `audio.js, characters.js, progression.js, profile.js, parts.js, market.js, maps.js, skills.js, robots.js, terrain.js, weapons.js, entity.js, projectile.js, ai.js, game.js` (test ettiğin yeni dosya bu listede yoksa testte görünmez). `parts.js`, `run.js`/`progression.js`/`market.js` bundle'larının **hepsine** girer çünkü `profile.js` artık çalışma zamanında onu çağırır (`sanitizeParts`/`sanitizeLoadoutShape`).
 - `game.js` DOM'a yalnızca metot **gövdelerinde** dokunduğundan sandbox'ta yüklenebilir; DOM kullanan metotlar test edilmez.
-- Doğrulananlar: 34 karakterin veri bütünlüğü, her `kind`'in en az bir karakterde kullanımı, her karakterin `useSkill` ile hatasız çalışması, cooldown, `Entity.damage` (zırh + kalkan + hasar azaltma), zehir, `applyAreaDamage` menzili, `drawCharExtras` çizimleri, geliştirme build'i, ödül döngüsü ve hikâye modunun durum makinesi/maç entegrasyonu (kupa haritası → sahne → robot seçimi → brifing → maç → ilerleme yazımı).
+- Doğrulananlar: 34 karakterin veri bütünlüğü, her `kind`'in en az bir karakterde kullanımı, her karakterin `useSkill` ile hatasız çalışması, cooldown, `Entity.damage` (zırh + kalkan + hasar azaltma), zehir, `applyAreaDamage` menzili, `drawCharExtras` çizimleri, geliştirme build'i, ödül döngüsü ve maç sonu sonuç kartının kapanması.
 - `tests/progression.js` saf ekonomi/profil testleridir: seviye eşikleri, ödül matrisi, 12 yetenek adaptörü, profil doğrulama ve satın alma önkoşulları.
-- `tests/story.js` hikâye verisini, kilit grafiğini ve profil göçünü doğrular: görev/kanıt kimlikleri, `mapId↔zoneId` eşleşmesi, dokuz bölge, profil v1→v4 göçü, bozuk `story`/`ammo`'da ekonomi korunması ve Bakım Puanı formülü. Kural listesinin kaynağı `docs/story-mode-lock.md` §14'tür.
 - `tests/market.js` cephane ekonomisidir: fiyat tablosu ve yedek fiyat, ortak depo doğrulama (bilinmeyen/sınırsız silah, üst sınır), satın alma önkoşulları (depo dolu / Hurda yetersiz / kısmi alım), maça yükleme ve harcananı düşme, robot depolarının ortak depoya taşındığı v3→v4 göçü, pazar ekranı/satın alma akışı ve maç entegrasyonu. **Parça testleri** de burada: katalog bütünlüğü, `buyPart` benzersizliği, `equipPart` takma/sökme/taşıma + sahiplik, çakışma çözümü, v4→v5 göçü, `resolveRobotBuild` parça etkileri (düz + çarpımsal, kırpma sınırları).
 
-**Karakter/yetenek/silah/hasar mantığını değiştirdiysen `node tests/run.js` çalıştır; ekonomi/profil mantığını değiştirdiysen `node tests/progression.js` de çalıştır; cephane/pazar mantığını değiştirdiysen `node tests/market.js` de çalıştır; hikâye verisi/kilidi değiştiyse `node tests/story.js` de çalıştır.** Yeni karakter/yetenek eklerken testlerin geçtiğinden emin ol.
+**Karakter/yetenek/silah/hasar mantığını değiştirdiysen `node tests/run.js` çalıştır; ekonomi/profil mantığını değiştirdiysen `node tests/progression.js` de çalıştır; cephane/pazar mantığını değiştirdiysen `node tests/market.js` de çalıştır.** Yeni karakter/yetenek eklerken testlerin geçtiğinden emin ol.
 
 ## Bilinen durum / dikkat
 

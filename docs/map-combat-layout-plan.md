@@ -35,7 +35,6 @@ kaygan zemin, zorunlu kazma veya özel hava akımı bu çalışmanın kapsamınd
   Geniş robotlar ayrıca sınanır. Gerekirse aday çevresinin yerleşimi değiştirilir.
 - Oyuncu numarası sürekli yüksek veya avantajlı tarafa bağlanmayacak. Serbest
   maçta noktalar karıştırılacak; denge testinde koltuklar ve ilk oynayan döndürülecek.
-  Hikâyede sabit başlangıç gerekiyorsa görev verisiyle açıkça belirtilecek.
 - Zorunlu geçişler yürünebilir rampalarla bağlanacak. Mevcut yürüyüşün 16 piksel
   basamak sınırı var; bunu aşan dik kenara merdiven/rampa gerekecek. Özel zıplama
   yalnız kestirme sağlar. Normal zıplamanın gerçek erişimi simülasyonla ölçülecek.
@@ -323,8 +322,8 @@ DR-23 ve KU-26 bu gruptadır. Başarısız olurlarsa düz tepeye dönüştürül
 - **Savaş:** Bir düzlükte hız kazanıp ortada durmak veya karşıya çıkmak.
   TEK haritasındaki kadar uzun ve kesintisiz yaklaşma bulunmaz.
 - **Tahribat / kontrol:** Bir pist oyulduğunda diğeri hücum alanı olarak kalır.
-  Hikâyenin ilk görevinde kullanıldığı için başlangıç rotası kolay okunmalı;
-  oyuncuyu hemen çukura düşüren doğuş kullanılmaz. Büyük hurda halkaları arkadadır.
+  Başlangıç rotası kolay okunmalı; oyuncuyu hemen çukura düşüren doğuş kullanılmaz.
+  Büyük hurda halkaları arkadadır.
 
 ### 23 · DR-23 · KANCA-4 — Üç Katlı Raf
 
@@ -414,7 +413,7 @@ DR-23 ve KU-26 bu gruptadır. Başarısız olurlarsa düz tepeye dönüştürül
   farkı daha düşük yan mevziler ve merkezde tutulabilir küçük siper olmasıdır.
 - **Tahribat / kontrol:** Merkez siper silindiğinde aşağıya inmek daha riskli
   olur. Görsel döküm ağzı oynanabilir alanın arkasında; yerde öldürücü lav
-  varmış izlenimi oluşturulmaz. Hikâye maçında normal robotla yaklaşma sınanır.
+  varmış izlenimi oluşturulmaz. Normal robotla yaklaşma sınanır.
 
 ### 30 · ST-30 · SOĞUT-2 — Soğutucu Kanallar
 
@@ -494,7 +493,7 @@ Her harita için sırasıyla şu üç çizim hazırlanacak:
    boru gibi tek baskın arka plan yapısı. Küçük rastgele dekor onun yerini tutmaz.
 
 Harita kartında ayrı mekân adı büyük, bölge adı ve arena kodu küçük gösterilecek.
-Harita kartı ve hikâye brifingi maçtaki gerçek geometrinin küçültülmüş çizimini
+Harita kartı maçtaki gerçek geometrinin küçültülmüş çizimini
 kullanacak. Köprü altta boş görünüyorsa maçta da boş olacak. Dekor için rastgelelik
 kalabilir; ana geometri ve doğuşlar her yeniden girişte aynı kalacak.
 
@@ -502,7 +501,7 @@ kalabilir; ana geometri ve doğuşlar her yeniden girişte aynı kalacak.
 
 ### A. Tek yerleşim kaynağı
 
-`js/maps.js` içinde mevcut harita kimlikleri, `forChar`, bölge ve hikâye bağlantıları
+`js/maps.js` içinde mevcut harita kimlikleri, `forChar` ve bölge bağlantıları
 korunarak haritaya özel yerleşim kayıtları hazırlanacak. Bölge malzemeyi;
 yerleşim ise zemini belirleyecek. Karakterin yetenek türü artık ana arazi şeklinin
 tek belirleyicisi olmayacak.
@@ -559,32 +558,6 @@ yayınlanmayacak. Bot değerlendirmesi en az şu durumları kapsayacak:
 - Köprü delindikten sonra değişen erişimi yeniden değerlendirme.
 - Normal zıplama ile özel zıplama/süzülme olanaklarını birbirine karıştırmama.
 
-## 5. Hikâyeye bağlama
-
-Görev kimlikleri, ödüller ve kilit sırası bu düzenleme nedeniyle değişmeyecek.
-Brifingde oyuncuya bir cümlelik mekân ipucu verilecek; robot yeteneğini kullanmak
-zorunluymuş gibi anlatılmayacak.
-
-| Görev | Harita | Brifingde öne çıkacak karar |
-| --- | --- | --- |
-| Açık Servis Kontenjanı | Hurda Yarışı | “Ortadaki çukurda durabilir, sonra öbür düzlüğe çıkabilirsin.” |
-| Mıknatısın İtirazı | Mıknatıs Köprüsü | “Üst yol açıkta. Alt yoldan gidersen çıkış rampasını kullan.” |
-| Donmuş Vardiya | Donmuş Tank Sahası | “Ortaya inince rakibine yaklaşırsın ama siperin kalmaz.” |
-| Renk Hakkı | İkiz Boya Kabinleri | “Kabinlerin tepeleri iyi birer atış noktası.” |
-| Kimsenin İzlemediği Hat | Tahliye Setleri | “Rakibine yaklaşırken aranızdaki yükseklik farkına da bak.” |
-| Ağırlığın Kanıtı | Pres Meydanı | “Meydana inersen yakın dövüş başlayabilir.” |
-| Kumun Altındaki Hat | Gömülü Servis Tüneli | “Tüneli açabilir ya da üstteki rampadan geçebilirsin.” |
-| Kapı Açık Kalsın | Yükleme Rampası | “Yoldaki çukurlar hücumunu kesebilir.” |
-| Ocağı Söndürmeden | Döküm Ağzı | “Ortadaki küçük siper, yaklaşırken işine yarayabilir.” |
-| Dokuzuncu Ölçüm | Eski Tamir Çukuru | “Çukur seni korur ama yukarıdaki rakibi vurmak zorlaşabilir.” |
-| Final Vardiyası | Pres Meydanı | “Bu meydanı tanıyorsun. Rakibine ne zaman yaklaşacağını seç.” |
-| Ortak Vardiya | Temel Test Sahası | “Kalın zemin hemen açılmaz. Hangi tarafı hedefleyeceğini seç.” |
-
-PRES-4 etabı ile final aynı haritaya bilinçli geri dönüş olarak kalacak. Finalde
-ışıklar, seyirci alanı ve turnuva süslemesi değişebilir; geometri gizlice değişmez.
-İleride farklı final arenası istenirse ayrı `layout` varyantı, önizleme ve denge
-testiyle ele alınır; mevcut 34 haritadan biriymiş gibi sayılmaz.
-
 ## 6. Uygulama sırası ve bitirme koşulları
 
 ### Aşama 1 — Ortak temel ve üç örnek
@@ -602,8 +575,8 @@ silüet ve oynanış tekrarına bakılır; yalnız sayı farkı kalan tasarım y
 ### Aşama 3 — 13–22
 
 SIZ-7'den BİLYE-3'e sırayla ilerlenir. Alan yeteneği mesafeleri, yüksek mevziler,
-geri itme ve hücum yolları özellikle sınanır. Hikâyenin açılış haritası BİLYE-3
-için ilk kez oynayan birinin rotayı okuyabilmesi ayrıca kontrol edilir.
+geri itme ve hücum yolları özellikle sınanır. Açılış haritası BİLYE-3 için ilk
+kez oynayan birinin rotayı okuyabilmesi ayrıca kontrol edilir.
 
 ### Aşama 4 — 23–34
 
@@ -633,11 +606,9 @@ testten geçmezse diğer bitmiş haritaları engellemeden ayrı açık iş olara
   kaçış seçenekleri ve hayatta kalma süresi karşılaştırılır.
 - 34 haritalık siyah-beyaz önizleme sayfasında tekrarlayan silüetler incelenir.
   Farklı piksel dizisi tek başına özgün savaş düzeninin kanıtı sayılmaz.
-- Hikâyenin 12 görevi yeni haritalarla başlatılır; bölge eşleşmesi, brifing,
-  görev sonu ve aynı arenaya final dönüşü kontrol edilir.
 
-Mevcut `node tests/run.js` ve `node tests/story.js` takımlarına ek olarak,
-geometri/doğuş/katman maskeleri için bağımlılıksız `tests/maps.js` eklendi.
+Mevcut `node tests/run.js` takımına ek olarak, geometri/doğuş/katman maskeleri
+için bağımlılıksız `tests/maps.js` eklendi.
 Otomatik takımlar geçiyor. Sonraki adım gerçek tarayıcıda görsel ve oynanış
 kabulüdür; yalnız kaynak incelemesi “haritalar güzel görünüyor ve dengeli”
 sonucunu vermeyecek.

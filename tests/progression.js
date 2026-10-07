@@ -11,11 +11,11 @@ const fs = require("fs");
 const path = require("path");
 
 const JS_DIR = path.join(__dirname, "..", "js");
-const FILES = ["characters.js", "progression.js", "profile.js", "parts.js", "market.js", "maps.js", "story-data.js", "story.js"];
+const FILES = ["characters.js", "progression.js", "profile.js", "parts.js", "market.js", "maps.js"];
 const bundle =
   FILES.map((f) => fs.readFileSync(path.join(JS_DIR, f), "utf8")).join("\n;\n") +
   "\n;globalThis.__P = { CHARACTERS, SERVICE_LEVELS, MAX_SERVICE_XP, MAX_TIER, START_SCRAP, BRANCHES, BRANCH_LABELS, TIER_COSTS, TIER_LEVEL_GATES, REWARD_BASE, DIFFICULTY_MULTIPLIER, levelForXp, xpForLevel, nextLevelXp, levelUpMessage, calculateMatchReward, resolveRobotBuild, upgradeEffectText, robotUpgradeSummary, totalTiers, sanitizeUpgrades, nextUpgradeStep, toSafeInt, defaultProfile, defaultRobotProgress, normalizeProfile, loadProfile, saveProfile, getRobotProgress, grantMatchReward, purchaseUpgrade, PROFILE_KEY, CLAIMED_MATCH_LIMIT, createSessionId, " +
-  "PROFILE_SCHEMA_VERSION, defaultStoryProgress, normalizeStoryProgress, maintenancePoints, firstMissionId };";
+  "PROFILE_SCHEMA_VERSION };";
 
 const sandbox = { Math, Date, console, JSON, Set, Map, Array, Object, Number, String, isFinite, parseInt };
 sandbox.globalThis = sandbox;
@@ -254,7 +254,6 @@ group("Profil şeması ve doğrulama");
   check("yeni profil 200 Hurda ile başlar", fresh.scrap === 200);
   check("yeni profil şema sürümü taşır", fresh.version === P.PROFILE_SCHEMA_VERSION && P.PROFILE_SCHEMA_VERSION === 6);
   check("varsayılan profil round-trip", JSON.stringify(P.normalizeProfile(fresh)) === JSON.stringify(fresh));
-  check("varsayılan hikâye alanı hazır", fresh.story.currentMissionId === P.firstMissionId() && fresh.story.completedMissions.length === 0);
 
   check("boş girdi varsayılana düşer", P.normalizeProfile(undefined).scrap === 200);
   const missing = P.normalizeProfile({ version: 1 });

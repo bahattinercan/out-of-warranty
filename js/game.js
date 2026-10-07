@@ -67,8 +67,8 @@ const MK_FOOT_NOTICE_DY = 54; // geri bildirim: navY + bu
 
 // Üst-sağ köşe DOM ses denetimine aittir (CSS #audio-control: top 8px, yükseklik
 // 36px, sağda ~224px — CSS tarafındaki `--audio-reserve` ile aynı kural).
-// Canvas ekranları bu kutuya YAZI ÇİZMEZ; pazar başlık satırı ve hikâye
-// ilerletme ipucu bu yüzden bu alanın dışına taşındı (kullanıcı bildirimi).
+// Canvas ekranları bu kutuya YAZI ÇİZMEZ; pazar başlık satırı bu yüzden bu
+// alanın dışına taşındı (kullanıcı bildirimi).
 const AUDIO_SAFE = { x: 726, y: 8, w: 224, h: 36 };
 
 // Pazar sekmeleri: cephane + dört parça yuvası. "PARÇALAR" diye tek sekme
@@ -81,9 +81,6 @@ const MARKET_TABS = [
   { id: "tool", label: "APARAT" },
   { id: "feet", label: "AYAK" },
 ];
-// Hikâye sahnesindeki "İlerlet" ipucunun y'si: ses denetimi alanının (h=36)
-// ALTINDA kalır. Sabit olarak tutulur ve testle denetlenir (kullanıcı bildirimi).
-const STORY_HINT_Y = 52;
 
 // Skill arketipinin kartta görünen kısa etiketi (arazinin neyi öne çıkardığı)
 const ARCH_LABELS = {
@@ -137,15 +134,6 @@ class Game {
     this.marketTab = "ammo";     // açık sekme: "ammo" | yuva id'si (helmet/body/tool/feet)
     this.marketFx = null;        // satın alma sonrası kart parıltısı
     this.marketNotice = null;    // kısa geri bildirim (eksik Hurda / dolu depo)
-    // Hikâye modu çalışma alanları: kupa haritası, sahne oynatıcı, saha robotu
-    // seçimi ve brifing durumu reset() ile temizlenir.
-    this.storyMissionId = null;  // açık görev kartı (kupa haritası seçimi)
-    this.storyMission = null;    // maç sırasında görev verisi
-    this.storySceneId = null;    // oynatılan sahnenin kimliği
-    this.storySceneIndex = 0;    // ekranda olan kutu
-    this.storySceneChars = 0;    // yazı animasyonu ilerlemesi (harf)
-    this.storySceneOnDone = null;// sahne bitince çağrılacak devamlılık
-    this.storyFocus = 0;         // klavyeyle gezinilen satır/kart
     this.bindInput();
     this.reset();
     requestAnimationFrame(this.loop.bind(this));
@@ -174,13 +162,6 @@ class Game {
     this.charPage = 0;        // karakter seçim ekranı sayfası
     this.mapPage = 0;         // harita seçim ekranı sayfası
     this.matchProgress = null; // maç başına ödül sayaçları (startGame kurar)
-    this.storyMissionId = null;
-    this.storyMission = null;
-    this.storySceneId = null;
-    this.storySceneIndex = 0;
-    this.storySceneChars = 0;
-    this.storySceneOnDone = null;
-    this.storyFocus = 0;
     this.wind = null;
     this.windTurnsRemaining = 0;
     this.windChangeFx = null;
@@ -193,9 +174,9 @@ class Game {
   }
 
   startGame() {
-    // Maç kurulurken sonuç kartı her hâlükârda kapanır. Hikâye yenilgisindeki
-    // "Tekrar Oyna" yalnız startGame()'i çağırdığı için kart açık kalıyor,
-    // maç arkada yeniden başlarken ekranda aynı menü duruyordu (F2-11).
+    // Maç kurulurken sonuç kartı her hâlükârda kapanır: "Tekrar Oyna" yalnız
+    // startGame()'i çağırdığı için kart açık kalıp maç arkada yeniden başlarken
+    // ekranda asılı duruyordu (F2-11).
     hideOverlay();
     // Önceki maçtan kalan yüklenmiş cephane varsa envantere geri yaz (normalde
     // maç sonunda yapılır; bu çağrı yarıda kesilen akışlara karşı güvenlik ağı).
@@ -214,9 +195,8 @@ class Game {
     // Köprü/raf gibi katmanlı alanlarda fromY doğru katmanı seçer.
     const n = this.selectedChars.length;
     const spawnPads = getMapSpawnPads(this.selectedMap, n);
-    // Geliştirmeler yalnız tek oyunculu ilerleme modlarında (bilgisayara karşı
-    // ve hikâye) ve yalnız insan robotunda etkindir; botlar ve yerel maçlar
-    // taban tanımı kullanır (aynı kurucu).
+    // Geliştirmeler yalnız bilgisayara karşı modunda ve yalnız insan robotunda
+    // etkindir; botlar ve yerel maçlar taban tanımı kullanır (aynı kurucu).
     const upgradesOn = isSinglePlayerProgressionMode(this.mode);
     this.players = this.selectedChars.map((def, i) => {
       const pad = spawnPads[i] || { x: n === 1 ? 0.5 : (0.12 + 0.76 * i / Math.max(1, n - 1)), fromY:0 };
@@ -292,9 +272,7 @@ class Game {
   }
 
   beginMode(mode) {
-    // Hikâye modu menüden kendi rotasıyla açılır (openStoryResume); buraya
-    // yalnız computer/local gelir. Yine de bilinmeyen değeri local'e düşür.
-    this.mode = mode === "computer" ? "computer" : mode === "story" ? "story" : "local";
+    this.mode = mode === "computer" ? "computer" : "local";
     if (this.mode === "computer") {
       this.state = "DIFFICULTY_SELECT";
       this.updateHud();
@@ -325,17 +303,10 @@ class Game {
     // Ortak depo: robot başına ayrı depo yok; pazar kartının alt yazısı için
     // tek depo sayacı yeterlidir.
     const depotTotal = ammoDepotTotal(getAmmoDepot(this.profile));
-    // Hikâye kartının alt yazısı kayıta göre değişir: boş kampanyada haritaya,
-    // ilerleme varsa "Devam Et", bitmiş devrede "Yeni Kupa" davetine (D-09).
-    const story = this.profile ? this.profile.story : null;
-    const storySub = !story || !story.completedMissions.length
-      ? "Dokuz Bölge Kupası"
-      : story.endingSeen ? "Yeni Kupa Devresi • Arşiv" : "Devam Et • Kupa Haritası";
     // Her kart kendi imza rengini ve vektör ikonunu taşır: kenarlık, ikon
     // plakası ve hover parıltısı aynı accent'ten türetilir — menü tek bakışta
-    // bölme bölme okunur (kupa/robot/ikili/dişli/mermi/soru glifleri).
+    // bölme bölme okunur (robot/ikili/dişli/mermi/soru glifleri).
     const items = [
-      { action: "story", icon: "kupa", accent: "#c89bff", title: "HİKÂYE MODU", sub: storySub },
       { action: "computer", icon: "robot", accent: "#ff7b7b", title: "Otomatik Birimlere Karşı", sub: "1 operatör ve 1–3 fabrika robotu" },
       { action: "local", icon: "ikili", accent: "#7baeff", title: "Yerel Operatörler", sub: "Aynı cihazda 2–6 oyuncu" },
       { action: "workshop", icon: "dişli", accent: "#d8a72f", title: "ATÖLYE", sub: `Robotlarını kalibre et • ${scrap} Hurda` },
@@ -538,8 +509,6 @@ class Game {
     this.workshopFx = null;
     this.workshopNotice = null;
     this.workshopSlotOpen = false;
-    // Maç sonu Atölye düğmesinden gelindiyse (hikâye/festival bağlamı) haritaya dön.
-    if (this.mode === "story" || this.mode === "festival") { this.openStoryMap(); return; }
     this.state = "MODE_SELECT";
     this.updateHud();
   }
@@ -1249,8 +1218,7 @@ class Game {
     for (const r of this._modeRects || []) {
       if (mx >= r.x && mx <= r.x + r.w && my >= r.y && my <= r.y + r.h) {
         SFX.uiClick();
-        if (r.action === "story") this.openStoryResume();
-        else if (r.action === "workshop") this.openWorkshop();
+        if (r.action === "workshop") this.openWorkshop();
         else if (r.action === "market") this.openMarket();
         else if (r.action === "tutorial") this.openTutorial();
         else this.beginMode(r.action);
@@ -1505,10 +1473,6 @@ class Game {
   closeMarket() {
     this.marketFx = null;
     this.marketNotice = null;
-    // Atölye ile aynı rota kuralı: hikâye/festival bağlamında menüye değil kupa
-    // haritasına dönülür (pazar şu an yalnız ana menüden açılıyor; kural ileride
-    // maç sonu ekranından açılırsa da doğru kalır).
-    if (this.mode === "story" || this.mode === "festival") { this.openStoryMap(); return; }
     this.state = "MODE_SELECT";
     this.updateHud();
   }
@@ -2134,9 +2098,6 @@ class Game {
         if (this.weaponMenuOpen && this.state === "AIMING") { this.weaponMenuOpen = false; this.updateHud(); return; }
         this.goBack(); return;
       }
-      // Hikâye ekranları: sahne ilerletme ve menü gezinme tamamen klavyeyle.
-      if (this.state === "STORY_SCENE" && this.storySceneId && (e.key === "Enter" || e.code === "Space")) { e.preventDefault(); this.advanceStoryScene(); return; }
-      if (this.handleStoryMenuKey(e)) return;
       // Atölye: ok tuşları sayfa/dal gezinir, Enter/Space satın alır.
       if (this.state === "WORKSHOP" && this.handleWorkshopKey(e)) return;
       // Pazar: 1..5 sekmeler (cephane + dört yuva).
@@ -2196,11 +2157,6 @@ class Game {
         return;
       }
       if (this.state === "TUTORIAL") { this.handleTutorialClick(this.input.mouseX, this.input.mouseY); return; }
-      if (this.state === "STORY_SCENE") { this.handleStorySceneClick(this.input.mouseX, this.input.mouseY); return; }
-      if (this.state === "STORY_MAP") { this.handleStoryMapClick(this.input.mouseX, this.input.mouseY); return; }
-      if (this.state === "STORY_ROBOT_SELECT") { this.handleStoryRobotSelectClick(this.input.mouseX, this.input.mouseY); return; }
-      if (this.state === "STORY_BRIEFING") { this.handleStoryBriefingClick(this.input.mouseX, this.input.mouseY); return; }
-      if (this.state === "STORY_ARCHIVE") { this.handleStoryArchiveClick(this.input.mouseX, this.input.mouseY); return; }
       if (this.state === "COUNT_SELECT") {
         this.handleCountSelectClick(this.input.mouseX, this.input.mouseY);
         return;
@@ -2414,16 +2370,13 @@ class Game {
   }
 
   // Oyundan çık: bekleyen bot kararını ve girdileri temizleyip mod menüsüne dön.
-  // Hikâye bağlamında çıkış kupa haritasına döner (Ana Menü değil).
   quitToMenu() {
-    const storyContext = this.mode === "story" || this.mode === "festival";
     this.clearTurnInput();
     this.bot.cancel();
     for (const b of this.bots) b.cancel();
     // Yarıda bırakılan maçta da yüklenmiş cephane envantere geri döner.
     this._settleAmmoDepot();
     this.reset();
-    if (storyContext) this.openStoryMap();
   }
 
   // Cephane deposunu maç sonucuna göre günceller: yüklenen ek mermiden
@@ -2463,10 +2416,6 @@ class Game {
     if (this.state === "WORKSHOP") { this.closeWorkshop(); return; }
     if (this.state === "MARKET") { this.closeMarket(); return; }
     if (this.state === "TUTORIAL") { this.state = "MODE_SELECT"; this.updateHud(); return; }
-    // Hikâye ekranları hep kupa haritasına döner; haritadan çıkış menüye gider.
-    if (this.state === "STORY_SCENE") { this.abortStoryScene(); return; }
-    if (this.state === "STORY_ROBOT_SELECT" || this.state === "STORY_BRIEFING" || this.state === "STORY_ARCHIVE") { this.openStoryMap(); return; }
-    if (this.state === "STORY_MAP") { this.state = "MODE_SELECT"; this.updateHud(); return; }
     if (this.state === "DIFFICULTY_SELECT") { this.state = "MODE_SELECT"; this.updateHud(); return; }
     if (this.state === "BOT_COUNT_SELECT") { this.state = "DIFFICULTY_SELECT"; this.updateHud(); return; }
     if (this.state === "COUNT_SELECT") { this.state = "MODE_SELECT"; this.updateHud(); return; }
@@ -2771,12 +2720,6 @@ class Game {
       const humanIdx = this.matchProgress ? this.matchProgress.humanIndex : 0;
       const result = winner ? (winner === this.players[humanIdx] ? "win" : "loss") : "draw";
       const reward = this.grantMatchReward(result);
-      if (this.mode === "story" && this.storyMission) {
-        // Hikâye akışı: ilerleme yalnız burada yazılır, sonra sonuç sahnesi
-        // (varsa) ve overlay gösterilir.
-        this.finishStoryMatch(result, reward);
-        return;
-      }
       if (this.mode === "tutorial") {
         // Öğretici maç: ödül yok, sonucu rehber diliyle anlat.
         const won = winner && winner === this.players[humanIdx];
@@ -2785,19 +2728,6 @@ class Game {
           won ? "Artık hazırsın — Ana Menü'den gerçek maçlara çıkabilirsin."
               : "Endişelenme — 'Tekrar Oyna' ile aynı bölümü yeniden dene.",
           null
-        );
-        this.updateHud();
-        return;
-      }
-      if (this.mode === "festival") {
-        // Kupa Festivali: ödül normal kapıyla yazılır; ilerlemeye dokunulmaz.
-        const nextBtn = document.getElementById("story-next-btn");
-        if (nextBtn) nextBtn.dataset.canNext = "0";
-        showOverlay(
-          winner ? `${winner.name} festival maçını kazandı! 🏆` : "Tahsis berabere kaldı!",
-          winner ? "" : "İkisi de elendi.",
-          reward,
-          "story"
         );
         this.updateHud();
         return;
@@ -2847,7 +2777,7 @@ class Game {
     return this.windChangeFx;
   }
 
-  // Uygun bir tek oyunculu maçın (bilgisayara karşı veya hikâye) ödülünü
+  // Uygun bir tek oyunculu maçın (bilgisayara karşı) ödülünü
   // profile yazar. Önkoşullar: mod, en az bir çözümlenmiş insan atışı ve maç
   // anahtarının daha önce talep edilmemiş olması. Uygun değilse null döner (overlay ödülsüz çizilir).
   grantMatchReward(result) {
@@ -2873,11 +2803,7 @@ class Game {
   }
 
   update(dt) {
-    // Sahne oynatıcı: yazı animasyonu için kare başına güncelleme ister.
-    // DOM katmanı burada da senkronlanır (updateHud sahne geçişinde bir kez
-    // çağrılır; kaçan bir geçiş silah panelini sahnede bırakmasın).
-    if (this.state === "STORY_SCENE") { this.updateStoryScene(dt); this.updateWeaponHud(); return; }
-    if (this.state === "MODE_SELECT" || this.state === "DIFFICULTY_SELECT" || this.state === "BOT_COUNT_SELECT" || this.state === "CHAR_SELECT" || this.state === "COUNT_SELECT" || this.state === "MAP_SELECT" || this.state === "WORKSHOP" || this.state === "MARKET" || this.state === "TUTORIAL" || this.state === "STORY_MAP" || this.state === "STORY_ROBOT_SELECT" || this.state === "STORY_BRIEFING" || this.state === "STORY_ARCHIVE") {
+    if (this.state === "MODE_SELECT" || this.state === "DIFFICULTY_SELECT" || this.state === "BOT_COUNT_SELECT" || this.state === "CHAR_SELECT" || this.state === "COUNT_SELECT" || this.state === "MAP_SELECT" || this.state === "WORKSHOP" || this.state === "MARKET" || this.state === "TUTORIAL") {
       if (this.state === "WORKSHOP") this.updateWorkshopFx(dt);
       if (this.state === "MARKET") this.updateMarketFx(dt);
       // Menülerde updateHud yalnız geçiş anında çağrıldığından, yarıda kalan ya
@@ -3125,26 +3051,6 @@ class Game {
     }
     if (this.state === "MARKET") {
       this.renderMarket(ctx);
-      return;
-    }
-    if (this.state === "STORY_MAP") {
-      this.renderStoryMap(ctx);
-      return;
-    }
-    if (this.state === "STORY_SCENE") {
-      this.renderStoryScene(ctx);
-      return;
-    }
-    if (this.state === "STORY_ROBOT_SELECT") {
-      this.renderStoryRobotSelect(ctx);
-      return;
-    }
-    if (this.state === "STORY_BRIEFING") {
-      this.renderStoryBriefing(ctx);
-      return;
-    }
-    if (this.state === "STORY_ARCHIVE") {
-      this.renderStoryArchive(ctx);
       return;
     }
     if (this.state === "MODE_SELECT") {
@@ -3775,11 +3681,8 @@ class Game {
 
   updateHud() {
     // Seçim/menü ekranlarında HUD'u gizle: sıra/rüzgâr bilgisi anlamsız ve
-    // ortadaki büyük başlığı/butonları kapatıyor. Hikâye ekranları da aynı
-    // kurala uyar: sahnenin "Enter/Space ile ilerlet" ipucu artık canvasa
-    // çizilir (üst sağ) — DOM banner sahne başlığıyla çakışıyordu.
-    const menuState = this.state === "MODE_SELECT" || this.state === "DIFFICULTY_SELECT" || this.state === "BOT_COUNT_SELECT" || this.state === "COUNT_SELECT" || this.state === "CHAR_SELECT" || this.state === "MAP_SELECT" || this.state === "WORKSHOP" || this.state === "MARKET" || this.state === "TUTORIAL" ||
-      this.state === "STORY_MAP" || this.state === "STORY_SCENE" || this.state === "STORY_ROBOT_SELECT" || this.state === "STORY_BRIEFING" || this.state === "STORY_ARCHIVE";
+    // ortadaki büyük başlığı/butonları kapatıyor.
+    const menuState = this.state === "MODE_SELECT" || this.state === "DIFFICULTY_SELECT" || this.state === "BOT_COUNT_SELECT" || this.state === "COUNT_SELECT" || this.state === "CHAR_SELECT" || this.state === "MAP_SELECT" || this.state === "WORKSHOP" || this.state === "MARKET" || this.state === "TUTORIAL";
     const hud = document.getElementById("hud");
     if (hud) hud.classList.toggle("hidden", menuState);
     // Alt savaş paneli de aynı kurala uyar (menülerde oyuncu kartı anlamsız).
@@ -3883,23 +3786,6 @@ class Game {
       } else if (this.state === "TUTORIAL") {
         banner.textContent = "Nasıl Oynanır — kontroller ve tur kuralları";
         banner.style.color = "#fff";
-      } else if (this.state === "STORY_MAP") {
-        banner.textContent = this.profile.story.endingSeen
-          ? "Kupa Festivali — yıllık stres testi"
-          : "Dokuz Bölge Kupası — Kupa Haritası";
-        banner.style.color = "#ffd166";
-      } else if (this.state === "STORY_SCENE") {
-        banner.textContent = "Diyalog oynatılıyor — Enter/Space veya tıkla";
-        banner.style.color = "#ffd166";
-      } else if (this.state === "STORY_ROBOT_SELECT") {
-        banner.textContent = "Saha robotu seçiliyor…";
-        banner.style.color = "#ffd166";
-      } else if (this.state === "STORY_BRIEFING") {
-        banner.textContent = "Görev brifingi";
-        banner.style.color = "#ffd166";
-      } else if (this.state === "STORY_ARCHIVE") {
-        banner.textContent = "Hikâye Arşivi";
-        banner.style.color = "#ffd166";
       } else if (this.state === "GAMEOVER") {
         banner.textContent = "Tahsis Tamamlandı";
         banner.style.color = "#fff";
@@ -3936,9 +3822,9 @@ class Game {
   updateWeaponHud() {
     const panel = document.getElementById("weapon-panel");
     if (!panel) return;
-    // Menüleri tek tek dışlamak güvenli değil: yeni bir STORY_* ekranı eklenince
-    // önceki maçın oyuncuları bellekteyse panel o menüye sızabiliyor. Silahlar
-    // yalnız gerçek savaş döngüsünün üç durumunda görünür.
+    // Menüleri tek tek dışlamak güvenli değil: önceki maçın oyuncuları
+    // bellekteyse panel bir menüye sızabiliyor. Silahlar yalnız gerçek savaş
+    // döngüsünün üç durumunda görünür.
     const playing = this.players.length > 0 &&
       (this.state === "AIMING" || this.state === "PROJECTILE" || this.state === "SETTLE");
     panel.classList.toggle("hidden", !playing);
@@ -4341,840 +4227,22 @@ class Game {
     this.render();
   }
 
-  // ── Hikâye modu (STORY_*) ─────────────────────────────────────────────────
-  // Kupa haritası → giriş sahnesi → saha robotu seçimi → brifing → arena
-  // rotasının tamamı mevcut durum makinesine eklenen beş durumla kurulur.
-  // Savaş fiziği değişmez: kadro, harita ve rakipler görev verisinden gelir,
-  // sıra/rüzgar/ödül akışı serbest maçınkini kullanır.
-
-  // "HİKÂYE MODU" menü kartı: ilerleme varsa kayıtlı görevin brifingine gir
-  // (Devam Et), boş veya bitmiş devrede kupa haritası/Arşiv'e yönlendir.
-  openStoryResume() {
-    const story = this.profile.story;
-    const current = story.currentMissionId;
-    if (story.endingSeen || !story.completedMissions.length ||
-        !isMissionUnlocked(current, story.completedMissions)) {
-      this.openStoryMap();
-      return;
-    }
-    this.openStoryMission(current);
-  }
-
-  openStoryMap() {
-    this.mode = "story";
-    this.storyMissionId = null;
-    this.storyMission = null;
-    this.storyFocus = 0;
-    this.clearTurnInput();
-    // Kupa haritasına dönüş her zaman maç sonu overlay'ini kapatır: sahne
-    // bittiğinde kart açık kalıp haritanın üstünde asılı kalabiliyordu.
-    hideOverlay();
-    this.state = "STORY_MAP";
-    this.updateHud();
-  }
-
-  openStoryArchive() {
-    this.mode = "story";
-    this.storyFocus = 0;
-    this.clearTurnInput();
-    this.state = "STORY_ARCHIVE";
-    this.updateHud();
-  }
-
-  // Görev kartına girildi: giriş sahnesi varsa oynat, yoksa robot seçimine.
-  openStoryMission(missionId) {
-    const mission = getMissionById(missionId);
-    if (!mission || !isMissionUnlocked(missionId, this.profile.story.completedMissions)) return;
-    this.storyMissionId = missionId;
-    this.storyMission = mission;
-    // Arena teması sahne/robot seçimi/brifing ekranlarında da okunur. Bunu
-    // yalnız startStoryMission'da kurmak, kupa haritasından doğrudan gelen
-    // oyunda saha robotu seçimini boş bırakıyordu (selectedMap null).
-    this.selectedMap = getMapById(mission.mapId);
-    if (mission.introSceneId && sceneById(mission.introSceneId)) {
-      this.playStoryScene(mission.introSceneId, () => this.openStoryRobotSelect());
-    } else {
-      this.openStoryRobotSelect();
-    }
-  }
-
-  // Sahne oynatıcı: kutu kutu ilerler, görülen sahne Arşiv'e işaretlenir.
-  playStoryScene(sceneId, onDone) {
-    const scene = sceneById(sceneId);
-    if (!scene) { if (onDone) onDone(); return; }
-    this.storySceneId = sceneId;
-    this.storySceneIndex = 0;
-    this.storySceneChars = 0;
-    this.storySceneOnDone = onDone || null;
-    this.storySceneStartMs = Date.now(); // fade-in için sahne başlangıcı
-    if (!this.profile.story.seenScenes.includes(sceneId)) this.profile.story.seenScenes.push(sceneId);
-    this.persistStory();
-    this.clearTurnInput();
-    SFX.sceneBip(scene.lines[0].speakerId); // ilk cümlenin başında konuşmacı bipli
-    this.state = "STORY_SCENE";
-    this.updateHud();
-  }
-
-  // Yazı animasyonu: her karede birkaç harf ilerler.
-  updateStoryScene(dt) {
-    const scene = sceneById(this.storySceneId);
-    if (!scene) return;
-    const line = scene.lines[this.storySceneIndex];
-    if (line) this.storySceneChars = Math.min(line.text.length, this.storySceneChars + dt * STORY_SCENE_TYPE_SPEED);
-  }
-
-  // Sahne ilerletme: yazı bitmemisse tek basışta tamamlanır; son kutudan
-  // sonra kayıtlı devamlılık çağrılır (robot seçimi / brifing / arşiv).
-  advanceStoryScene() {
-    const scene = sceneById(this.storySceneId);
-    if (!scene) { this.endStoryScene(); return; }
-    const line = scene.lines[this.storySceneIndex];
-    if (line && this.storySceneChars < line.text.length) {
-      this.storySceneChars = line.text.length;
-      return;
-    }
-    if (this.storySceneIndex < scene.lines.length - 1) {
-      this.storySceneIndex++;
-      this.storySceneChars = 0;
-      SFX.sceneBip(scene.lines[this.storySceneIndex].speakerId);
-      return;
-    }
-    this.endStoryScene();
-  }
-
-  endStoryScene() {
-    SFX.stopSceneBips(); // atlanan sahnenin sesi geride kalmaz (plan §21)
-    const cb = this.storySceneOnDone;
-    this.storySceneOnDone = null;
-    this.storySceneId = null;
-    if (cb) cb();
-    else this.openStoryMap();
-  }
-
-  // Sahneyi bitirmeden çıkış (geri/Esc/geri butonu): bekleyen konuşmacı bipleri
-  // ve devam çağrısı temizlenir, kupa haritasına dönülür. endStoryScene'den
-  // farkı, sahnenin devamındaki ekrana (robot seçimi/brifing) geçmemesidir.
-  abortStoryScene() {
-    SFX.stopSceneBips();
-    this.storySceneOnDone = null;
-    this.storySceneId = null;
-    this.openStoryMap();
-  }
-
-  openStoryRobotSelect() {
-    this.storyFocus = 0;
-    this.clearTurnInput();
-    this.state = "STORY_ROBOT_SELECT";
-    this.updateHud();
-  }
-
-  // 34 robotun tamamı açıktır; yalnız bu görevin rakipleri geçici kapalıdır.
-  // Seçim profile yazılır ve sonraki görevlerde varsayılan olur (kilit §13).
-  selectStoryRobot(robotId) {
-    if (!this.storyMission || !selectableRobotsForMission(this.storyMission).includes(robotId)) return;
-    this.profile.story.selectedRobotId = robotId;
-    this.persistStory();
-    SFX.uiClick();
-    this.openStoryBriefing();
-  }
-
-  openStoryBriefing() {
-    this.storyFocus = 0;
-    this.clearTurnInput();
-    this.state = "STORY_BRIEFING";
-    this.updateHud();
-  }
-
-  // Brifingdeki zorluk seçimi kalıcıdır; maç kadrosunu etkilemez.
-  cycleStoryDifficulty(dir) {
-    const keys = Object.keys(STORY_DIFFICULTIES);
-    const i = keys.indexOf(this.profile.story.difficulty);
-    this.profile.story.difficulty = keys[(i + dir + keys.length) % keys.length];
-    this.persistStory();
-    SFX.uiClick();
-  }
-
-  // Görev verisinden kadro ve haritayı kurup mevcut startGame() akışını
-  // kullanır. Önerilen seviye kapı değildir; denetim yalnız kilit grafiğidir.
-  startStoryMission(missionId) {
-    const mission = getMissionById(missionId);
-    if (!mission || !isMissionUnlocked(missionId, this.profile.story.completedMissions)) return;
-    const selectable = selectableRobotsForMission(mission);
-    const chosen = this.profile.story.selectedRobotId;
-    const robotId = selectable.includes(chosen) ? chosen : firstMissionRobotId(); // null/geçersiz → FIX-8
-    const oppDefs = mission.opponents
-      .map((id) => CHARACTERS.find((c) => c.id === id))
-      .filter(Boolean);
-    const playerDef = CHARACTERS.find((c) => c.id === robotId) || CHARACTERS[0];
-
-    this.mode = "story";
-    this.storyMissionId = missionId;
-    this.storyMission = mission;
-    this.difficulty = resolveStoryDifficulty(this.profile.story.difficulty).ai;
-    this.selectedMap = getMapById(mission.mapId);
-    this.selectedChars = [playerDef, ...oppDefs];
-    this.playerControls = ["human", ...oppDefs.map(() => "bot")];
-    this.bots = oppDefs.map(() => {
-      const bot = new BotController();
-      bot.difficulty = this.difficulty;
-      return bot;
-    });
-    this.charSelectPhase = 0;
-    hideOverlay();
-    this.startGame();
-    this.updateHud();
-  }
-
-  // Maç sonu: ilerleme YALNIZ burada ve bir kez yazılır (plan §18). Sonra
-  // sonuç sahnesi (varsa), ardından overlay gösterilir.
-  finishStoryMatch(result, reward) {
-    const mission = this.storyMission || getMissionById(this.storyMissionId);
-    if (!mission) { this.quitToMenu(); return; }
-    const story = this.profile.story;
-    if (result === "win") {
-      if (!story.completedMissions.includes(mission.id)) story.completedMissions.push(mission.id);
-      // Sıralı tut: kayıt okunur kalsın; Bakım Puanı zaten set mantığıyla türer.
-      story.completedMissions.sort((a, b) => getMissionById(a).order - getMissionById(b).order);
-      if (mission.winSceneId && sceneById(mission.winSceneId)) story.seenScenes.push(mission.winSceneId);
-      const nextId = nextMissionId(mission.id);
-      // Kayıt imleci yalnız İLERİ hareket eder: erken bir görevin rövanşı
-      // oyuncuyu geride bırakılan göreve geri sarmaşmasın (F3-07 tekrar
-      // oynama ilerlemeyi geri almaz).
-      if (nextId && getMissionById(nextId).order > getMissionById(story.currentMissionId).order) {
-        story.currentMissionId = nextId;
-      } else if (!nextId) {
-        story.endingSeen = true; // Ortak Vardiya tamamlandı: kupa festivali sürer
-      }
-    } else {
-      // Yenilgi/beraberlik ilerlemeyi geri almaz; görev yeniden denenebilir.
-      if (mission.lossSceneId && sceneById(mission.lossSceneId)) story.seenScenes.push(mission.lossSceneId);
-    }
-    this.persistStory();
-    const sceneId = result === "win" ? mission.winSceneId : mission.lossSceneId;
-    const after = () => this.showStoryOverlay(result, reward);
-    // Ara sahne (F4-02): yalnız zafer sonrası ve yalnızca bu görevin ara
-    // sahnesi yazılmışsa oynar (perde geçişleri / final öncesi).
-    const midId = result === "win" ? mission.midSceneId : null;
-    const playMidThenOverlay = () => {
-      if (midId && sceneById(midId)) {
-        if (!story.seenScenes.includes(midId)) story.seenScenes.push(midId);
-        this.persistStory();
-        this.playStoryScene(midId, after);
-      } else after();
-    };
-    if (sceneId && sceneById(sceneId)) this.playStoryScene(sceneId, playMidThenOverlay);
-    else playMidThenOverlay();
-  }
-
-  // Hikâye maç sonu overlay'i: düğme etiketleri mod bağlamına göre değişir.
-  showStoryOverlay(result, reward) {
-    const mission = this.storyMission || getMissionById(this.storyMissionId);
-    const win = result === "win";
-    // Maç bitti: durum GAMEOVER'a çekilir. Sahne oynatıcısından gelindiyse
-    // STORY_SCENE'de kalmak, sahne kimliği temizlendiği için bir sonraki
-    // render'da haritaya sessizce atlanmasına (kart asılı kalmasına) yol açıyordu.
-    this.state = "GAMEOVER";
-    const nextBtn = document.getElementById("story-next-btn");
-    if (nextBtn) nextBtn.dataset.canNext = win && !this.profile.story.endingSeen ? "1" : "0";
-    showOverlay(
-      win ? `${mission.title} tamamlandı! 🏆` : `${mission.title} kazanılamadı`,
-      win ? "" : "Görev yeniden denenebilir; ilerleme geri alınmaz.",
-      reward,
-      "story"
-    );
-    // Yenilgide düğme etiketi doğru dursun: tekrar etmek o görevdir.
-    if (!win) {
-      const restartBtn = document.getElementById("restart-btn");
-      if (restartBtn) restartBtn.textContent = "Tekrar Oyna";
-    }
-  }
-
-  // "Sonraki Etap": kayıtlı bir sonraki görevin giriş sahnesine girer.
-  storyNextMission() {
-    const story = this.profile.story;
-    if (story.endingSeen || !isMissionUnlocked(story.currentMissionId, story.completedMissions)) {
-      this.openStoryMap();
-      return;
-    }
-    hideOverlay();
-    this.openStoryMission(story.currentMissionId);
-  }
-
-  // Hikâye profiline dokunan her yazım tek kapıdan geçer; kayıt kullanılamıyorsa
-  // tek seferlik uyarı gösterilir (profile.js ile aynı davranış).
-  persistStory() {
-    this.profile = normalizeProfile(this.profile);
-    if (!saveProfile(this.profile)) notifyStorageFailure();
-  }
-
-  // Hikâye menü ekranlarında klavye gezinme. Brifingde ok tuşları zorluğu
-  // değiştirir; diğer ekranlarda satır/kart seçimini gezinir.
-  handleStoryMenuKey(e) {
-    if (this.state === "STORY_BRIEFING") {
-      if (e.key === "ArrowLeft" || e.key === "a" || e.key === "A") { this.cycleStoryDifficulty(-1); return true; }
-      if (e.key === "ArrowRight" || e.key === "d" || e.key === "D") { this.cycleStoryDifficulty(1); return true; }
-      if (e.key === "Enter" || e.code === "Space") { e.preventDefault(); this.startStoryMission(this.storyMissionId); return true; }
-      return false;
-    }
-    if (!this.state.startsWith("STORY_") || this.state === "STORY_SCENE") return false;
-    if (e.key === "ArrowLeft" || e.key === "a" || e.key === "A") { if (this.storyFocus > 0) { this.storyFocus--; SFX.uiClick(); } return true; }
-    if (e.key === "ArrowRight" || e.key === "d" || e.key === "D") { this.storyFocus++; SFX.uiClick(); return true; }
-    if (e.key === "Enter" || e.code === "Space") { e.preventDefault(); this.confirmStoryFocus(); return true; }
-    return false;
-  }
-
-  // Klavye onayı duruma göre satırı/kartı çalıştırır (tıklama ile aynı rota).
-  confirmStoryFocus() {
-    if (this.state === "STORY_MAP") {
-      const rows = this.storyRows();
-      const row = rows[Math.min(this.storyFocus, rows.length - 1)];
-      if (row && row.missionId === "__festival__") { this.openStoryFestival(); return; }
-      if (row && row.status !== "locked") this.openStoryMission(row.missionId);
-      return;
-    }
-    if (this.state === "STORY_ROBOT_SELECT") {
-      const ids = selectableRobotsForMission(this.storyMission);
-      const id = ids[Math.min(this.storyFocus, ids.length - 1)];
-      if (id) this.selectStoryRobot(id);
-      return;
-    }
-    if (this.state === "STORY_ARCHIVE") {
-      const entries = this.profile.story.seenScenes.map((id) => ({ sceneId: id, info: storySceneInfo(id) }))
-        .sort((a, b) => (a.info.mission ? a.info.mission.order : 99) - (b.info.mission ? b.info.mission.order : 99) || a.info.variant.localeCompare(b.info.variant));
-      const entry = entries[Math.min(this.storyFocus, entries.length - 1)];
-      if (entry) this.playStoryScene(entry.sceneId, () => this.openStoryArchive());
-    }
-  }
-
-  // Kupa haritasındaki tıklanabilir görev satırları; storyRows() ile aynı
-  // sırada üretilir (klavye gezinmesiyle çakışmasın).
-  storyRows() {
-    const out = [];
-    for (const zoneId of STORY_CAMPAIGN.zoneOrder) {
-      for (const mission of missionsForZone(zoneId)) {
-        out.push({ missionId: mission.id, status: missionStatusOf(mission, this.profile.story) });
-      }
-    }
-    // Epilog sonrası haritaya festival satırı düşer (klavye odağı da onu gösterir).
-    if (this.profile.story.endingSeen) out.push({ missionId: "__festival__", status: "open" });
-    return out;
-  }
-
-  // Kupa Festivali (Faz A): epilog sonrası yıllık stres testi. Rastgele arena
-  // ve rakipler; ödül normal formülle yazılır, kampanya ilerlemesine
-  // dokunulmaz (finishStoryMatch çağrılmaz). Epilogun "festival her yıl
-  // düzenlenir" sözünü oynanışa bağlar.
-  openStoryFestival() {
-    const chosen = this.profile.story.selectedRobotId;
-    const playerDef = CHARACTERS.find((c) => c.id === chosen) || CHARACTERS[0];
-    const pool = CHARACTERS.filter((c) => c.id !== playerDef.id);
-    const oppCount = 1 + Math.floor(Math.random() * 3);
-    const oppDefs = [];
-    while (oppDefs.length < oppCount) {
-      const cand = pool[Math.floor(Math.random() * pool.length)];
-      if (!oppDefs.some((d) => d.id === cand.id)) oppDefs.push(cand);
-    }
-    this.mode = "festival";
-    this.storyMissionId = null;
-    this.storyMission = null;
-    this.difficulty = resolveStoryDifficulty(this.profile.story.difficulty).ai;
-    this.selectedMap = MAPS[Math.floor(Math.random() * MAPS.length)];
-    this.selectedChars = [playerDef, ...oppDefs];
-    this.playerControls = ["human", ...oppDefs.map(() => "bot")];
-    this.bots = oppDefs.map(() => {
-      const bot = new BotController();
-      bot.difficulty = this.difficulty;
-      return bot;
-    });
-    this.charSelectPhase = 0;
-    hideOverlay();
-    this.startGame();
-    this.updateHud();
-  }
-
-  // "Sonraki Etap": kayıtlı bir sonraki görevin giriş sahnesine girer.
-  handleStoryMapClick(mx, my) {
-    for (const r of this._storyMissionRects || []) {
-      if (mx >= r.x && mx <= r.x + r.w && my >= r.y && my <= r.y + r.h) {
-        if (r.status === "locked") { SFX.uiClick(); return; }
-        this.openStoryMission(r.missionId);
-        return;
-      }
-    }
-    if (this.hitRect(this._storyArchiveRect, mx, my)) { SFX.uiClick(); this.openStoryArchive(); return; }
-    if (this._storyFestivalRect && this.hitRect(this._storyFestivalRect, mx, my)) { SFX.uiClick(); this.openStoryFestival(); return; }
-    if (this.hitBackButton(mx, my)) { SFX.uiClick(); this.state = "MODE_SELECT"; this.updateHud(); return; }
-  }
-
-  handleStorySceneClick(mx, my) {
-    if (this.hitBackButton(mx, my)) { SFX.uiClick(); this.abortStoryScene(); return; }
-    if (this.hitRect(this._storySkipRect, mx, my)) { SFX.uiClick(); this.endStoryScene(); return; }
-    this.advanceStoryScene();
-  }
-
-  handleStoryRobotSelectClick(mx, my) {
-    for (const r of this._storyRobotRects || []) {
-      if (mx >= r.x && mx <= r.x + r.w && my >= r.y && my <= r.y + r.h) {
-        this.selectStoryRobot(r.robotId);
-        return;
-      }
-    }
-    if (this.hitRect(this._backRect, mx, my)) { this.openStoryMap(); return; }
-  }
-
-  handleStoryBriefingClick(mx, my) {
-    for (const r of this._storyDiffRects || []) {
-      if (mx >= r.x && mx <= r.x + r.w && my >= r.y && my <= r.y + r.h) {
-        this.profile.story.difficulty = r.diff;
-        this.persistStory();
-        SFX.uiClick();
-        return;
-      }
-    }
-    if (this.hitRect(this._storyStartRect, mx, my)) { this.startStoryMission(this.storyMissionId); return; }
-    if (this.hitRect(this._backRect, mx, my)) { this.openStoryMap(); return; }
-  }
-
-  handleStoryArchiveClick(mx, my) {
-    for (const r of this._storyArchiveEntryRects || []) {
-      if (mx >= r.x && mx <= r.x + r.w && my >= r.y && my <= r.y + r.h) {
-        this.playStoryScene(r.sceneId, () => this.openStoryArchive());
-        return;
-      }
-    }
-    if (this.hitRect(this._backRect, mx, my)) { this.openStoryMap(); return; }
-  }
-
   // Küçük çarpı/panel hit yardımcı: menü kartlarında tekrar eden test.
   hitRect(rect, x, y) {
     if (!rect) return false;
     return x >= rect.x && x <= rect.x + rect.w && y >= rect.y && y <= rect.y + rect.h;
   }
 
-  renderStoryMap(ctx) {
-    const W = this.W, H = this.H;
-    drawClouds(ctx, W);
-    ctx.fillStyle = "#000000bb"; ctx.fillRect(0, 0, W, H);
-    ctx.textAlign = "center"; ctx.textBaseline = "top";
-    ctx.fillStyle = "#ffe45e"; ctx.font = uiTitleFont(26);
-    ctx.fillText("DOKUZ BÖLGE KUPASI", W / 2, 12);
-
-    const points = maintenancePoints(this.profile.story);
-    ctx.fillStyle = "#cfe0ee"; ctx.font = uiTextFont(12);
-    ctx.fillText(`Atölye Bakım Puanı: ${points.total} / 270`, W / 2, 40);
-
-    const curt = new Set(curtailedZones(this.profile.story));
-    const cardW = Math.floor((W - 4 * 12) / 3), cardH = 132, gap = 12;
-    const startX = (W - (3 * cardW + 2 * gap)) / 2, startY = 62;
-    this._storyMissionRects = [];
-
-    // Bölgeleri boru hattıyla bağla (devre soldan sağa okunur).
-    const centers = STORY_CAMPAIGN.zoneOrder.map((zoneId, i) => {
-      const col = i % 3, row = (i / 3) | 0;
-      return { x: startX + col * (cardW + gap) + cardW / 2, y: startY + row * (cardH + gap) + cardH / 2 };
-    });
-    ctx.strokeStyle = "#3b526b"; ctx.lineWidth = 3;
-    for (let i = 0; i < centers.length - 1; i++) {
-      const a = centers[i], b = centers[i + 1];
-      ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
-    }
-
-    for (let i = 0; i < STORY_CAMPAIGN.zoneOrder.length; i++) {
-      const zoneId = STORY_CAMPAIGN.zoneOrder[i];
-      const zone = STORY_ZONES.find((z) => z.zoneId === zoneId);
-      const col = i % 3, row = (i / 3) | 0;
-      const x = startX + col * (cardW + gap), y = startY + row * (cardH + gap);
-      const inCur = curt.has(zoneId);
-      // Kart içerigi (kilit §12): bölge kodu, görev durumu, ev sahibi
-      // şampiyonlar, toplanan teknik kanıt, Bakım Puanı ve arşiv işareti.
-      const zoneBP = points.zones[zoneId] || 0;
-      const zoneEvidence = collectedEvidence(this.profile.story).filter((e) => e.zoneId === zoneId);
-      const archived = missionsForZone(zoneId).some((m) =>
-        this.profile.story.seenScenes.some((s) => s.startsWith(`scene_${m.id}_`)));
-      // Bölge kartı: kısıntıda kırmızı kenar + koyu kızıl tint. İç köşeler
-      // kod/rozet metinleriyle dolu — perçin kapalı (çakışmasın).
-      _csPanel(ctx, x, y, cardW, cardH, {
-        accent: inCur ? "#ff7b7b" : "#3b526b",
-        fillTop: inCur ? "#1a1013" : null, fillBottom: inCur ? "#100b0d" : null,
-        rivets: false,
-      });
-
-      // Bölge kodu + sağ üstte Bakım Puanı ve arşiv rozeti. Kısıntı yalnız
-      // renkle değil metinle bildirilir (plan §18).
-      ctx.fillStyle = inCur ? "#ff9b9b" : "#63e6be";
-      ctx.font = uiTextFont(10, 700); ctx.textAlign = "left";
-      ctx.fillText(zone.zoneCode, x + 10, y + 10);
-      ctx.textAlign = "right";
-      ctx.fillStyle = zoneBP > 0 ? "#ffe45e" : "#5c6b7a";
-      ctx.fillText(`BP ${zoneBP}${archived ? "  📖" : ""}`, x + cardW - 10, y + 10);
-      ctx.textAlign = "left";
-      ctx.fillStyle = inCur ? "#ffb3b3" : "#eef5ff"; ctx.font = uiTitleFont(14);
-      ctx.fillText(zone.zoneLabel, x + 10, y + 24);
-      ctx.fillStyle = "#9fb6c9"; ctx.font = uiTextFont(10);
-      ctx.fillText(inCur ? "KISINTIDA — bantlar bekliyor" : zone.fearText, x + 10, y + 42, cardW - 20);
-      // Ev sahibi şampiyonları küçük etiketlerle listele.
-      const champs = zone.representativeIds
-        .map((id) => { const d = CHARACTERS.find((c) => c.id === id); return d ? d.label : id; })
-        .join(" • ");
-      ctx.fillStyle = "#5c6b7a"; ctx.font = uiTextFont(9);
-      ctx.fillText(`Şampiyonlar: ${champs}`, x + 10, y + 55, cardW - 20);
-
-      // Görev satırları (bölge başına 1–2 görev): tıklanabilir + klavye odağı.
-      let ry = y + 72;
-      for (const mission of missionsForZone(zoneId)) {
-        const status = missionStatusOf(mission, this.profile.story);
-        const rowRect = { x: x + 10, y: ry, w: cardW - 20, h: 20, missionId: mission.id, status };
-        const rowIndex = this._storyMissionRects.length;
-        this._storyMissionRects.push(rowRect);
-        const hovered = this.hitRect(rowRect, this.input.mouseX, this.input.mouseY);
-        const focused = rowIndex === Math.min(this.storyFocus, this._storyMissionRects.length - 1);
-        if (hovered || (focused && status !== "locked")) {
-          ctx.fillStyle = "#1c2a3c"; _csRoundRect(ctx, rowRect.x - 2, rowRect.y - 1, rowRect.w + 4, rowRect.h + 2, 6); ctx.fill();
-        }
-        ctx.fillStyle = status === "locked" ? "#5c6b7a" : status === "done" ? "#8aff8a" : "#ffe45e";
-        ctx.font = uiTextFont(11, 700);
-        ctx.fillText(status === "locked" ? "🔒" : status === "done" ? "✓" : "▶", rowRect.x, rowRect.y + 3);
-        ctx.fillStyle = status === "locked" ? "#5c6b7a" : "#eef5ff";
-        ctx.font = uiTextFont(11);
-        ctx.fillText(mission.title, rowRect.x + 18, rowRect.y + 4, rowRect.w - 22);
-        // Teknik kanıt toplandıysa görev satırında rozet göster.
-        if (status === "done" && zoneEvidence.some((e) => e.missionId === mission.id)) {
-          ctx.fillStyle = "#ffd166"; ctx.font = uiTextFont(10, 700); ctx.textAlign = "right";
-          ctx.fillText("🧾", rowRect.x + rowRect.w, rowRect.y + 4);
-          ctx.textAlign = "left";
-        }
-        ry += 24;
-      }
-    }
-
-    // Alt şerit: Arşiv + (epilog sonrası) Festival + Ana Menü (geri butonu).
-    ctx.fillStyle = "#9fb6c9"; ctx.font = uiTextFont(11); ctx.textAlign = "center";
-    ctx.fillText(`Toplanan teknik kanıt: ${collectedEvidence(this.profile.story).length} / 9  •  Hurda: ${this.profile.scrap}`, W / 2, H - 42);
-    this._storyArchiveRect = { x: 24, y: H - 42, w: 128, h: 30 };
-    _csPanel(ctx, this._storyArchiveRect.x, this._storyArchiveRect.y, this._storyArchiveRect.w, this._storyArchiveRect.h, { accent: "#3b526b", rivets: false });
-    ctx.fillStyle = "#cfe0ee"; ctx.font = uiTextFont(12, 700); ctx.textBaseline = "middle";
-    ctx.fillText("Hikâye Arşivi", this._storyArchiveRect.x + this._storyArchiveRect.w / 2, this._storyArchiveRect.y + 15);
-
-    // Kupa Festivali düğmesi: yalnız epilog oynandıktan sonra (endingSeen).
-    if (this.profile.story.endingSeen) {
-      this._storyFestivalRect = { x: W / 2 - 92, y: H - 42, w: 184, h: 30 };
-      const fFocused = this.storyFocus >= this._storyMissionRects.length;
-      const fHover = this.hitRect(this._storyFestivalRect, this.input.mouseX, this.input.mouseY);
-      _csPanel(ctx, this._storyFestivalRect.x, this._storyFestivalRect.y, this._storyFestivalRect.w, this._storyFestivalRect.h, {
-        accent: fHover || fFocused ? "#ffe45e" : "#63e6be",
-        hover: fHover || fFocused, glow: fHover || fFocused, rivets: false,
-      });
-      ctx.fillStyle = "#63e6be"; ctx.font = uiTextFont(12, 700);
-      ctx.fillText("Kupa Festivali ▸", this._storyFestivalRect.x + this._storyFestivalRect.w / 2, this._storyFestivalRect.y + 15);
-    } else {
-      this._storyFestivalRect = null;
-    }
-    this._backRect = { x: W - 104, y: H - 42, w: 80, h: 30 };
-    this.drawBackButton(ctx, "‹ Ana Menü");
-  }
-
-  renderStoryScene(ctx) {
-    const W = this.W, H = this.H;
-    const scene = sceneById(this.storySceneId);
-    if (!scene) { this.endStoryScene(); return; }
-    // Sahne arka planı görevin bölge paletini kullanır (plan §10.5).
-    const mission = STORY_MISSIONS.find((m) => m.introSceneId === scene.id || m.winSceneId === scene.id || m.lossSceneId === scene.id || m.midSceneId === scene.id);
-    const theme = getMapById(mission ? mission.mapId : "kopek");
-    // Sahne açılışı: 300 ms yumuşak fade-in (Math.random yok — kilit §16).
-    const fade = Math.min(1, (Date.now() - (this.storySceneStartMs || Date.now())) / 300);
-    ctx.globalAlpha = fade;
-    drawSky(ctx, W, H, theme);
-    drawBackdrop(ctx, W, H, theme);
-    drawClouds(ctx, W, theme.cloud);
-    ctx.fillStyle = "#00000099"; ctx.fillRect(0, 0, W, H);
-
-    const line = scene.lines[Math.min(this.storySceneIndex, scene.lines.length - 1)];
-    const isSystem = line.speakerId === "system";
-    const def = isSystem ? null : CHARACTERS.find((c) => c.id === line.speakerId);
-    const name = isSystem ? "MERKEZ" : def ? def.label : line.speakerId;
-    const accent = isSystem ? "#9fb6c9" : def ? def.color : "#cfe0ee";
-
-    // Alt diyalog sayfası: endüstriyel panel (fade globalAlpha'sı paneli de
-    // yumuşakça soldurur). Portre çerçevesi ve iç öğeler aynen kalır.
-    const sheet = { x: 24, y: H - 172, w: W - 48, h: 152 };
-    _csPanel(ctx, sheet.x, sheet.y, sheet.w, sheet.h, { accent: "#3b526b" });
-
-    // Portre: ikinci bir çizici yazılmaz; mevcut drawRobot büyük çizilir.
-    ctx.fillStyle = "#06090b"; _csRoundRect(ctx, sheet.x + 14, sheet.y + 16, 116, 116, 10); ctx.fill();
-    ctx.strokeStyle = isSystem ? "#3b526b" : def.accent || "#63e6be"; ctx.lineWidth = 2;
-    _csRoundRect(ctx, sheet.x + 14, sheet.y + 16, 116, 116, 10); ctx.stroke();
-    if (def) {
-      // Konuşan portre hafifçe nefes alır: sin tabanlı, deterministic bobbing.
-      const bob = Math.sin((this.renderTimeMs || 0) / 320) * 2;
-      drawRobot(ctx, { cx: sheet.x + 72, cy: sheet.y + 80 + bob, r: 38, facing: 1, charDef: def, timeMs: this.renderTimeMs || 0, motion: { vx: 0, vy: 0, onGround: true } });
-    } else {
-      // Merkezi sistem: eski prosedür dili konuşan sanayi monitörü.
-      ctx.fillStyle = "#1c2833"; _csRoundRect(ctx, sheet.x + 40, sheet.y + 40, 64, 68, 6); ctx.fill();
-      ctx.fillStyle = "#7baeff"; ctx.fillRect(sheet.x + 50, sheet.y + 52, 44, 6);
-      ctx.fillStyle = "#ffcb69"; ctx.fillRect(sheet.x + 50, sheet.y + 64, 44, 6);
-      ctx.fillStyle = "#4aff9f"; ctx.fillRect(sheet.x + 50, sheet.y + 76, 28, 6);
-    }
-
-    const tx = sheet.x + 148, tw = sheet.w - 172;
-    ctx.textAlign = "left"; ctx.textBaseline = "top";
-    ctx.fillStyle = isSystem ? "#cfe0ee" : def ? def.color : "#eef5ff";
-    ctx.font = uiTitleFont(14);
-    ctx.fillText(name, tx, sheet.y + 12);
-
-    const shown = line.text.slice(0, Math.floor(this.storySceneChars));
-    // Diyalog gövde metni: uiTextFont varsayılanı SemiBold (600). 400 iken bu
-    // satır panelin 700 etiketleriyle aynı aile gibi okunmuyor, sahne ekranı
-    // "başka bir yazı tipi" kullanıyormuş gibi görünüyordu (kullanıcı
-    // bildirimi); artık gövde metni oyunun her yerinde aynı kademede.
-    ctx.fillStyle = "#eef5ff"; ctx.font = uiTextFont(15);
-    const rows = _wrapCanvasText(ctx, shown, tw);
-    rows.slice(0, STORY_SCENE_MAX_ROWS).forEach((r, i) => ctx.fillText(r, tx, sheet.y + 36 + i * 20, tw));
-
-    // x/y ilerleme göstergesi + "ilerlet" işaretçisi: metin tamamlandysa
-    // yanıp sönen ok yazının bitişiği beklediğini gösterir.
-    ctx.fillStyle = "#9fb6c9"; ctx.font = uiTextFont(12, 700); ctx.textAlign = "right";
-    ctx.fillText(`${this.storySceneIndex + 1}/${scene.lines.length}`, sheet.x + sheet.w - 16, sheet.y + 12);
-    if (this.storySceneChars >= line.text.length) {
-      ctx.fillStyle = accent;
-      ctx.font = uiTitleFont(14);
-      const pulse = Math.sin((this.renderTimeMs || 0) / 260) > 0;
-      ctx.fillText(pulse ? "▼" : "", sheet.x + sheet.w - 16, sheet.y + 12 + 18);
-    }
-
-    // Sahneyi Atla eylemi — panel dili (hover'da sarı kenar + parıltı)
-    this._storySkipRect = { x: sheet.x + sheet.w - 132, y: sheet.y + sheet.h - 38, w: 118, h: 28 };
-    const skipHover = this.hitRect(this._storySkipRect, this.input.mouseX, this.input.mouseY);
-    _csPanel(ctx, this._storySkipRect.x, this._storySkipRect.y, this._storySkipRect.w, this._storySkipRect.h, {
-      accent: skipHover ? "#ffe45e" : "#3b526b",
-      hover: skipHover, glow: skipHover, rivets: false,
-    });
-    ctx.fillStyle = "#cfe0ee"; ctx.font = uiTextFont(12, 700); ctx.textAlign = "center"; ctx.textBaseline = "middle";
-    ctx.fillText("Sahneyi Atla ▸", this._storySkipRect.x + this._storySkipRect.w / 2, this._storySkipRect.y + 14);
-
-    // Üst bağlam rozeti: görev — bölge, küçük panel çipi içinde. HUD bu
-    // ekranda gizli; sahne başlığı tamamen canvasa aittir. İlerletme ipucu
-    // (eski DOM banner metni) sağ üst köşeye taşındı.
-    const ctxLine = mission ? `${mission.title} — ${theme.zoneLabel}` : theme.zoneLabel;
-    ctx.font = uiTextFont(12, 700);
-    const chipW = Math.ceil(ctx.measureText(ctxLine).width) + 22;
-    _csPanel(ctx, W / 2 - chipW / 2, 8, chipW, 24, { accent: "#3b526b", rivets: false });
-    ctx.textAlign = "center"; ctx.textBaseline = "top";
-    ctx.fillStyle = "#ffe45e";
-    ctx.fillText(ctxLine, W / 2, 14);
-    ctx.fillStyle = "#9fb6c9"; ctx.font = uiTextFont(11);
-    ctx.textAlign = "right";
-    // Üst-sağ köşe DOM ses denetimine ayrılmıştır; ipucu onun ALTINA çizilir
-    // (eskiden y=13'te ses denetiminin altında kalıyordu).
-    ctx.fillText("İlerlet: Enter / Space / tık", W - 24, STORY_HINT_Y);
-    // Sahneden çıkış (Esc ile aynı rota). Sahne tıklaması metni ilerlettiği
-    // için geri butonu ilerletmeden önce kontrol edilir.
-    this.drawBackButton(ctx, "‹ Kupa Haritası");
-    ctx.globalAlpha = 1; // fade yalnız bu sahne çiziminde geçerli
-  }
-
-  renderStoryRobotSelect(ctx) {
-    const W = this.W, H = this.H;
-    drawClouds(ctx, W);
-    ctx.fillStyle = "#000000bb"; ctx.fillRect(0, 0, W, H);
-    const zone = STORY_ZONES.find((z) => z.zoneId === this.storyMission.zoneId);
-    // Arena etiketi görev verisinden türetilir; selectedMap bir sebeple boşsa
-    // bile seçim ekranı çizilmeye devam eder.
-    const arena = this.selectedMap || getMapById(this.storyMission.mapId);
-    ctx.textAlign = "center"; ctx.textBaseline = "top";
-    ctx.fillStyle = "#ffe45e"; ctx.font = uiTitleFont(22);
-    ctx.fillText("Saha robotu seç", W / 2, 10);
-    ctx.fillStyle = "#9fb6c9"; ctx.font = uiTextFont(12);
-    ctx.fillText(`${this.storyMission.title} • ${zone.zoneLabel} • Arena: ${arena.label}`, W / 2, 36);
-
-    const selectable = selectableRobotsForMission(this.storyMission);
-    const cardW = 92, cardH = 74, gap = 8, cols = 7;
-    const gridW = cols * cardW + (cols - 1) * gap;
-    const startX = Math.round((W - gridW) / 2), startY = 64;
-    this._storyRobotRects = [];
-    const mx = this.input.mouseX, my = this.input.mouseY;
-
-    for (let i = 0; i < CHARACTERS.length; i++) {
-      const ch = CHARACTERS[i];
-      const col = i % cols, row = (i / cols) | 0;
-      const cx = startX + col * (cardW + gap), cy = startY + row * (cardH + gap);
-      const allowed = selectable.includes(ch.id);
-      const selected = ch.id === (this.profile.story.selectedRobotId || firstMissionRobotId());
-      const hovered = mx >= cx && mx <= cx + cardW && my >= cy && my <= cy + cardH;
-      this._storyRobotRects.push({ x: cx, y: cy, w: cardW, h: cardH, robotId: ch.id });
-
-      ctx.globalAlpha = allowed ? 1 : 0.4;
-      // Endüstriyel panel kart; hover lift yalnız seçilebilir kartta.
-      const cyv = cy + (hovered && allowed ? -2 : 0);
-      _csPanel(ctx, cx, cyv, cardW, cardH, {
-        accent: selected ? "#63e6be" : hovered && allowed ? "#ffe45e" : "#2a3848",
-        hover: hovered && allowed, glow: hovered && allowed, selected,
-        fillTop: selected ? "#1b2b1f" : null, fillBottom: selected ? "#122015" : null,
-      });
-
-      drawRobot(ctx, { cx: cx + cardW / 2, cy: cyv + 28, r: 15, facing: 1, charDef: ch, timeMs: this.renderTimeMs || 0, motion: { vx: 0, vy: 0, onGround: true }, parts: getRobotProgress(this.profile, ch.id).loadout });
-      ctx.fillStyle = ch.color; ctx.font = uiTextFont(11, 700); ctx.textAlign = "center"; ctx.textBaseline = "top";
-      ctx.fillText(ch.label, cx + cardW / 2, cyv + 52, cardW - 8);
-      if (!allowed) {
-        ctx.fillStyle = "#ff9b9b"; ctx.font = uiTextFont(9, 700);
-        ctx.fillText("Rakip 🔒", cx + cardW / 2, cyv + 64);
-      }
-      ctx.globalAlpha = 1;
-    }
-
-    ctx.fillStyle = "#9fb6c9"; ctx.font = uiTextFont(11);
-    ctx.fillText("Rakip robotlar bu görevde seçilemez; seçim sonraki görevlerde de geçerlidir", W / 2, H - 26);
-    this._backRect = { x: 24, y: H - 56, w: 128, h: 32 };
-    this.drawBackButton(ctx, "‹ Kupa Haritası");
-  }
-
-  renderStoryBriefing(ctx) {
-    const W = this.W, H = this.H;
-    drawClouds(ctx, W);
-    ctx.fillStyle = "#000000bb"; ctx.fillRect(0, 0, W, H);
-    const mission = this.storyMission;
-    const zone = STORY_ZONES.find((z) => z.zoneId === mission.zoneId);
-    const level = levelForXp(getRobotProgress(this.profile, this.profile.story.selectedRobotId || firstMissionRobotId()).xp);
-    const arena = this.selectedMap || getMapById(mission.mapId);
-
-    ctx.textAlign = "center"; ctx.textBaseline = "top";
-    ctx.fillStyle = "#ffe45e"; ctx.font = uiTitleFont(24);
-    ctx.fillText(mission.title, W / 2, 10);
-    ctx.fillStyle = "#cfe0ee"; ctx.font = uiTextFont(13);
-    ctx.fillText(`${zone.zoneLabel} • Arena: ${arena.label} (${arena.arenaCode}) • Önerilen Seviye: ${mission.recommendedLevel}`, W / 2, 38);
-
-    // Rakip kadrosu: veriden gelir; görev dışı seçim sunulmaz.
-    const oppCount = mission.opponents.length;
-    const oppY = 64;
-    ctx.fillStyle = "#9fb6c9"; ctx.font = uiTextFont(12, 700);
-    ctx.fillText(`${oppCount} rakip`, W / 2 - 90, oppY + 12);
-    let ox = W / 2 - 50;
-    for (const id of mission.opponents) {
-      const def = CHARACTERS.find((c) => c.id === id);
-      drawRobot(ctx, { cx: ox, cy: oppY + 30, r: 17, facing: 1, charDef: def, timeMs: this.renderTimeMs || 0, motion: { vx: 0, vy: 0, onGround: true } });
-      ctx.fillStyle = "#eef5ff"; ctx.font = uiTextFont(11, 700); ctx.textAlign = "center"; ctx.textBaseline = "top";
-      ctx.fillText(def.label, ox, oppY + 52);
-      ox += 46;
-    }
-
-    // Zorluk seçimi: kadro değişmez, yalnız bot zekâsı değişir.
-    ctx.fillStyle = "#9fb6c9"; ctx.font = uiTextFont(12, 700); ctx.textAlign = "center"; ctx.textBaseline = "top";
-    ctx.fillText("Vardiya zorluğu", W / 2, 140);
-    const keys = Object.keys(STORY_DIFFICULTIES);
-    const bw2 = 150, bh2 = 34, gap2 = 12;
-    const dxs = W / 2 - (keys.length * bw2 + (keys.length - 1) * gap2) / 2;
-    this._storyDiffRects = [];
-    for (let i = 0; i < keys.length; i++) {
-      const d = STORY_DIFFICULTIES[keys[i]];
-      const sel = keys[i] === this.profile.story.difficulty;
-      const x = dxs + i * (bw2 + gap2);
-      const hovered = this.hitRect({ x, y: 160, w: bw2, h: bh2 }, this.input.mouseX, this.input.mouseY);
-      this._storyDiffRects.push({ x, y: 160, w: bw2, h: bh2, diff: keys[i] });
-      _csPanel(ctx, x, 160, bw2, bh2, {
-        accent: sel ? "#4aff4a" : hovered ? "#ffe45e" : "#3b526b",
-        hover: hovered, glow: hovered, selected: sel,
-        fillTop: sel ? "#1e3a26" : null, fillBottom: sel ? "#12251a" : null,
-      });
-      ctx.fillStyle = sel ? "#8aff8a" : "#eef5ff"; ctx.font = uiTextFont(12, 700); ctx.textBaseline = "middle";
-      ctx.fillText(d.label, x + bw2 / 2, 177);
-    }
-
-    // Hazırlık bilgisi: seviye kapı değildir; geliştirmeler insan robotunda etkin.
-    const up = getRobotProgress(this.profile, this.profile.story.selectedRobotId || firstMissionRobotId());
-    const playerDef = CHARACTERS.find((c) => c.id === (this.profile.story.selectedRobotId || firstMissionRobotId()));
-    ctx.textAlign = "center"; ctx.textBaseline = "top";
-    ctx.fillStyle = "#cfe0ee"; ctx.font = uiTextFont(12);
-    ctx.fillText(`${playerDef.label} • Servis Seviyesi ${levelForXp(up.xp)} • Atölye geliştirmesi: ${totalTiers(up)}/9 • Hurda: ${this.profile.scrap}`, W / 2, 210);
-
-    // Görevin kanıtı: kazanılacak teknik ölçüm (kilit §7). Son görevde yoktur.
-    if (mission.evidence) {
-      ctx.fillStyle = "#ffd166"; ctx.font = uiTextFont(11, 700);
-      ctx.fillText(`Kanıt: ${mission.evidence.label}`, W / 2, 228);
-    }
-
-    // Öğretici paketi (yalnız ilk üç görevde, yalnız burada).
-    let ty = 238;
-    for (const tid of mission.tutorials) {
-      const bundle = STORY_TUTORIALS[tid];
-      if (!bundle) continue;
-      ctx.fillStyle = "#ffd166"; ctx.font = uiTextFont(12, 700);
-      ctx.fillText(`Öğretici: ${bundle.title}`, W / 2, ty);
-      ty += 18;
-      for (const text of bundle.lines) {
-        ctx.fillStyle = "#9fb6c9"; ctx.font = uiTextFont(11);
-        for (const row of _wrapCanvasText(ctx, text, 560)) { ctx.fillText(row, W / 2, ty); ty += 15; }
-      }
-      ty += 6;
-    }
-
-    // Başla düğmesi. Geri → kupa haritası.
-    this._storyStartRect = { x: W / 2 - 90, y: H - 56, w: 180, h: 36 };
-    const startHover = this.hitRect(this._storyStartRect, this.input.mouseX, this.input.mouseY);
-    // Ekranın birincil eylemi: tehlike şeritli büyük başlat paneli
-    _csPanel(ctx, this._storyStartRect.x, this._storyStartRect.y, this._storyStartRect.w, this._storyStartRect.h, {
-      accent: "#ffe45e", hover: startHover, glow: startHover, hazardTop: true,
-    });
-    ctx.fillStyle = "#ffe45e"; ctx.font = uiTitleFont(15); ctx.textBaseline = "middle";
-    ctx.fillText("Maçı Başla ▶", W / 2, this._storyStartRect.y + 18);
-    this._backRect = { x: 24, y: H - 48, w: 136, h: 32 };
-    this.drawBackButton(ctx, "‹ Kupa Haritası");
-  }
-
-  renderStoryArchive(ctx) {
-    const W = this.W, H = this.H;
-    drawClouds(ctx, W);
-    ctx.fillStyle = "#000000bb"; ctx.fillRect(0, 0, W, H);
-    ctx.textAlign = "center"; ctx.textBaseline = "top";
-    ctx.fillStyle = "#ffe45e"; ctx.font = uiTitleFont(24);
-    ctx.fillText("Hikâye Arşivi", W / 2, 12);
-    // Başlık altı tehlike şeridi — arşiv ekranında başlık bölgesi geniş
-    _csHazardStrip(ctx, W / 2 - 110, 44, 220, 4);
-    const entries = this.profile.story.seenScenes
-      .map((id) => ({ sceneId: id, info: storySceneInfo(id) }))
-      .sort((a, b) => (a.info.mission ? a.info.mission.order : 99) - (b.info.mission ? b.info.mission.order : 99) || a.info.variant.localeCompare(b.info.variant));
-
-    if (!entries.length) {
-      ctx.fillStyle = "#9fb6c9"; ctx.font = uiTextFont(13);
-      ctx.fillText("Henüz izlenen sahne yok. Görev oynadıkça sahneler burada birikir.", W / 2, 90);
-    } else {
-      this._storyArchiveEntryRects = [];
-      const rowH = 28, startX2 = W / 2 - 300;
-      let ry = 64;
-      for (let i = 0; i < entries.length; i++) {
-        const e = entries[i];
-        const rect = { x: startX2, y: ry, w: 600, h: 24 };
-        this._storyArchiveEntryRects.push({ ...e, ...rect });
-        const hovered = this.hitRect(rect, this.input.mouseX, this.input.mouseY);
-        const focused = i === Math.min(this.storyFocus, entries.length - 1);
-        if (hovered || focused) { ctx.fillStyle = "#1c2a3c"; _csRoundRect(ctx, rect.x - 4, rect.y - 2, rect.w + 8, rect.h + 4, 6); ctx.fill(); }
-        ctx.textAlign = "left"; ctx.textBaseline = "middle";
-        ctx.fillStyle = "#cfe0ee"; ctx.font = uiTextFont(12);
-        ctx.fillText(`${e.info.mission ? e.info.mission.title : "?"} — ${e.info.label}`, rect.x + 10, ry + rect.h / 2);
-        ctx.fillStyle = "#5c6b7a"; ctx.font = uiTextFont(10); ctx.textAlign = "right";
-        ctx.fillText("▶ yeniden izle", rect.x + rect.w, ry + rect.h / 2);
-        ry += rowH;
-      }
-    }
-    this._backRect = { x: 24, y: H - 48, w: 152, h: 32 };
-    this.drawBackButton(ctx, "‹ Kupa Haritası");
-  }
 }
 
-/* ---- hikâye modu yardımcıları ---- */
-
-// Diyalog kutusunun yazı animasyon hızı (harf/saniye).
-const STORY_SCENE_TYPE_SPEED = 45;
-// Bir kutu aynı anda en fazla bu kadar satır gösterir; kalanını ilerletme
-// basışı tamam saysa da veri sözleşmesi kutuyu 3 satırda tutmayı önerir.
-const STORY_SCENE_MAX_ROWS = 5;
-
-// Tek oyunculu ilerleme modları: bilgisayara karşı ve hikâye. Her ikisinde
-// insan robotunda Atölye geliştirmeleri etkindir ve maç ödülü yazılır.
-// game.js'teki tüm mode === "computer" kontrolleri bu kapıdan geçer.
+// Tek oyunculu ilerleme modu: bilgisayara karşı. Bu modda insan robotunda
+// Atölye geliştirmeleri etkindir ve maç ödülü yazılır. game.js'teki tüm
+// mode === "computer" kontrolleri bu kapıdan geçer.
 function isSinglePlayerProgressionMode(mode) {
-  return mode === "computer" || mode === "story" || mode === "festival";
+  return mode === "computer";
 }
 
-// Canvas metin kaydırma: kelime kelime kırar; diyalog ve brifing metinleri
+// Canvas metin kaydırma: kelime kelime kırar; öğretici metinleri
 // kutu içine bu şekilde sarılır (Math.random() kullanmaz).
 function _wrapCanvasText(ctx, text, maxWidth) {
   const words = String(text || "").split(/\s+/).filter(Boolean);
@@ -5191,16 +4259,6 @@ function _wrapCanvasText(ctx, text, maxWidth) {
   }
   if (current) rows.push(current);
   return rows;
-}
-
-// Sahne kimliğinden (scene_<missionId>_<variant>) görev ve kutu etiketi üret.
-// Arşiv listesi bu bilgiyi kullanır; bilinmeyen kimlikler soru işaretiyle
-// görünür ama oyunu engellemez.
-const STORY_SCENE_VARIANT_LABELS = { intro: "Giriş", win: "Zafer", loss: "Yenilgi", mid: "Ara" };
-function storySceneInfo(sceneId) {
-  const mission = STORY_MISSIONS.find((m) => sceneId.startsWith(`scene_${m.id}_`)) || null;
-  const variant = mission ? sceneId.slice(`scene_${mission.id}_`.length) : "";
-  return { mission, variant, label: STORY_SCENE_VARIANT_LABELS[variant] || variant || "Sahne" };
 }
 
 /* ---- yardımcılar ---- */
@@ -5550,22 +4608,7 @@ function _msIcon(ctx, kind, cx, cy, accent, lit) {
   ctx.lineWidth = 2;
   ctx.lineCap = "round";
   ctx.lineJoin = "round";
-  if (kind === "kupa") {
-    // Hikâye modu: kupa — kase + kulplar + sap + kaide
-    ctx.beginPath();
-    ctx.moveTo(cx - 8, cy - 9);
-    ctx.lineTo(cx + 8, cy - 9);
-    ctx.quadraticCurveTo(cx + 8, cy - 1, cx + 3, cy);
-    ctx.lineTo(cx - 3, cy);
-    ctx.quadraticCurveTo(cx - 8, cy - 1, cx - 8, cy - 9);
-    ctx.stroke();
-    ctx.beginPath(); ctx.arc(cx - 8, cy - 5, 3.5, Math.PI / 2, Math.PI * 1.5); ctx.stroke();
-    ctx.beginPath(); ctx.arc(cx + 8, cy - 5, 3.5, -Math.PI / 2, Math.PI / 2); ctx.stroke();
-    ctx.beginPath();
-    ctx.moveTo(cx, cy); ctx.lineTo(cx, cy + 6);
-    ctx.moveTo(cx - 5, cy + 8); ctx.lineTo(cx + 5, cy + 8);
-    ctx.stroke();
-  } else if (kind === "robot") {
+  if (kind === "robot") {
     // Otomatik birimler: fabrika robotu kafası — kafa + anten + gözler + ağız
     _panelPath(ctx, cx - 10, cy - 7, 20, 16, 3); ctx.stroke();
     ctx.beginPath();
@@ -5678,11 +4721,8 @@ function statRow(label, n) {
 }
 
 // Maç sonu overlay'i: ödül hesaplamaz, yalnız hazır sonuç modelini gösterir.
-// Her gösterimde düğmeler varsayılana döner; hikâye bağlamı "story" moduyla
-// kendi etiketlerini yazar (Kupa Haritası / Atölye / Sonraki Etap).
-function showOverlay(title, sub, reward, mode) {
-  const storyNextBtn = document.getElementById("story-next-btn");
-  if (storyNextBtn) storyNextBtn.classList.add("hidden");
+// Her gösterimde düğmeler varsayılana döner.
+function showOverlay(title, sub, reward) {
   const defWorkshop = document.getElementById("workshop-btn");
   if (defWorkshop) defWorkshop.textContent = "Atölyeye Git";
   const defRestart = document.getElementById("restart-btn");
@@ -5707,15 +4747,6 @@ function showOverlay(title, sub, reward, mode) {
     }
   }
   document.getElementById("overlay").classList.remove("hidden");
-  if (mode === "story") {
-    const menuBtn = document.getElementById("menu-btn");
-    if (menuBtn) menuBtn.textContent = "Kupa Haritası";
-    const workshopBtn = document.getElementById("workshop-btn");
-    if (workshopBtn) workshopBtn.textContent = "Atölye";
-    const restartBtn = document.getElementById("restart-btn");
-    if (restartBtn) restartBtn.textContent = "Tekrar Etap";
-    if (storyNextBtn && storyNextBtn.dataset.canNext === "1") storyNextBtn.classList.remove("hidden");
-  }
 }
 function hideOverlay() {
   document.getElementById("overlay").classList.add("hidden");

@@ -9,29 +9,29 @@ Faz çıktıları:
 - `profile.js` şema v5 (`parts` + `robots.loadout`, çapraz doğrulama + çakışma çözümü, v4→v5 göçü)
 - `progression.js`: `resolveRobotBuild` parça etkileri (düz toplam + çarpımsal birleşim, kırpma sınırları) + `partEffectText` + `PART_KNOCKBACK_MIN`
 - `index.html`: parts.js yükleme sırası (profile → parts → market)
-- Testler: run 808, market 246, progression 165, story 597, audio 21
+- Testler: run 808, market 246, progression 165, audio 21
 
 **Faz 2 — pazar sekmeleri (2026-09-25)**
 - `game.js`: `marketTab`/`marketPartPage` durumları; `renderMarket` kabuğa bölündü (`_renderMarketTabs` + `_renderMarketAmmo` + `_renderMarketParts` + `_renderMarketNav` + `_renderMarketNotice` + `_marketEquippedMap`); `purchaseMarketPart`; `switchMarketTab`/`changeMarketPage`; `handleMarketClick` üç katman (sekme → sayfa → kart); `1`/`2` klavye kısayolu; tekerlek aktif sekmeyi sayfalar
 - Izgara geometrisi gridY=84 KORUNDU (alt yazı satırı sekme bandına dönüştü) — mevcut cephane ekranı hiç kaymadı
 - Parça kartı: ikon + ad + etki + yuva rozeti + fiyat/Alındı + "Takılı → robot" durumu
 - `_market_probe.html`: `parts.js` + iki tuval (cephane + parça, tüm kart durumları)
-- Testler: run 826 (+18), market 246, progression 165, story 597, audio 21 — görsel doğrulama `screenshots/market_probe_faz2.png`
+- Testler: run 826 (+18), market 246, progression 165, audio 21 — görsel doğrulama `screenshots/market_probe_faz2.png`
 
 **Faz 3 — Atölye parça paneli (2026-09-25)**
 - `game.js`: `workshopMode` (GELİŞTİRME | PARÇALAR), `workshopSlot`, `workshopSlotOpen`, `workshopPartCursor`, `workshopNotice`; `renderWorkshop` iç mod yapısına bölündü (`_renderWorkshopModeTabs` + `_renderWorkshopParts`); `switchWorkshopMode`/`selectWorkshopSlot`/`workshopSlotParts`/`_workshopSlotRows`/`openWorkshopSlot`/`closeWorkshopSlot`/`_moveWorkshopPartCursor`/`applyWorkshopPart`; `handleWorkshopKey` moda duyarlı; `handleWorkshopClick` sekme→yuva→satır; `goBack` önce açık listeyi kapatır
 - Yuva paneli: 4 yuva (takılı parça + envanterdeki seçenek sayısı); liste: sahip olunan parçalar (etki önizlemesi) + "Boş bırak"; takılı satırda `✓ takılı`
 - Karakter seçim kartına takılı parça rozeti (4 nokta, `_drawPartDots`); `_workshop_probe.html` dört görünüm (geliştirme/yuva/liste/karakter seçimi), `screenshots/workshop_probe_faz3.png`
-- Testler: run 852 (+26), market 246, progression 165, story 597, audio 21
+- Testler: run 852 (+26), market 246, progression 165, audio 21
 
 **Faz 4 — cila (2026-09-25)**
 - `robots.js`: `_rbPartSpecs` + `_rbPartAccessories` — takılı parçalar robot siluetine aksesuar olarak çizilir (göğüs plakası, vizör optik şeridi, sırt hücresi, taban takozları). `options.parts` yoksa çizim imzası **birebir** korunur (testli regresyon)
 - `progression.js`: build `parts` (sanitize loadout) taşır → `entity.js` `partLoadout` ile maç içi aksesuar yolunu besler
-- `game.js`: atölye kartı/önizleme, karakter seçimi ve hikâye robot seçimi çizimlerine `parts` geçirilir
+- `game.js`: atölye kartı/önizleme ve karakter seçimi çizimlerine `parts` geçirilir
 - `audio.js`: `SFX.partMount()` (metal klik + yay); parça alımı ve takma bu sesi kullanır
 - `_parts_sheet.html` (11 ikon + 6 aksesuar karşılaştırması), `screenshots/parts_sheet_faz4.png`
 - README: "Parça sekmesi" bölümü + tablo + kontroller; CLAUDE.md: parts.js satırı, "Yeni parça" veri tarifi, test notları
-- Testler: run 862 (+6), market 246, progression 165, story 597, audio 21, maps 960
+- Testler: run 862 (+6), market 246, progression 165, audio 21, maps 960
 
 Sıradaki (opsiyonel): Turbo Palet — `moveSpeedMult` ekseni + `Entity.walk` tek çarpanı; yürüyüş doğrulama betiği (`_walk_verify.js`) yeniden koşulmalı.
 
@@ -82,7 +82,7 @@ Kaynaklar (kod tabanı okuması, 2026-09-25 — satır numaraları bugünkü kod
 ### 1.3 Kalıcı güç kanalı
 
 - `resolveRobotBuild(charDef, robotProgress, opts)` (progression.js L243): geliştirme kademelerini tek türetilmiş build'e toplar (tek-çarpan kuralı: bonuslar üst üste çarpılmaz, tek türetilmiş değer kullanılır).
-- Çağrı yeri: `game.js L182` — `upgradesOn && ctrl !== "bot"` iken `{ upgradesEnabled: true }`. `upgradesOn = isSinglePlayerProgressionMode(mode)` → `computer | story | festival` (L175). Botlar ve yerel (hot-seat) maçlar taban tanım kullanır → parçalar da aynı geçide bağlanır.
+- Çağrı yeri: `game.js L182` — `upgradesOn && ctrl !== "bot"` iken `{ upgradesEnabled: true }`. `upgradesOn = isSinglePlayerProgressionMode(mode)` → `computer` (L175). Botlar ve yerel (hot-seat) maçlar taban tanım kullanır → parçalar da aynı geçide bağlanır.
 - Sabitler (progression.js): `ARMOR_CAP=0.40`, `CHASSIS_HP_BONUS {t1:0.05, t3:0.10}`, `CHASSIS_ARMOR_BONUS=0.02`, `CHASSIS_KNOCKBACK_REDUCTION=0.10`, `MODULE_POWER_BONUS {t1:0.06, t3:0.15}`, `MODULE_COOLDOWN_REDUCTION=1`, `MODULE_MIN_COOLDOWN=2`, `CORE_STAMINA {base:70,t1:78,t3:85}`, `CORE_WEAPON_BONUS {t2:0.04,t3:0.07}`.
 - Ödül ekonomisi: `REWARD_BASE win=60 Hurda` × zorluk çarpanı (0.75…1.5) × (1 + %20·(rakip−1)), tavan 150. Normal 1v1 galibiyet = 60; normal 3 rakip = 84; uzman 4 rakip = 144.
 
@@ -104,13 +104,13 @@ Kaynaklar (kod tabanı okuması, 2026-09-25 — satır numaraları bugünkü kod
 | **D-03** | Yuva kümesi | 3 / 4 / 6 yuva | **4 yuva**: `helmet, body, tool, feet`. Robot anatomisiyle birebir; yuva başına 3 parça → 12 parça ilk katalog. 6 yuva (silah yuvası, depo) Faz 2+ adayı |
 | **D-04** | Takma yeri | (a) Pazar "Parçalar" sekmesinde tak (b) Atölye'de tak | **(b)**. Atölye robot-başına çalışan ekran; pazar kartına takma listesi sığmaz. Pazar satış listesi kalır — sorumluluk ayrımı mevcut yapıyla aynı |
 | **D-05** | Etki eksenleri (v1) | (a) yalnız mevcut build çıktıları (b) yeni fizik alanları (hız, menzil…) | **(a)**. AI/mermi/puanlama koduna dokunulmaz; denge denetlenebilir kalır. "Hareket hızı +%10" (Turbo Palet) tek yeni mekanik olarak Faz 3 opsiyonu |
-| **D-06** | Kilit kuralı | — | Parçalar geliştirmelerle **aynı geçidi** paylaşır: `resolveRobotBuild` içinde `upgradesEnabled` bayrağı hem kademeleri hem parçaları kapsar; kural metni atölyeyle aynı ("yalnız bilgisayara karşı ve hikâyede, insan robotunda etkin") |
+| **D-06** | Kilit kuralı | — | Parçalar geliştirmelerle **aynı geçidi** paylaşır: `resolveRobotBuild` içinde `upgradesEnabled` bayrağı hem kademeleri hem parçaları kapsar; kural metni atölyeyle aynı ("yalnız bilgisayara karşı, insan robotunda etkin") |
 | **D-07** | Fiyat bandı | — | **40–130 Hurda** tek seferlik. Katalog toplamı ≈ 755 → normal 1v1'de ~13 galibiyet, 3 rakip normal'de ~8 maç: uzun soluklu hedef; cephane tüketim ekonomisini gölgelemez |
 | **D-08** | Geri satış / çöpçülük | (a) yok (b) %50 geri satış (c) parçayı hurdaya ayırma | **(a) v1'de yok**. Geri satış çakışma/bakiye/UI durumlarını büyütür; sök-ücreti yok, söküp başka robota takmak ücretsiz |
 | **D-09** | Dolu parçayı başka robota takma | (a) engelle ("önce sök") (b) tek adımda taşı | **(b)**. Tak eylemi eski robottan otomatik söker; tek anlamlı işlem, boşta parça durumu UI'da yine görünür |
 | **D-10** | Parça ikon çizimi | (a) Projectile ikonları gibi ortak shape haritası (b) her parçaya özel çizici | **(b) ama sade**: `PART_ICON_SHAPES` haritası + tek `drawPartIcon` (40 px, `_rb` tarzı düz dolgu). Gradyan/shadowBlur YOK (tema kuralı), `Date.now`/`Math.random` YOK |
 | **D-11** | Atölye parça paneli yerleşimi | (a) sağ panele sıkıştır (b) iç mod değiştirme (Geliştirme/Parçalar) | **(b)**. §1.2 ölçümü: sağ panelde yalnız ~70 px boşluk → yuva paneli + seçim listesi sığmaz. Mod değiştirme, pazar sekme deseninin aynısı olacak (tutarlı UI dili) |
-| **D-12** | Parçalar hikâyede | (a) geliştirmelerle aynı kapsamda (b) hikâyede kapalı | **(a)**. `upgradesOn` zaten story/festival'de doğru — ayrı kural gerekmez; hikâye kilidi dokümanına not düşülür (K-10 "Hurda/Atölye sistemleri" kapsamı) |
+| **D-12** | Parçaların maç kapsamı | (a) geliştirmelerle aynı kapsamda (b) yalnız serbest maçta | **(a)**. `upgradesOn` zaten bilgisayara karşı modunda doğru — ayrı kural gerekmez |
 
 ## 3. Veri modeli — profil şeması **v5**
 
@@ -130,7 +130,7 @@ profile = {
       },
     }
   },
-  claimedMatches, story, updatedAt,   // değişmez
+  claimedMatches, updatedAt,   // değişmez
 }
 ```
 
@@ -184,7 +184,7 @@ Migrasyon/normalize **tek geçişte**:
 
 ```js
 if (version < 5) {
-  // v4 → v5: parça alanları eklenir; mevcut veri (scrap/ammo/robots/story)
+  // v4 → v5: parça alanları eklenir; mevcut veri (scrap/ammo/robots)
   // HİÇ taşınmaz ve değişmez. Boş parts + boş loadout'lar normalizeProfile'da
   // üretilir. data.version = 5;
 }
@@ -192,7 +192,7 @@ if (version < 5) {
 
 - `PROFILE_SCHEMA_VERSION = 5` (profile.js).
 - `defaultProfile()` → `parts: []` alanı eklenir; `defaultRobotProgress()` → `loadout: sanitizeLoadoutShape(null)`; `sanitizeRobotProgress` loadout şekil denetimini ekler.
-- Bilinen risk yok: eski kayıt v4 alanlarını korur, yeni alanlar boş açılır. `tests/story.js`'teki "profil v1→v4 göçü" grubu **v1→v5** adına güncellenir (mevcut iddialar korunur + v5 alan iddiaları eklenir).
+- Bilinen risk yok: eski kayıt v4 alanlarını korur, yeni alanlar boş açılır; profil göçü testleri v1→v5 kapsamına genişletilir.
 
 ### 3.5 Ekonomi cephesi — `js/parts.js`
 
@@ -295,7 +295,7 @@ Kırpma örnekleri: ZIP (cooldown 3) + Yedek Yükleyici + Aparat Kademe II → 3
 ```js
 // "Can 110 → 125" tarzı önizleme; upgradeEffectText deseninde:
 function partEffectText(charDef, robotProgress, slot, candidatePartId | null)
-function buildPartsSummary(robotProgress) → "Kask: Nişan Merceği • Gövde: — • …"  (pazar kartı + brifing için)
+function buildPartsSummary(robotProgress) → "Kask: Nişan Merceği • Gövde: — • …"  (pazar kartı için)
 ```
 
 ## 7. Pazar UI — sekmeler (`game.js`)
@@ -425,7 +425,7 @@ Yuvaya tıklayınca (`workshopSlot` kurulur) yuva paneli yerine **liste overlay'
 
 - Karakter seçim kartı: taklı parça sayısı rozeti `●●○○` (4 nokta, sağ üst) — Faz 3.
 - Pazar parça kartı: "FIX-8'de" etiketi — Faz 2.
-- Maç başı brifing/robot seçim kartı: parça satırı (buildPartsSummary) — Faz 3, opsiyonel.
+- Karakter seçim kartı: parça satırı (buildPartsSummary) — Faz 3, opsiyonel.
 
 ## 10. Görsel cila (Faz 4)
 
@@ -465,7 +465,6 @@ Taklı parçaya göre minik, robotun kimliğini bastırmayan ekler (`drawRobot`'
 | `tests/run.js` | FILES + `__M` export listesine parça simgeleri; yeni çizim/UI grupları | — |
 | `tests/market.js` | FILES + `__K` export'ları; §12'deki gruplar | — |
 | `README.md` / `CLAUDE.md` | Pazar bölümüne sekmeler + parçalar; dosya tablosuna `parts.js` satırı; "Yeni parça" veri tarifine ekleme | — |
-| `docs/story-mode-lock.md` | K-10 kapsamına parçalar notu (kilit dokunuşu gerekmez, sadece açıklama) | — |
 
 **Yükleme sırası gerekçesi:** `normalizeProfile` (profile.js) çalışma zamanında `sanitizeParts`'i çağırır — klasik scriptlerde çağrı zamanı çözümlenir, o yüzden parts.js'in profile.js'ten sonra gelmesi yeterli ve güvenli. market.js'ten önce olması (market test FILES'ının sırasıyla uyum) okunabilirlik için.
 
@@ -476,7 +475,7 @@ Taklı parçaya göre minik, robotun kimliğini bastırmayan ekler (`drawRobot`'
 1. **Katalog doğrulaması** — `PARTS` 11 (Turbo Paletsiz v1) / 12 (opsiyonlu) parça; her spec: bilinen yuva + ≥1 etki + pozitif tam fiyat + id tekrarsız + `desc` boş değil; yuva başına tam 3; her `effects` alanı katalog şemasında tanımlıdır.
 2. **`sanitizeParts`** — boş/bozuk girdi → `[]`; bilinmeyen id atılır; tekrar ayıklanır; sıra korunur.
 3. **`sanitizeLoadoutShape`** — bilinmeyen yuva anahtarı atılır; yuvasıyla uyuşmayan parça `null`; eksik anahtarlar `null` üretilir.
-4. **`normalizeProfile` çapraz doğrulama** — sahipsiz parça loadout'tan düşer; aynı parça iki robotta → `CHARACTERS` sırasındaki ilkinde kalır; `parts` bozuksa ekonomi (`scrap/ammo/story`) korunur.
+4. **`normalizeProfile` çapraz doğrulama** — sahipsiz parça loadout'tan düşer; aynı parça iki robotta → `CHARACTERS` sırasındaki ilkinde kalır; `parts` bozuksa ekonomi (`scrap/ammo`) korunur.
 5. **Migrasyon v4→v5** — v4 kayıt (ammo + upgrades dolu) kayıpsız açılır; `parts:[]` + boş loadout'lar üretilir; `updatedAt` korunur; gelecekteki sürüm (v6) güvenli fallback.
 6. **`buyPart`** — başarılı alım (scrap düşer, parts'a girer, `saveProfile` çağrılır); bakiye yetersiz → `SCRAP_REQUIRED` ve bakiyeye dokunulmaz; zaten sahip → `ALREADY_OWNED`; bilinmeyen parça → `INVALID_PART`; doğrulama (scrap/part tutarlılığı).
 7. **`equipPart`** — geçerli takma; yuva uyuşmazlığı → `SLOT_MISMATCH`; sahipsiz → `NOT_OWNED`; bilinmeyen robot → `INVALID_ROBOT`; sökme (`null`); **taşıma**: parça B robotta iken A'ya takılırsa B'den düşer ve `previousOwner` döner.
@@ -494,9 +493,9 @@ Taklı parçaya göre minik, robotun kimliğini bastırmayan ekler (`drawRobot`'
 | Faz | İçerik (dosya sırasıyla) | Kabul ölçütü | Komutlar |
 | --- | --- | --- | --- |
 | **Faz 0** | Bu belge; D-01…D-12 + katalog onayı | Belge başlığı "kilitli" | — |
-| **Faz 1** | `parts.js` (katalog+ekonomi), `profile.js` v5, `progression.js` loadout; testler | market.js 9 grup yeşil; öteki suitler regresyonsuz; bozuk kayıtta ekonomi korunması | `node tests/market.js` + `run.js` + `progression.js` + `story.js` + `audio.js` |
+| **Faz 1** | `parts.js` (katalog+ekonomi), `profile.js` v5, `progression.js` loadout; testler | market.js 9 grup yeşil; öteki suitler regresyonsuz; bozuk kayıtta ekonomi korunması | `node tests/market.js` + `run.js` + `progression.js` + `audio.js` |
 | **Faz 2** | `game.js` pazar sekmeleri + Parçalar ızgarası + `purchaseMarketPart`; `_market_probe.html` güncelle | Sekme tıklama+klavye; alım kalıcı (sayfa yenilense korunur); kart durumları doğru; headless ekran görüntüsü | testler + headless Chrome screenshot (probe) |
-| **Faz 3** | Atölye `workshopMode/workshopSlot` + yuva paneli + liste + klavye; pazar kartı "kimde" etiketi; brifing özeti | Tak/sök/taşı UI'da çalışır; parçalı robot maçta ölçülebilir etki (test iddiası); klavye akışı tam | testler + headless atölye probe |
+| **Faz 3** | Atölye `workshopMode/workshopSlot` + yuva paneli + liste + klavye; pazar kartı "kimde" etiketi | Tak/sök/taşı UI'da çalışır; parçalı robot maçta ölçülebilir etki (test iddiası); klavye akışı tam | testler + headless atölye probe |
 | **Faz 4** | İkon cilası + robot aksesuarları + SFX + README/CLAUDE/lock notu + `_parts_sheet.html` | Tüm suitler yeşil; `_parts_sheet` + maç içi ekran görüntüleri onayı | tüm suitler + görsel doğrulama |
 | **Faz 3-ops** | Turbo Palet: `moveSpeedMult` alanı + `Entity.walk` tek çarpanı + 1 parça + test | Yürüyüş testleri (mevcut 48 denetim) bozulmaz; hız ölçümü ×1.10 | `_walk_verify.js` + run.js |
 
@@ -510,7 +509,7 @@ Taklı parçaya göre minik, robotun kimliğini bastırmayan ekler (`drawRobot`'
 | **Kart metin taşması** | Tüm kart yazıları genişlik-sınırlı `fillText` (mevcut ammo kartı deseni); uzun parça adları `cardW - 124` kuralıyla |
 | **vm mock/çizim** | `mockCtx` dolu (fillText/gradients dahil) ama çizimler yine saf + deterministik yazılır; gradyan/shadowBlur tema kuralı gereği kullanılmaz |
 | **Ekonomi gölgelenmesi** | Parça fiyatları Kademe I–II bandında; cephane sarf ekonomisi korunur; ilk maçlardan sonra denge notu README'ye yazılır |
-| **Hikâye kilidi** | Parçalar yalnız `upgradesOn` yolundan etkin; `isSinglePlayerProgressionMode` dışında build=null → hikâye dışı etkisiz (mevcut geçit değişmeden korunur) |
+| **Kapsam kilidi** | Parçalar yalnız `upgradesOn` yolundan etkin; `isSinglePlayerProgressionMode` dışında build=null → yerel/öğretici maçlarda etkisiz (mevcut geçit değişmeden korunur) |
 | **Geri uyumsuz profil** | v5 migrasyonu yalnız alan ekler; bozuk `parts`/`loadout` normalize'da ekonomiye dokunmadan temizlenir (v4 göçü test deseni kopyalanır) |
 
 ## 16. Karar kutusu (onay bekliyor)
@@ -533,10 +532,9 @@ Kullanıcı, Pazar ekranında iki çakışma bildirdi; üçüncü bir vaka da ay
 |---|---|---|---|
 | 1 | CEPHANE sekmesi "‹ Ana Menü" butonuyla üst üste biniyor | Sekme bandı `MK_TAB_Y=44` (x 24..270); geri butonu `x16..120, y16..48` → 44..48 bandında kesişme | Sekmeler geri butonunun **sağına + aynı hizaya**: `MK_TAB_X=132`, `MK_TAB_Y=19` (ızgara `gridY=84` değişmedi) |
 | 2 | "Hurda" yazısı DOM ses denetiminin altında kalıyor | Pazar başlığı `Hurda` metnini `(W-24, 18)` — üst-sağ köşe DOM ses denetimine ait | Bilgi satırı `MK_INFO_Y=57`'ye indi ve **soldan** başlar (Hurda sarı + özet gri); pazar başlığında sağ kenar yazısı kalmadı. Özet metinleri de kısaltıldı |
-| 3 | (aynı sınıf) Hikâye sahnesi "İlerlet" ipucu ses denetiminin altında | İpucu `(W-24, 13)` | `STORY_HINT_Y=52` sabiti ile alanın altına taşındı |
 
 - Yeni `AUDIO_SAFE` sabiti (üst-sağ DOM alanı: `x726 y8 224×36`) canvas tarafında kuralı belgeler; `_market_probe.html` bu kutuyu **kılavuz** olarak çizer (içine canvas yazısı girmemeli).
-- Regresyon testleri (+4, run.js): (a) pazar render'ında ses denetimi alanına `fillText` çizilmez, (b) sekmeler geri butonunun sağında, (c) bilgi satırı güvenli alanın altında, (d) hikâye ipucu güvenli alanın altında → **run 869/869**.
+- Regresyon testleri (+3, run.js): (a) pazar render'ında ses denetimi alanına `fillText` çizilmez, (b) sekmeler geri butonunun sağında, (c) bilgi satırı güvenli alanın altında → **run 869/869**.
 
 ---
 
@@ -551,7 +549,7 @@ Kullanıcı, Pazar ekranında iki çakışma bildirdi; üçüncü bir vaka da ay
 | Atölye listesi | Tek sayfa (yuva başına ≤3 parça) | **Sayfalı liste** (4 satır/sayfa, `1/2` göstergesi); imleç sayfayı da kaydırır |
 | Event | — | `Entity.jumpPowerMult` (sıçrama impulsu çarpanı) |
 
-Testler: run 871, market 342, progression 165, story 597, audio 21, maps 960, `_walk_verify` 48/48.
+Testler: run 871, market 342, progression 165, audio 21, maps 960, `_walk_verify` 48/48.
 Görseller: `screenshots/market_probe_faz2.png` (4 sekme sayfası + kılavuz kutu), `screenshots/workshop_probe_faz3.png` (sayfalı liste).
 
 ### 18.1 Robot üzerindeki donanım görselleri yenilendi (2026-09-25, kullanıcı isteği)
@@ -602,7 +600,7 @@ Robotlar artık her yuvaya **iki** parça takabiliyor: 4 yuva × 2 = **8 parça*
 | Atölye | Yuva satırı = solda yuva adı + **iki alt yuva hücresi**; `←/→` alt yuva, `↑/↓` yuva; hücreye tıklayınca o alt yuvanın **sayfalı listesi** açılır; liste `✓ burada` / `✓ 1. yuvada` yazar; `Boş bırak` ilgili alt yuvayı boşaltır |
 | Robot görünümü | İkinci donanım `_RB_PART_SECONDARY` ile **yuvanın KENDİ anatomik çapası** (kask→kafa, gövde→kasa, aparat→sırt/omuz, ayak→alt takım) çevresinde küçültülür ve boş kalan bölgeye kaydırılır (üst üste binmez) — bkz. §20 |
 | Rozet | Karakter seçim kartındaki nokta, o yuvada iki parça varsa **içi koyu göbek** ile çizilir |
-| Testler | run **900** (+11: 8 hücre, indeksli takma/taşıma, geçersiz indeks, otomatik yerleşim, eski imza uyumu, çift donanım çizimi, çapa tabanlı ikinci donanım), market **363** (+21: dizi doğrulama, kırpma, tekrar engeli, iki parçanın toplanması, indeksli önizleme, v5→v6 göçü), progression 165, story 597, audio 21, maps 960, `_walk_verify` 48/48 |
+| Testler | run **900** (+11: 8 hücre, indeksli takma/taşıma, geçersiz indeks, otomatik yerleşim, eski imza uyumu, çift donanım çizimi, çapa tabanlı ikinci donanım), market **363** (+21: dizi doğrulama, kırpma, tekrar engeli, iki parçanın toplanması, indeksli önizleme, v5→v6 göçü), progression 165, audio 21, maps 960, `_walk_verify` 48/48 |
 | Görseller | `screenshots/workshop_probe_faz3.png` (8 hücre + "✓ 1. yuvada" listesi), `screenshots/parts_wearables_v1.png` (çift donanım satırı), `screenshots/parts_secondary_before_after.png` (§20 öncesi/sonrası) |
 
 ---

@@ -1,7 +1,7 @@
 # Yetenek Efektleri Planı (her modül için ayrı cast efekti + kalıcı aura)
 
 Tarih: 26 Eylül 2026
-Durum: **Faz 1–5 uygulandı.** Testler: `run.js` 735/735 · `progression.js` 165/165 · `story.js` 597/597 · `audio.js` 21/21 · `maps.js` 960/960.
+Durum: **Faz 1–5 uygulandı.** Testler: `run.js` 735/735 · `progression.js` 165/165 · `audio.js` 21/21 · `maps.js` 960/960.
 Doğrulama: `_skill_fx_sheet.html` (grid/`?big=1`/`?strip=1`/`?icons=1`) ve `_skill_fx_battle.html` headless ekran görüntüleri.
 Dayanak: [`CLAUDE.md`](../CLAUDE.md) (klasik script, `file://`, veri-güdümlü tasarım), [`projectile-visual-plan.md`](projectile-visual-plan.md) (aynı desen), `js/skills.js`, `js/characters.js`, `js/entity.js`, `js/game.js`, `tests/run.js`.
 
@@ -170,7 +170,7 @@ Entity.draw  → drawSkillAura(ctx, entity, cx, cy)  // kalıcı durumlar
 1. `node tests/run.js` — yeni gruplar: "Yetenek efekt kaydı" (her karakterin shape'i var, shape'ler kayıtlı,
    farklı shape'ler farklı imza), "Efekt çizimi" (tüm shape'ler 0..life mock ctx ile hatasız), "Efekt determinizmi"
    (aynı seed → aynı op dizisi), "Aura çizimi" (`drawSkillAura` tüm durum kombinasyonlarıyla).
-2. `node tests/progression.js` · `tests/story.js` · `tests/audio.js` · `tests/maps.js` yeşil.
+2. `node tests/progression.js` · `tests/audio.js` · `tests/maps.js` yeşil.
 3. `_skill_fx_sheet.html` + headless Chrome ekran görüntüsü: 34 efekt okunur, kesilmemiş, birbirinden ayrık.
 4. README'ye "Yetenek efektleri" bölümü.
 
