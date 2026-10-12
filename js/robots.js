@@ -680,10 +680,20 @@ const RB_GUN_PIVOT_Y = -0.34; // omuz pivotu, gövde merkezine göre dikey (− 
 // olmalı (`_rbLauncher` içindeki `len - r * 0.06` = 1.36r).
 const RB_GUN_MUZZLE = 1.36;
 
+// Okunabilirlik ölçeği (R2, 2026-10-12): robot ÇİZİMİ %10 büyütülür. Fizik
+// yarıçapı (`Entity.r`, çarpışma/vuruş kutusu) DEĞİŞMEZ — yalnız görsel boyut
+// artar, böylece 960×540'ta siluet ve modül/parça detayları okunur.
+// KURAL: ölçek hem `drawRobot` hem `robotMuzzlePoint` içinde uygulanır. İkisi
+// ayrışırsa nişan çizgisi/mermi çıkışı çizilen namludan kayar; tests/run.js'teki
+// "Nişan hizası" grubu bu sabiti referans alarak bunu yakalar.
+const RB_VISUAL_SCALE = 1.10;
+
 // Verilen gövde merkezi, yarıçap, bakış yönü ve nişan açısı için namlu ağzının
 // dünya konumu. Bakış yönü yalnız pivotun aynalanmasını etkiler; namlu HER
 // ZAMAN nişan yönüne bakar (çizimde de `ctx.scale(facing,1)` bunu yapar).
+// `r` fizik yarıçapıdır; çizimle aynı kalmak için görsel ölçek burada uygulanır.
 function robotMuzzlePoint(cx, cy, r, facing, aim) {
+  r *= RB_VISUAL_SCALE;
   const px = cx + (facing < 0 ? -1 : 1) * r * RB_GUN_PIVOT_X;
   const py = cy + r * RB_GUN_PIVOT_Y;
   return {
@@ -977,7 +987,9 @@ function drawRobot(ctx, options) {
   const def = o.charDef;
   if (!def || def.visualKind !== "robot") return false;
 
-  const r = Math.max(4, o.r || def.r || 14);
+  // Görsel ölçek: fizik yarıçapı olduğu gibi kalır, yalnız çizim büyür
+  // (RB_VISUAL_SCALE; aynı sabit `robotMuzzlePoint` içinde de uygulanır).
+  const r = Math.max(4, (o.r || def.r || 14) * RB_VISUAL_SCALE);
   const facing = o.facing < 0 ? -1 : 1;
   const accent = def.accent || "#63e6be";
   const color = def.color || "#777777";

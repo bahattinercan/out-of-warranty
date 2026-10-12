@@ -18,7 +18,7 @@ const JS_DIR = path.join(__dirname, "..", "js");
 const FILES = ["audio.js", "characters.js", "progression.js", "profile.js", "parts.js", "market.js", "maps.js", "skills.js", "skill-fx.js", "robots.js", "terrain.js", "weapons.js", "entity.js", "projectile.js", "ai.js", "game.js"];
 const bundle =
   FILES.map((f) => fs.readFileSync(path.join(JS_DIR, f), "utf8")).join("\n;\n") +
-  "\n;globalThis.__M = { CHARACTERS, MAPS, BIOMES, FACTORY_ZONES, PROP_DRAWERS, WEAPONS, SKILL_PROJECTILES, PROJECTILE_SHAPES, SHARED_SHAPES, PROJ_SUBSTEP, PROJ_MAX_SUBSTEPS, useSkill, drawCharExtras, drawRobot, robotMuzzlePoint, RB_GUN_PIVOT_X, RB_GUN_PIVOT_Y, RB_GUN_MUZZLE, Entity, Projectile, Explosion, GRAVITY, Game, BotController, AI_LIMITS, aiWorldKey, aiSimulateShot, aiCoarseCandidates, aiPathIsSafe, aiRandom, AI_DIFFICULTY, aiDamageMultiplier, aiAssignDamageScale, aiSelectWeapon, skillConsumesShot, SKILL_SHOT_KINDS, AI_SKILL_REPLACE_SCORE, " +
+  "\n;globalThis.__M = { CHARACTERS, MAPS, BIOMES, FACTORY_ZONES, PROP_DRAWERS, WEAPONS, SKILL_PROJECTILES, PROJECTILE_SHAPES, SHARED_SHAPES, PROJ_SUBSTEP, PROJ_MAX_SUBSTEPS, useSkill, drawCharExtras, drawRobot, robotMuzzlePoint, RB_GUN_PIVOT_X, RB_GUN_PIVOT_Y, RB_GUN_MUZZLE, RB_VISUAL_SCALE, Entity, Projectile, Explosion, GRAVITY, Game, BotController, AI_LIMITS, aiWorldKey, aiSimulateShot, aiCoarseCandidates, aiPathIsSafe, aiRandom, AI_DIFFICULTY, aiDamageMultiplier, aiAssignDamageScale, aiSelectWeapon, skillConsumesShot, SKILL_SHOT_KINDS, AI_SKILL_REPLACE_SCORE, " +
   "SKILL_FX_SHAPES, SKILL_FX_KIND_DEFAULT, SKILL_FX_EXTENT, spawnSkillFx, updateSkillFx, drawSkillFx, drawSkillFxIcon, drawSkillAura, SkillFx, " +
   "SERVICE_LEVELS, MAX_SERVICE_XP, MAX_TIER, START_SCRAP, BRANCHES, BRANCH_LABELS, TIER_COSTS, TIER_LEVEL_GATES, REWARD_BASE, DIFFICULTY_MULTIPLIER, levelForXp, xpForLevel, nextLevelXp, levelUpMessage, calculateMatchReward, resolveRobotBuild, upgradeEffectText, robotUpgradeSummary, totalTiers, sanitizeUpgrades, nextUpgradeStep, toSafeInt, defaultProfile, defaultRobotProgress, normalizeProfile, loadProfile, saveProfile, getRobotProgress, grantMatchReward, purchaseUpgrade, PROFILE_KEY, createSessionId, " +
   "AMMO_DEPOT_CAP, AMMO_BULK_QTY, AMMO_BULK_QTY_BIG, AMMO_PRICES, ammoPriceFor, ammoBasePrice, weaponPowerScore, weaponStats, sellableWeapons, sanitizeAmmoDepot, getAmmoDepot, setAmmoDepot, mergeDepots, ammoDepotTotal, buyAmmo, mergeAmmoWithDepot, battleLoad, unspentDepot, settleDepot, weaponById, weaponBattleMax, isSellableWeapon, initialAmmo, " +
@@ -479,7 +479,10 @@ group("Nişan hizası — çizilen namlu ağzı ile muzzle aynı noktada");
           timeMs: 0, motion: { vx: 0, vy: 0, onGround: true },
         });
         const muzzle = e.muzzle;
-        const ringRad = ch.r * 0.28 * 0.44; // _rbLauncher ağız halkası (th·0.44)
+        // Ağız halkası yarıçapı ÇİZİM ölçeğini içerir (RB_VISUAL_SCALE):
+        // çizim %10 büyütülürken mantık aynı kaldığı için testin de ölçekli
+        // yarıçapı kullanması gerekir; yoksa "ağız bulunamadı" sanılır.
+        const ringRad = ch.r * M.RB_VISUAL_SCALE * 0.28 * 0.44; // _rbLauncher ağız halkası (th·0.44)
         const hit = arcs.some((a) => Math.abs(a.rad - ringRad) < 1e-6 &&
           Math.hypot(a.p[0] - muzzle.x, a.p[1] - muzzle.y) < 0.01);
         const label = `${ch.label} (facing=${facing}, ${aimDeg}°)`;
@@ -606,7 +609,10 @@ group("Yürüyüş fazı mesafeye kilitli");
 group("Yürüyüş geometrisi ve kayma (çizim komutlarından)");
 {
   const def = chars[0];
-  const r = def.r, stride = r * 1.3;
+  // Adım mesafesi (yer gerçeği) ve ayak salınımı ÇİZİM ölçeğiyle birlikte
+  // büyür: çizim %10 büyütüldüğü için (RB_VISUAL_SCALE) hem adım uzunluğu hem
+  // ayak salınımı ölçeklenir; kayma payı bandı (%10–20) aynen korunur.
+  const r = def.r, stride = r * 1.3 * M.RB_VISUAL_SCALE;
   const walkMotion = (phase) => ({ vx: 0, vy: 0, onGround: true, walkAmp: 1, walkPhase: phase });
 
   // Ayak dönüşümü çizici içinde tek desendir: translate(x,y) → rotate(a) →
@@ -648,7 +654,7 @@ group("Yürüyüş geometrisi ve kayma (çizim komutlarından)");
   }
   const travel = hi - lo, slipRatio = (stride - travel) / stride;
   rotSpread = rotHi - rotLo;
-  check("ayak salınımı = 2 × 0.56r", Math.abs(travel - 2 * r * 0.56) < 1e-9, `salınım=${travel.toFixed(3)} beklenen=${(2 * r * 0.56).toFixed(3)}`);
+  check("ayak salınımı = 2 × 0.56r", Math.abs(travel - 2 * r * 0.56 * M.RB_VISUAL_SCALE) < 1e-9, `salınım=${travel.toFixed(3)} beklenen=${(2 * r * 0.56 * M.RB_VISUAL_SCALE).toFixed(3)}`);
   check("kayma payı adımın %10–20'si", slipRatio > 0.10 && slipRatio < 0.20,
     `%${(slipRatio * 100).toFixed(1)} (adım başına ${(stride - travel).toFixed(2)}px / ${stride.toFixed(1)}px)`);
   check("bilek açısı döngüde belirgin değişir", rotSpread > 0.3, `${rotSpread.toFixed(3)} rad`);

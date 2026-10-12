@@ -396,6 +396,18 @@ function drawBackdrop(ctx, W, H, theme) {
 
 function _drawHaze(ctx, W, H, theme) {
   if (!theme.haze) return;
+  // Oyun bandı (robotların gezindiği dikey aralık) yumuşak bir karartma alır:
+  // arkadaki bina/pencere detayı ön plandaki siluetlerle yarışmasın. Kenarları
+  // gradyanla eritildi — düz şerit gökyüzünde yatay bir dikiş bırakıyordu
+  // (ilk deneme, 2026-10-12). Bu katman yalnız arka plana uygulanır; arazi ve
+  // oyuncular bundan sonra çizilir.
+  const band = ctx.createLinearGradient(0, H * 0.40, 0, H * 0.86);
+  band.addColorStop(0, "rgba(0,0,0,0)");
+  band.addColorStop(0.35, "rgba(0,0,0,0.18)");
+  band.addColorStop(0.75, "rgba(0,0,0,0.18)");
+  band.addColorStop(1, "rgba(0,0,0,0)");
+  ctx.fillStyle = band;
+  ctx.fillRect(0, H * 0.40, W, H * 0.46);
   const g = ctx.createLinearGradient(0, H * 0.42, 0, H * 0.82);
   g.addColorStop(0, "rgba(0,0,0,0)");
   g.addColorStop(1, theme.haze);
@@ -439,7 +451,10 @@ function _buildBackdrop(theme, W, H) {
       points.push({ x, y: roofY }, { x, y: topY }, { x: x + bw, y: topY }, { x: x + bw, y: roofY });
       for (let wy = topY + 7; wy < roofY - 5; wy += 11) {
         for (let wx = x + 5; wx < x + bw - 5; wx += 9) {
-          if (Math.random() < 0.45) windows.push({ x: wx, y: wy, w: 4, h: 5, c: Math.random() < 0.7 ? "#ffd87a" : "#bcd0e6" });
+          // Okunabilirlik (2026-10-12): pencere ışıkları oyun bandında yüksek
+          // frekanslı gürültü üretip robot siluetlerini yutuyordu. Yoğunluk
+          // 0.45→0.30, renkler karartıldı: arka plan geri çekilir, ön plan okunur.
+          if (Math.random() < 0.30) windows.push({ x: wx, y: wy, w: 4, h: 5, c: Math.random() < 0.7 ? "#8a6f3a" : "#54687d" });
         }
       }
       x += bw + 2;

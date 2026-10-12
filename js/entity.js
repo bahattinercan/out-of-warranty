@@ -14,6 +14,13 @@ const AIR_MAX_VX = 3.2;        // havadayken maksimum yatay hız
 // geriye akar (adım başına ~%14 kayma payı). Aynı mekanizma hücum/patlama
 // savrulmasını (`vx`) de kapsar.
 const WALK_STRIDE_UNIT = 1.3;  // bir adımın uzunluğu (r birimi)
+// Çizim ölçeği (robots.js > RB_VISUAL_SCALE) bacakları da büyütür: adım
+// mesafesi aynı kalırsa ayaklar yere basarken kayar ve kayma payı tasarlanan
+// %10–20 bandından çıkar (tests/run.js "Yürüyüş geometrisi ve kayma" grubu
+// bunu ölçer). Bu yüzden yürüyüş ve teker fazı adım başına aynı ölçekle
+// bölünür — büyük bacak daha uzun adım atar. Sabit yüklenmemişse (eski
+// sandbox/eksik bundle) ölçek 1 kabul edilir, davranış eskisi gibi kalır.
+const STRIDE_VISUAL_SCALE = typeof RB_VISUAL_SCALE === "number" ? RB_VISUAL_SCALE : 1;
 const WALK_SPEED = 2.2;        // temel yürüme adımı (px); parça bunu çarpanla ölçekler
 // Faz açısını kare başına sınırla: hücum savrulmasında faz çok hızlı dönerse
 // bacaklar/teker göz kırpar (aliasing). ~1.8× yürüyüş hızına karşılık gelir.
@@ -154,13 +161,13 @@ class Entity {
     if (!dx) return;
     const d = Math.max(-MAX_STRIDE_DX, Math.min(MAX_STRIDE_DX, dx));
     this.walkPhase = wrapStridePhase(
-      this.walkPhase + (d * this.facing * Math.PI) / (this.r * WALK_STRIDE_UNIT)
+      this.walkPhase + (d * this.facing * Math.PI) / (this.r * WALK_STRIDE_UNIT * STRIDE_VISUAL_SCALE)
     );
     // Teker yalnız yerde gerçekten yuvarlanırken döner (havada boşa dönmez).
     const rr = ROLL_RADIUS_UNIT[this.locomotion];
     if (rr && this.onGround) {
       const dr = Math.max(-MAX_ROLL_STEP,
-        Math.min(MAX_ROLL_STEP, (d * this.facing) / (this.r * rr)));
+        Math.min(MAX_ROLL_STEP, (d * this.facing) / (this.r * rr * STRIDE_VISUAL_SCALE)));
       this.rollPhase = wrapStridePhase(this.rollPhase + dr);
     }
   }
@@ -320,6 +327,18 @@ class Entity {
     ctx.fillStyle = "#00000033";
     ctx.fill();
 
+    // Takım halkası: robotun ayak hizasında oyuncu renginde ince bir halka.
+    // Okunabilirlik (2026-10-12): kalabalık kadroda/yoğun arka planda "hangisi
+    // benim robotum" sorusu siluetten değil bu halkadan çözülür; aynı renk
+    // üst paneldeki kartla eşleşir.
+    if (this.playerTint) {
+      ctx.beginPath();
+      ctx.ellipse(this.x, this.y + 1, this.r * 1.05, 5.5, 0, 0, Math.PI * 2);
+      ctx.strokeStyle = this.playerTint;
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    }
+
     // Robot gövdesi. Legacy veri yüklenirse eski dairesel çizim güvenli fallback'tir.
     const drewRobot = typeof drawRobot === "function" && drawRobot(ctx, {
       cx, cy, r: this.r, facing: this.facing, aim: this.aim, charDef: this.charDef,
@@ -351,11 +370,12 @@ class Entity {
       ctx.beginPath(); ctx.arc(cx + 4 + eyeDx + this.facing, cy - 3, 1.6, 0, 6.28); ctx.fill();
     }
 
-    // HP barı (kafanın üstünde)
-    const bw = 34, bh = 5;
-    const bx = cx - bw / 2, by = cy - this.r - 12;
+    // HP barı (kafanın üstünde). Okunabilirlik (2026-10-12): çubuk büyütüldü
+    // (34×5 → 40×6) ve koyu bir çerçeve aldı; dolgu oranı uzaktan okunur.
+    const bw = 40, bh = 6;
+    const bx = cx - bw / 2, by = cy - this.r - 15;
     ctx.fillStyle = "#00000066";
-    ctx.fillRect(bx, by, bw, bh);
+    ctx.fillRect(bx - 1, by - 1, bw + 2, bh + 2);
     const shownHp = this.displayHp;
     ctx.fillStyle = shownHp > 40 ? "#5fdc6b" : "#ff6b6b";
     ctx.fillRect(bx, by, bw * (shownHp / this.maxHp), bh);

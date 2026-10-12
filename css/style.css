@@ -214,7 +214,7 @@ html, body {
 }
 .player-info .p-body { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
 .player-info .p-top { display: flex; align-items: baseline; gap: 5px; min-width: 0; }
-.player-info .p-order { flex: 0 0 auto; font-size: 11px; font-weight: 700; color: #ffd166; font-variant-numeric: tabular-nums; }
+.player-info .p-order { flex: 0 0 auto; font-size: 12px; font-weight: 700; color: #ffd166; font-variant-numeric: tabular-nums; }
 .player-info .name {
   flex: 1 1 auto; min-width: 0;
   font-size: 12px; font-weight: 700;
@@ -229,7 +229,9 @@ html, body {
   overflow: hidden;
 }
 .player-info .hpfill { height: 100%; transition: width .2s ease; }
-.player-info .p-hp { font-size: 10px; font-weight: 700; opacity: .8; font-variant-numeric: tabular-nums; }
+/* Okunabilirlik (2026-10-12): HUD'un en küçük puntoları 1px büyütüldü ve
+   gölge aldı — 960×540 iç çözünürlükte alt panel ve üst şerit uzaktan okunur. */
+.player-info .p-hp { font-size: 11px; font-weight: 700; opacity: .85; font-variant-numeric: tabular-nums; text-shadow: 0 1px 2px #000c; }
 
 /* Sağdaki eylem alanı: silah değiştir + seçili silah / modül / yardımcı yuvalar */
 #battle-actions { flex: 0 0 auto; display: flex; align-items: stretch; gap: 7px; }
@@ -294,20 +296,22 @@ html, body {
 .act-slot.ready .slot-count { color: #b9ffe9; }
 .act-slot.cooling .slot-count { color: #ffc0aa; }
 .act-slot .slot-name {
-  max-width: 60px;
-  font-size: 9px;
+  max-width: 66px;
+  font-size: 10px;
   font-weight: 700;
-  opacity: .8;
+  opacity: .85;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  text-shadow: 0 1px 2px #000c;
 }
 
 .center { display: flex; flex-direction: row; flex-wrap: wrap; align-items: center; justify-content: center; gap: 2px 12px; }
-#turn-banner { font-size: 15px; font-weight: 400; font-family: var(--font-title); letter-spacing: .5px; white-space: nowrap; }
+#turn-banner { font-size: 16px; font-weight: 400; font-family: var(--font-title); letter-spacing: .5px; white-space: nowrap; text-shadow: 0 1px 2px #000c; }
 #wind-indicator {
-  font-size: 12px;
-  opacity: .9;
+  font-size: 13px;
+  opacity: .95;
+  text-shadow: 0 1px 2px #000c;
   white-space: nowrap;
   padding: 3px 7px;
   border-radius: 7px;
