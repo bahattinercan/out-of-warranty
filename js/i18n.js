@@ -27,7 +27,7 @@ const LANG_REQUIRED = ["en"];
 // kimlikten kurulur, `t("workshop.branch." + branch, ...)`). tests/i18n.js bu
 // öneklerle başlayan sözlük anahtarlarını "kodda kullanılıyor" sayar; hangi
 // kimliklerin gerçekten var olduğunu ayrıca kataloglardan doğrular.
-const I18N_DYNAMIC_PREFIXES = ["workshop.branch.", "workshop.slot.", "tutorial.coach.", "market.tab.", "weapon.", "part."];
+const I18N_DYNAMIC_PREFIXES = ["workshop.branch.", "workshop.slot.", "tutorial.coach.", "market.tab.", "weapon.", "part.", "char."];
 const LANG_LABELS = {
   "tr": "Türkçe",
   "en": "English",
@@ -353,6 +353,109 @@ const I18N = {
     "part.kilitli_taban.desc": "Reduces knockback by 15%",
     "part.cift_turbo.label": "Dual Turbo Tracks",
     "part.cift_turbo.desc": "Move speed +16%",
+    // ── Veri katalogları: robotlar (F2c-3) ─────────────────────────────
+    "char.kopek.role": "Maintenance",
+    "char.kopek.skill.label": "Emergency Repair",
+    "char.kopek.skill.desc": "Gain 25 HP",
+    "char.kedi.role": "Defense",
+    "char.kedi.skill.label": "Polar Shield",
+    "char.kedi.skill.desc": "Block the next hit",
+    "char.ayi.role": "Demolition",
+    "char.ayi.skill.label": "Pressure Loading",
+    "char.ayi.skill.desc": "Next blast is bigger",
+    "char.tavsan.role": "Scout",
+    "char.tavsan.skill.label": "Spring Launcher",
+    "char.tavsan.skill.desc": "High jump",
+    "char.tilki.role": "Artillery",
+    "char.tilki.skill.label": "Twin Barrel",
+    "char.tilki.skill.desc": "Fire two shells",
+    "char.panda.role": "Loading",
+    "char.panda.skill.label": "Press Strike",
+    "char.panda.skill.desc": "Heavy blow to the target ahead",
+    "char.kaplan.role": "Cutting",
+    "char.kaplan.skill.label": "Twin Cutter",
+    "char.kaplan.skill.desc": "Slashing attack ahead",
+    "char.timsah.role": "Hauling",
+    "char.timsah.skill.label": "Rotary Joint",
+    "char.timsah.skill.desc": "Knocks the target ahead away",
+    "char.suaygiri.role": "Loading",
+    "char.suaygiri.skill.label": "Hydraulic Claw",
+    "char.suaygiri.skill.desc": "Massive claw slam",
+    "char.koala.role": "Calibration",
+    "char.koala.skill.label": "Tuning Mallet",
+    "char.koala.skill.desc": "Mallet blow ahead",
+    "char.kunduz.role": "Riveting",
+    "char.kunduz.skill.label": "Balance Hammer",
+    "char.kunduz.skill.desc": "Powerful knockback ahead",
+    "char.ordek.role": "Welding",
+    "char.ordek.skill.label": "Spot Weld Strike",
+    "char.ordek.skill.desc": "Fast blow ahead",
+    "char.kokarca.role": "Waste",
+    "char.kokarca.skill.label": "Waste Gas",
+    "char.kokarca.skill.desc": "Sprays corrosive gas forward",
+    "char.aslan.role": "Energy",
+    "char.aslan.skill.label": "EMP Strike",
+    "char.aslan.skill.desc": "Blasts energy around you",
+    "char.kurtadam.role": "Alarm",
+    "char.kurtadam.skill.label": "Alarm Resonance",
+    "char.kurtadam.skill.desc": "Knocks back with a sound wave",
+    "char.sirtlan.role": "Vibration",
+    "char.sirtlan.skill.label": "Frequency Overflow",
+    "char.sirtlan.skill.desc": "Hits the area with resonance",
+    "char.rakun.role": "Separation",
+    "char.rakun.skill.label": "Centrifuge",
+    "char.rakun.skill.desc": "Knocks everything around you back",
+    "char.ornitorenk.role": "Cooling",
+    "char.ornitorenk.skill.label": "Coolant Vent",
+    "char.ornitorenk.skill.desc": "Liquid wave around you",
+    "char.yeti.role": "Cooling",
+    "char.yeti.skill.label": "Cryo Strike",
+    "char.yeti.skill.desc": "Cold burst around you",
+    "char.dino.role": "Press",
+    "char.dino.skill.label": "Ground Maul",
+    "char.dino.skill.desc": "Shakes every opponent",
+    "char.gergedan.role": "Courier",
+    "char.gergedan.skill.label": "Turbo Wheel",
+    "char.gergedan.skill.desc": "Charge forward, damaging what you hit",
+    "char.kirpi.role": "Bearing",
+    "char.kirpi.skill.label": "Bearing Charge",
+    "char.kirpi.skill.desc": "Ram by rolling",
+    "char.maymun.role": "Rack Service",
+    "char.maymun.skill.label": "Service Hook",
+    "char.maymun.skill.desc": "Long-distance jump",
+    "char.kanguru.role": "High Rack",
+    "char.kanguru.skill.label": "Overload Spring",
+    "char.kanguru.skill.desc": "Very high jump",
+    "char.yarasa.role": "Ventilation",
+    "char.yarasa.skill.label": "Emergency Rotor",
+    "char.yarasa.skill.desc": "Glide this turn",
+    "char.armadillo.role": "Excavation",
+    "char.armadillo.skill.label": "Depth Auger",
+    "char.armadillo.skill.desc": "Burrow into the ground",
+    "char.hamster.role": "Security",
+    "char.hamster.skill.label": "Armor Lock",
+    "char.hamster.skill.desc": "Halve damage for 2 turns",
+    "char.bukalemun.role": "Inspection",
+    "char.bukalemun.skill.label": "Optic Deflector",
+    "char.bukalemun.skill.desc": "Block the next hit",
+    "char.ejderha.role": "Casting",
+    "char.ejderha.skill.label": "Slag Sphere",
+    "char.ejderha.skill.desc": "Hurl a molten metal sphere",
+    "char.penguen.role": "Cooling",
+    "char.penguen.skill.label": "Coolant Capsule",
+    "char.penguen.skill.desc": "Launch two capsules",
+    "char.oklukirpi.role": "Assembly",
+    "char.oklukirpi.skill.label": "Rivet Salvo",
+    "char.oklukirpi.skill.desc": "Launch three rivets",
+    "char.sincap.role": "Parts Sorting",
+    "char.sincap.skill.label": "Explosive Bolt",
+    "char.sincap.skill.desc": "Launch an exploding bolt",
+    "char.kus.role": "Ventilation",
+    "char.kus.skill.label": "Vortex Fan",
+    "char.kus.skill.desc": "Launch a pressure vortex",
+    "char.zurafa.role": "Treatment",
+    "char.zurafa.skill.label": "Corrosive Spray",
+    "char.zurafa.skill.desc": "Launch corrosive liquid",
   },
   "zh-Hans": {},
   ru: {},
@@ -503,8 +606,19 @@ const DATA_CATALOGS = [
       { key: "desc", id: "id", at: ["desc"] },
     ],
   },
-  // Sıradaki dilimler: CHARACTERS (role + skill.label/desc), MAPS (label/skillLabel
-  // + bölge adı). Kaydedilene kadar Türkçe kalırlar.
+  {
+    get: () => { try { return CHARACTERS; } catch (e) { return null; } },
+    prefix: "char",
+    // Model kodu (`label`: FIX-8, MIK-0 …) bilinçli olarak listede YOK:
+    // Kimlik A kararı gereği marka kodu her dilde aynı kalır.
+    paths: [
+      { key: "role", id: "id", at: ["role"] },
+      { key: "skill.label", id: "id", at: ["skill", "label"] },
+      { key: "skill.desc", id: "id", at: ["skill", "desc"] },
+    ],
+  },
+  // Sıradaki dilim: MAPS (label/skillLabel + bölge adı). Kaydedilene kadar
+  // harita adları Türkçe kalır.
 ];
 
 // Katalog nesnesi → { anahtar: türkçe değer }: dil geri alınırken özgün metin.
@@ -567,10 +681,10 @@ function applyDataTranslations() {
       if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", buildLocaleSelect);
     }
   }
-  // Kataloglar bu betikten SONRA yüklendiği için ilk uygulama boş döner; tüm
-  // klasik betikler çalıştıktan sonra (DOMContentLoaded) bir kez daha uygula.
-  // Sondalar da böylece tarayıcı dilini (?locale=en veya --lang=en-US) katalog
-  // metinlerine yansıtır. Fonksiyon idempotenttir; main.js'teki çağrı da güvenli.
+  // İlk uygulama kataloglar hazır olmadan çalışır (i18n.js onlardan önce yüklenir).
+  // Normalde her katalog dosyası yüklendiğinde kendini bildirir (applyDataTranslations
+  // çağrısı katalog dosyalarının sonundadır); bu kanca sonradan eklenecek bir katalog
+  // tetikleyiciyi unutursa diye güvenlik ağıdır. Fonksiyon idempotenttir.
   if (typeof document !== "undefined" && document && document.addEventListener) {
     if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", applyDataTranslations);
     else applyDataTranslations();

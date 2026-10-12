@@ -122,7 +122,7 @@ const missingInEn = [...usedKeys].filter((k) => I.I18N.en[k] === undefined);chec
 // Katalog alanları çalışma zamanında (i18n.js > DATA_CATALOGS) çevrilir; bekçi
 // anahtar listesini de aynı yapılandırmadan üretir, böylece test ile oyun tek
 // kaynağı paylaşır. Kaydedilmemiş katalog alanı bilinçli olarak Türkçe kalır.
-const catFiles = ["weapons.js", "parts.js", "characters.js"];
+const catFiles = ["weapons.js", "parts.js", "characters.js", "maps.js"];
 const catSrc = [I18N_SRC]
   .concat(catFiles.map((f) => fs.readFileSync(path.join(JS_DIR, f), "utf8")))
   .join("\n;\n");
@@ -131,7 +131,7 @@ catSandbox.globalThis = catSandbox;
 vm.createContext(catSandbox);
 vm.runInContext(
   catSrc + "\n;globalThis.__CAT = { entries: dataTranslationEntries(), prefixes: dataTranslationPrefixes(), " +
-    "applyDataTranslations, setLocale, I18N, WEAPONS, PARTS, CHARACTERS };",
+    "applyDataTranslations, setLocale, I18N, WEAPONS, PARTS, CHARACTERS, MAPS };",
   catSandbox, { filename: "catalog-bundle.js" }
 );
 const CAT = catSandbox.__CAT;
@@ -152,8 +152,23 @@ CAT.setLocale("tr", { persist: false });
 check("katalog çevirisi uygulanıyor", enName !== trName && enName === CAT.I18N.en["weapon." + w0.id + ".name"], `${trName} → ${enName}`);
 check("tr'ye dönüşte katalog özgün metne döner", w0.name === trName, w0.name);
 CAT.setLocale("en", { persist: false });
-check("kaydedilmemiş katalog alanı Türkçe kalır", CAT.CHARACTERS[0].role === "Bakım", CAT.CHARACTERS[0].role);
+check("model kodu (characters > label) çevrilmiyor", CAT.CHARACTERS[0].label === "FIX-8", CAT.CHARACTERS[0].label);
+check("kaydedilmemiş katalog alanı Türkçe kalır", CAT.MAPS[0].label === "Eski Tamir Çukuru", CAT.MAPS[0].label);
 CAT.setLocale("tr", { persist: false });
+
+// Aynı Türkçe kaynağı paylaşan alanlar tek çeviri kullanmalı: ör. dört robotun
+// rolü "Soğutma" ise dördü de aynı İngilizce sözcüğü göstermeli — aynı kavram
+// iki farklı adla görünmesin (kopyalanan çeviriler arasında sürüklenme bekçisi).
+const enOfTr = new Map();
+const sharedBad = [];
+for (const e of CAT.entries) {
+  const tr = e.holder[e.at];
+  const en = CAT.I18N.en[e.key];
+  if (typeof tr !== "string" || en === undefined) continue;
+  if (enOfTr.has(tr) && enOfTr.get(tr) !== en) sharedBad.push(`${tr}: ${enOfTr.get(tr)} ≠ ${en}`);
+  else enOfTr.set(tr, en);
+}
+check("aynı Türkçe kaynağı paylaşan alanlar tek çeviri kullanıyor", sharedBad.length === 0, sharedBad.slice(0, 3).join(" | "));
 
 const isDynamicKey = (k) => I.I18N_DYNAMIC_PREFIXES.some((p) => k.startsWith(p));
 const orphan = Object.keys(I.I18N.en).filter((k) => !usedKeys.has(k) && !isDynamicKey(k));

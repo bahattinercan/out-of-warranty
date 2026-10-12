@@ -53,3 +53,9 @@ const CHARACTERS = [
   _robot({ id:"kus", label:"FAN-5", role:"Havalandırma", color:"#5ab0e0", accent:"#bfe0ff", r:11, hp:70, armor:0.0, dmgMult:1.0, chassis:"flying", locomotion:"rotors", body:"small", attachment:"vortex_fan", face:"dual_led", personality:"Hava akışını düzeltirken etraftaki her şeyi dağıtır.", skill:{ id:"tornado", label:"Girdap Fanı", desc:"Basınç girdabı fırlat", cooldown:3, kind:"spit", params:{ proj:"tornado", count:1, speed:10 }, fx:{ shape:"vortexFan", tint:"#bfe0ff", accent:"#eaf6ff" } } }),
   _robot({ id:"zurafa", label:"ASİT-6", role:"Arıtma", color:"#e0b84a", accent:"#8cdc5a", r:16, hp:100, armor:0.05, dmgMult:1.0, chassis:"experimental", locomotion:"legs", body:"tall", attachment:"acid_nozzle", face:"warning_led", personality:"Tıkanmış borulara gereğinden güçlü çözücü uygular.", skill:{ id:"venomspit", label:"Aşındırıcı Püskürtü", desc:"Aşındırıcı sıvı fırlat", cooldown:4, kind:"spit", params:{ proj:"venom", count:1, speed:10 }, fx:{ shape:"acidSpray", tint:"#8cdc5a", accent:"#e0ffb0" } } }),
 ];
+
+// Çeviri katmanı: katalog yüklendiği anda seçili dili uygula. i18n.js bu
+// dosyadan önce yüklenir; katalog çevirisi (DATA_CATALOGS) dil değişiminde
+// setLocale içinde, ilk yüklemede ise burada uygulanır — böylece sondalar gibi
+// betik yükleme anında çizen sayfalar da doğru dilde çizer.
+if (typeof applyDataTranslations === "function") applyDataTranslations();

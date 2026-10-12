@@ -648,3 +648,9 @@ function drawPartIcon(ctx, part, size) {
   PART_ICON_SHAPES[shape](ctx, size, tint, accent);
   ctx.restore();
 }
+
+// Çeviri katmanı: katalog yüklendiği anda seçili dili uygula. i18n.js bu
+// dosyadan önce yüklenir; katalog çevirisi (DATA_CATALOGS) dil değişiminde
+// setLocale içinde, ilk yüklemede ise burada uygulanır — böylece sondalar gibi
+// betik yükleme anında çizen sayfalar da doğru dilde çizer.
+if (typeof applyDataTranslations === "function") applyDataTranslations();

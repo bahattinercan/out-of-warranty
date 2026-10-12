@@ -358,3 +358,9 @@ const SKILL_PROJECTILES = {
     look: { shape: "acid", orient: "spin", spin: 0.08, tail: "drip", accent: "#d6ff9e" },
   },
 };
+
+// Çeviri katmanı: katalog yüklendiği anda seçili dili uygula. i18n.js bu
+// dosyadan önce yüklenir; katalog çevirisi (DATA_CATALOGS) dil değişiminde
+// setLocale içinde, ilk yüklemede ise burada uygulanır — böylece sondalar gibi
+// betik yükleme anında çizen sayfalar da doğru dilde çizer.
+if (typeof applyDataTranslations === "function") applyDataTranslations();
