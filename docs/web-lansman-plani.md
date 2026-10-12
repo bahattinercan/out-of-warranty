@@ -92,6 +92,8 @@ Sayılar üçüncü taraf tahminleridir (VG Insights/Gamalytic/SteamSpy türevi)
 
 **Uygulama durumu:** F3a tamamlandı — protokol ve oturum çekirdeği `js/net/protocol.js` + `js/net/session.js` altında, `tests/net.js` ile tarayıcısız sınanıyor (95 assert). Çekirdek metin üretmez: hata/iptal NEDENLERİ kod olarak dolaşır, arayüz bunları `t()` ile çevirir. `js/net/*` henüz `index.html`'e eklenmedi; F3c'de oyun akışına bağlanınca eklenecek (şimdilik yalnız testler yükler).
 
+**Ölçülen paket bütçesi (F3b, 6 oyuncu, `tests/net-state.js`):** başlangıç snapshot'ı (build dahil) 4.087 bayt · periyodik snapshot (build hariç) 2.519 bayt · arazi maskesi (RLE, tek seferlik) 1.436 bayt. Arazi ilk durumu `Math.random` ile üretildiği için her istemcide farklıdır → host maskeyi RLE ile gönderir, sonraki değişiklikler `destroy(x,y,r)` kaydı olarak yayınlanır ve misafir aynı çağrıları oynatır (deterministik). Türetilmiş istatistikler (can üst sınırı, zırh, hız çarpanları) yalnız başlangıç paketinde gider: çevrimiçi maçta taban build kuralı böyle uygulanır ve misafir profil verisine ihtiyaç duymaz.
+
 **Doğrulama (F3 çıkış ölçütü):** iki farklı ağdan (biri mobil hotspot) 2 oyuncu, aynı harita, 5 tur; kurulum <20 sn; kopma <%5; tur sırası her iki tarafta aynı; yeniden bağlanma aynı koltuğa döner.
 
 ---
@@ -215,7 +217,7 @@ Referans gerçeklik: Steam medyanı $249/ömür; web'de ilk oyun $0–400/ay. Bu
 | **F1b** (yapıldı) | Okunabilirlik R2 (çizim ölçeği 1.10 + yürüyüş fazı senkronu) | `robots.js`, `entity.js`, `tests/run.js` | `node tests/run.js` 1109/1109 (nişan hizası + kayma grupları) · `_aim_probe`/`_battle_probe` ekran görüntüsü |
 | **F2** (altyapı + menü yapıldı) | `js/i18n.js` + ilk ekranların anahtarlanması | i18n altyapısı, menü/marka çevirisi, `tests/i18n.js` | `node tests/i18n.js` 46/46 · diğer 5 paket yeşil · headless EN menü ekranı |
 | **F3a** (yapıldı) | Çevrimiçi protokol + oturum çekirdeği (saf, taşımadan bağımsız) | `js/net/protocol.js`, `js/net/session.js`, `tests/net.js` | `node tests/net.js` 95/95 (zarf/komut doğrulama, tekilleştirme, değişmezler, saat/borç, kopma) |
-| **F3b** | Durum anlık görüntüsü + arazi kayıtları (capture/apply) | `js/net/state.js` | snapshot gidiş-dönüş + arazi tekrar oynatma testleri |
+| **F3b** (yapıldı) | Durum anlık görüntüsü + arazi senkronu (capture/apply) | `js/net/state.js`, `tests/net-state.js` | `node tests/net-state.js` 45/45 (gidiş-dönüş hash'i, arazi birebir, savunmacı apply, boyut bütçesi) |
 | **F3c** | WebRTC taşıma (PeerJS) + lobi ekranı + oyun akışı bağlantısı | `js/net/transport.js`, `js/online-lobby.js`, `index.html` | §4 çıkış ölçütü (iki ağdan 5 tur, kurulum <20 sn) |
 | **F4** | 6 oyuncu, oda/davet akışı, bot devralma | lobi + yeniden bağlanma | 6 oyuncu simülasyonu + kopma senaryoları, `tests/multiplayer/` |
 | **F5** | Portal uyumu: SDK, reklam yerleri, event ölçümü | `js/portal.js` | iframe testi, 16:9 ölçekleme, reklam ödülü doğru veriliyor |

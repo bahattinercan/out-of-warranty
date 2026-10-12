@@ -30,6 +30,7 @@ node tests/market.js
 node tests/audio.js
 node tests/i18n.js
 node tests/net.js       # çevrimiçi protokol + oturum (F3a)
+node tests/net-state.js # çevrimiçi durum + arazi senkronu (F3b)
 ```
 
 ## ⚠️ En kritik kural: klasik scriptler, ES module YOK
@@ -83,6 +84,7 @@ Oyun `file://` üzerinden çift tıklayınca çalışmak zorunda. Bu yüzden:
 | `js/audio.js`      | ~380   | `SFX` — Web Audio ile prosedürel ses + sahne konuşmacısı bipleri                                                                                                            |
 | `js/net/protocol.js` | ~200 | Çevrimiçi protokol (F3a): zarf/komut doğrulama, sıra, komut tekilleştirme, girdi tazeliği — DOM/WebRTC bilmez                                                 |
 | `js/net/session.js`  | ~340 | Çevrimiçi oturum (F3a): host yetkili tur/komut akışı, saat ve borç, kopma/bot devralma, iptal; oyun kuralları `rules` adaptöründen gelir                       |
+| `js/net/state.js`    | ~330 | Çevrimiçi durum senkronu (F3b): snapshot capture/apply, arazi maskesi RLE, oyma kayıtlarının oynatılması, hash — savunmacı apply                 |
 
 ## Veri-güdümlü tasarım (uzantı noktaları)
 
