@@ -116,6 +116,13 @@ Yeni içerik çoğunlukla **kod değil veri** eklemekle yapılır:
   dünya-piksel kaplamasını (`hudTopInset`/`hudRightInset`) ölçer, lobi başlığı ve
   sütunları bu güvenli alana uyar (dar dünyada tek sütuna iner). `tests/net-game.js`
   §11 bu yerleşimi 6 dünya genişliği × 3 denetim bölgesi için denetler.
+  **Tarayıcı kısayolları lobide TÜKETİLMEZ** (`Game.handleLobbyKey` ve
+  `OnlineLobby.handleKey` Ctrl/Cmd/Alt + tuşu yok sayar): `preventDefault`
+  çağrılırsa tarayıcının yapıştırma eylemi iptal olur ve `paste` olayı hiç
+  doğmaz — oda kodu yapıştırma bu yüzden çalışmıyordu. Oda kodu ayrıştırıcısı
+  (`_parseCode`) kod alfabesine ve simge sınırlarına uyar (`oda=` parametresi →
+  `ABC-DE` → tek başına 5 karakter), böylece panodaki URL'nin içindeki rastgele
+  sözcük kod sanılmaz.
   Ayrıntılı akış ve ölçütler: `docs/web-lansman-plani.md` §4.
 - Süreli yetenek durumları **entity üzerinde** tutulur (`nextShotMod`, `damageReduce`, `poison`, `dashAttack`, `glideTurns`) ve her tur sonunda (`endTurn`) işlenir/azaltılır.
 

@@ -59,6 +59,7 @@ En öğretici kombinasyon: **bir cihaz ev Wi-Fi'sinde, diğeri telefon hotspot'u
 | Karşı taraf ayrıldı | Karşı sekme kapandı / ağ değişti | Yeni oda kur |
 | Sürüm uyuşmuyor | İki taraf farklı build çalıştırıyor | İki tarafta da aynı dosyaları aç (tarayıcı önbelleğini yenile) |
 | Oda dolu | Koltuklar doldu (şu an 2 koltuk) | Yeni oda kur |
+| Kod yapıştırılamıyor | Pano izni yok ya da metin kod içermiyor | `Ctrl+V` ile davet bağlantısını yapıştır (`...?oda=ABCDE`); kod ekranına elle de yazılabilir |
 
 **TURN yedeği:** `js/online-lobby.js > ONLINE_TURN_SERVERS` boş bırakıldı (ücretsiz
 bir relay anahtarı gerektirir). Simetrik NAT arkasındaki oyuncular için oraya

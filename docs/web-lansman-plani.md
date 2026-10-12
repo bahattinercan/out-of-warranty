@@ -135,6 +135,18 @@ Yerleşim bekçisi: `tests/net-game.js` §11 (6 dünya genişliği × 3 denetim 
 × 4 ekran; ekran dışı/çakışan/denetim altında kalan düğme aranır) — kasten
 bozularak doğrulandı.
 
+(3) **Oda kodu yapıştırılamıyordu:** lobi klavye işleyicisi `Ctrl+V`'yi
+tüketip `preventDefault` çağırıyordu → tarayıcının yapıştırma eylemi iptal
+oluyor ve `paste` olayı hiç doğmuyordu. Ayrıca ayrıştırıcı var olmayan bir
+yöntemi çağırıyordu (`_joinRoom`) ve panodaki URL'nin içindeki ilk 5 harfli
+sözcüğü ("projel") oda kodu sanabiliyordu. Düzeltme: `Game.handleLobbyKey` ve
+`OnlineLobby.handleKey` değiştirici tuşlu olayları tüketmez; yeni `_parseCode`
+önce `oda=` parametresini, sonra `ABC-DE` gösterimini, en son tek başına 5
+karakterlik simgeyi arar ve adayı kod alfabesine göre süzer; başarılı
+yapıştırmada "Oda kodu yapıştırıldı" bildirimi çıkar. Gerçek tarayıcı provası
+`_online_small.html` içindedir (`ClipboardEvent` ile yapıştırma →
+`PASTE-TEST typed=QWERT step=code joined=QWERT ctrlVConsumed=false`).
+
 **Doğrulama (F3 çıkış ölçütü):** iki farklı ağdan (biri mobil hotspot) 2 oyuncu, aynı harita, 5 tur; kurulum <20 sn; kopma <%5; tur sırası her iki tarafta aynı; yeniden bağlanma aynı koltuğa döner.
 
 ---
@@ -260,7 +272,7 @@ Referans gerçeklik: Steam medyanı $249/ömür; web'de ilk oyun $0–400/ay. Bu
 | **F3a** (yapıldı) | Çevrimiçi protokol + oturum çekirdeği (saf, taşımadan bağımsız) | `js/net/protocol.js`, `js/net/session.js`, `tests/net.js` | `node tests/net.js` 95/95 (zarf/komut doğrulama, tekilleştirme, değişmezler, saat/borç, kopma) |
 | **F3b** (yapıldı) | Durum anlık görüntüsü + arazi senkronu (capture/apply) | `js/net/state.js`, `tests/net-state.js` | `node tests/net-state.js` 45/45 (gidiş-dönüş hash'i, arazi birebir, savunmacı apply, boyut bütçesi) |
 | **F3c-1** (yapıldı) | Taşıma katmanı (PeerJS + döngü) ve uçtan uca entegrasyon testi | `js/net/transport.js`, `tests/net-integration.js` | `node tests/net-integration.js` 43/43 (el sıkışma, 5 tur senkron, oyma, kopma, gecikme/kayıp, sahte Peer ile PeerJS akışı) |
-| **F3c-2** (yapıldı) | Lobi ekranı (oda kodu, davet, hazır) + oyun akışı bağlantısı | `js/online-lobby.js`, `js/net/adapter.js`, `index.html`, i18n | `node tests/net-game.js` 67/67 (lobi → maç → 5 tur → sonuç + yerleşim) + headless sondalar `_online_probe.html`, `_online_small.html` |
+| **F3c-2** (yapıldı) | Lobi ekranı (oda kodu, davet, hazır) + oyun akışı bağlantısı | `js/online-lobby.js`, `js/net/adapter.js`, `index.html`, i18n | `node tests/net-game.js` 81/81 (lobi → maç → 5 tur → sonuç + yerleşim + yapıştırma) + headless sondalar `_online_probe.html`, `_online_small.html` |
 | **F3c-3** (kullanıcı) | İki farklı ağdan gerçek deneme | — | §4 çıkış ölçütü: 5 tur, kurulum <20 sn, kopma <%5 |
 | **F4** | 6 oyuncu, oda/davet akışı, bot devralma | lobi + yeniden bağlanma | 6 oyuncu simülasyonu + kopma senaryoları, `tests/multiplayer/` |
 | **F5** | Portal uyumu: SDK, reklam yerleri, event ölçümü | `js/portal.js` | iframe testi, 16:9 ölçekleme, reklam ödülü doğru veriliyor |
