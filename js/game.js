@@ -115,6 +115,9 @@ class Game {
     // 124 eski davranışın değeridir. Modül kartı çizicisi (skills.js >
     // drawSkillHud) hâlâ bu inset'i beşinci argüman olarak okuyabilir.
     this.hudBottomInset = 124;
+    // Sağ üst DOM denetimlerinin dünya-piksel kaplaması (measureHudInsets).
+    this.hudTopInset = 0;
+    this.hudRightInset = 0;
     // Açılır silah listesinin mantıksal sınırları; syncBottomHud liste açıkken
     // doldurur (yerleşim/telemetri), kapalıyken null olur.
     this.hudPanelRect = null;
@@ -475,6 +478,10 @@ class Game {
   updateOnlineHost(dt) {
     const o = this.online;
     if (!o || o.role !== "host") { this.updateCore(dt); return; }
+    // Kendi girdimiz YEREL ve her zaman taze: tazelik denetimi hosta
+    // uygulanırsa (hiç INPUT paketi gelmediği için) yürüme ve güç doldurma her
+    // karede silinir ve host atış yapamaz.
+    o.session.touchLocalInput(0);
     const res = o.session.update(dt * 1000);
     if (res && res.ok === false && res.reason === "SIM_DEBT") { this.onlineAbort("SIM_DEBT"); return; }
     // Oyun turu kapattıysa (turnId ilerledi) oturum da aynı kimliğe geçer.
@@ -3472,6 +3479,30 @@ class Game {
     this.updateHud();
   }
 
+  /* Sağ üst köşe güvenli alanı: ses denetimi + dil seçici DOM'da sabit CSS px
+   * durur; dünya ölçeği küçüldükçe dünya pikselinde daha çok yer kaplarlar.
+   * Menü ekranları (çevrimiçi lobi) başlıklarını ve sütunlarını bu alanın
+   * dışında tutar: `hudTopInset` (bu y'nin üstünde sağ üst köşe dolu) ve
+   * `hudRightInset` (sağdan bu kadar içeride başlanmalı), ikisi de DÜNYA px. */
+  measureHudInsets() {
+    const canvas = this.canvas;
+    if (!canvas || !canvas.getBoundingClientRect) { this.hudTopInset = 0; this.hudRightInset = 0; return; }
+    const cr = canvas.getBoundingClientRect();
+    if (!cr.width || !cr.height) return;
+    const sx = this.W / cr.width, sy = this.H / cr.height;
+    let top = 0, right = 0;
+    for (const id of ["audio-control", "locale-control"]) {
+      const el = document.getElementById(id);
+      if (!el || !el.getBoundingClientRect) continue;
+      const r = el.getBoundingClientRect();
+      if (!r.width || !r.height) continue;
+      top = Math.max(top, (r.bottom - cr.top) * sy);
+      right = Math.max(right, (cr.right - r.left) * sx);
+    }
+    this.hudTopInset = Math.round(top) + 6;
+    this.hudRightInset = Math.round(right) + 6;
+  }
+
   // Geri tamponu, canvas'ın ekrandaki gerçek piksel boyutuna (DPR dahil) eşitle.
   // Dünya koordinatları W×H'de kalır; çizim bağlamı ölçeklenerek tam çözünürlükte
   // ve keskin render edilir. Boyut değişmediyse tampon yeniden atanmaz.
@@ -3485,6 +3516,12 @@ class Game {
     if (this.canvas.width !== pxW || this.canvas.height !== pxH) {
       this.canvas.width = pxW;
       this.canvas.height = pxH;
+      // Yerleşim değişti: sağ üstteki DOM denetimlerinin (ses + dil) kapladığı
+      // alan ölçülür. Sabit CSS px oldukları için DAR dünyada oransal olarak
+      // büyürler ve menü ekranlarının sağ üstünü kapatırlar (çevrimiçi lobi
+      // bildirimi). Ölçüm yalnız boyut değiştiğinde yapılır (kare başına
+      // getBoundingClientRect çağrısı olmasın).
+      this.measureHudInsets();
     }
     // Dünya yüksekliği sabit (this.H); genişlik ekranın en-boy oranından türetilir
     // ki ölçek tek-tip kalsın (yatay gerilme/bozulma olmaz) ve oyun tüm ekran

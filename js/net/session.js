@@ -425,6 +425,14 @@ class NetSession {
     return { ok: true, steps };
   }
 
+  /* YEREL koltuğun girdisini tazele. Host kendi girdisini ağdan almaz (INPUT
+   * paketi göndermez), bu yüzden tazelik denetimine takılıp HER KAREDE
+   * temizleniyordu: host ne yürüyebiliyor ne güç doldurabiliyordu (bu yüzden
+   * atış yapamıyordu — kullanıcı bildirimi). Oyun katmanı her karede çağırır. */
+  touchLocalInput(playerIdx) {
+    this.inputs.touch(playerIdx, this.now());
+  }
+
   /* Arazi değişikliklerini yayınlar ve sürümü ilerletir. Oyma simülasyon
    * adımında (patlama) oluştuğu için oyun katmanı her adımdan sonra kuyruğu
    * buraya boşaltır; komut sırasında oluşan oymalar da aynı yoldan gider. */

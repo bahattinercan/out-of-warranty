@@ -21,7 +21,7 @@ const FILES = ["i18n.js", "audio.js", "characters.js", "progression.js", "profil
   "market.js", "maps.js", "skills.js", "skill-fx.js", "robots.js", "terrain.js", "weapons.js",
   "entity.js", "projectile.js", "ai.js", "net/protocol.js", "net/transport.js", "net/state.js",
   "net/session.js", "net/adapter.js", "online-lobby.js", "game.js"];
-const EXPORT = "\n;globalThis.__G = { Game, CHARACTERS, MAPS, getMapById, NET_MSG, NET_CMD, NET_PHASE, " +
+const EXPORT = "\n;globalThis.__G = { Game, OnlineLobby, CHARACTERS, MAPS, getMapById, NET_MSG, NET_CMD, NET_PHASE, " +
   "NET_PROTOCOL_VERSION, NET_TRANSPORT_STATUS, NetSession, LoopbackTransport, netRoomCode, " +
   "netFormatRoomCode, netCaptureState, netSnapshotHash, netCaptureTerrain, netApplyState };";
 
@@ -270,6 +270,19 @@ syncFrames(p, 2);
 check("nişan hedefe döndü (yatay)", Math.abs(p.host.players[0].aim) < 1, String(p.host.players[0].aim));
 p.host.startCharge();
 check("host CHARGE komutu kabul edildi (güç doldurma açık)", p.host.input.charging === true);
+// Regresyon (kullanıcı bildirimi: "HOST atış yapamıyor"): host kendi girdisini
+// AĞDAN almaz, bu yüzden girdi tazelik denetimine takılıp güç doldurma ve
+// yürüme her karede siliniyordu → atış hiç başlamıyordu.
+syncFrames(p, 5);
+check("host güç doldurma kareler boyunca korunuyor", p.host.input.charging === true,
+  "charging=" + p.host.input.charging);
+check("host yürüme girdisi de korunuyor", (() => {
+  p.host.input.left = true;
+  syncFrames(p, 3);
+  const held = p.host.input.left === true;
+  p.host.input.left = false;
+  return held;
+})());
 p.host.input.power = 0.75;
 p.host.releaseFire();
 check("host atışı PROJECTILE'a geçti", p.host.state === "PROJECTILE", p.host.state);
@@ -428,6 +441,66 @@ check("komut reddi bildirimi metne çevrildi", typeof p.guest.online.notice.text
 p.host.quitToMenu();
 check("menüye dönüş ağ bağlamını kapatır", p.host.online === null && p.host.mode === null);
 check("menüye dönüş taşımayı kapatır", p.ta.status === G.NET_TRANSPORT_STATUS.CLOSED, p.ta.status);
+
+// ── 11) Yerleşim: dar/geniş dünyada çakışma yok, denetimlerin altında kalınmaz
+/* Kullanıcı bildirimi: "küçük ekranlarda çevrimiçi sayfasının tasarımı
+ * bozuluyor". Dünya genişliği pencere oranına göre 648–1620 arasında değişir ve
+ * sağ üstteki DOM denetimleri sabit CSS px kalır; lobi bu ikisine uyarlı
+ * olmalı. Ölçüt: (a) tüm tıklama alanları dünya içinde, (b) hiçbiri diğeriyle
+ * çakışmıyor, (c) hepsi sağ üst denetim bölgesinin DIŞINDA. */
+function layoutProbe(worldW, hudTop, hudRight) {
+  const g = Object.create(G.Game.prototype);
+  g.W = worldW; g.H = 540;
+  g.terrain = null;
+  g.input = { mouseX: -100, mouseY: -100 };
+  g.profile = null;
+  g.renderTimeMs = 0;
+  g.state = "ONLINE_LOBBY";
+  g.hudTopInset = hudTop;
+  g.hudRightInset = hudRight;
+  g.updateHud = function () {};
+  g.lobby = new G.OnlineLobby(g);
+  g.lobby.open();
+  return g;
+}
+function rectsOverlap(a, b) {
+  return !(a.x + a.w <= b.x || b.x + b.w <= a.x || a.y + a.h <= b.y || b.y + b.h <= a.y);
+}
+function layoutReport(g, label) {
+  const out = [];
+  for (const r of g.lobby._rects) {
+    if (r.x < 0 || r.y < 0 || r.x + r.w > g.W + 0.5 || r.y + r.h > g.H + 0.5) {
+      out.push(`${label}: ekran dışı ${r.action} (${Math.round(r.x)},${Math.round(r.y)},${Math.round(r.w)}x${Math.round(r.h)})`);
+    }
+    // Sağ üst denetim bölgesi: ya SOLUNDA ya ALTINDA olmalı.
+    const clear = (r.x + r.w <= g.W - g.hudRightInset + 0.5) || (r.y >= g.hudTopInset - 0.5);
+    if (!clear) out.push(`${label}: denetim bölgesinde ${r.action}`);
+  }
+  for (let i = 0; i < g.lobby._rects.length; i++) {
+    for (let j = i + 1; j < g.lobby._rects.length; j++) {
+      const a = g.lobby._rects[i], b = g.lobby._rects[j];
+      if (rectsOverlap(a, b)) out.push(`${label}: çakışma ${a.action} ↔ ${b.action}`);
+    }
+  }
+  return out;
+}
+const layoutProblems = [];
+for (const worldW of [648, 760, 855, 979, 1280, 1620]) {
+  for (const [top, right] of [[0, 0], [147, 291], [90, 220]]) {
+    const g = layoutProbe(worldW, top, right);
+    const ctx = dom.document.createElement("canvas").getContext("2d");
+    g.lobby.step = "role"; g.lobby.render(ctx);
+    layoutProblems.push(...layoutReport(g, `rol/${worldW}/${right}`));
+    g.lobby.step = "code"; g.lobby.typed = "ABC"; g.lobby.render(ctx);
+    layoutProblems.push(...layoutReport(g, `kod/${worldW}/${right}`));
+    g.lobby.step = "room"; g.lobby.role = "host"; g.lobby.render(ctx);
+    layoutProblems.push(...layoutReport(g, `oda-host/${worldW}/${right}`));
+    g.lobby.role = "guest"; g.lobby.ready = true; g.lobby.render(ctx);
+    layoutProblems.push(...layoutReport(g, `oda-misafir/${worldW}/${right}`));
+  }
+}
+check("lobi yerleşimi dar ve geniş dünyada bozulmuyor (çakışma/taşma yok)",
+  layoutProblems.length === 0, layoutProblems.slice(0, 4).join(" | "));
 
 // ── Özet ─────────────────────────────────────────────────────────────────
 console.log("────────────────────────────────────────────────");

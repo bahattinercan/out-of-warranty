@@ -526,34 +526,71 @@ class OnlineLobby {
     }
   }
 
+  // ── Yerleşim ────────────────────────────────────────────────────────────
+  /* Dünya genişliği pencere en-boy oranına göre DEĞİŞİR (Game.resize: dar
+   * pencerede ~648'e iner, geniş ekranda ~1620'ye çıkar) ve sağ üstteki DOM
+   * denetimleri (ses + dil) sabit CSS px kalır. Bu yüzden burada HİÇBİR x sabit
+   * yazılmaz: her ölçü W, H ve sağ üst güvenli alandan türetilir. Aksi hâlde dar
+   * dünyada sütunlar üst üste biner ve başlık denetimlerin altında kalır
+   * (kullanıcı bildirimi: "küçük ekranda çevrimiçi sayfasının tasarımı
+   * bozuluyor"). */
+  _layout() {
+    const W = this.game.W, H = this.game.H;
+    const top = Math.max(0, this.game.hudTopInset || 0);
+    const right = Math.max(0, this.game.hudRightInset || 0);
+    // Başlık ve içerik, sağ üstteki denetimlerin SOLUNDA/ALTINDA kalır.
+    const safeW = Math.max(300, W - right);
+    const margin = Math.max(14, Math.round(W * 0.035));
+    const contentW = Math.max(260, safeW - margin * 2);
+    return {
+      W, H, top, right, safeW, margin, contentW,
+      cx: Math.round(safeW / 2),
+      // İki sütun ancak bu genişlikte yan yana sığar (koltuk 300 + bilgi 300 + ara).
+      wide: contentW >= 620,
+    };
+  }
+
   // ── Çizim ───────────────────────────────────────────────────────────────
 
   render(ctx) {
-    const W = this.game.W, H = this.game.H;
+    const L = this._layout();
     this._rects = [];
-    if (typeof drawClouds === "function") drawClouds(ctx, W, "rgba(190,215,240,0.14)");
-    _msBackdrop(ctx, W, H);
-    ctx.textAlign = "center";
-    ctx.textBaseline = "top";
-    ctx.fillStyle = "#000000aa"; ctx.font = uiTitleFont(28);
-    ctx.fillText(t("online.title", "ÇEVRİMİÇİ"), W / 2 + 2, 34);
-    ctx.fillStyle = "#ffe45e"; ctx.font = uiTitleFont(28);
-    ctx.fillText(t("online.title", "ÇEVRİMİÇİ"), W / 2, 32);
-    ctx.fillStyle = "#cfe0ee"; ctx.font = uiTextFont(13);
-    ctx.fillText(t("online.subtitle", "Aynı oda kodundaki iki operatör — internet üzerinden"), W / 2, 70);
-    if (typeof _csHazardStrip === "function") _csHazardStrip(ctx, W / 2 - 110, 92, 220, 4);
+    if (typeof drawClouds === "function") drawClouds(ctx, L.W, "rgba(190,215,240,0.14)");
+    _msBackdrop(ctx, L.W, L.H);
+    this._renderHeader(ctx, L);
 
-    if (this.step === "role") this._renderRole(ctx, W, H);
-    else if (this.step === "code") this._renderCode(ctx, W, H);
-    else this._renderRoom(ctx, W, H);
+    if (this.step === "role") this._renderRole(ctx, L);
+    else if (this.step === "code") this._renderCode(ctx, L);
+    else this._renderRoom(ctx, L);
 
-    this._renderStatus(ctx, W, H);
+    this._renderStatus(ctx, L);
   }
 
-  _renderRole(ctx, W, H) {
-    const bw = 300, bh = 168, gap = 28;
-    const y = 168;
-    const x1 = W / 2 - bw - gap / 2, x2 = W / 2 + gap / 2;
+  // Başlık bloğu: sağ üst denetimlerinin dışında kalan alanda ortalanır.
+  _renderHeader(ctx, L) {
+    ctx.textAlign = "center";
+    ctx.textBaseline = "top";
+    const size = L.safeW < 560 ? 22 : 28;
+    ctx.fillStyle = "#000000aa"; ctx.font = uiTitleFont(size);
+    ctx.fillText(t("online.title", "ÇEVRİMİÇİ"), L.cx + 2, 34);
+    ctx.fillStyle = "#ffe45e"; ctx.font = uiTitleFont(size);
+    ctx.fillText(t("online.title", "ÇEVRİMİÇİ"), L.cx, 32);
+    ctx.fillStyle = "#cfe0ee"; ctx.font = uiTextFont(12);
+    const sub = _fitTextLines(ctx, t("online.subtitle", "Aynı oda kodundaki iki operatör — internet üzerinden"),
+      L.contentW, 12, (p) => uiTextFont(p), 1, 9);
+    ctx.fillText(sub.lines[0], L.cx, 32 + size + 8);
+    if (typeof _csHazardStrip === "function") {
+      const hw = Math.min(220, Math.round(L.safeW * 0.5));
+      _csHazardStrip(ctx, L.cx - hw / 2, 32 + size + 24, hw, 4);
+    }
+  }
+
+  _renderRole(ctx, L) {
+    const gap = 16;
+    const bw = Math.max(160, Math.min(300, Math.floor((L.contentW - gap) / 2)));
+    const bh = Math.max(118, Math.min(168, Math.round(L.H * 0.31)));
+    const y = Math.max(L.top + 40, Math.round(L.H * 0.30));
+    const x1 = L.cx - bw - gap / 2, x2 = L.cx + gap / 2;
     this._button(ctx, { x: x1, y, w: bw, h: bh, action: "host" }, {
       title: t("online.role.host", "ODA KUR"),
       sub: t("online.role.host.sub", "Kod üret, arkadaşını davet et"),
@@ -564,126 +601,180 @@ class OnlineLobby {
       sub: t("online.role.join.sub", "Arkadaşının kodunu yaz"),
       accent: "#7bdc8e",
     });
-    // Robot seçici kartların ALTINDA ortada durur (cx = W/2). Eskiden `W`
-    // geçilmişti → seçici ekranın sağ kenarına taşıyordu (sonda yakaladı).
-    this._renderRobotPicker(ctx, W / 2, y + bh + 30);
-    this.drawBack(ctx, t("common.mainMenu", "‹ Ana Menü"));
+    // Robot seçici kartların altında, alt şeride (geri düğmesi) değmeyecek yerde.
+    const pickerY = Math.min(y + bh + 22, L.H - 148);
+    this._renderRobotPicker(ctx, L.cx, pickerY);
+    this.drawBack(ctx, L, t("common.mainMenu", "‹ Ana Menü"));
   }
 
-  _renderCode(ctx, W, H) {
+  _renderCode(ctx, L) {
     ctx.fillStyle = "#eef5ff"; ctx.font = uiTitleFont(18);
     ctx.textAlign = "center"; ctx.textBaseline = "top";
-    ctx.fillText(t("online.code.title", "ODA KODU"), W / 2, 140);
-    const n = ONLINE_CODE_LENGTH, bw = 46, gap = 12;
+    ctx.fillText(t("online.code.title", "ODA KODU"), L.cx, Math.max(L.top + 34, 118));
+    const n = ONLINE_CODE_LENGTH, gap = 10;
+    const bw = Math.max(30, Math.min(46, Math.floor((L.contentW - gap * (n - 1)) / n)));
+    const bh = Math.round(bw * 1.3);
     const total = n * bw + (n - 1) * gap;
-    const x0 = (W - total) / 2, y = 176;
+    const x0 = L.cx - total / 2;
+    const y = Math.max(L.top + 58, 146);
     for (let i = 0; i < n; i++) {
       const ch = this.typed[i] || "";
       const active = i === this.typed.length;
-      _csPanel(ctx, x0 + i * (bw + gap), y, bw, 60, {
+      _csPanel(ctx, x0 + i * (bw + gap), y, bw, bh, {
         accent: active ? "#ffe45e" : ch ? "#4fc3f7" : "#3b526b",
         glow: active, selected: !!ch,
       });
       ctx.fillStyle = ch ? "#eef5ff" : "#5e7488";
-      ctx.font = uiTitleFont(26);
+      ctx.font = uiTitleFont(Math.max(18, Math.round(bw * 0.56)));
       ctx.textAlign = "center"; ctx.textBaseline = "middle";
-      ctx.fillText(ch || "·", x0 + i * (bw + gap) + bw / 2, y + 31);
+      ctx.fillText(ch || "·", x0 + i * (bw + gap) + bw / 2, y + bh / 2);
     }
-    ctx.fillStyle = "#9fb6c9"; ctx.font = uiTextFont(12);
     ctx.textAlign = "center"; ctx.textBaseline = "top";
-    ctx.fillText(t("online.code.hint", "Kodu yaz — son harfte kendiliğinden katılır (Enter ile de olur)"), W / 2, y + 76);
+    ctx.fillStyle = "#9fb6c9";
+    const hint = _fitTextLines(ctx, t("online.code.hint", "Kodu yaz — son harfte kendiliğinden katılır (Enter ile de olur)"),
+      L.contentW, 12, (p) => uiTextFont(p), 2, 9);
+    for (let i = 0; i < hint.lines.length; i++) ctx.fillText(hint.lines[i], L.cx, y + bh + 14 + i * (hint.px + 2));
     ctx.fillStyle = "#5e7488"; ctx.font = uiTextFont(11);
-    ctx.fillText(t("online.code.paste", "Davet bağlantısını yapıştırabilirsin (Ctrl+V)"), W / 2, y + 98);
-    this.drawBack(ctx, t("online.back", "‹ Geri"));
+    const paste = _fitTextLines(ctx, t("online.code.paste", "Davet bağlantısını yapıştırabilirsin (Ctrl+V)"),
+      L.contentW, 11, (p) => uiTextFont(p), 1, 9);
+    ctx.fillText(paste.lines[0], L.cx, y + bh + 20 + hint.lines.length * (hint.px + 2));
+    this.drawBack(ctx, L, t("online.back", "‹ Geri"));
   }
 
-  _renderRoom(ctx, W, H) {
-    const left = { x: 96, y: 132, w: 400, h: 300 };
-    _csPanel(ctx, left.x, left.y, left.w, left.h, { accent: "#2a3848" });
+  _renderRoom(ctx, L) {
+    const rows = this._seatRows();
+    const seatsH = 38 + rows.length * 54;
+    if (L.wide) {
+      // İki sütunlu blok ORTALANIR: çok geniş dünyada (ultra geniş ekran) sol
+      // kenara yapışıp sağda büyük boşluk bırakmasın.
+      const colW = Math.min(400, Math.round((L.contentW - 24) * 0.55));
+      const rw = Math.min(320, L.contentW - colW - 24);
+      const blockW = colW + 24 + rw;
+      const x0 = Math.round(L.cx - blockW / 2);
+      // Dikey ortalama: bilgi sütunu (kod + düğmeler + seçici) koltuk panelinden
+      // uzun olduğu için ona göre ortalanır.
+      const top = Math.max(L.top + 16, Math.round((L.H - 250) / 2));
+      this._renderSeats(ctx, { x: x0, y: top, w: colW, h: seatsH }, rows);
+      this._renderRoomInfo(ctx, L, x0 + colW + 24 + rw / 2, top, rw, false);
+    } else {
+      // Dar dünya: tek sütun — koltuklar üstte, kod/düğmeler altta (kompakt).
+      const top = Math.max(L.top + 8, 96);
+      this._renderSeats(ctx, { x: L.margin, y: top, w: L.contentW, h: seatsH }, rows);
+      this._renderRoomInfo(ctx, L, L.cx, top + seatsH + 10, L.contentW, true);
+    }
+    // Sol alt: durum metni bu düğmenin SAĞINDAKİ şeritte çizilir, böylece
+    // dar yerleşimde üst üste binmezler (sonda yakaladı).
+    this._button(ctx, { x: L.margin, y: L.H - 48, w: 140, h: 32, action: "leave" }, {
+      title: t("online.leave", "‹ AYRIL"), accent: "#ff7b7b", small: true,
+    });
+  }
+
+  // Koltuk listesi paneli (satır çizimi geniş ve dar yerleşimde ortaktır).
+  _renderSeats(ctx, rect, rows) {
+    _csPanel(ctx, rect.x, rect.y, rect.w, rect.h, { accent: "#2a3848" });
     ctx.textAlign = "left"; ctx.textBaseline = "top";
     ctx.fillStyle = "#9fb6c9"; ctx.font = uiTextFont(11, 700);
-    ctx.fillText(t("online.seats.title", "KOLTUKLAR"), left.x + 16, left.y + 14);
-    const seats = this._seatRows();
-    for (let i = 0; i < seats.length; i++) {
-      const row = seats[i];
-      const ry = left.y + 40 + i * 62;
-      _csPanel(ctx, left.x + 12, ry, left.w - 24, 54, {
+    ctx.fillText(t("online.seats.title", "KOLTUKLAR"), rect.x + 16, rect.y + 12);
+    for (let i = 0; i < rows.length; i++) {
+      const row = rows[i];
+      const ry = rect.y + 32 + i * 54;
+      _csPanel(ctx, rect.x + 12, ry, rect.w - 24, 50, {
         accent: row.you ? "#ffe45e" : row.claimed ? "#4fc3f7" : "#2a3848",
         fillTop: row.you ? "#233046" : "#161f2a",
       });
       const ch = row.robotId ? CHARACTERS.find((c) => c.id === row.robotId) : null;
-      // Küçük robot önizlemesi (kadro kimliği biliniyorsa)
       if (ch) {
         drawRobot(ctx, {
-          cx: left.x + 44, cy: ry + 30, r: 12, facing: 1, charDef: ch,
+          cx: rect.x + 42, cy: ry + 27, r: 11, facing: 1, charDef: ch,
           timeMs: this.game.renderTimeMs || 0,
           motion: { vx: 0, vy: 0, onGround: true },
         });
       }
       ctx.textAlign = "left"; ctx.textBaseline = "middle";
       ctx.fillStyle = ch ? "#eef5ff" : "#7f93a6";
-      ctx.font = uiTitleFont(14);
-      ctx.fillText(ch ? ch.label : t("online.seat.empty", "Bekleniyor…"), left.x + 74, ry + 20);
+      ctx.font = uiTitleFont(13);
+      ctx.fillText(ch ? ch.label : t("online.seat.empty", "Bekleniyor…"), rect.x + 70, ry + 18);
       ctx.fillStyle = "#8fa6bd"; ctx.font = uiTextFont(11);
-      const who = row.host ? t("online.seat.host", "ODA SAHİBİ") : t("online.seat.guest", "MİSAFİR");
-      ctx.fillText(who, left.x + 74, ry + 38);
-      // Durum rozeti: bağlantı + hazır
+      ctx.fillText(row.host ? t("online.seat.host", "ODA SAHİBİ") : t("online.seat.guest", "MİSAFİR"), rect.x + 70, ry + 35);
       const badge = !row.claimed ? t("online.seat.waiting", "BAĞLANMADI")
         : row.ready ? t("online.seat.ready", "HAZIR")
         : t("online.seat.notReady", "HAZIR DEĞİL");
-      const badgeColor = !row.claimed ? "#7f93a6" : row.ready ? "#7bdc8e" : "#ffd24a";
       ctx.textAlign = "right"; ctx.textBaseline = "middle";
-      ctx.fillStyle = badgeColor; ctx.font = uiTextFont(11, 700);
-      ctx.fillText(badge, left.x + left.w - 24, ry + 27);
+      ctx.fillStyle = !row.claimed ? "#7f93a6" : row.ready ? "#7bdc8e" : "#ffd24a";
+      ctx.font = uiTextFont(11, 700);
+      ctx.fillText(badge, rect.x + rect.w - 22, ry + 25);
       if (row.you) {
         ctx.fillStyle = "#ffe45e"; ctx.font = uiTextFont(10, 700);
-        ctx.fillText(t("online.seat.you", "SEN"), left.x + left.w - 24, ry + 43);
+        ctx.fillText(t("online.seat.you", "SEN"), rect.x + rect.w - 22, ry + 39);
       }
     }
-    // Oda kodu: büyük ve okunur (davetin asıl taşıyıcısı)
+  }
+
+  /* Oda kodu + davet/hazır/başlat düğmeleri + robot seçici. `compact` (dar
+   * yerleşim) kısa aralıklar ve tek satırlık robot seçici kullanır. */
+  _renderRoomInfo(ctx, L, cx, y, w, compact) {
+    const bw = Math.min(300, w);
+    const x = cx - bw / 2;
     ctx.textAlign = "center"; ctx.textBaseline = "top";
     ctx.fillStyle = "#9fb6c9"; ctx.font = uiTextFont(11, 700);
-    ctx.fillText(t("online.roomCode", "ODA KODU"), W - 250, 138);
-    ctx.fillStyle = "#ffe45e"; ctx.font = uiTitleFont(34);
-    ctx.fillText(netFormatRoomCode(this.code), W - 250, 156);
+    ctx.fillText(t("online.roomCode", "ODA KODU"), cx, y);
+    ctx.fillStyle = "#ffe45e"; ctx.font = uiTitleFont(compact ? 26 : 34);
+    ctx.fillText(netFormatRoomCode(this.code), cx, y + (compact ? 14 : 18));
     ctx.fillStyle = "#8fa6bd"; ctx.font = uiTextFont(11);
-    ctx.fillText(t("online.roomCode.hint", "Arkadaşın bu kodu KODA KATIL ekranına yazsın"), W - 250, 200);
+    const hintY = y + (compact ? 44 : 62);
+    const hint = _fitTextLines(ctx, t("online.roomCode.hint", "Arkadaşın bu kodu KODA KATIL ekranına yazsın"),
+      w, 11, (p) => uiTextFont(p), 1, 9);
+    ctx.fillText(hint.lines[0], cx, hintY);
 
-    const by = 226;
+    const by = hintY + (compact ? 15 : 22);
+    const bh = compact ? 34 : 40;
     if (this.role === "host") {
-      this._button(ctx, { x: W - 400, y: by, w: 300, h: 40, action: "copy" }, {
+      this._button(ctx, { x, y: by, w: bw, h: bh, action: "copy" }, {
         title: t("online.invite.copy", "BAĞLANTIYI KOPYALA"), accent: "#3fae8c", small: true,
       });
       const can = !!(this.session && this.session.canStart());
-      this._button(ctx, { x: W - 400, y: by + 52, w: 300, h: 48, action: "start", disabled: !can }, {
+      this._button(ctx, { x, y: by + bh + 6, w: bw, h: bh + 4, action: "start", disabled: !can }, {
         title: can ? t("online.start", "MAÇI BAŞLAT") : t("online.startWait", "Karşı taraf bekleniyor…"),
         accent: can ? "#ffe45e" : "#3b526b", small: true, disabled: !can,
       });
-    } else {
-      this._button(ctx, { x: W - 400, y: by, w: 300, h: 48, action: "ready" }, {
-        title: this.ready ? t("online.readyCancel", "HAZIR DEĞİLİM") : t("online.ready", "HAZIRIM"),
-        accent: this.ready ? "#ffd24a" : "#7bdc8e", small: true,
-      });
-      ctx.fillStyle = "#8fa6bd"; ctx.font = uiTextFont(11);
-      ctx.textAlign = "center"; ctx.textBaseline = "top";
-      ctx.fillText(t("online.readyWait", "Oda sahibi başlatınca maç başlar"), W - 250, by + 58);
+      this._renderRobotPicker(ctx, cx, by + bh * 2 + 26, undefined, compact);
+      return;
     }
-    // Kendi robotun: lobide her iki taraf da değiştirebilir (misafir HELLO'yu
-    // yeniden gönderir → host kadrosunu günceller). Seçici, düğmelerin (…326)
-    // ALTINDA başlar ki "MAÇI BAŞLAT" ile çakışmasın.
-    this._renderRobotPicker(ctx, W - 250, 348);
-    this._button(ctx, { x: 96, y: 448, w: 150, h: 32, action: "leave" }, {
-      title: t("online.leave", "‹ AYRIL"), accent: "#ff7b7b", small: true,
+    this._button(ctx, { x, y: by, w: bw, h: bh + 4, action: "ready" }, {
+      title: this.ready ? t("online.readyCancel", "HAZIR DEĞİLİM") : t("online.ready", "HAZIRIM"),
+      accent: this.ready ? "#ffd24a" : "#7bdc8e", small: true,
     });
+    ctx.fillStyle = "#8fa6bd"; ctx.font = uiTextFont(11);
+    const wait = _fitTextLines(ctx, t("online.readyWait", "Oda sahibi başlatınca maç başlar"),
+      w, 11, (p) => uiTextFont(p), 1, 9);
+    ctx.fillText(wait.lines[0], cx, by + bh + 10);
+    this._renderRobotPicker(ctx, cx, by + bh + (compact ? 24 : 28), undefined, compact);
   }
 
-  /* Robot seçici. `interactive` verilmezse lobide (maç başlamadan) serbesttir;
+  /* Robot seçici. `compact` tek satır: ◀ [robot] FIX-8 ▶ (dar yerleşimde dikey
+   * yer kazandırır). `interactive` verilmezse lobide (maç başlamadan) serbesttir;
    * maç sırasında kapanır (kadro START ile sabitlenir). */
-  _renderRobotPicker(ctx, cx, y, interactive) {
+  _renderRobotPicker(ctx, cx, y, interactive, compact) {
     const ch = this.robot;
     if (!ch) return;
     if (interactive === undefined) {
       interactive = !this.session || this.session.phase === NET_PHASE.LOBBY;
+    }
+    if (compact) {
+      if (interactive) {
+        this._button(ctx, { x: cx - 96, y, w: 32, h: 32, action: "robotPrev" }, { title: "‹", small: true, accent: "#4fc3f7" });
+        this._button(ctx, { x: cx + 64, y, w: 32, h: 32, action: "robotNext" }, { title: "›", small: true, accent: "#4fc3f7" });
+      }
+      drawRobot(ctx, {
+        cx, cy: y + 16, r: 11, facing: 1, charDef: ch,
+        timeMs: this.game.renderTimeMs || 0,
+        motion: { vx: 0, vy: 0, onGround: true },
+        parts: this.game.profile ? getRobotProgress(this.game.profile, ch.id).loadout : null,
+      });
+      ctx.textAlign = "center"; ctx.textBaseline = "top";
+      ctx.fillStyle = "#eef5ff"; ctx.font = uiTitleFont(12);
+      ctx.fillText(ch.label, cx, y + 32);
+      return;
     }
     ctx.textAlign = "center"; ctx.textBaseline = "top";
     ctx.fillStyle = "#9fb6c9"; ctx.font = uiTextFont(11, 700);
@@ -707,25 +798,23 @@ class OnlineLobby {
     }
   }
 
-  _renderStatus(ctx, W, H) {
+  /* Durum/bildirim şeridi: sol alttaki gezinme düğmesinin SAĞINDA kalan alanda
+   * ortalanır (dar yerleşimde düğmeyle çakışmaması için). */
+  _renderStatus(ctx, L) {
     ctx.textAlign = "center"; ctx.textBaseline = "middle";
-    if (this.error) {
-      ctx.fillStyle = "#ff9f5a"; ctx.font = uiTextFont(12, 700);
-      ctx.fillText(this.error.text || this._errorText(this.error.code), W / 2, H - 40);
-      return;
-    }
-    if (this.notice) {
-      ctx.fillStyle = "#7bdc8e"; ctx.font = uiTextFont(12, 700);
-      ctx.fillText(this.notice.text || this._noticeText(this.notice.key), W / 2, H - 40);
-      return;
-    }
+    const x0 = L.margin + 158;
+    const stripW = Math.max(120, L.contentW - 158);
+    const cx = Math.round(x0 + stripW / 2);
+    const oneLine = (text, color) => {
+      ctx.fillStyle = color; ctx.font = uiTextFont(12, 700);
+      const fit = _fitTextLines(ctx, text, stripW, 12, (p) => uiTextFont(p, 700), 1, 9);
+      ctx.fillText(fit.lines[0], cx, L.H - 32);
+    };
+    if (this.error) { oneLine(this.error.text || this._errorText(this.error.code), "#ff9f5a"); return; }
+    if (this.notice) { oneLine(this.notice.text || this._noticeText(this.notice.key), "#7bdc8e"); return; }
     if (this.step === "room") {
       const text = this._statusText();
-      if (text) {
-        ctx.fillStyle = this.statusText === "open" ? "#7bdc8e" : "#9fb6c9";
-        ctx.font = uiTextFont(12);
-        ctx.fillText(text, W / 2, H - 40);
-      }
+      if (text) oneLine(text, this.statusText === "open" ? "#7bdc8e" : "#9fb6c9");
     }
   }
 
@@ -742,7 +831,10 @@ class OnlineLobby {
     }
     const st = this.session && this.session.lobbyState;
     const mySeat = this.session ? this.session.mySeat : null;
-    const seats = st && st.seats ? st.seats : [{ playerIdx: 0, claimed: true, ready: true, robotId: null }, { playerIdx: 1, claimed: true, ready: this.ready, robotId: this.robotId }];
+    const seats = st && st.seats ? st.seats : [
+      { playerIdx: 0, claimed: true, ready: true, robotId: null },
+      { playerIdx: 1, claimed: true, ready: this.ready, robotId: this.robotId },
+    ];
     return seats.map((s) => ({
       playerIdx: s.playerIdx, claimed: s.claimed, ready: s.ready,
       robotId: s.playerIdx === (mySeat == null ? 1 : mySeat) ? this.robotId : s.robotId,
@@ -761,24 +853,28 @@ class OnlineLobby {
     });
     ctx.textAlign = "center"; ctx.textBaseline = "middle";
     if (o.sub) {
+      // Rol kartı: ikon + başlık + alt yazı (yükseklikle ölçeklenir).
+      const iconY = rect.y + Math.min(34, Math.round(rect.h * 0.22));
+      _msIcon(ctx, "ağ", rect.x + rect.w / 2, iconY, o.accent || "#4fc3f7", hovered);
       ctx.fillStyle = o.disabled ? "#7f93a6" : "#eef5ff";
-      ctx.font = uiTitleFont(20);
-      ctx.fillText(o.title, rect.x + rect.w / 2, rect.y + rect.h / 2 - 16);
-      ctx.fillStyle = "#9fb6c9"; ctx.font = uiTextFont(12);
-      ctx.fillText(o.sub, rect.x + rect.w / 2, rect.y + rect.h / 2 + 20);
-      // Rol kartı ikonu: iki düğüm arasında bağlantı (çevrimiçi imzası)
-      _msIcon(ctx, "ağ", rect.x + rect.w / 2, rect.y + 34, o.accent || "#4fc3f7", hovered);
+      ctx.font = uiTitleFont(rect.w < 220 ? 17 : 20);
+      ctx.fillText(o.title, rect.x + rect.w / 2, rect.y + rect.h / 2 - 12);
+      ctx.fillStyle = "#9fb6c9"; ctx.font = uiTextFont(11);
+      const sub = _fitTextLines(ctx, o.sub, rect.w - 16, 11, (p) => uiTextFont(p), 2, 9);
+      for (let i = 0; i < sub.lines.length; i++) ctx.fillText(sub.lines[i], rect.x + rect.w / 2, rect.y + rect.h / 2 + 14 + i * 12);
     } else {
       ctx.fillStyle = o.disabled ? "#7f93a6" : "#eef5ff";
-      ctx.font = uiTitleFont(o.small ? 13 : 16);
-      ctx.fillText(o.title, rect.x + rect.w / 2, rect.y + rect.h / 2 + 1);
+      const size = o.small ? 13 : 16;
+      const fit = _fitTextLines(ctx, o.title, rect.w - 14, size, uiTitleFont, 1, 9);
+      ctx.font = uiTitleFont(size);
+      ctx.fillText(fit.lines[0], rect.x + rect.w / 2, rect.y + rect.h / 2 + 1);
     }
     this._rects.push({ x: rect.x, y: rect.y, w: rect.w, h: rect.h, action: rect.action, disabled: !!o.disabled });
   }
 
-  drawBack(ctx, label) {
-    const W = this.game.W, H = this.game.H;
-    const rect = { x: 20, y: H - 52, w: 170, h: 34, action: "back" };
+  // Geri düğmesi sol altta; durum/bildirim metni onun sağındaki şeritte.
+  drawBack(ctx, L, label) {
+    const rect = { x: L.margin, y: L.H - 48, w: 150, h: 32, action: "back" };
     this._button(ctx, rect, { title: label, accent: "#4fc3f7", small: true });
   }
 }

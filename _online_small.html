@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Çevrimiçi lobi — KÜÇÜK EKRAN sondası (oyuna dâhil değil)</title>
+  <!-- Gerçek index.html yerleşimi (css/style.css + gerçek DOM parçaları) küçük
+       pencerede yüklenir: canvas dünyası pencere en-boy oranına göre
+       GENİŞLER/DARALIR (Game.resize), DOM denetimleri ise sabit CSS px kalır.
+       Bu sonda, çevrimiçi ekranın dar dünyada bozulup bozulmadığını gösterir. -->
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <div id="app">
+    <div id="stage">
+      <div id="audio-control" role="group" aria-label="Ses ayarları">
+        <button id="mute-btn" type="button" title="Sesi kapat (M)" aria-label="Sesi kapat" aria-pressed="false">
+          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+            <path d="M11 5 6 9H3v6h3l5 4Z" />
+            <path class="sound-waves" d="M15 8a6 6 0 0 1 0 8m3-11a10 10 0 0 1 0 14" />
+            <path class="sound-off" d="m16 9 6 6m0-6-6 6" />
+          </svg>
+          <span id="mute-label">Ses</span>
+        </button>
+        <input id="volume-slider" type="range" min="0" max="100" step="1" value="100" aria-label="Ses düzeyi" />
+        <output id="volume-value" for="volume-slider">100%</output>
+      </div>
+      <div id="locale-control">
+        <span aria-hidden="true">🌐</span>
+        <label for="locale-select">Dil</label>
+        <select id="locale-select"><option value="tr">Türkçe</option></select>
+      </div>
+      <canvas id="game" width="960" height="540"></canvas>
+    </div>
+  </div>
+
+  <script src="js/i18n.js"></script>
+  <script src="js/audio.js"></script>
+  <script src="js/characters.js"></script>
+  <script src="js/progression.js"></script>
+  <script src="js/profile.js"></script>
+  <script src="js/parts.js"></script>
+  <script src="js/market.js"></script>
+  <script src="js/maps.js"></script>
+  <script src="js/skills.js"></script>
+  <script src="js/skill-fx.js"></script>
+  <script src="js/robots.js"></script>
+  <script src="js/terrain.js"></script>
+  <script src="js/weapons.js"></script>
+  <script src="js/entity.js"></script>
+  <script src="js/projectile.js"></script>
+  <script src="js/ai.js"></script>
+  <script src="js/net/protocol.js"></script>
+  <script src="js/net/transport.js"></script>
+  <script src="js/net/state.js"></script>
+  <script src="js/net/session.js"></script>
+  <script src="js/net/adapter.js"></script>
+  <script src="js/online-lobby.js"></script>
+  <script src="js/game.js"></script>
+  <script>
+    (function () {
+      var m = /[?&]locale=([\w-]+)/.exec(location.search);
+      if (m) { try { setLocale(m[1], { persist: false }); } catch (e) {} }
+      var step = (/[?&]step=(\w+)/.exec(location.search) || [])[1] || "room";
+
+      // Gerçek `resize()` + `render()` yolları kullanılır: sahte oyun nesnesi
+      // Game.prototype'tan türer, böylece dünya genişliği pencere oranına göre
+      // gerçekten daralır (küçük ekranın asıl nedeni bu).
+      const canvas = document.getElementById("game");
+      const g = Object.create(Game.prototype);
+      g.canvas = canvas;
+      g.ctx = canvas.getContext("2d");
+      g.W = 960; g.H = 540;
+      g.terrain = null;
+      g.input = { mouseX: -100, mouseY: -100 };
+      g.profile = defaultProfile();
+      g.renderTimeMs = 1400;
+      g.state = "ONLINE_LOBBY";
+      g.updateHud = function () {};
+      g.lobby = new OnlineLobby(g);
+      g.lobby.open();
+
+      if (step === "room") {
+        // Gerçek el sıkışma: iki lobi döngü taşımasıyla bağlanır.
+        const [ta, tb] = LoopbackTransport.pair({ name: "host" }, { name: "guest" });
+        const gG = Object.create(Game.prototype);
+        gG.W = 960; gG.H = 540; gG.input = { mouseX: -100, mouseY: -100 };
+        gG.profile = defaultProfile(); gG.renderTimeMs = 1400; gG.state = "ONLINE_LOBBY";
+        gG.updateHud = function () {};
+        const guest = new OnlineLobby(gG);
+        guest.open();
+        g.lobby.adoptTransport(ta, { role: "host", code: "ABCDE" });
+        guest.adoptTransport(tb, { role: "guest", code: "ABCDE" });
+        guest.toggleReady();
+      } else if (step === "role") {
+        // rol ekranı (fare kartın üstünde)
+        g.input.mouseX = 300; g.input.mouseY = 250;
+      } else if (step === "code") {
+        g.lobby.step = "code"; g.lobby.typed = "ABC";
+      }
+
+      function draw() {
+        g.render();   // içinde resize() çağrılır → W pencere oranına göre güncellenir
+      }
+      draw();
+      window.addEventListener("resize", draw);
+      console.log("SMALL-PROBE OK · pencere=" + window.innerWidth + "x" + window.innerHeight +
+        " · dünya=" + g.W + "x" + g.H + " · ölçek=" + g._scaleX.toFixed(2) + "/" + g._scaleY.toFixed(2));
+    })();
+  </script>
+</body>
+</html>
