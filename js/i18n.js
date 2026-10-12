@@ -27,7 +27,7 @@ const LANG_REQUIRED = ["en"];
 // kimlikten kurulur, `t("workshop.branch." + branch, ...)`). tests/i18n.js bu
 // öneklerle başlayan sözlük anahtarlarını "kodda kullanılıyor" sayar; hangi
 // kimliklerin gerçekten var olduğunu ayrıca kataloglardan doğrular.
-const I18N_DYNAMIC_PREFIXES = ["workshop.branch.", "workshop.slot.", "tutorial.coach.", "market.tab.", "weapon."];
+const I18N_DYNAMIC_PREFIXES = ["workshop.branch.", "workshop.slot.", "tutorial.coach.", "market.tab.", "weapon.", "part."];
 const LANG_LABELS = {
   "tr": "Türkçe",
   "en": "English",
@@ -304,6 +304,55 @@ const I18N = {
     "weapon.hook.name": "Hook",
     "weapon.hook.special": "Pulls you",
     "weapon.hook.desc": "Flies straight and pulls you to whatever it grabs; deals no damage.",
+    // ── Veri katalogları: parçalar (F2c-2) ──────────────────────────────
+    "part.nisan_mercegi.label": "Aiming Scope",
+    "part.nisan_mercegi.desc": "Weapon shells hit 5% harder",
+    "part.termal_vizor.label": "Thermal Visor",
+    "part.termal_vizor.desc": "Module power +6%",
+    "part.denge_sensoru.label": "Balance Sensor",
+    "part.denge_sensoru.desc": "Reduces knockback by 10%",
+    "part.hedef_takip.label": "Target Tracking Unit",
+    "part.hedef_takip.desc": "Weapon shells hit 8% harder",
+    "part.radar_anteni.label": "Radar Antenna",
+    "part.radar_anteni.desc": "Module power +9%",
+    "part.zirh_kaski.label": "Armored Helmet",
+    "part.zirh_kaski.desc": "Armor +4% • knockback −5%",
+    "part.lehim_yamasi.label": "Solder Patch",
+    "part.lehim_yamasi.desc": "Max HP +15",
+    "part.kompozit_plaka.label": "Composite Plate",
+    "part.kompozit_plaka.desc": "Armor +6%",
+    "part.sogutucu_radyator.label": "Cooling Radiator",
+    "part.sogutucu_radyator.desc": "Max energy +10",
+    "part.takviyeli_govde.label": "Reinforced Hull",
+    "part.takviyeli_govde.desc": "HP +10%",
+    "part.cift_kat_plaka.label": "Double-Layer Plate",
+    "part.cift_kat_plaka.desc": "Armor +9%",
+    "part.basinc_hucre.label": "Pressure Cell",
+    "part.basinc_hucre.desc": "Energy +14 • HP +8",
+    "part.yedek_yukleyici.label": "Backup Loader",
+    "part.yedek_yukleyici.desc": "Module cooldown shortened by 1 turn (minimum 2)",
+    "part.takviye_bobini.label": "Boost Coil",
+    "part.takviye_bobini.desc": "Module power +8%",
+    "part.hassas_ayar_civtasi.label": "Fine-Tuning Bolt",
+    "part.hassas_ayar_civtasi.desc": "Weapon damage +4%",
+    "part.asiri_yuk_bobini.label": "Overload Coil",
+    "part.asiri_yuk_bobini.desc": "Module power +12%",
+    "part.namlu_aparati.label": "Barrel Attachment",
+    "part.namlu_aparati.desc": "Weapon damage +7%",
+    "part.zamanlayici_cip.label": "Timer Chip",
+    "part.zamanlayici_cip.desc": "Module cooldown −1 turn • module power +4%",
+    "part.denge_jiroskobu.label": "Balance Gyro",
+    "part.denge_jiroskobu.desc": "Reduces knockback by 12%",
+    "part.yay_takozlari.label": "Spring Pads",
+    "part.yay_takozlari.desc": "Max energy +8",
+    "part.turbo_palet.label": "Turbo Tracks",
+    "part.turbo_palet.desc": "Move speed +10%",
+    "part.sicrama_yayi.label": "Jump Spring",
+    "part.sicrama_yayi.desc": "Jump power +10%",
+    "part.kilitli_taban.label": "Locking Base",
+    "part.kilitli_taban.desc": "Reduces knockback by 15%",
+    "part.cift_turbo.label": "Dual Turbo Tracks",
+    "part.cift_turbo.desc": "Move speed +16%",
   },
   "zh-Hans": {},
   ru: {},
@@ -446,8 +495,16 @@ const DATA_CATALOGS = [
       { key: "desc", id: "id", at: ["desc"] },
     ],
   },
-  // Sıradaki dilimler: PARTS (label/desc), CHARACTERS (role + skill.label/desc),
-  // MAPS (label/skillLabel + bölge adı). Kaydedilene kadar Türkçe kalırlar.
+  {
+    get: () => { try { return PARTS; } catch (e) { return null; } },
+    prefix: "part",
+    paths: [
+      { key: "label", id: "id", at: ["label"] },
+      { key: "desc", id: "id", at: ["desc"] },
+    ],
+  },
+  // Sıradaki dilimler: CHARACTERS (role + skill.label/desc), MAPS (label/skillLabel
+  // + bölge adı). Kaydedilene kadar Türkçe kalırlar.
 ];
 
 // Katalog nesnesi → { anahtar: türkçe değer }: dil geri alınırken özgün metin.

@@ -122,7 +122,7 @@ const missingInEn = [...usedKeys].filter((k) => I.I18N.en[k] === undefined);chec
 // Katalog alanları çalışma zamanında (i18n.js > DATA_CATALOGS) çevrilir; bekçi
 // anahtar listesini de aynı yapılandırmadan üretir, böylece test ile oyun tek
 // kaynağı paylaşır. Kaydedilmemiş katalog alanı bilinçli olarak Türkçe kalır.
-const catFiles = ["weapons.js", "characters.js"];
+const catFiles = ["weapons.js", "parts.js", "characters.js"];
 const catSrc = [I18N_SRC]
   .concat(catFiles.map((f) => fs.readFileSync(path.join(JS_DIR, f), "utf8")))
   .join("\n;\n");
@@ -131,7 +131,7 @@ catSandbox.globalThis = catSandbox;
 vm.createContext(catSandbox);
 vm.runInContext(
   catSrc + "\n;globalThis.__CAT = { entries: dataTranslationEntries(), prefixes: dataTranslationPrefixes(), " +
-    "applyDataTranslations, setLocale, I18N, WEAPONS, CHARACTERS };",
+    "applyDataTranslations, setLocale, I18N, WEAPONS, PARTS, CHARACTERS };",
   catSandbox, { filename: "catalog-bundle.js" }
 );
 const CAT = catSandbox.__CAT;
