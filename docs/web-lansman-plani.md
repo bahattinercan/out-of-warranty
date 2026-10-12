@@ -47,22 +47,23 @@ Sayılar üçüncü taraf tahminleridir (VG Insights/Gamalytic/SteamSpy türevi)
 - **Yasak anlatım:** "Worms benzeri topçu oyunu" ve "prototip". Türe göre değil, *oynanış anına* göre satılır.
 - **Klip kuralı:** Her yeni silah/modül en az bir "izlenesi an" üretmeli (zincir patlama, uçurumdan düşme, son anda ıskalama, kendi kendini vurma). Yeni içerik eklerken bu test uygulanır.
 - **Görsel üretim hattı:** README'deki `_*_probe.html` + headless Chrome akışı pazarlama GIF/ekran görüntüsü üretimi için de kullanılır (ek araç gerekmez).
-- **İsim (karar bekliyor):** TR "Oyuncak Tantanası" + EN adayları aşağıda. Steam'de "Dökümhane-9" kullanılmaz. Kaba arama yapıldı (12 Ekim 2026); resmî marka/alan adı/sosyal hesap taraması kısa liste seçilince yapılır.
+- **Kadro kimliği (kullanıcı yönlendirmesi, 12 Ekim 2026):** Oyun "kurmalı oyuncak" metaforuyla değil **kadronun kendisiyle** gidiyor; isim buradan türetilir. `characters.js`: 34 robot — oyuncuya görünen kimlik **model kodu** (FIX-8, MIK-0, BOM-12, ZIP, ÇİFT-6, KES-9, SİREN-6, HAYALET-4 …), iç `id` alanları hayvan (kopek, kedi, ayi, timsah, ejderha …), `role` bir fabrika işi (Bakım, Yıkım, Soğutma, Raf Bakımı, Döküm …) ve her `personality` bir arıza/bakım şakası ("Fren modülü hiçbir zaman teslim edilmedi", "Filtre değişim uyarısını yıllardır erteliyor", "Basınç göstergesi hep kırmızı bölgededir").
+- **İsim (karar bekliyor):** Kaba arama 12 Ekim 2026; resmî marka/alan adı/sosyal hesap taraması kısa liste seçilince yapılır. Steam'de "Dökümhane-9" kullanılmaz; EN'de "Foundry" dolu.
 
-| EN adayı | TR karşılığı | Neden işe yarar | Kaba arama (Steam/itch) |
+| EN adayı | TR karşılığı | Neden kadroya oturuyor | Kaba arama |
 |---|---|---|---|
-| **Wind-Up Chaos** | Kurmalı Kaos | Kurmalı oyuncak teması + kaos; EN'de "wind up" hem *kur* hem *kızdır* demek → klip başlığı olarak çift anlam | Bulunan tek şey bir Yu-Gi-Oh destesi; **oyun adı boş görünüyor** |
-| **Rivet Rumble** | Perçin Rampası | Mekanik parça + kavga, aliterasyonlu ve akılda kalıcı | **Çakışma bulunamadı** |
-| **Toy Tantrum** | Oyuncak Tantanası | Mevcut TR adın birebir EN karşılığı; marka tek dilli kalır | Ad boş, ama "tantrum" etiketi kalabalık (Tantrum Teddies, Figure It Out) |
-| Bolt & Bedlam | Cıvata Curcunası | Mekanik + gürültülü kaos, karakterli | Taranmadı [?] |
-| Tin Brawlers | Teneke Kavgacılar | Türü ve malzemeyi tek bakışta söyler | Taranmadı [?] |
-| Rumpus Box | Tantana Kutusu | Kutudan oyuncak çıkarma teması; mevcut TR adın kardeşi | Taranmadı [?] |
-| Cog Riot | Çarklı Curcuna | Kısa, klip/etiket olarak güçlü | Taranmadı [?] |
-| Screw Loose | Vida Gevşek | "Bir vidası gevşek" deyimi; komik ve karakter odaklı | Aynı adlı içerikler var → marka riski [?] |
-| ~~Toybox Tussle~~ | — | — | **ALINMIŞ:** itch'te oyun + Steam'de app 383076 |
-| ~~Box Brawlers~~ | Kutu Savaşçıları | — | Jenerik, ayrışmıyor (önerilmez) |
+| **Out of Warranty** | **Garanti Dışı** | Kadronun kolektif kimliği: kişilik satırlarının hepsi zaten bir garanti/arıza şakası; deadpan kurumsal mizah friendslop tonuna uyar | **Oyun adı bulunamadı → boş görünüyor** |
+| **Shift Nine** | **Vardiya-9** | Fabrika vardiyası; "Dökümhane-9" ve dokuz bölge soyunu korur, seri/klip kurgusuna uygun ("yeni vardiya başlıyor") | Oyun adı yok (yalnız başka oyunların içinde geçen "shift 9" mekaniği) |
+| **Beast Crew** | Hayvan Kadrosu | Hayvan-makine kadroyu öne çıkarır | Oyun adı bulunamadı |
+| Fault Report | Arıza Kaydı | Bürokratik mizah; içerik "kayıt"lar olarak kurgulanabilir | Oyun adı bulunamadı |
+| Unauthorized Repair | Yetkisiz Onarım | Kadroya oturuyor ama uzun ve ağır | Oyun adı bulunamadı |
+| ~~Scrap Squad~~ | — | — | **ALINMIŞ:** itch (2019) + Godot şablonu + mobil oyun |
+| ~~Loose Bolts~~ | — | — | **ALINMIŞ:** itch'te araba yarışı |
+| ~~Rusty Rumble~~ | — | — | **ALINMIŞ:** itch'te robot boss-fight |
+| ~~Scrap Shift~~ | — | — | **ALINMIŞ:** itch + CrazyGames roguelite |
+| ~~Industrial Animals~~ | — | — | Troma'nın 2016 korku filmi (kötü çağrışım) |
 
-**Kısa liste (öneri):** 1) Wind-Up Chaos / Kurmalı Kaos — türü (atış = kurma), temayı (kurmalı oyuncak) ve tonu (kaos) tek adda söyler. 2) Rivet Rumble / Perçin Rampası. 3) Toy Tantrum / Oyuncak Tantanası — mevcut TR adı korur.
+**Kısa liste (öneri):** 1) **Out of Warranty / Garanti Dışı** — kadronun kimliği + ton tek adda; 2) **Shift Nine / Vardiya-9** — dünya kurulumu ve "9" soyu; 3) **Beast Crew / Hayvan Kadrosu** — hayvan-makine kadroyu öne çıkarır. Alternatif yön: model kodunu marka yapmak ("Codename: FIX-8") — tek karakteri öne çıkardığı için kadro oyununda zayıf kalır.
 
 ---
 
