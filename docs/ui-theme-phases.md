@@ -135,20 +135,32 @@ robotun" rozeti), sayfa çubuğu.
 ## 5. Faz 3B — Atölye (en yoğun ekran)
 
 Durum: **✅ Uygulandı (F3C-01..06; 703/703 test).** Not: başlık altı şerit bu
-yoğun ekrana sığmadığı için sağ büyük panele `hazardTop` olarak taşındı;
-kilitli satın alma butonuna da `hazardTop` eklendi (kilitli bölme okunurluğu).
+yoğun ekrana sığmadığı için sağ büyük panele `hazardTop` olarak taşındı.
+**Düzeltme (kullanıcı görsel kabulü, "gövde kilidi"):** kilitli satın alma
+butonundaki `hazardTop` kaldırıldı — şerit ekranın aile imzası olarak yalnız
+sağ panelin üst kenarında kalır; devre dışı düğmede tekrar edince pasif
+kontrol ekranın en gürültülü öğesi oluyordu. Kilit okunurluğu sakin asma kilit
+glifi (`_csLockGlyph`) + sebep satırıyla korunur.
+**Düzeltme 2 ("yukarı kaymış kart"):** eylem plakası sabit 42px iken altında
+panel dibine kadar boş bir "yuva" kalıyordu; plaka artık kalan alanı doldurur
+(`h = max(42, gy + WS_PANEL_H - (py + 4))`). İçerik bloğu plakanın
+ortasına hizalanır (etiket `btn.h/2 - 6.5`, sebep satırı +15px).
+**Düzeltme 3 ("aradaki ufak boşluk"):** plaka panel dibine **yapışır** — alt
+boşluk 0'dır; alt kenar ve köşe perçinleri panelin alt kenarıyla aynı yere
+gelir (tek çizgi, çift kenarlık yok). Yükseklik `max(42, …)` olduğu için
+Sv. 4+ istatistik satırlı dar yerleşimde de dibe yapışık kalır.
 
 Öğe envanteri: başlık + alt yazı, sol sayfalı robot grid'i (kart ~85×88:
 mini robot, isim, "Sv. x • y/9"), sayfa gezinme + "Sayfa n/N", sağ büyük
 panel (robot, isim·rol 18px, Servis Seviyesi + XP, XP çubuğu, Hurda
 sayacı pulse, maç istatistiği), 3 dal paneli (dal adı — kademe, etki
 satırı, durum satırı; seçili yeşil; montaj parıltısı workshopFx), eylem
-butonu (yeşil etkin / gri kilitli + neden satırı), geri butonu.
+butonu (dört durum: yeşil etkin / gri kilitli + asma kilit glifi / gri Hurda eksik / sakin yeşil tamam + neden satırı), geri butonu.
 
 - **F3C-01** Sol grid kartları `_csPanel` (`accent: selected ? "#63e6be" : hovered ? "#ffe45e" : "#2a3848"`; 85×88'de perçin açık). Seçili kart `fillTop "#16261c"` hafif yeşil tint.
 - **F3C-02** Sağ büyük panel `_csPanel` (rivets açık, `hazardTop: false`); XP çubuğu, Hurda pulse ve istatistik satırları aynen korunur.
 - **F3C-03** Dal panelleri `_csPanel` (`selected` → `#63e6be` accent + yeşil tint `fillTop "#18251d"`); montaj parıltısı (workshopFx) mevcut `#d8fff1` konturuyla korunur.
-- **F3C-04** Eylem butonu `_csPanel`: etkin → yeşil accent + hover glow; kilitli → gri accent + metin soluk (mevcut `#8b9aa5`). "kilitli" durumunda üstte küçük tehlike şeridi (`hazardTop`) — "kilitli bölme" okunurluğu (doz onayına tabi).
+- **F3C-04** Eylem butonu `_csPanel`, dört durum: **hazır** → yeşil accent + hover glow; **kilitli** (Servis Seviyesi kapısı) → gri accent + soluk metin (`#8b9aa5`) + asma kilit glifi (`_csLockGlyph`) + sebep satırı; **Hurda eksik** → gri accent, glif yok (geçici engel); **tamam** → sakin yeşil accent + "Bu dal tamamlandı". Etiket biçimi dal panelleriyle aynı terimi kullanır (`Gövde — Kademe I …`). Devre dışı durumda **üst tehlike şeridi kullanılmaz** (şerit ekran imzasıdır; düzeltilmiş karar 2026-10).
 - **F3C-05** Gezinme butonları + "Sayfa n/N" pill'i `_csPanel`/`_csRoundRect` (F3A-04 deseni).
 - **F3C-06** Başlık altı tehlike şeridi (`W/2-120, y=56, 240, 4`) — pilot ekranlarla aynı aile imzası.
 - Kabul: satın alma akışı, klavye (Enter) ve tüm hit alanları aynı; disabled durum eskisi kadar net.
@@ -197,7 +209,7 @@ Durum: **F5-01..03 ✅; F5-04 kullanıcı kabulü bekleniyor.** Sapma notu: geli
 1. **Test harness:** Bu planda yeni dosya/global açılmaz; `tests/run.js` FILES listesi ve script sırası değişmez (geçmiş ders).
 2. **Atölye yoğunluğu:** En çok hit alanı olan ekran; her panelde `opts` dışında hiçbir geometri değişmez, `workshopFx` parıltısı korunur.
 3. **Perçin eşiği:** `_csPanel` perçinleri w>56 && h>30 koşuluyla açılır; küçük butonlar `rivets:false` ile sade kalır (desen: gezinme/geri butonları).
-4. **Doz ayarı:** Perçin/şerit dozu Faz 2 pilot onayıyla kilitlenir; onay "fazla" gelirse `_csPanel` opts tek yerden (hazardTop kullanım listesi) kısalır — faz yeniden yapılmaz.
+4. **Doz ayarı:** Perçin/şerit dozu Faz 2 pilot onayıyla kilitlenir; onay "fazla" gelirse `_csPanel` opts tek yerden (hazardTop kullanım listesi) kısalır — faz yeniden yapılmaz. **Uygulandı (2026-10):** liste tek kullanıma indi — `hazardTop` yalnız sağ panelin üst kenarında; kilitli eylem butonu sakin gri plaka + asma kilit glifi kullanır.
 5. **Geri alma:** Her faz bağımsız; Faz 3A-3B sıralaması serbest, tek ekran geri alınabilir (panel→eski çizim tek commit).
 
 ## 9. Uygulama sırası (öneri)

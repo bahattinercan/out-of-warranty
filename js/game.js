@@ -40,6 +40,7 @@ const WS_ROWS = 3;
 const WS_PANEL_H = 440;
 const WS_FX_DURATION = 0.6; // satın alma sonrası montaj parıltısı (saniye)
 const WS_NOTICE_DURATION = 2.2; // takma/sökme geri bildirim yazısı (saniye)
+const WS_LOCK_GLYPH_W = 12; // eylem düğmesindeki asma kilit glifi genişliği (px)
 
 // Cephane Pazarı: ortak depo için tek ızgara — 3 sütun × 5 satır (sayfa
 // başına 15 kart). Kart genişliği pencere genişliğine göre hesaplanır.
@@ -878,40 +879,66 @@ class Game {
 
       // ── Eylem düğmesi: seçili dalın sonraki kademesini satın alır ─────
       const step = nextUpgradeStep(up, this.workshopBranch);
-      const btn = { x: rx, y: py + 4, w: rw, h: 42 };
+      // Plaka panelin alt boşluğunu doldurur ve panel dibine yapışır (alt
+      // boşluk yok): sabit 42px'te plakanın altında boş bir "yuva" kalıyordu,
+      // panel dibine 10px boşluk bırakınca da arada ince bir çizgi görünüyordu
+      // (kullanıcı görsel kabulü). Alt kenar ve köşe perçinleri panelin alt
+      // kenarıyla aynı yere gelir — çift çizgi oluşmaz.
+      const btn = { x: rx, y: py + 4, w: rw, h: Math.max(42, gy + WS_PANEL_H - (py + 4)) };
       this._workshopActionRect = btn;
-      let label, enabled = false, reason = "";
+      // Dört durum, dört ayrı okunuş — hepsi metinle de anlatılır:
+      //   ready  yeşil çelik + hover parıltısı (satın alınabilir)
+      //   locked gri plaka + asma kilit glifi (Servis Seviyesi kapısı kapalı)
+      //   short  gri plaka, glif yok (Hurda yetmiyor; geçici engel)
+      //   done   sakin yeşil, sebep "Bu dal tamamlandı" (engel değil, iş yok)
+      // Kilitli durumda ÜST TEHLİKE ŞERİDİ KULLANILMAZ: şerit bu ekranın aile
+      // imzasıdır (sağ panelin üst kenarı). Devre dışı bir düğmede tekrar
+      // edilince hem imza seyrelir hem de pasif kontrol ekranın en gürültülü
+      // öğesi olur (kullanıcı görsel kabulü: "gövde kilidi" tasarım hatası).
+      let label, reason = "", state;
       if (!step.ok) {
+        state = "done";
         label = "Tam Kalibrasyon";
         reason = "Bu dal tamamlandı";
       } else if (level < step.requiredLevel) {
-        label = `${BRANCH_LABELS[this.workshopBranch]} ${romanTier(step.nextTier)} — kilitli`;
+        state = "locked";
+        label = `${BRANCH_LABELS[this.workshopBranch]} — Kademe ${romanTier(step.nextTier)} kilitli`;
         reason = `Servis Seviyesi ${step.requiredLevel} gerekli`;
       } else if (scrap < step.cost) {
-        label = `${BRANCH_LABELS[this.workshopBranch]} ${romanTier(step.nextTier)} — ${step.cost} Hurda`;
+        state = "short";
+        label = `${BRANCH_LABELS[this.workshopBranch]} — Kademe ${romanTier(step.nextTier)} — ${step.cost} Hurda`;
         reason = `${step.cost - scrap} Hurda eksik`;
       } else {
-        label = `${BRANCH_LABELS[this.workshopBranch]} ${romanTier(step.nextTier)} geliştir — ${step.cost} Hurda`;
-        enabled = true;
+        state = "ready";
+        label = `${BRANCH_LABELS[this.workshopBranch]} — Kademe ${romanTier(step.nextTier)} geliştir — ${step.cost} Hurda`;
       }
-      const hovBtn = mx >= btn.x && mx <= btn.x + btn.w && my >= btn.y && my <= btn.y + btn.h;
-      // Etkin: yeşil çelik; kilitli: gri panel + üst tehlike şeridi
-      // ("kilitli bölme" okunurluğu — doz plan §5 F3C-04).
+      const ready = state === "ready";
+      const hovBtn = ready && mx >= btn.x && mx <= btn.x + btn.w && my >= btn.y && my <= btn.y + btn.h;
       _csPanel(ctx, btn.x, btn.y, btn.w, btn.h, {
-        accent: enabled ? "#63e6be" : "#3b4650",
-        hover: enabled && hovBtn, glow: enabled && hovBtn,
-        hazardTop: !enabled,
-        fillTop: enabled ? (hovBtn ? "#1f513c" : "#173a2a") : "#161b20",
-        fillBottom: enabled ? (hovBtn ? "#142f24" : "#0f241c") : "#0e1216",
+        accent: ready ? "#63e6be" : state === "done" ? "#3f7f68" : "#3b4650",
+        hover: hovBtn, glow: hovBtn,
+        fillTop: ready ? (hovBtn ? "#1f513c" : "#173a2a") : state === "done" ? "#131d1a" : "#161b20",
+        fillBottom: ready ? (hovBtn ? "#142f24" : "#0f241c") : state === "done" ? "#0c1310" : "#0e1216",
       });
-      ctx.fillStyle = enabled ? "#d8fff1" : "#8b9aa5";
+      // İçerik bloğu (etiket + sebep satırı) plakanın ortasına hizalanır;
+      // sebep satırı etiketin 15px altındadır (Math.round: tek satırlı
+      // "hazır" durumunda etiket tam ortada kalır).
+      const labelY = btn.y + Math.round(reason ? btn.h / 2 - 6.5 : btn.h / 2);
       ctx.font = uiTitleFont(14);
       ctx.textAlign = "center"; ctx.textBaseline = "middle";
-      ctx.fillText(label, btn.x + btn.w / 2, btn.y + (reason ? 15 : btn.h / 2));
+      // Kilitliyse etiket asma kilit glifiyle birlikte ortalanır (glif solunda).
+      const lockW = WS_LOCK_GLYPH_W + 7;
+      const lw = ctx.measureText(label).width;
+      const groupX = btn.x + (btn.w - (lw + (state === "locked" ? lockW : 0))) / 2;
+      if (state === "locked") _csLockGlyph(ctx, groupX + WS_LOCK_GLYPH_W / 2, labelY, WS_LOCK_GLYPH_W, "#a9b8c3");
+      ctx.fillStyle = ready ? "#d8fff1" : state === "done" ? "#a9d8c8" : "#8b9aa5";
+      ctx.textAlign = "left";
+      ctx.fillText(label, groupX + (state === "locked" ? lockW : 0), labelY);
+      ctx.textAlign = "center";
       if (reason) {
-        ctx.fillStyle = "#8fa8ba";
+        ctx.fillStyle = state === "done" ? "#7f9c92" : "#8fa8ba";
         ctx.font = uiTextFont(10);
-        ctx.fillText(reason, btn.x + btn.w / 2, btn.y + 30);
+        ctx.fillText(reason, btn.x + btn.w / 2, labelY + 15);
       }
     }
 
@@ -4493,13 +4520,44 @@ function _csGlow(ctx, color, blur) {
   ctx.restore();
 }
 
+// Asma kilit glifi (Atölye eylem düğmesinin "kilitli" durumu): gövdenin
+// üstünde iki kollu yay + kesik köşeli mini plaka. Tehlike şeridinin sakin
+// karşılığıdır — şerit ekranın aile imzası olarak panelin üst kenarında kalır
+// (ui-theme-phases.md §5 F3C-04, kullanıcı görsel kabulü).
+// s: glif yüksekliği (px); glif cy'ye göre dikey ortalanır.
+function _csLockGlyph(ctx, cx, cy, s, color) {
+  const bodyW = s * 0.75, bodyH = s * 0.5;
+  const bodyY = cy + s * 0.5 - bodyH;           // gövde glif kutusunun dibinde
+  const r = s * 0.23, ay = bodyY - s * 0.22;    // yay merkezi gövdenin üstünde
+  ctx.save();
+  ctx.strokeStyle = color;
+  ctx.fillStyle = color;
+  ctx.lineWidth = 1.4;
+  ctx.lineCap = "round";
+  ctx.beginPath();
+  ctx.moveTo(cx - r, bodyY);
+  ctx.lineTo(cx - r, ay);
+  ctx.arc(cx, ay, r, Math.PI, 0);
+  ctx.lineTo(cx + r, bodyY);
+  ctx.stroke();
+  _csRoundRect(ctx, cx - bodyW / 2, bodyY, bodyW, bodyH, 1.6);
+  ctx.fill();
+  // Anahtar deliği: gövdeyi "kilit" olarak okutur (koyu nokta)
+  ctx.fillStyle = "#0b1015";
+  ctx.beginPath();
+  ctx.arc(cx, bodyY + bodyH * 0.5, s * 0.075, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+}
+
 // Ana panel. opts:
 //   accent    — kenarlık rengi (varsayılan çelik mavisi #3b526b)
 //   hover     — açık dolgu + (glow ile) parıltı
 //   glow      — hover parıltısı açık/kapalı
 //   selected  — kalın kenarlık (seçili durum)
 //   rivets    — köşe perçinleri (küçük butonlarda false)
-//   hazardTop — üst kenarda tehlike şeridi
+//   hazardTop — üst kenarda tehlike şeridi (ekran/bölme aile imzası: sağ
+//               panelin üst kenarı; devre dışı düğmelere uygulanmaz)
 //   fillTop/fillBottom — özel dolgu (seçili durumun yeşili vb.)
 function _csPanel(ctx, x, y, w, h, opts) {
   const o = opts || {};
