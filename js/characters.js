@@ -1,7 +1,9 @@
-/* DÖKÜMHANE-9 seçilebilir robot tanımları.
- * Dahili id değerleri harita/test uyumluluğu için korunur. Görsel kimlik;
- * chassis, locomotion, body, attachment ve face alanlarından üretilir.
- * Oynanış değerleri tema öncesi sürümle aynıdır.
+/* GARANTİ DIŞI (Out of Warranty) seçilebilir robot tanımları.
+ * Oyuncuya görünen kimlik `label` alanıdır (model kodu: FIX-8, MIK-0 …).
+ * `id` alanları hayvan adıdır ve YALNIZ iç koddur (harita/eşleme/test
+ * uyumluluğu) — arayüzde gösterilmez (marka kararı, 12 Ekim 2026).
+ * Görsel kimlik; chassis, locomotion, body, attachment ve face alanlarından
+ * üretilir. Oynanış değerleri tema öncesi sürümle aynıdır.
  */
 function _robot(def) {
   def.visualKind = "robot";

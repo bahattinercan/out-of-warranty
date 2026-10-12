@@ -42,6 +42,12 @@ const WS_FX_DURATION = 0.6; // satın alma sonrası montaj parıltısı (saniye)
 const WS_NOTICE_DURATION = 2.2; // takma/sökme geri bildirim yazısı (saniye)
 const WS_LOCK_GLYPH_W = 12; // eylem düğmesindeki asma kilit glifi genişliği (px)
 
+// Oyuncuya görünen marka adı (Türkçe arayüz). İngilizce yayın adı
+// "Out of Warranty"; F2 (i18n) adımında bu sabit dil tablosuna bağlanır
+// (`brand.title`). O zamana kadar ekran başlıklarının TEK kaynağı burasıdır —
+// başlığı elle yazma, bu sabiti kullan.
+const GAME_TITLE = "GARANTİ DIŞI";
+
 // Cephane Pazarı: ortak depo için tek ızgara — 3 sütun × 5 satır (sayfa
 // başına 15 kart). Kart genişliği pencere genişliğine göre hesaplanır.
 const MK_COLS = 3;
@@ -293,9 +299,9 @@ class Game {
     ctx.textAlign = "center"; ctx.textBaseline = "top";
     // Başlık: koyu gölge kopyası + sarı üst kopya — hafif derinlik
     ctx.fillStyle = "#000000aa"; ctx.font = uiTitleFont(34);
-    ctx.fillText("DÖKÜMHANE-9", W / 2 + 2, H / 2 - 164);
+    ctx.fillText(GAME_TITLE, W / 2 + 2, H / 2 - 164);
     ctx.fillStyle = "#ffe45e"; ctx.font = uiTitleFont(34);
-    ctx.fillText("DÖKÜMHANE-9", W / 2, H / 2 - 166);
+    ctx.fillText(GAME_TITLE, W / 2, H / 2 - 166);
     ctx.fillStyle = "#cfe0ee"; ctx.font = uiTextFont(15);
     ctx.fillText("Arena tahsis protokolünü başlat", W / 2, H / 2 - 112);
     // Başlık altı tehlike şeridi: endüstriyel imza detayı (Faz 2 pilot)
@@ -2040,7 +2046,7 @@ class Game {
     ctx.font = uiTitleFont(30);
     ctx.textAlign = "center";
     ctx.textBaseline = "top";
-    ctx.fillText("DÖKÜMHANE-9", W / 2, H / 2 - 132);
+    ctx.fillText(GAME_TITLE, W / 2, H / 2 - 132);
 
     ctx.fillStyle = "#cfe0ee";
     ctx.font = uiTitleFont(18);

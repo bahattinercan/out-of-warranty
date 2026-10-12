@@ -85,7 +85,7 @@ const BIOMES = {
 };
 
 // Eski biome anahtarları harita/karakter eşleşmesini bozmamak için korunur;
-// içerikleri DÖKÜMHANE-9 fabrika bölgeleriyle değiştirilir.
+// içerikleri GARANTİ DIŞI (Out of Warranty) fabrika bölgeleriyle değiştirilir.
 const FACTORY_ZONES = {
   meadow: {
     zoneId: "scrapyard", zoneLabel: "Hurda Sahası", zoneCode: "HS",

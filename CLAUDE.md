@@ -8,6 +8,9 @@ Kullanıcı dili **Türkçe**: kod yorumları, README ve UI metinleri Türkçedi
 **New Wild Ones**, _Wild Ones_ tarzı sıra tabanlı 2D topçu (artillery) oyununun erken prototipidir.
 İki oyuncu (Kırmızı / Mavi) **hot-seat** (aynı klavye) sırayla oynar; yıkılabilir arazi, rüzgar, çok sayıda silah ve karakter yeteneği vardır.
 
+**Yayın adı:** *Out of Warranty* (Türkçe arayüz: **Garanti Dışı**). Depo/klasör adı (`new-wild-ones`) ve eski iç ad (`Dökümhane-9`) tarihseldir; oyuncuya görünen başlık yayın adıdır (tek kaynak: `js/game.js > GAME_TITLE`).
+Marka kimliği robot **model kodlarıdır** (FIX-8, MIK-0, BOM-12 …). `js/characters.js` içindeki hayvan `id` değerleri yalnız iç koddur, arayüzde gösterilmez.
+
 - **Teknoloji:** HTML5 Canvas + **saf JavaScript**. Çerçeve yok, derleme yok, npm bağımlılığı yok.
 - **Çalıştırma:** `index.html` dosyasını çift tıklayıp tarayıcıda aç — kurulum gerekmez.
 - **Canvas:** sabit iç çözünürlük `960×540` (CSS ile ölçeklenir; HiDPI için `devicePixelRatio` kullanılır).

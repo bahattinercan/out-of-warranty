@@ -1,4 +1,4 @@
-# DÖKÜMHANE-9 — Arena Prototipi
+# GARANTİ DIŞI (Out of Warranty) — Arena Prototipi
 
 Terk edilmiş bir mega fabrikada küçük servis robotlarının yedek parça hakkı için savaştığı sıra tabanlı 2D topçu oyunu. HTML5 Canvas ve saf JavaScript ile çalışır; kurulum veya derleme gerektirmez.
 
