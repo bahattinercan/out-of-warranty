@@ -31,7 +31,8 @@ node tests/audio.js
 node tests/i18n.js
 node tests/net.js       # çevrimiçi protokol + oturum (F3a)
 node tests/net-state.js # çevrimiçi durum + arazi senkronu (F3b)
-node tests/net-integration.js # çevrimiçi uçtan uca (host+misafir, F3c)
+node tests/net-integration.js # çevrimiçi ağ yığını (protokol+oturum+durum+taşıma)
+node tests/net-game.js     # çevrimiçi OYUN uçtan uca (lobi → maç → sonuç)
 ```
 
 ## ⚠️ En kritik kural: klasik scriptler, ES module YOK
@@ -69,7 +70,7 @@ Oyun `file://` üzerinden çift tıklayınca çalışmak zorunda. Bu yüzden:
 | `index.html`       | —      | Sahne, HUD, overlay, `<script>` yükleme sırası                                                                                                  |
 | `css/style.css`    | —      | Tüm stil                                                                                                                                        |
 | `js/main.js`       | 30     | Giriş noktası; `Game` örneğini kurar, butonları/fullscreen'i bağlar                                                                             |
-| `js/game.js`       | ~3350  | **En büyük dosya.** Durum makinesi (karakter seç → harita seç → savaş → bitiş), sıra/rüzgar, girdi, render döngüsü, hasar uygulama yardımcıları |
+| `js/game.js`       | ~3800  | **En büyük dosya.** Durum makinesi (karakter seç → harita seç → çevrimiçi lobi → savaş → bitiş), sıra/rüzgar, girdi, render döngüsü, hasar uygulama yardımcıları. Çevrimiçi: `updateOnlineHost`/`updateGuest`, `onlineCommand`, `beginOnlineMatch` |
 | `js/characters.js` | ~53    | `CHARACTERS` (34 karakter): can/zırh/hasar + veri-güdümlü `skill`                                                                               |
 | `js/progression.js` | ~330  | Saf ekonomi: seviye eşikleri, ödül formülü, `resolveRobotBuild`, yetenek adaptörleri                                                            |
 | `js/profile.js`    | ~330   | Profil şeması (v6: **ortak** cephane deposu + **parça/loadout, yuva başına 2**), doğrulama/migrasyon, `loadProfile`/`saveProfile`, satın alma ve ödül cephesi                            |
@@ -86,7 +87,9 @@ Oyun `file://` üzerinden çift tıklayınca çalışmak zorunda. Bu yüzden:
 | `js/net/protocol.js` | ~200 | Çevrimiçi protokol (F3a): zarf/komut doğrulama, sıra, komut tekilleştirme, girdi tazeliği — DOM/WebRTC bilmez                                                 |
 | `js/net/session.js`  | ~340 | Çevrimiçi oturum (F3a): host yetkili tur/komut akışı, saat ve borç, kopma/bot devralma, iptal; oyun kuralları `rules` adaptöründen gelir                       |
 | `js/net/state.js`    | ~330 | Çevrimiçi durum senkronu (F3b): snapshot capture/apply, arazi maskesi RLE, oyma kayıtlarının oynatılması, hash — savunmacı apply                 |
-| `js/net/transport.js` | ~230 | Çevrimiçi taşıma (F3c): döngü taşıması (gecikme/kayıp simülasyonu) + PeerJS sarmalayıcı + oda kodu üretimi                                          |
+| `js/net/transport.js` | ~235 | Çevrimiçi taşıma (F3c): döngü taşıması (gecikme/kayıp simülasyonu) + PeerJS sarmalayıcı (ICE/STUN) + oda kodu üretimi                                          |
+| `js/net/adapter.js` | ~230 | Oyun ↔ ağ köprüsü (F3c): `rules` adaptörü (komut→oyun çağrısı), host tur/snapshot/arazi yayını, misafir uygulama                                  |
+| `js/online-lobby.js` | ~660 | Çevrimiçi lobi ekranı (F3c): oda kodu/davet/hazır akışı, PeerJS tembel yükleme, robot seçici, hata ve durum metinleri |
 
 ## Veri-güdümlü tasarım (uzantı noktaları)
 
@@ -97,6 +100,14 @@ Yeni içerik çoğunlukla **kod değil veri** eklemekle yapılır:
 - **Yeni parça:** `parts.js > PARTS` dizisine bir spec ekle: `{ id, label, slot, desc, price, effects, icon }`. `slot` dört yuvadan biri olmalı (`helmet/body/tool/feet`); `effects` yalnız tanımlı eksenleri kullanır (`maxHpFlat`, `maxHpPct`, `armorFlat`, `staminaFlat`, `weaponDamagePct`, `powerPct`, `knockbackRedPct`, `cooldownFlat`, `moveSpeedMult`, `jumpPowerMult`); her yuvaya `PARTS_PER_SLOT` (2) parça takılır — loadout[yuva] bir dizidir. Yeni bir eksen eklenirse `progression.js > PART_EFFECT_KEYS` + `_partEffectTotals` + `resolveRobotBuild` formülü ve `partEffectText` de güncellenir. `icon.shape` `parts.js > PART_ICON_SHAPES` içinde olmalı (yoksa cıvata yedeğine düşer). README parça tablosunu güncelle.
 - **Yeni karakter:** `characters.js > CHARACTERS` dizisine ekle; `skill.kind` mevcut türlerden biri olmalı (`heal`, `shield`, `damageReduce`, `nextShot`, `jump`, `dash`, `dig`, `glide`, `melee`, `radial`, `quake`, `spit`). Yeni bir `kind` eklersen `skills.js > useSkill` içine dallanma ekle.
 - **Yeni harita teması:** `maps.js` içindeki biyom/tema tablolarından üretilir; her karaktere bir harita bağlanır.
+- **Çevrimiçi (F3c) özeti:** lobi `js/online-lobby.js`, ağ çekirdeği `js/net/*.js`
+  (protokol → taşıma → durum → oturum → adaptör), oyun bağlantısı `js/game.js`
+  içindeki `beginOnlineMatch`/`updateOnlineHost`/`updateGuest`. Host yetkilidir;
+  misafir komut gönderir ve hostun paketlerini uygular. Arazi oyması hostta
+  yuvarlanmış parametrelerle kazınır (`terrain.recordChanges`) ki iki maske
+  birebir olsun. Komut kimlikleri koltuk ad alanındadır (`s0-1`, `s1-1`) —
+  çakışırsa host karşı tarafın komutunu "yinelenen" sanıp uygulamaz.
+  Ayrıntılı akış ve ölçütler: `docs/web-lansman-plani.md` §4.
 - Süreli yetenek durumları **entity üzerinde** tutulur (`nextShotMod`, `damageReduce`, `poison`, `dashAttack`, `glideTurns`) ve her tur sonunda (`endTurn`) işlenir/azaltılır.
 
 ## Testler

@@ -96,6 +96,30 @@ Sayılar üçüncü taraf tahminleridir (VG Insights/Gamalytic/SteamSpy türevi)
 
 **F3c-1 (taşıma):** `js/net/transport.js` üç uygulama sunar — `LoopbackTransport` (aynı süreç, gecikme/kayıp simülasyonu; testler ve aynı makinede iki sekme provası), `PeerJsTransport` (PeerJS bulut sinyalleşmesi; `peerFactory` enjekte edilebilir olduğu için sahte Peer ile mesaj akışı ve yeniden bağlanma headless sınanır) ve PeerJS yoksa `UNAVAILABLE` durumu (oyun çevrimdışı modlarla devam eder). Oda kodu 5 karakter, karışan harfler (0/O, 1/I) çıkarılmış, gösterimde `ABC-DE` biçiminde. `tests/net-integration.js` host+misafir yığınını birlikte çalıştırır: el sıkışması (START → maske + tam durum → LOADED → PLAYING), 5 turluk senkron turu (her turda iki tarafın durum hash'i AYNI), oyma sonrası arazi birebir, komut tekilleştirme ve çakışma, kopma → bot → aynı koltuğa dönüş, gecikmeli+kayıplı girdi akışı.
 
+**F3c-2 (lobi + oyun bağlantısı):** `js/online-lobby.js` tuvalde oda kurma/koda
+katılma, davet bağlantısı (`?oda=KOD` ile tek tık katılma), koltuk listesi, hazır
+akışı ve robot seçicisini çizer; PeerJS CDN'i **ilk girişte** tembel yüklenir
+(çevrimdışı açılış etkilenmez). `js/net/adapter.js` oturumun `rules` arayüzünü
+oyuna bağlar: CHARGE/CANCEL/RELEASE/MODULE/JUMP/MOVE komutları oyun çağrısına
+çevrilir, host sabit adımlı ağ saatini yürütür (`updateOnlineHost`), tur kapanınca
+TURN yayınlanır, arazi oymaları ve periyodik durum gönderilir. Misafir
+`updateGuest` ile yalnız görsel yumuşatma yapar; hasar/arazi/tur kararı hostta.
+Misafirin nişanı 20 paket/sn güvenilmez akışla gider, atış açısı+gücü RELEASE ile
+atomik taşınır. Çevrimiçi maçta geliştirmeler kapalıdır (taban build), arena oda
+sahibinin robotuna ait haritadır.
+
+**Testlerin yakaladığı gerçek hatalar (F3c-2):** (1) `ONLINE_LOBBY`/`ONLINE_LOADING`
+durumları HUD ve çekirdek döngüde tanınmadığı için oyuncu listesi boşken
+`this.active` okunuyordu (çökme); (2) host kendi yükleme onayını vermediği için
+maç sonsuza dek LOADING'de kalıyordu; (3) iki tarafın komut kimlikleri ("c1")
+çakıştığı için host karşı tarafın komutunu yinelenen sanıp uygulamıyordu →
+kimlikler koltuk ad alanına alındı (`s0-1`/`s1-1`); (4) oyma kaydı yuvarlanıp
+kazıma ham değerle yapıldığı için iki arazi maskesi birkaç piksel ayrışıyordu →
+host artık yuvarlanmış değerlerle kazıyor; (5) `WELCOME` misafiri LOADING'e
+aldığı için lobi ekranı "maç başladı" sanıyordu → aşama LOBBY kalır. Ayrıca
+robot seçici rol ekranında `cx` yerine `W` ile çağrıldığı için sağ kenara
+taşıyordu (headless sonda yakaladı).
+
 **Doğrulama (F3 çıkış ölçütü):** iki farklı ağdan (biri mobil hotspot) 2 oyuncu, aynı harita, 5 tur; kurulum <20 sn; kopma <%5; tur sırası her iki tarafta aynı; yeniden bağlanma aynı koltuğa döner.
 
 ---
@@ -221,7 +245,8 @@ Referans gerçeklik: Steam medyanı $249/ömür; web'de ilk oyun $0–400/ay. Bu
 | **F3a** (yapıldı) | Çevrimiçi protokol + oturum çekirdeği (saf, taşımadan bağımsız) | `js/net/protocol.js`, `js/net/session.js`, `tests/net.js` | `node tests/net.js` 95/95 (zarf/komut doğrulama, tekilleştirme, değişmezler, saat/borç, kopma) |
 | **F3b** (yapıldı) | Durum anlık görüntüsü + arazi senkronu (capture/apply) | `js/net/state.js`, `tests/net-state.js` | `node tests/net-state.js` 45/45 (gidiş-dönüş hash'i, arazi birebir, savunmacı apply, boyut bütçesi) |
 | **F3c-1** (yapıldı) | Taşıma katmanı (PeerJS + döngü) ve uçtan uca entegrasyon testi | `js/net/transport.js`, `tests/net-integration.js` | `node tests/net-integration.js` 43/43 (el sıkışma, 5 tur senkron, oyma, kopma, gecikme/kayıp, sahte Peer ile PeerJS akışı) |
-| **F3c-2** | Lobi ekranı (oda kodu, hazır akışı) + oyun akışı bağlantısı | `js/online-lobby.js`, `index.html`, i18n anahtarları | §4 çıkış ölçütü (iki ağdan 5 tur, kurulum <20 sn) |
+| **F3c-2** (yapıldı) | Lobi ekranı (oda kodu, davet, hazır) + oyun akışı bağlantısı | `js/online-lobby.js`, `js/net/adapter.js`, `index.html`, i18n | `node tests/net-game.js` 64/64 (lobi → maç → 5 tur → sonuç) + headless sonda `_online_probe.html` |
+| **F3c-3** (kullanıcı) | İki farklı ağdan gerçek deneme | — | §4 çıkış ölçütü: 5 tur, kurulum <20 sn, kopma <%5 |
 | **F4** | 6 oyuncu, oda/davet akışı, bot devralma | lobi + yeniden bağlanma | 6 oyuncu simülasyonu + kopma senaryoları, `tests/multiplayer/` |
 | **F5** | Portal uyumu: SDK, reklam yerleri, event ölçümü | `js/portal.js` | iframe testi, 16:9 ölçekleme, reklam ödülü doğru veriliyor |
 | **F6** | Kapalı test (20–50 kişi, itch.io) → demo yayını | yayın + geri bildirim notu | Kapalı test raporu |

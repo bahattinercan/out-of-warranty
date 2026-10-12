@@ -335,6 +335,40 @@ Oyunun kaynak dili Türkçedir: Türkçe metinler **kodun içinde** durur, diğe
 - **Gölgeleme yasağı:** Bir fonksiyon içinde `const t = this.tutorial;` gibi yerel bir `t` değişkeni tanımlamak, o fonksiyondaki `t()` çağrılarını gölgeler ve çalışma zamanında "t is not a function" verir (iki kez yaşandı: durum şeridi, eğitim koçu). Bu durumda yerel değişkeni `tut` gibi ayırt edici bir adla yeniden adlandır — `node tests/i18n.js` bu tuzağı otomatik yakalar.
 - **Görsel doğrulama:** Sondalar `?locale=en` (veya `#en`) ile İngilizce çizilir: `_tutorial_probe.html` eğitim ekranı + koç panelini, `_market_probe.html` Pazar'ın dört sekmesini (cephane + üç yuva, bildirim/parıltı durumlarıyla) tek karede çizer — uzun EN metinlerin kartlara/panellere sığdığı böyle ölçülür.
 
+## Çevrimiçi oynanış (beta)
+
+Ana menüdeki **ÇEVRİMİÇİ** kartı iki oyuncunun internet üzerinden 1v1 oynamasını
+sağlar. Sunucu yoktur: iki tarayıcı **WebRTC** ile doğrudan bağlanır, yalnız
+sinyalleşme için PeerJS bulut sunucusu kullanılır (oyun trafiği P2P akar).
+
+1. Oda sahibi **ODA KUR**'a basar; ekranda 5 karakterlik bir oda kodu çıkar
+   (`ABC-DE`) ve **BAĞLANTIYI KOPYALA** davet bağlantısını panoya yazar.
+2. Diğer oyuncu **KODA KATIL**'a basıp kodu yazar (ya da davet bağlantısını
+   açar: `...?oda=ABCDE`) ve **HAZIRIM** der.
+3. Oda sahibi **MAÇI BAŞLAT**'a basar. İki taraf aynı araziyi, aynı rüzgârı ve
+   aynı robot istatistiklerini görür.
+
+- **Yetki:** oda sahibi (host) tek yetkili simülasyondur. Misafirin atışı, açı ve
+  güç **atomik** olarak tek komutta hosta gider; host doğrular ve uygular. Hostun
+  kendi komutu da aynı doğrulamadan geçer (ayrıcalıklı yol yoktur).
+- **Durum:** host saniyede ~10 kez durum paketi, arazi oyması olduğunda oyma kaydı
+  yayınlar; misafir arada yalnız görsel yumuşatma yapar (kendi başına hasar/arazi
+  kararı vermez).
+- **Kopma:** kopan oyuncunun robotu 12 saniye maçta kalır; süre dolarsa bot
+  devralır. Aynı sekmeden dönüş aynı koltuğa oturur.
+- **Çevrimdışı:** PeerJS CDN'i yüklenemezse oyun çökmez; lobi "çevrimiçi
+  kitaplığı yüklenemedi" der ve diğer modlar çalışmaya devam eder.
+- **Geliştirmeler kapalı:** çevrimiçi maçta iki taraf taban robot istatistikleriyle
+  oynar (depo/atölye yalnız tek oyunculu ilerlemeye aittir). Arena, oda sahibinin
+  robotuna ait haritadır.
+- **TURN yedeği:** simetrik NAT/kurumsal ağ arkasında doğrudan bağlantı
+  kurulamazsa ücretsiz bir TURN sunucusu gerekir; `js/online-lobby.js >
+  ONLINE_TURN_SERVERS` boş bırakılmıştır (anahtar gerektirir).
+
+**İki cihazla deneme (yayın öncesi ölçüt):** aynı oda koduyla iki farklı ağdan
+(farklı Wi-Fi + mobil hotspot gibi) 5 tur oynanmalı, oda kurulumu 20 saniyenin
+altında kalmalı ve kopma oranı %5'i aşmamalıdır.
+
 ## Testler
 
 ```powershell
@@ -346,7 +380,8 @@ node tests/maps.js
 node tests/i18n.js
 node tests/net.js          # çevrimiçi protokol + oturum (F3a)
 node tests/net-state.js    # çevrimiçi durum + arazi senkronu (F3b)
-node tests/net-integration.js # çevrimiçi uçtan uca host+misafir (F3c)
+node tests/net-integration.js # çevrimiçi ağ yığını (protokol+oturum+durum+taşıma)
+node tests/net-game.js     # çevrimiçi OYUN uçtan uca (lobi → maç → sonuç)
 ```
 
 Ana test takımı robot veri sözleşmesini, 34 arena üretimini, dokuz fabrika bölgesini, bütün prop kayıtlarını, modüler çizimi, yetenekleri, bot karar sistemini (puanlama, güvenlik filtresi, hareket yolu, isabet kalitesi ve zorluk merdiveni) ve geliştirme sisteminin oyun entegrasyonunu doğrular. Harita testleri 34 benzersiz profili, 2–6 oyuncu doğuşlarını ve katmanlı köprü/raf/tünel maskelerini denetler. Geliştirme testleri seviye eşiklerini, ödül formülünü, yetenek adaptörlerini, profil doğrulamasını ve satın alma önkoşullarını tarayıcısız denetler. Pazar testleri cephane fiyatlarını, ortak depo doğrulamasını (bilinmeyen/sınırsız silah ve üst sınır), satın alma önkoşullarını, maça yükleme ve harcanan mermiyi düşme döngüsünü, robot depolarının ortak depoya taşındığı v3→v4 göçünü ayrıca pazar ekranı/satın alma akışının oyun entegrasyonunu denetler. **Parça testleri** katalog bütünlüğünü (24 parça, yuva başına 6, etki eksenleri), benzersiz satın almayı, **yuva başına iki alt yuvayı** (indeksli takma, taşıma, kırpma, göç v5→v6), aynı parçanın birden çok robotta takılı olabilmesini, parçaların build'e etkilerini (düz toplamlar + çarpımsal güç/savrulma/hız/sıçrama, kırpma sınırları), pazar yuva sekmelerini, Atölye parça panelini (8 hücre + sayfalı liste) ve aksesuar çizimini denetler. Ses testleri Web Audio kaynak temizliğini, sessize alma davranışını, seviye kaydını ve hasar bildirimlerini denetler. Mermi görsel testleri 27 spec'in tasarım ailesi kuralını (paylaşım yalnız `SHARED_SHAPES` beyaz listesinde), shape'lerin birbirinden farklı çizim üretmesini, tüm spec'lerin hatasız çizilmesini ve önizleme çizicisini denetler. Yetenek efekti testleri her modülün kayıtlı ve benzersiz bir `fx.shape` taşıdığını, her türün varsayılan efektini, türetilmiş build'in görsel kimliği koruduğunu, 34 shape'in ömrü boyunca hatasız/farklı/deterministik çizildiğini, gradient-`shadowBlur` kullanılmadığını ve aura/ikon çizicilerini denetler.
@@ -373,4 +408,10 @@ Ana test takımı robot veri sözleşmesini, 34 arena üretimini, dokuz fabrika 
 | `js/ai.js` | Bot balistik araması, zorluk tablosu ve güvenlik/hasar değerlendirmesi |
 | `js/audio.js` | Prosedürel Web Audio efektleri |
 | `js/game.js` | Durum makinesi, tur akışı, giriş ve ekranlar |
+| `js/online-lobby.js` | Çevrimiçi lobi ekranı: oda kodu, davet bağlantısı, hazır akışı (PeerJS tembel yüklenir) |
+| `js/net/protocol.js` | Çevrimiçi protokol: zarf/komut doğrulama, tekilleştirme, girdi tazeliği |
+| `js/net/session.js` | Host yetkili oturum çekirdeği: sıra, tur sınırı, kopma toleransı, iptal |
+| `js/net/state.js` | Durum senkronu: anlık görüntü, arazi maskesi (RLE), oyma kayıtları, hash |
+| `js/net/transport.js` | Taşıma: döngü (test) + PeerJS/WebRTC sarmalayıcı, oda kodu üretimi |
+| `js/net/adapter.js` | Oyun ↔ ağ köprüsü: `rules` adaptörü, tur/snapshot/arazi yayını |
 | `js/main.js` | Başlangıç ve DOM bağlantıları |
