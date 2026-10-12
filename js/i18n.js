@@ -27,7 +27,7 @@ const LANG_REQUIRED = ["en"];
 // kimlikten kurulur, `t("workshop.branch." + branch, ...)`). tests/i18n.js bu
 // öneklerle başlayan sözlük anahtarlarını "kodda kullanılıyor" sayar; hangi
 // kimliklerin gerçekten var olduğunu ayrıca kataloglardan doğrular.
-const I18N_DYNAMIC_PREFIXES = ["workshop.branch.", "workshop.slot.", "tutorial.coach.", "market.tab.", "weapon.", "part.", "char."];
+const I18N_DYNAMIC_PREFIXES = ["workshop.branch.", "workshop.slot.", "tutorial.coach.", "market.tab.", "weapon.", "part.", "char.", "map.", "mapzone.", "arena."];
 const LANG_LABELS = {
   "tr": "Türkçe",
   "en": "English",
@@ -64,6 +64,25 @@ const I18N = {
     "menu.mode.tutorial.sub": "Controls and turn rules",
     "tutorial.title": "HOW TO PLAY",
     // ── Savaş HUD'u (dil seçici, üst şerit, alt panel) ──────────────────
+    // ── Mod/oyuncu/harita seçimi + modül kartı (F2c-4b) ────────────────
+    "mode.difficulty.title": "Choose difficulty",
+    "difficulty.easy": "Easy",
+    "difficulty.normal": "Normal",
+    "difficulty.hard": "Hard",
+    "difficulty.expert": "Expert",
+    "mode.botCount.title": "Choose the number of opponents",
+    "opponents.1": "1 Opponent",
+    "opponents.2": "2 Opponents",
+    "opponents.3": "3 Opponents",
+    "mode.playerCount.title": "How many players?",
+    "mode.playerCount.hint": "Click a number — then each player picks a robot in turn",
+    "mode.playerCount.hintFast": "Two players is the fastest way to test",
+    "charSelect.localNote": "Standard calibration — upgrades off",
+    "mapSelect.title": "Choose a Factory Zone",
+    "skill.cooldown": "{n} turns until ready",
+    "skill.consumesShot": "Uses up the turn's shot",
+    "hud.turnIdle": "Turn: -",
+    "hud.windIdle": "Wind: -",
     "hud.language": "Language",
     "hud.fullscreen": "Fullscreen",
     "hud.fullscreen.title": "Fullscreen (F)",
@@ -110,6 +129,7 @@ const I18N = {
     "common.page": "Page {n} / {total}",
     "common.pageShort": "{n}/{total}",
     "common.scrap": "Scrap: {scrap}",
+    "common.page": "Page {page} / {total}",
     // ── Atölye (F2b-2) ───────────────────────────────────────────────────
     "workshop.title": "WORKSHOP",
     "workshop.subtitleParts": "Install parts — parts apply in the same matches as upgrades",
@@ -456,6 +476,92 @@ const I18N = {
     "char.zurafa.role": "Treatment",
     "char.zurafa.skill.label": "Corrosive Spray",
     "char.zurafa.skill.desc": "Launch corrosive liquid",
+    // ── Veri katalogları: haritalar (F2c-4) ────────────────────────────
+    "map.kopek.label": "Old Repair Pit",
+    "map.kopek.skillLabel": "Emergency Repair",
+    "map.kedi.label": "Magnet Bridge",
+    "map.kedi.skillLabel": "Polar Shield",
+    "map.ayi.label": "Pressure Depot",
+    "map.ayi.skillLabel": "Pressure Loading",
+    "map.tavsan.label": "Frozen Steps",
+    "map.tavsan.skillLabel": "Spring Launcher",
+    "map.tilki.label": "Twin Paint Booths",
+    "map.tilki.skillLabel": "Twin Barrel",
+    "map.panda.label": "Press Square",
+    "map.panda.skillLabel": "Press Strike",
+    "map.kaplan.label": "Cutting Dock",
+    "map.kaplan.skillLabel": "Twin Cutter",
+    "map.timsah.label": "Pipe Elbow",
+    "map.timsah.skillLabel": "Rotary Joint",
+    "map.suaygiri.label": "Settling Basin",
+    "map.suaygiri.skillLabel": "Hydraulic Claw",
+    "map.koala.label": "Calibration Benches",
+    "map.koala.skillLabel": "Tuning Mallet",
+    "map.kunduz.label": "Filter Terraces",
+    "map.kunduz.skillLabel": "Balance Hammer",
+    "map.ordek.label": "Welding Passage",
+    "map.ordek.skillLabel": "Spot Weld Strike",
+    "map.kokarca.label": "Old Filter Store",
+    "map.kokarca.skillLabel": "Waste Gas",
+    "map.aslan.label": "Transformer Yard",
+    "map.aslan.skillLabel": "EMP Strike",
+    "map.kurtadam.label": "Alarm Tower",
+    "map.kurtadam.skillLabel": "Alarm Resonance",
+    "map.sirtlan.label": "Echo Hangar",
+    "map.sirtlan.skillLabel": "Frequency Overflow",
+    "map.rakun.label": "Separation Bowl",
+    "map.rakun.skillLabel": "Centrifuge",
+    "map.ornitorenk.label": "Drainage Banks",
+    "map.ornitorenk.skillLabel": "Coolant Vent",
+    "map.yeti.label": "Frozen Tank Field",
+    "map.yeti.skillLabel": "Cryo Strike",
+    "map.dino.label": "Foundation Test Yard",
+    "map.dino.skillLabel": "Ground Maul",
+    "map.gergedan.label": "Loading Ramp",
+    "map.gergedan.skillLabel": "Turbo Wheel",
+    "map.kirpi.label": "Scrap Race",
+    "map.kirpi.skillLabel": "Bearing Charge",
+    "map.maymun.label": "Three-Storey Rack",
+    "map.maymun.skillLabel": "Service Hook",
+    "map.kanguru.label": "Sand Hill Jump",
+    "map.kanguru.skillLabel": "Overload Spring",
+    "map.yarasa.label": "Ceiling Service Line",
+    "map.yarasa.skillLabel": "Emergency Rotor",
+    "map.armadillo.label": "Buried Service Tunnel",
+    "map.armadillo.skillLabel": "Depth Auger",
+    "map.hamster.label": "Plate Shelter",
+    "map.hamster.skillLabel": "Armor Lock",
+    "map.bukalemun.label": "Inspection Corridor",
+    "map.bukalemun.skillLabel": "Optic Deflector",
+    "map.ejderha.label": "Casting Spout",
+    "map.ejderha.skillLabel": "Slag Sphere",
+    "map.penguen.label": "Coolant Channels",
+    "map.penguen.skillLabel": "Coolant Capsule",
+    "map.oklukirpi.label": "Shipping Rack",
+    "map.oklukirpi.skillLabel": "Rivet Salvo",
+    "map.sincap.label": "Bolt Sorting Table",
+    "map.sincap.skillLabel": "Explosive Bolt",
+    "map.kus.label": "Open-Air Screen",
+    "map.kus.skillLabel": "Vortex Fan",
+    "map.zurafa.label": "Container Wash Bay",
+    "map.zurafa.skillLabel": "Corrosive Spray",
+    "mapzone.scrapyard.zoneLabel": "Scrap Yard",
+    "mapzone.assembly.zoneLabel": "Assembly Line",
+    "mapzone.warehouse.zoneLabel": "Warehouse Racks",
+    "mapzone.cooling.zoneLabel": "Cooling Plant",
+    "mapzone.paint.zoneLabel": "Paint Shop",
+    "mapzone.loading.zoneLabel": "Loading Dock",
+    "mapzone.waste.zoneLabel": "Waste Treatment",
+    "mapzone.foundry.zoneLabel": "Foundry",
+    "mapzone.sandblast.zoneLabel": "Sandblast Unit",
+    "mapSelect.back": "‹ Robots",
+    "mapSelect.yourRobot": "★ your robot",
+    "arena.arena": "Close arena",
+    "arena.vertical": "Platforms",
+    "arena.open": "Open ground",
+    "arena.thick": "Thick ground",
+    "arena.lane": "Attack lane",
+    "arena.bastion": "Fortress",
   },
   "zh-Hans": {},
   ru: {},
@@ -522,6 +628,18 @@ function t(key, fallback, vars) {
 // DOM metinleri: <span data-i18n="key"> ve title için data-i18n-title.
 // Canvas dışı arayüz (HUD, kaplama düğmeleri) bu iki öznitelikle çevrilir;
 // özniteliği olmayan düğüm DOM'un kendi (Türkçe) metnini korur.
+// DOM çevirisinde Türkçe KAYNAK metin düğüm başına bir kez saklanır. Aksi
+// hâlde fallback olarak düğümün o anki metni okunur ve EN'e geçip TR'ye
+// dönüldüğünde ekranda İngilizce metin kalır (dil geri dönüşü bozulur —
+// tests/i18n.js bunu yakaladı).
+const _domSources = new WeakMap();
+function _domSource(el, kind, current) {
+  let rec = _domSources.get(el);
+  if (!rec) { rec = {}; _domSources.set(el, rec); }
+  if (rec[kind] === undefined) rec[kind] = current;
+  return rec[kind];
+}
+
 function applyDomTranslations(root) {
   if (typeof document === "undefined" || !document || !document.querySelectorAll) return 0;
   const scope = root || document;
@@ -530,14 +648,15 @@ function applyDomTranslations(root) {
   for (let i = 0; i < nodes.length; i++) {
     const el = nodes[i];
     const key = el.getAttribute("data-i18n");
-    const fb = el.getAttribute("data-i18n-fallback") || el.textContent;
+    const fb = el.getAttribute("data-i18n-fallback") || _domSource(el, "text", el.textContent);
     el.textContent = t(key, fb);
     n++;
   }
   const titled = scope.querySelectorAll("[data-i18n-title]");
   for (let i = 0; i < titled.length; i++) {
     const el = titled[i];
-    el.setAttribute("title", t(el.getAttribute("data-i18n-title"), el.getAttribute("title") || ""));
+    const src = _domSource(el, "title", el.getAttribute("title") || "");
+    el.setAttribute("title", t(el.getAttribute("data-i18n-title"), src));
     n++;
   }
   // aria-label ayrı öznitelik: ekran okuyucu metni görsel metinden farklı
@@ -545,7 +664,8 @@ function applyDomTranslations(root) {
   const aria = scope.querySelectorAll("[data-i18n-aria]");
   for (let i = 0; i < aria.length; i++) {
     const el = aria[i];
-    el.setAttribute("aria-label", t(el.getAttribute("data-i18n-aria"), el.getAttribute("aria-label") || ""));
+    const src = _domSource(el, "aria", el.getAttribute("aria-label") || "");
+    el.setAttribute("aria-label", t(el.getAttribute("data-i18n-aria"), src));
     n++;
   }
   return n;
@@ -617,8 +737,20 @@ const DATA_CATALOGS = [
       { key: "skill.desc", id: "id", at: ["skill", "desc"] },
     ],
   },
-  // Sıradaki dilim: MAPS (label/skillLabel + bölge adı). Kaydedilene kadar
-  // harita adları Türkçe kalır.
+  {
+    get: () => { try { return MAPS; } catch (e) { return null; } },
+    prefix: "map",
+    // `forLabel` (robotun model kodu) ve `zoneCode` (HS, MH …) bilinçli olarak
+    // listede yok: kodlar her dilde aynı kalır.
+    paths: [
+      { key: "label", id: "id", at: ["label"] },
+      { key: "skillLabel", id: "id", at: ["skillLabel"] },
+      // Bölge adı bölge kimliğiyle anahtarlanır: aynı bölgedeki 3-4 harita
+      // aynı adı paylaşır, tek çeviri yeter (ayrı önek: harita kimliğiyle
+      // karışmasın diye).
+      { key: "zoneLabel", id: "zoneId", at: ["zoneLabel"], prefix: "mapzone" },
+    ],
+  },
 ];
 
 // Katalog nesnesi → { anahtar: türkçe değer }: dil geri alınırken özgün metin.
@@ -627,7 +759,12 @@ const _dataOriginals = new Map();
 // Kayıtlı katalogların çeviri önekleri ("weapon." gibi) — test bekçisi bunları
 // dinamik anahtar ailesi olarak tanır.
 function dataTranslationPrefixes() {
-  return DATA_CATALOGS.map((cat) => cat.prefix + ".");
+  const out = [];
+  for (const cat of DATA_CATALOGS) {
+    out.push(cat.prefix + ".");
+    for (const p of cat.paths) if (p.prefix) out.push(p.prefix + ".");
+  }
+  return out;
 }
 
 // Uygulanacak (tutucu nesne, alan, anahtar) üçlülerini üretir: çeviri ile kapsam
@@ -642,7 +779,8 @@ function dataTranslationEntries() {
         const holder = p.at.length === 1 ? item : item[p.at[0]];
         const id = item[p.id];
         if (!holder || !id) continue;
-        out.push({ holder, at: p.at[p.at.length - 1], key: cat.prefix + "." + id + "." + p.key });
+        const prefix = p.prefix || cat.prefix;   // yol başına önek (ör. mapzone.)
+        out.push({ holder, at: p.at[p.at.length - 1], key: prefix + "." + id + "." + p.key });
       }
     }
   }

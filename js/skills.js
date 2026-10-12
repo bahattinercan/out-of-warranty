@@ -178,12 +178,12 @@ function drawSkillHud(ctx, entity, W, H, bottomInset, panelRect) {
 
   ctx.fillStyle = ready ? "#b9ffe9" : "#ffc0aa";
   ctx.font = uiTextFont(10);
-  ctx.fillText(ready ? def.desc : `${entity.skillCooldown} tur sonra hazır`, px + 10, py + 27, textW);
+  ctx.fillText(ready ? def.desc : t("skill.cooldown", "{n} tur sonra hazır", { n: entity.skillCooldown }), px + 10, py + 27, textW);
   if (consumes) {
     // Oyuncu Q'ya bastığında turun biteceğini önceden bilsin.
     ctx.fillStyle = "#ffcf70";
     ctx.font = uiTextFont(9, 700);
-    ctx.fillText("Atış hakkını doldurur", px + 10, py + 43, textW);
+    ctx.fillText(t("skill.consumesShot", "Atış hakkını doldurur"), px + 10, py + 43, textW);
   }
   if (projSpec && typeof Projectile !== "undefined") {
     ctx.save();

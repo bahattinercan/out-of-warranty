@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Garanti Dışı (Out of Warranty)</title>
+  <title data-i18n="brand.title">Garanti Dışı (Out of Warranty)</title>
   <link rel="stylesheet" href="css/style.css" />
 </head>
 <body>
@@ -13,8 +13,8 @@
         <div class="center">
           <!-- Bu iki metni savaş döngüsü her karede yazar (game.js > updateHud):
                i18n anahtarı DOM'da değil kodda tutulur, aksi halde çift kaynak olur. -->
-          <div id="turn-banner">Sıra: -</div>
-          <div id="wind-indicator" role="status" aria-live="polite">Rüzgar: -</div>
+          <div id="turn-banner" data-i18n="hud.turnIdle">Sıra: -</div>
+          <div id="wind-indicator" role="status" aria-live="polite" data-i18n="hud.windIdle">Rüzgar: -</div>
           <!-- Simge ile metin ayrı düğümlerde: çeviri yalnız metni değiştirir,
                glif (⛶ / ⏏) kaybolmaz. Öğenin kendi Türkçe metni fallback'tir. -->
           <button id="fullscreen-btn" title="Tam ekran (F)" data-i18n-title="hud.fullscreen.title">⛶ <span data-i18n="hud.fullscreen">Tam Ekran</span></button>

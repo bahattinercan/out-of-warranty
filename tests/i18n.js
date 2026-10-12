@@ -136,6 +136,11 @@ vm.runInContext(
 );
 const CAT = catSandbox.__CAT;
 check("katalog çeviri alanı üretildi", CAT.entries.length >= 40, `${CAT.entries.length} alan`);
+// Dört katalog da kayıtlı olmalı: silah 60 + parça 48 + robot 102 + harita 77 = 287
+// (bölge adı bölgeye göre anahtarlanır: 34 harita 9 bölge adını paylaşır, bu yüzden
+// benzersiz anahtar sayısı bakılır).
+const uniqueCatKeys = new Set(CAT.entries.map((e) => e.key));
+check("tüm katalog alanları çeviri kapsamında", uniqueCatKeys.size === 287, `${uniqueCatKeys.size} alan`);
 const missingCat = CAT.entries.filter((e) => CAT.I18N.en[e.key] === undefined).map((e) => e.key);
 check("her katalog alanı `en` sözlüğünde var", missingCat.length === 0, missingCat.slice(0, 6).join(", "));
 for (const pre of CAT.prefixes) {
@@ -153,7 +158,8 @@ check("katalog çevirisi uygulanıyor", enName !== trName && enName === CAT.I18N
 check("tr'ye dönüşte katalog özgün metne döner", w0.name === trName, w0.name);
 CAT.setLocale("en", { persist: false });
 check("model kodu (characters > label) çevrilmiyor", CAT.CHARACTERS[0].label === "FIX-8", CAT.CHARACTERS[0].label);
-check("kaydedilmemiş katalog alanı Türkçe kalır", CAT.MAPS[0].label === "Eski Tamir Çukuru", CAT.MAPS[0].label);
+check("harita robot kodu (maps > forLabel) çevrilmiyor", CAT.MAPS[0].forLabel === "FIX-8", CAT.MAPS[0].forLabel);
+check("harita bölge kodu (maps > zoneCode) çevrilmiyor", CAT.MAPS[0].zoneCode === "HS", CAT.MAPS[0].zoneCode);
 CAT.setLocale("tr", { persist: false });
 
 // Aynı Türkçe kaynağı paylaşan alanlar tek çeviri kullanmalı: ör. dört robotun
@@ -275,8 +281,15 @@ dom.api.setLocale("en");
 check("DOM: metin çevrilir", dn.textNode.textContent === "Fullscreen", dn.textNode.textContent);
 check("DOM: title çevrilir", dn.titleNode._attrs.title === "Back to menu (Esc)", dn.titleNode._attrs.title);
 check("DOM: aria-label çevrilir", dn.ariaNode._attrs["aria-label"] === "Robots", dn.ariaNode._attrs["aria-label"]);
-const domTrSources = [["data-i18n", "hud.fullscreen"]].length; // yalnız okunurluk için
+const domTrSources = []; // yalnız okunurluk için
 check("DOM: çevrilen düğüm sayısı döner", dom.api.applyDomTranslations() === 3, String(dom.api.applyDomTranslations()));
+// Dil geri dönüşü: EN'e geçip TR'ye dönünce düğümler Türkçe KAYNAK metne dönmeli.
+// (Önceden fallback olarak düğümün o anki metni okunuyordu, TR'ye dönüşte ekranda
+// İngilizce metin kalıyordu — bu test o hatayı yakaladı.)
+dom.api.setLocale("tr");
+check("DOM: TR'ye dönüşte metin kaynağa döner", dn.textNode.textContent === "Tam Ekran", dn.textNode.textContent);
+check("DOM: TR'ye dönüşte title kaynağa döner", dn.titleNode._attrs.title === "Menüye dön (Esc)", dn.titleNode._attrs.title);
+check("DOM: TR'ye dönüşte aria-label kaynağa döner", dn.ariaNode._attrs["aria-label"] === "Robotlar", dn.ariaNode._attrs["aria-label"]);
 
 // ── 6) Yerel `t` gölgelemesi bekçisi ─────────────────────────────────────
 // `const t = this.tutorial;` gibi bir yerel değişken, aynı fonksiyon içindeki
@@ -308,6 +321,114 @@ for (const f of codeFiles) {
   }
 }
 check("yerel `t` değişkeni t() çağrısını gölgelemiyor", shadowed.length === 0, shadowed.join(", "));
+
+// ── 7) Kalıntı bekçisi: t() dışında kalan Türkçe metin ───────────────────
+// Oyuncuya görünen metin ya t() ile sarılır ya da veri kataloğundan gelir.
+// Yeni bir ekranın başlığı sabit Türkçe yazılırsa bu bekçi yakalar: görüntüleme
+// çağrılarının argümanları, etiket dizileri ve index.html'de data-i18n'siz
+// metinler taranır. Katalog veri dosyaları Türkçe KAYNAK metin taşıdığı için
+// yalnız görüntüleme çağrıları bakımından taranır.
+const TR_CHARS = "çğıöşüÇĞİÖŞÜ";
+const TR_WORDS = ["Rakip", "oyuncu", "Oyuncu", "hazır", "tur sonra", "Adet", "Toplam", "Kaydet", "Skor", "senin", "robotun", "Geri", "Sayfa", "sayfa"];
+const DISPLAY_CALLS = ["fillText", "setSlotText", "_marketNotice", "_workshopNotice", "showOverlay", "drawBackButton"];
+const CATALOG_FILES = ["characters.js", "weapons.js", "parts.js", "maps.js"];
+const TECH_LIT = /font|px|rgba|Segoe|Chakra|Russo|^[.#]|^[a-z_.-]+$|^[\w-]+$/;
+
+// String/şablon literallerinin [baş, son) aralıkları (yorumlar atlanır).
+function scanLiterals(src) {
+  const out = [];
+  let i = 0;
+  while (i < src.length) {
+    const c = src[i];
+    if (c === "/" && src[i + 1] === "/") { while (i < src.length && src[i] !== "\n") i++; }
+    else if (c === "/" && src[i + 1] === "*") { i += 2; while (i + 1 < src.length && !(src[i] === "*" && src[i + 1] === "/")) i++; i += 2; }
+    else if (c === '"' || c === "'" || c === "`") {
+      const q = c, start = i; i++;
+      while (i < src.length) {
+        if (src[i] === "\\") { i += 2; continue; }
+        if (src[i] === q) { i++; break; }
+        i++;
+      }
+      out.push([start, i]);
+    } else i++;
+  }
+  return out;
+}
+// `from` konumundaki açılış parantezinin/köşeli parantezin kapsadığı aralık.
+function matchRange(src, from) {
+  const open = src[from], close = open === "(" ? ")" : "]";
+  let depth = 0, i = from;
+  while (i < src.length) {
+    const c = src[i];
+    if (c === '"' || c === "'" || c === "`") {
+      const q = c; i++;
+      while (i < src.length) { if (src[i] === "\\") { i += 2; continue; } if (src[i] === q) break; i++; }
+    } else if (c === open) depth++;
+    else if (c === close) { depth--; if (depth === 0) return [from, i + 1]; }
+    i++;
+  }
+  return [from, src.length];
+}
+// t(...) çağrılarının aralıkları: içindeki literaller çevrilmiş sayılır.
+function translatedRanges(src) {
+  const out = [];
+  const re = /(?<![\w$.])t\s*\(/g;
+  let m;
+  while ((m = re.exec(src))) out.push(matchRange(src, src.indexOf("(", m.index)));
+  return out;
+}
+function looksTurkish(text) {
+  if (text.length < 4 || !/[A-Za-z]/.test(text) || TECH_LIT.test(text)) return false;
+  if ([...TR_CHARS].some((ch) => text.indexOf(ch) >= 0)) return true;
+  return TR_WORDS.some((w) => text.indexOf(w) >= 0);
+}
+const leftover = [];
+for (const f of codeFiles) {
+  const src = fs.readFileSync(path.join(JS_DIR, f), "utf8");
+  const lits = scanLiterals(src);
+  const trs = translatedRanges(src);
+  const spans = [];
+  for (const name of DISPLAY_CALLS) {
+    // Yöntem çağrısıdır (ctx.fillText, this._marketNotice): önünde nokta olur,
+    // bu yüzden lookbehind kullanılmaz.
+    const re = new RegExp(name + "\\s*\\(", "g");
+    let m;
+    while ((m = re.exec(src))) spans.push(matchRange(src, src.indexOf("(", m.index)));
+  }
+  // Etiket dizileri (düğme/başlık metinleri burada durur) — katalog verisi hariç.
+  if (CATALOG_FILES.indexOf(f) < 0) {
+    const arrRe = /(?:const|let|var)\s+[A-Za-z_]*(?:labels?|titles?|texts?|lines?)[A-Za-z_]*\s*=\s*\[/gi;
+    let m;
+    while ((m = arrRe.exec(src))) spans.push(matchRange(src, src.indexOf("[", m.index)));
+  }
+  for (const [start, end] of lits) {
+    if (!spans.some(([a, b]) => a <= start && end <= b)) continue;
+    if (trs.some(([a, b]) => a <= start && end <= b)) continue;
+    const text = src.slice(start + 1, end - 1);
+    if (!looksTurkish(text)) continue;
+    leftover.push(`${f}:${src.slice(0, start).split("\n").length}: ${text.slice(0, 40)}`);
+  }
+}
+// index.html: data-i18n taşımayan, metni olan öğeler.
+const htmlSrc = fs.readFileSync(path.join(__dirname, "..", "index.html"), "utf8");
+const tagRe = /<([a-z]+)([^>]*)>([^<>{}]{2,60})<\/\1>/g;
+let tm;
+while ((tm = tagRe.exec(htmlSrc))) {
+  const attrs = tm[2], text = tm[3].trim();
+  if (attrs.indexOf("data-i18n") >= 0) continue;
+  if (!looksTurkish(text)) continue;
+  leftover.push(`index.html:${htmlSrc.slice(0, tm.index).split("\n").length}: ${text}`);
+}
+check("görünen metinler t() ile sarılmış (sabit Türkçe metin yok)", leftover.length === 0, leftover.slice(0, 5).join(" | "));
+
+// Harita kartındaki arketip etiketleri: kimlikler game.js > ARCH_LABELS'tan
+// okunur, her arketipin çevirisi olmalı (yeni arketip eklenirse test kırılır).
+const archBlock = (gameFileSrc.match(/const ARCH_LABELS = \{([\s\S]*?)\};/) || [])[1] || "";
+const archIds = [...archBlock.matchAll(/([a-z]+):\s*"/g)].map((m) => m[1]);
+check("ARCH_LABELS kimlikleri okundu", archIds.length >= 6, archIds.join(", "));
+for (const id of archIds) {
+  check(`arketip çevirisi var: ${id}`, I.I18N.en["arena." + id] !== undefined);
+}
 
 // ── Özet ──────────────────────────────────────────────────────────────────
 console.log(`\ni18n: ${pass} geçti, ${fail} kaldı`);

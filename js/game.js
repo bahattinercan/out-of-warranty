@@ -94,6 +94,10 @@ const ARCH_LABELS = {
   arena: "Yakın arena", vertical: "Platformlar", open: "Açık alan",
   thick: "Kalın zemin", lane: "Hücum koridoru", bastion: "Kale",
 };
+// Karttaki arketip etiketi: anahtar arketip kimliğinden üretilir (arena.*).
+function archLabel(archetype) {
+  return t("arena." + archetype, ARCH_LABELS[archetype] || "");
+}
 
 class Game {
   constructor(canvas) {
@@ -376,11 +380,17 @@ class Game {
     ctx.fillStyle = "#000000bb"; ctx.fillRect(0, 0, W, H);
     ctx.fillStyle = "#ffe45e"; ctx.font = uiTitleFont(28);
     ctx.textAlign = "center"; ctx.textBaseline = "top";
-    ctx.fillText("Zorluk seç", W / 2, H / 2 - 100);
+    ctx.fillText(t("mode.difficulty.title", "Zorluk seç"), W / 2, H / 2 - 100);
     // Başlık altı tehlike şeridi (pilot aile dili)
     _csHazardStrip(ctx, W / 2 - 100, H / 2 - 64, 200, 5);
     const levels = ["easy", "normal", "hard", "expert"];
-    const labels = ["Kolay", "Orta", "Zor", "Ustalık"];
+    // Etiketler anahtar + Türkçe kaynak olarak burada durur (difficulty.*).
+    const labels = [
+      t("difficulty.easy", "Kolay"),
+      t("difficulty.normal", "Orta"),
+      t("difficulty.hard", "Zor"),
+      t("difficulty.expert", "Ustalık"),
+    ];
     const bw = 130, bh = 60, gap = 16;
     const totalW = levels.length * bw + (levels.length - 1) * gap;
     const startX = (W - totalW) / 2;
@@ -436,11 +446,15 @@ class Game {
     ctx.fillStyle = "#000000bb"; ctx.fillRect(0, 0, W, H);
     ctx.fillStyle = "#ffe45e"; ctx.font = uiTitleFont(28);
     ctx.textAlign = "center"; ctx.textBaseline = "top";
-    ctx.fillText("Rakip sayısı seç", W / 2, H / 2 - 100);
+    ctx.fillText(t("mode.botCount.title", "Rakip sayısı seç"), W / 2, H / 2 - 100);
     // Başlık altı tehlike şeridi (pilot aile dili)
     _csHazardStrip(ctx, W / 2 - 100, H / 2 - 64, 200, 5);
     const counts = [1, 2, 3];
-    const labels = ["1 Rakip", "2 Rakip", "3 Rakip"];
+    const labels = [
+      t("opponents.1", "1 Rakip"),
+      t("opponents.2", "2 Rakip"),
+      t("opponents.3", "3 Rakip"),
+    ];
     const bw = 130, bh = 60, gap = 16;
     const totalW = counts.length * bw + (counts.length - 1) * gap;
     const startX = (W - totalW) / 2;
@@ -2076,7 +2090,7 @@ class Game {
     ctx.fillText(t("brand.title", GAME_TITLE), W / 2, H / 2 - 132);
     ctx.fillStyle = "#cfe0ee";
     ctx.font = uiTitleFont(18);
-    ctx.fillText("Kaç oyuncu?", W / 2, H / 2 - 84);
+    ctx.fillText(t("mode.playerCount.title", "Kaç oyuncu?"), W / 2, H / 2 - 84);
     // Başlık altı tehlike şeridi (pilot aile dili)
     _csHazardStrip(ctx, W / 2 - 130, H / 2 - 62, 260, 5);
 
@@ -2112,8 +2126,8 @@ class Game {
     ctx.font = uiTextFont(13);
     ctx.textAlign = "center";
     ctx.textBaseline = "top";
-    ctx.fillText("Bir sayıya tıkla — sonra her oyuncu sırayla robotunu seçer", W / 2, y + BTN + 24);
-    ctx.fillText("Test için 2 oyuncu en hızlısıdır", W / 2, y + BTN + 44);
+    ctx.fillText(t("mode.playerCount.hint", "Bir sayıya tıkla — sonra her oyuncu sırayla robotunu seçer"), W / 2, y + BTN + 24);
+    ctx.fillText(t("mode.playerCount.hintFast", "Test için 2 oyuncu en hızlısıdır"), W / 2, y + BTN + 44);
     // Geri: oyuncu sayısı ekranından ana menüye dönüş (Esc ile aynı rota).
     this.drawBackButton(ctx, t("common.mainMenu", "‹ Ana Menü"));
   }
@@ -3244,7 +3258,7 @@ class Game {
       // Yerel maçta yükseltmeler kapalıdır; oyuncuya açıkça söylenir.
       ctx.fillStyle = "#9fb6c9";
       ctx.font = uiTextFont(12);
-      ctx.fillText("Standart kalibrasyon — geliştirmeler kapalı", W / 2, 62);
+      ctx.fillText(t("charSelect.localNote", "Standart kalibrasyon — geliştirmeler kapalı"), W / 2, 62);
     }
 
     // Kart sabitleri — tüm dikey pozisyonlar cx/cy'ye göreli, ch.r'dan bağımsız.
@@ -3405,7 +3419,7 @@ class Game {
       ctx.fillStyle = "#ffe45e";
       ctx.font = uiTitleFont(15);
       ctx.textAlign = "center"; ctx.textBaseline = "middle";
-      ctx.fillText(`Sayfa ${this.charPage + 1} / ${totalPages}`, mid, navY + btnH / 2);
+      ctx.fillText(t("common.page", "Sayfa {page} / {total}", { page: this.charPage + 1, total: totalPages }), mid, navY + btnH / 2);
     }
 
     // Geri butonu her fazda görünür: P2+ seçiminde önceki oyuncuya, ilk seçimde
@@ -3467,7 +3481,7 @@ class Game {
     ctx.font = uiTitleFont(24);
     ctx.textAlign = "center";
     ctx.textBaseline = "top";
-    ctx.fillText("Fabrika Bölgesi Seç", W / 2, 22);
+    ctx.fillText(t("mapSelect.title", "Fabrika Bölgesi Seç"), W / 2, 22);
 
     // Seçilen karakterler özeti (2–6 oyuncu)
     ctx.font = uiTextFont(13);
@@ -3539,12 +3553,12 @@ class Game {
       // Arketip + tema
       ctx.fillStyle = m.accent;
       ctx.font = uiTextFont(10);
-      ctx.fillText(`${m.arenaCode || ""} · ${ARCH_LABELS[m.archetype] || ""}`, cx + CARD_W / 2, cyv + 126);
+      ctx.fillText(`${m.arenaCode || ""} · ${archLabel(m.archetype)}`, cx + CARD_W / 2, cyv + 126);
 
       // Seçilen karakterin haritası: accent renkli mini rozet pill'i
       if (isOwn) {
         ctx.font = uiTextFont(9, 700);
-        const tag = "★ senin robotun";
+        const tag = t("mapSelect.yourRobot", "★ senin robotun");
         const tagW = ctx.measureText(tag).width + 12;
         ctx.fillStyle = m.accent + "22";
         _csRoundRect(ctx, cx + (CARD_W - tagW) / 2, cyv + 135, tagW, 15, 5);
@@ -3583,12 +3597,12 @@ class Game {
       ctx.fillStyle = "#ffe45e";
       ctx.font = uiTitleFont(14);
       ctx.textAlign = "center"; ctx.textBaseline = "middle";
-      ctx.fillText(`Sayfa ${this.mapPage + 1} / ${totalPages}`, mid, navY + btnH / 2);
+      ctx.fillText(t("common.page", "Sayfa {page} / {total}", { page: this.mapPage + 1, total: totalPages }), mid, navY + btnH / 2);
     }
 
     // Geri butonu: karakter seçimine dön
     this._backRect = null;
-    this.drawBackButton(ctx, "‹ Robotlar");
+    this.drawBackButton(ctx, t("mapSelect.back", "‹ Robotlar"));
   }
 
   // Harita seçim sayfasını sınırlar içinde değiştir
