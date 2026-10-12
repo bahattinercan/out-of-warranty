@@ -108,6 +108,8 @@ Sayılar üçüncü taraf tahminleridir (VG Insights/Gamalytic/SteamSpy türevi)
 
 Bu boyut 1–2 günlük iş; korkulacak bir refactor değil.
 
+**Durum (12 Ekim 2026):** F2 altyapısı kuruldu ve ilk ekran çevrildi. `js/i18n.js` (TR kaynak metin kod içinde + override sözlüğü, `t()`/`setLocale`, `data-i18n` DOM çevirisi, dil etiketi normalizasyonu), `js/game.js > t("brand.title", GAME_TITLE)` ile başlık tek kaynaktan, ana menü + tutorial başlığı anahtarlı. `tests/i18n.js` 46 assert (kapsam, orphan, TR fallback, kalıp doldurma, normalizasyon, kalıcılık) ve headless EN menü doğrulaması (`screenshots/f2-menu-en-v2.png`) yapıldı. Kalan iş F2b/F2c: savaş HUD'u, Atölye/Pazar ekranları, veri katalogları (~293 alan) ve diğer diller.
+
 **Dil sırası:** F2a `tr` + `en` (yayın için zorunlu), F2b `zh-Hans` + `ru`, F2c `es-ES` + `pt-BR`; sonra `pl`, `id`, `de`, `fr` (portal trafiği Polonya/Brezilya/Endonezya'ya kayıyor — portal analitiğine göre).
 
 **Mekanik:**
@@ -209,7 +211,7 @@ Referans gerçeklik: Steam medyanı $249/ömür; web'de ilk oyun $0–400/ay. Bu
 |---|---|---|---|
 | **F1** (yapıldı) | Okunabilirlik R1 (arka plan gürültüsü, HP barı, takım halkası, HUD puntosu) | maps/entity/css değişiklikleri | `node tests/run.js` 1109 · `tests/maps.js` 960 · ekran `screenshots/r2-battle-readability.png` |
 | **F1b** (yapıldı) | Okunabilirlik R2 (çizim ölçeği 1.10 + yürüyüş fazı senkronu) | `robots.js`, `entity.js`, `tests/run.js` | `node tests/run.js` 1109/1109 (nişan hizası + kayma grupları) · `_aim_probe`/`_battle_probe` ekran görüntüsü |
-| **F2** | `js/i18n.js` + TR/EN çıkarımı | i18n altyapısı, `tests/i18n.js` | `node tests/i18n.js` + tüm testler yeşil, headless metin sığdırma ölçümü |
+| **F2** (altyapı + menü yapıldı) | `js/i18n.js` + ilk ekranların anahtarlanması | i18n altyapısı, menü/marka çevirisi, `tests/i18n.js` | `node tests/i18n.js` 46/46 · diğer 5 paket yeşil · headless EN menü ekranı |
 | **F3** | WebRTC P2P çekirdek (2 oyuncu) | `js/net/` + `js/online-lobby.js` | §4 çıkış ölçütü (iki ağdan 5 tur) |
 | **F4** | 6 oyuncu, oda/davet akışı, bot devralma | lobi + yeniden bağlanma | 6 oyuncu simülasyonu + kopma senaryoları, `tests/multiplayer/` |
 | **F5** | Portal uyumu: SDK, reklam yerleri, event ölçümü | `js/portal.js` | iframe testi, 16:9 ölçekleme, reklam ödülü doğru veriliyor |

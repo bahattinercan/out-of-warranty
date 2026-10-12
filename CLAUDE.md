@@ -28,6 +28,7 @@ start index.html         # Windows
 node tests/run.js
 node tests/market.js
 node tests/audio.js
+node tests/i18n.js
 ```
 
 ## ⚠️ En kritik kural: klasik scriptler, ES module YOK
@@ -56,6 +57,7 @@ Oyun `file://` üzerinden çift tıklayınca çalışmak zorunda. Bu yüzden:
 | `Projectile`, `Explosion`                       | `projectile.js` | Spec-güdümlü mermi + patlama              |
 | `Game`                                          | `game.js`       | Durum makinesi, render, girdi             |
 | `SFX`                                           | `audio.js`      | Prosedürel ses efektleri                  |
+| `I18N`, `t`, `setLocale`, `LANG_ORDER`          | `i18n.js`       | Metin çevirisi (TR kaynak metin kod içinde) |
 
 ## Mimari (dosya sorumlulukları)
 
@@ -76,6 +78,7 @@ Oyun `file://` üzerinden çift tıklayınca çalışmak zorunda. Bu yüzden:
 | `js/weapons.js`    | ~243   | `WEAPONS` spec dizisi, mühimmat, `SKILL_PROJECTILES`                                                                                            |
 | `js/entity.js`     | ~285   | Yerçekimi, yürüme, nişan, can, silah/mühimmat, `damage()`                                                                                       |
 | `js/projectile.js` | ~171   | Mermi (sekme/fitil/saçma) + patlama efekti                                                                                                      |
+| `js/i18n.js`       | ~165   | `I18N` sözlükleri, `t()`/`setLocale()`, dil etiketi normalizasyonu, `data-i18n` DOM çevirisi                                                                                |
 | `js/audio.js`      | ~380   | `SFX` — Web Audio ile prosedürel ses + sahne konuşmacısı bipleri                                                                                                            |
 
 ## Veri-güdümlü tasarım (uzantı noktaları)
@@ -92,7 +95,7 @@ Yeni içerik çoğunlukla **kod değil veri** eklemekle yapılır:
 
 `tests/run.js` bağımlılıksızdır: oyun kaynaklarını Node `vm` ile tek bir sandbox'ta bundle'layıp globalleri doğrular.
 
-- Yüklenen dosyalar sabittir: `audio.js, characters.js, progression.js, profile.js, parts.js, market.js, maps.js, skills.js, robots.js, terrain.js, weapons.js, entity.js, projectile.js, ai.js, game.js` (test ettiğin yeni dosya bu listede yoksa testte görünmez). `parts.js`, `run.js`/`progression.js`/`market.js` bundle'larının **hepsine** girer çünkü `profile.js` artık çalışma zamanında onu çağırır (`sanitizeParts`/`sanitizeLoadoutShape`).
+- Yüklenen dosyalar sabittir: `i18n.js, audio.js, characters.js, progression.js, profile.js, parts.js, market.js, maps.js, skills.js, robots.js, terrain.js, weapons.js, entity.js, projectile.js, ai.js, game.js` (test ettiğin yeni dosya bu listede yoksa testte görünmez). `parts.js`, `run.js`/`progression.js`/`market.js` bundle'larının **hepsine** girer çünkü `profile.js` artık çalışma zamanında onu çağırır (`sanitizeParts`/`sanitizeLoadoutShape`).
 - `game.js` DOM'a yalnızca metot **gövdelerinde** dokunduğundan sandbox'ta yüklenebilir; DOM kullanan metotlar test edilmez.
 - Doğrulananlar: 34 karakterin veri bütünlüğü, her `kind`'in en az bir karakterde kullanımı, her karakterin `useSkill` ile hatasız çalışması, cooldown, `Entity.damage` (zırh + kalkan + hasar azaltma), zehir, `applyAreaDamage` menzili, `drawCharExtras` çizimleri, geliştirme build'i, ödül döngüsü ve maç sonu sonuç kartının kapanması.
 - `tests/progression.js` saf ekonomi/profil testleridir: seviye eşikleri, ödül matrisi, 12 yetenek adaptörü, profil doğrulama ve satın alma önkoşulları.
@@ -102,6 +105,7 @@ Yeni içerik çoğunlukla **kod değil veri** eklemekle yapılır:
 
 ## Bilinen durum / dikkat
 
+- **Yerelleştirme (F2):** Türkçe metin KODUN İÇİNDE kaynak metindir; diğer diller `js/i18n.js` sözlüğünde override'dır (`t("key", "Türkçe metin", {vars})`). Yeni metin eklerken önce koda yaz (Türkçe fallback), sonra sözlüğe ekle ve `node tests/i18n.js` çalıştır — test kapsam/orphan/TR-fallback bekçisidir. `i18n.js` `index.html`'de metin kullanan herkesten önce yüklenir; yeni bir js dosyası eklerken test bundle'larına (`tests/run.js` FILES, `tests/audio.js` source) da eklemeyi unutma.
 - **Ses entegrasyonu bağlı:** `index.html`, `audio.js` dosyasını yükler; oyun olayları `SFX` çağrılarını kullanır. Sessize alma, çalan ve planlanan kaynakları iptal eder. Ses kurulum hataları yalnız sesi devre dışı bırakır; reddedilen asenkron `resume()` isteği sonraki etkileşimde yeniden denenebilir. Ses değişikliklerinde `node tests/audio.js` çalıştır; bu test Web Audio sınırını taklit eder, fiziksel ses çıkışını doğrulamaz.
 - Patlamalar araziyi gerçekten oyar: zemin dokusu ve serpilen objeler offscreen arazi katmanına basıldığı için kraterle birlikte aşınır.
 
