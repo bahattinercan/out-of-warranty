@@ -27,7 +27,7 @@ const LANG_REQUIRED = ["en"];
 // kimlikten kurulur, `t("workshop.branch." + branch, ...)`). tests/i18n.js bu
 // öneklerle başlayan sözlük anahtarlarını "kodda kullanılıyor" sayar; hangi
 // kimliklerin gerçekten var olduğunu ayrıca kataloglardan doğrular.
-const I18N_DYNAMIC_PREFIXES = ["workshop.branch.", "workshop.slot.", "tutorial.coach.", "market.tab."];
+const I18N_DYNAMIC_PREFIXES = ["workshop.branch.", "workshop.slot.", "tutorial.coach.", "market.tab.", "weapon."];
 const LANG_LABELS = {
   "tr": "Türkçe",
   "en": "English",
@@ -243,6 +243,67 @@ const I18N = {
     "overlay.reward": "+{scrap} Scrap  •  +{xp} Service XP",
     "overlay.levelUp": "{robot}Service Level {before} → {after}",
     "storage.warning": "Progress could not be saved this session.",
+    // ── Veri katalogları: silahlar (F2c-1) ──────────────────────────────
+    "weapon.bazooka.name": "Bazooka",
+    "weapon.bazooka.special": "Balanced",
+    "weapon.bazooka.desc": "Balanced rocket. Explodes where it hits.",
+    "weapon.grenade.name": "Grenade",
+    "weapon.grenade.special": "Bounces • fuse",
+    "weapon.grenade.desc": "Rolls and bounces, then explodes when the fuse runs out.",
+    "weapon.sniper.name": "Sniper",
+    "weapon.sniper.special": "Fast • piercing",
+    "weapon.sniper.desc": "Flies very fast and straight; heavy damage on a direct hit.",
+    "weapon.shotgun.name": "Shotgun",
+    "weapon.shotgun.special": "5 pellets",
+    "weapon.shotgun.desc": "Five pellets per shot; wide spread, short range.",
+    "weapon.cluster.name": "Cluster",
+    "weapon.cluster.special": "Splits mid-air",
+    "weapon.cluster.desc": "Splits into fragments on impact and sets off several explosions.",
+    "weapon.triple.name": "Triple Rocket",
+    "weapon.triple.special": "3 rockets • spread",
+    "weapon.triple.desc": "Fires three rockets at once; wide spread.",
+    "weapon.sticky.name": "Sticky Bomb",
+    "weapon.sticky.special": "Sticks • fuse",
+    "weapon.sticky.desc": "Sticks where it lands and blows up on a short fuse.",
+    "weapon.rubber.name": "Rubber Bomb",
+    "weapon.rubber.special": "Very bouncy • fuse",
+    "weapon.rubber.desc": "Bounces hard off walls; explodes when the fuse runs out.",
+    "weapon.rubbertrio.name": "Rubber Trio",
+    "weapon.rubbertrio.special": "3 bounces",
+    "weapon.rubbertrio.desc": "Three bouncy bombs; wide spread.",
+    "weapon.grenadetrio.name": "Grenade Trio",
+    "weapon.grenadetrio.special": "3 bombs • fuse",
+    "weapon.grenadetrio.desc": "Three grenades; wide spread, fuse-detonated.",
+    "weapon.megacluster.name": "Mega Cluster",
+    "weapon.megacluster.special": "8 fragments",
+    "weapon.megacluster.desc": "Splits into eight fragments on impact.",
+    "weapon.nuke.name": "Nuke",
+    "weapon.nuke.special": "Huge blast",
+    "weapon.nuke.desc": "Massive blast. Slow but devastating.",
+    "weapon.barrage.name": "Rocket Barrage",
+    "weapon.barrage.special": "5 rockets",
+    "weapon.barrage.desc": "Five rockets per shot; wide spread.",
+    "weapon.mirv.name": "MIRV",
+    "weapon.mirv.special": "Splits overhead",
+    "weapon.mirv.desc": "Splits into fragments at the top of its arc.",
+    "weapon.airstrike.name": "Airstrike",
+    "weapon.airstrike.special": "Strike from above",
+    "weapon.airstrike.desc": "Six bombs rain down on the mouse target.",
+    "weapon.drill.name": "Drill",
+    "weapon.drill.special": "Piercing",
+    "weapon.drill.desc": "Drills through terrain, then explodes.",
+    "weapon.mine.name": "Mine",
+    "weapon.mine.special": "Triggers on approach",
+    "weapon.mine.desc": "Dropped on the ground; hits whoever comes near once armed.",
+    "weapon.napalm.name": "Napalm",
+    "weapon.napalm.special": "Burning field",
+    "weapon.napalm.desc": "Explodes and leaves a burning area behind.",
+    "weapon.teleportball.name": "Teleport Ball",
+    "weapon.teleportball.special": "Teleports",
+    "weapon.teleportball.desc": "Teleports you above where it lands; deals no damage.",
+    "weapon.hook.name": "Hook",
+    "weapon.hook.special": "Pulls you",
+    "weapon.hook.desc": "Flies straight and pulls you to whatever it grabs; deals no damage.",
   },
   "zh-Hans": {},
   ru: {},
@@ -280,6 +341,7 @@ function setLocale(lang, opts) {
     try { if (typeof localStorage !== "undefined" && localStorage) localStorage.setItem(I18N_STORAGE_KEY, next); } catch (e) { /* yoksay */ }
   }
   applyDomTranslations();
+  applyDataTranslations();
   if (typeof document !== "undefined" && document && document.getElementById) {
     const sel = document.getElementById("locale-select");
     if (sel && sel.value !== next) sel.value = next;
@@ -361,6 +423,74 @@ function buildLocaleSelect() {
   return true;
 }
 
+// ── Veri kataloğu çevirisi ───────────────────────────────────────────────
+// Katalog dosyaları (weapons/parts/characters/maps) Türkçe kaynak metni taşır ve
+// i18n.js'ten SONRA yüklenir; bu yüzden çeviri yükleme anında değil, dil
+// uygulanırken yapılır (setLocale). Özgün Türkçe değerler ilk uygulamada
+// saklanır, böylece Türkçeye dönüldüğünde katalog birebir eski hâline döner.
+//
+// Kimlik A kararı: model kodları (characters > label: FIX-8, maps > forLabel)
+// ÇEVRİLMEZ — marka kimliğinin parçası, hangi dilde olursa olsun aynı kalır.
+// Kapsam testi (tests/i18n.js) anahtar listesini bu yapılandırmadan üretir:
+// buraya kaydedilmeyen katalog alanı çevrilmez, Türkçe kalır.
+const DATA_CATALOGS = [
+  {
+    // Katalog globali i18n.js'ten SONRA yüklenir; o ana kadar tanımsızdır ve test
+    // paketi tüm dosyaları tek betikte birleştirdiğinde de TDZ hatası verir —
+    // try/catch ikisini de sessizce "katalog henüz yok" sayar.
+    get: () => { try { return WEAPONS; } catch (e) { return null; } },
+    prefix: "weapon",
+    paths: [
+      { key: "name", id: "id", at: ["name"] },
+      { key: "special", id: "id", at: ["special"] },
+      { key: "desc", id: "id", at: ["desc"] },
+    ],
+  },
+  // Sıradaki dilimler: PARTS (label/desc), CHARACTERS (role + skill.label/desc),
+  // MAPS (label/skillLabel + bölge adı). Kaydedilene kadar Türkçe kalırlar.
+];
+
+// Katalog nesnesi → { anahtar: türkçe değer }: dil geri alınırken özgün metin.
+const _dataOriginals = new Map();
+
+// Kayıtlı katalogların çeviri önekleri ("weapon." gibi) — test bekçisi bunları
+// dinamik anahtar ailesi olarak tanır.
+function dataTranslationPrefixes() {
+  return DATA_CATALOGS.map((cat) => cat.prefix + ".");
+}
+
+// Uygulanacak (tutucu nesne, alan, anahtar) üçlülerini üretir: çeviri ile kapsam
+// testi aynı listeyi kullanır, anahtar üretimi tek yerde kalsın diye.
+function dataTranslationEntries() {
+  const out = [];
+  for (const cat of DATA_CATALOGS) {
+    const list = cat.get();
+    if (!list) continue;                    // katalog henüz yüklenmedi
+    for (const item of list) {
+      for (const p of cat.paths) {
+        const holder = p.at.length === 1 ? item : item[p.at[0]];
+        const id = item[p.id];
+        if (!holder || !id) continue;
+        out.push({ holder, at: p.at[p.at.length - 1], key: cat.prefix + "." + id + "." + p.key });
+      }
+    }
+  }
+  return out;
+}
+
+// Kayıtlı katalogları seçili dile çevirir. Katalog henüz yüklenmemişse sessizce
+// geçer (i18n.js kataloglardan önce yüklenir; ilk çağrı bu yüzden boş dönebilir
+// — asıl uygulama main.js'te ve her dil değişiminde yapılır).
+function applyDataTranslations() {
+  for (const e of dataTranslationEntries()) {
+    let orig = _dataOriginals.get(e.holder);
+    if (!orig) { orig = {}; _dataOriginals.set(e.holder, orig); }
+    if (!(e.key in orig)) orig[e.key] = e.holder[e.at];
+    if (typeof orig[e.key] !== "string") continue;
+    e.holder[e.at] = t(e.key, orig[e.key]);
+  }
+}
+
 // İlk açılış: kayıtlı tercih → tarayıcı dili → tr. Kayıtlı tercih varsa
 // uygulanır; yoksa tespit edilen dil yalnız oturumluk kalır (kullanıcı kendi
 // seçimini yapana kadar depoya yazılmaz).
@@ -379,5 +509,13 @@ function buildLocaleSelect() {
     if (typeof document !== "undefined" && document && document.addEventListener) {
       if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", buildLocaleSelect);
     }
+  }
+  // Kataloglar bu betikten SONRA yüklendiği için ilk uygulama boş döner; tüm
+  // klasik betikler çalıştıktan sonra (DOMContentLoaded) bir kez daha uygula.
+  // Sondalar da böylece tarayıcı dilini (?locale=en veya --lang=en-US) katalog
+  // metinlerine yansıtır. Fonksiyon idempotenttir; main.js'teki çağrı da güvenli.
+  if (typeof document !== "undefined" && document && document.addEventListener) {
+    if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", applyDataTranslations);
+    else applyDataTranslations();
   }
 })();

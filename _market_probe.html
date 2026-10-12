@@ -87,9 +87,9 @@
     const g1 = makeFake({ version: 5, scrap: 1450, ammo: { grenade: 3, sniper: 1, mine: 2, nuke: 1 } }, "ammo");
     g1.input.mouseX = 150; g1.input.mouseY = 130;
     g1.marketFx = { weaponId: "grenade", t: 0.15 };
-    // Bildirim metni de oyunun anahtarından üretilir (sonda oyunla birlikte
-    // çevrilsin diye); silah adı hâlâ veri kataloğundan gelir (F2c).
-    g1.marketNotice = { text: t("market.ammoBought", "3× {label} alındı  (−{cost} Hurda)", { qty: 3, label: "El Bombası", cost: 90 }), color: "#8affc0", t: 0.3 };
+    // Bildirim metni ve silah adı da oyunun kendi kaynaklarından gelir
+    // (anahtar + katalog), böylece sonda oyunla birlikte çevrilir.
+    g1.marketNotice = { text: t("market.ammoBought", "3× {label} alındı  (−{cost} Hurda)", { qty: 3, label: weaponById("grenade").name, cost: 90 }), color: "#8affc0", t: 0.3 };
     g1.renderMarket(document.getElementById("c1").getContext("2d"));
     audioGuide(document.getElementById("c1").getContext("2d"));
 
@@ -97,7 +97,7 @@
     const g2 = makeFake(PARTS_PROFILE, "body");
     g2.input.mouseX = 150; g2.input.mouseY = 130;
     g2.marketFx = { partId: "takviyeli_govde", t: 0.15 };
-    g2.marketNotice = { text: t("market.partBought", "{label} alındı (−{cost} Hurda) — Atölye'den bir robota tak", { label: "Takviyeli Gövde", cost: 100 }), color: "#8affc0", t: 0.25 };
+    g2.marketNotice = { text: t("market.partBought", "{label} alındı (−{cost} Hurda) — Atölye'den bir robota tak", { label: partById("takviyeli_govde").label, cost: 100 }), color: "#8affc0", t: 0.25 };
     g2.renderMarket(document.getElementById("c2").getContext("2d"));
     audioGuide(document.getElementById("c2").getContext("2d"));
 

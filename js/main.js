@@ -13,6 +13,10 @@ window.addEventListener("DOMContentLoaded", () => {
 
   const canvas = document.getElementById("game");
   const game = new Game(canvas);
+  // Katalog metinleri (silah/parça/robot/harita adları) i18n.js'ten sonra yüklenir;
+  // ilk dil uygulaması kataloglar hazır olmadan çalıştığı için burada bir kez daha
+  // uygulanır (sonraki dil değişimlerinde setLocale kendisi uygular).
+  applyDataTranslations();
 
   document.getElementById("restart-btn").addEventListener("click", () => {
     game.replay();

@@ -118,6 +118,43 @@ check("index.html i18n özniteliği taşıyor", htmlKeys.size >= 15, `${htmlKeys
 
 const missingInEn = [...usedKeys].filter((k) => I.I18N.en[k] === undefined);check("kullanılan her anahtar `en` sözlüğünde var", missingInEn.length === 0, missingInEn.join(", "));
 
+// ── 2) Veri kataloğu çevirisi ─────────────────────────────────────────────
+// Katalog alanları çalışma zamanında (i18n.js > DATA_CATALOGS) çevrilir; bekçi
+// anahtar listesini de aynı yapılandırmadan üretir, böylece test ile oyun tek
+// kaynağı paylaşır. Kaydedilmemiş katalog alanı bilinçli olarak Türkçe kalır.
+const catFiles = ["weapons.js", "characters.js"];
+const catSrc = [I18N_SRC]
+  .concat(catFiles.map((f) => fs.readFileSync(path.join(JS_DIR, f), "utf8")))
+  .join("\n;\n");
+const catSandbox = { console, Math, Object, Array, Set, Map, String, navigator: { language: "tr-TR" } };
+catSandbox.globalThis = catSandbox;
+vm.createContext(catSandbox);
+vm.runInContext(
+  catSrc + "\n;globalThis.__CAT = { entries: dataTranslationEntries(), prefixes: dataTranslationPrefixes(), " +
+    "applyDataTranslations, setLocale, I18N, WEAPONS, CHARACTERS };",
+  catSandbox, { filename: "catalog-bundle.js" }
+);
+const CAT = catSandbox.__CAT;
+check("katalog çeviri alanı üretildi", CAT.entries.length >= 40, `${CAT.entries.length} alan`);
+const missingCat = CAT.entries.filter((e) => CAT.I18N.en[e.key] === undefined).map((e) => e.key);
+check("her katalog alanı `en` sözlüğünde var", missingCat.length === 0, missingCat.slice(0, 6).join(", "));
+for (const pre of CAT.prefixes) {
+  check(`katalog öneki bildirilmiş: ${pre}`, I.I18N_DYNAMIC_PREFIXES.indexOf(pre) >= 0);
+  dynamicUsed.add(pre);   // üretim DATA_CATALOGS yapılandırmasından gelir
+}
+// Davranış: en'e geçince metin değişir, tr'ye dönünce birebir özgün metne döner
+// (özgün değerler ilk uygulamada saklanır — yoksa geri dönüş bozuk olurdu).
+const w0 = CAT.WEAPONS[0];
+const trName = w0.name;
+CAT.setLocale("en", { persist: false });
+const enName = w0.name;
+CAT.setLocale("tr", { persist: false });
+check("katalog çevirisi uygulanıyor", enName !== trName && enName === CAT.I18N.en["weapon." + w0.id + ".name"], `${trName} → ${enName}`);
+check("tr'ye dönüşte katalog özgün metne döner", w0.name === trName, w0.name);
+CAT.setLocale("en", { persist: false });
+check("kaydedilmemiş katalog alanı Türkçe kalır", CAT.CHARACTERS[0].role === "Bakım", CAT.CHARACTERS[0].role);
+CAT.setLocale("tr", { persist: false });
+
 const isDynamicKey = (k) => I.I18N_DYNAMIC_PREFIXES.some((p) => k.startsWith(p));
 const orphan = Object.keys(I.I18N.en).filter((k) => !usedKeys.has(k) && !isDynamicKey(k));
 check("sözlükte kodda kullanılmayan anahtar yok", orphan.length === 0, orphan.join(", "));
