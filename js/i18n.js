@@ -86,6 +86,7 @@ const I18N = {
     "online.status.open": "Connection established",
     "online.status.closed": "Connection closed",
     "online.notice.joined": "Opponent joined the room",
+    "online.notice.codePasted": "Room code pasted",
     "online.notice.notYourTurn": "It is not your turn",
     "online.notice.shotUsed": "Your shot for this turn is used",
     "online.notice.noCharge": "Power charge was closed",

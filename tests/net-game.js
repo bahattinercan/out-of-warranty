@@ -442,7 +442,60 @@ p.host.quitToMenu();
 check("menüye dönüş ağ bağlamını kapatır", p.host.online === null && p.host.mode === null);
 check("menüye dönüş taşımayı kapatır", p.ta.status === G.NET_TRANSPORT_STATUS.CLOSED, p.ta.status);
 
-// ── 11) Yerleşim: dar/geniş dünyada çakışma yok, denetimlerin altında kalınmaz
+// ── 11) Oda kodu yapıştırma (kullanıcı bildirimi: "kod yapıştırılmıyor")
+/* İki ayrı hata vardı: (a) lobi klavye işleyicisi Ctrl+V'yi tüketip
+ * `preventDefault` çağırıyordu → tarayıcı yapıştırma eylemi iptal oluyor ve
+ * `paste` olayı hiç doğmuyordu; (b) ayrıştırıcı, panodaki URL'nin içindeki ilk
+ * 5 harfli sözcüğü ("projel") oda kodu sanıyordu ve `_joinRoom` adlı olmayan bir
+ * yöntemi çağırıyordu. */
+const pasteLobby = (() => {
+  const g = Object.create(G.Game.prototype);
+  g.W = 960; g.H = 540; g.terrain = null;
+  g.input = { mouseX: -100, mouseY: -100 };
+  g.profile = null; g.renderTimeMs = 0; g.state = "ONLINE_LOBBY";
+  g.hudTopInset = 0; g.hudRightInset = 0;
+  g.updateHud = function () {};
+  g.lobby = new G.OnlineLobby(g);
+  g.lobby.open();
+  return g;
+})();
+const pl = pasteLobby.lobby;
+const parsed = (text) => pl._parseCode(text);
+const inviteUrl = "file:///D:/code/projeler/new-wild-ones/index.html?oda=QWERT";
+check("davet bağlantısından kod çıkarılır", parsed(inviteUrl) === "QWERT", String(parsed(inviteUrl)));
+check("URL'deki rastgele sözcük kod sanılmaz (eski hata)", parsed("file:///D:/code/projeler/new-wild-ones/index.html") === null,
+  String(parsed("file:///D:/code/projeler/new-wild-ones/index.html")));
+check("tireli gösterim kabul edilir", parsed("ABC-DE") === "ABCDE", String(parsed("ABC-DE")));
+check("tek başına kod kabul edilir", parsed("  qwert ") === "QWERT", String(parsed("  qwert ")));
+check("kısa kod reddedilir", parsed("ABC") === null);
+check("alfabe dışı harf reddedilir (O/0/I/1 üretilmez)", parsed("ABODE") === null, String(parsed("ABODE")));
+check("davet bağlantısında kod parametresi öncelikli", parsed("https://x/y?oda=QWERT#ABC-DE") === "QWERT",
+  String(parsed("https://x/y?oda=QWERT#ABC-DE")));
+
+// Ctrl/Cmd/Alt + tuş lobi tarafından TÜKETİLMEZ (yapıştırma engellenmesin).
+check("Ctrl+V tüketilmez (preventDefault yapılmaz)",
+  pasteLobby.handleLobbyKey({ key: "v", ctrlKey: true, code: "KeyV" }) === false);
+check("Cmd+V tüketilmez", pasteLobby.handleLobbyKey({ key: "v", metaKey: true, code: "KeyV" }) === false);
+check("düz harf tüketilir (oda kodu yazımı)", pasteLobby.handleLobbyKey({ key: "a", code: "KeyA" }) === true);
+
+// Gerçek `paste` olayı: ayrıştırma + ekran geçişi + ağa ÇIKMADAN katılma çağrısı.
+let joined = 0;
+pl.joinRoom = function () { joined++; };
+pl.step = "role";
+pl._bindPaste();
+pl._boundPaste({ clipboardData: { getData: () => inviteUrl }, preventDefault() {} });
+check("yapıştırınca kod yazılır ve katılma çağrılır", pl.typed === "QWERT" && joined === 1 && pl.step === "code",
+  `typed=${pl.typed} joined=${joined} step=${pl.step}`);
+check("yapıştırma geri bildirimi verilir", !!(pl.notice && pl.notice.text));
+const before = joined;
+pl._boundPaste({ clipboardData: { getData: () => "ilgisiz metin" }, preventDefault() {} });
+check("ilgisiz metin katılmayı tetiklemez", joined === before);
+pl.step = "room";
+pl._boundPaste({ clipboardData: { getData: () => inviteUrl }, preventDefault() {} });
+check("oda ekranında yapıştırma yok sayılır", joined === before);
+pl._unbindPaste();
+
+// ── 12) Yerleşim: dar/geniş dünyada çakışma yok, denetimlerin altında kalınmaz
 /* Kullanıcı bildirimi: "küçük ekranlarda çevrimiçi sayfasının tasarımı
  * bozuluyor". Dünya genişliği pencere oranına göre 648–1620 arasında değişir ve
  * sağ üstteki DOM denetimleri sabit CSS px kalır; lobi bu ikisine uyarlı

@@ -2495,13 +2495,14 @@ class Game {
 
   bindInput() {
     window.addEventListener("keydown", (e) => {
-      // Çevrimiçi lobi açıkken tüm klavye oraya gider (oda kodu yazımı, hazır,
-      // başlat). Lobi kendi Esc/Enter işleyişini yönetir.
-      if (this.state === "ONLINE_LOBBY") {
-        if (this.lobby.handleKey(e)) {
-          if (e.key !== "m" && e.key !== "M") e.preventDefault?.();
-          return;
-        }
+      // Çevrimiçi lobi açıkken klavye oraya gider (oda kodu yazımı, hazır,
+      // başlat). Tarayıcı kısayolları (Ctrl/Cmd/Alt + tuş) TÜKETİLMEZ:
+      // preventDefault çağrılırsa tarayıcının YAPIŞTIRMA eylemi iptal olur ve
+      // `paste` olayı hiç doğmaz — oda kodu yapıştırma bu yüzden çalışmıyordu
+      // (kullanıcı bildirimi).
+      if (this.handleLobbyKey(e)) {
+        if (e.key !== "m" && e.key !== "M") e.preventDefault?.();
+        return;
       }
       // Kaydırıcının ok tuşları ve butonun Space/Enter girdileri oyuna geçmez.
       if (e.target.closest?.("#audio-control") && !["m", "M", "Escape"].includes(e.key)) return;
@@ -2703,6 +2704,15 @@ class Game {
         if (idx >= 0) this.selectWeapon(idx);
       });
     }
+  }
+
+  /* Çevrimiçi lobi açıkken klavyeyi lobiye devreder. Dönüş: olay TÜKETİLDİ mi?
+   * Değiştirici tuş (Ctrl/Cmd/Alt) basılıysa tüketilmez — yapıştırma/kopyalama
+   * gibi tarayıcı eylemleri engellenmemeli (aksi hâlde Ctrl+V hiç `paste`
+   * olayı üretmez ve oda kodu yapıştırılamaz). */
+  handleLobbyKey(e) {
+    if (this.state !== "ONLINE_LOBBY" || !this.lobby) return false;
+    return this.lobby.handleKey(e) !== false;
   }
 
   // Silah seçimi (yalnız AIMING). Mühimmatı olmayan silah atlanır.

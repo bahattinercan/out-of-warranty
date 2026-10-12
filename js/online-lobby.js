@@ -130,23 +130,46 @@ class OnlineLobby {
     } catch (e) { return null; }
   }
 
-  /* Panodan yapıştırma: davet bağlantısının tamamı ya da kodu yapıştırılabilir.
-   * Klavye olayı yerine paste olayı dinlenir (Ctrl+V tuvalde görünmez). */
+  /* Panodan oda kodu çıkarır. Sıra: (1) davet bağlantısındaki `oda=` parametresi,
+   * (2) tireli gösterim (ABC-DE), (3) tek başına 5 karakterlik simge. Aday KOD
+   * ALFABESİNE uymalıdır (0/O, 1/I üretilmez) ve simge sınırlarına saygı
+   * duyulur: yoksa `.../new-wild-ones/index.html` gibi bir yoldaki "projel"
+   * sözcüğü oda kodu sanılırdı (eski ayrıştırıcının hatası). */
+  _parseCode(text) {
+    const raw = String(text || "");
+    const clean = (v) => {
+      const c = String(v || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
+      if (c.length !== ONLINE_CODE_LENGTH) return null;
+      for (let i = 0; i < c.length; i++) if (NET_ROOM_ALPHABET.indexOf(c[i]) < 0) return null;
+      return c;
+    };
+    let m = /(?:[?&#]|^)oda=([A-Za-z0-9-]{4,10})/i.exec(raw);
+    if (m) { const c = clean(m[1]); if (c) return c; }
+    m = /(?:^|[^A-Za-z0-9])([A-Za-z0-9]{3})-([A-Za-z0-9]{2})(?:[^A-Za-z0-9]|$)/.exec(raw);
+    if (m) { const c = clean(m[1] + m[2]); if (c) return c; }
+    const re = /(?:^|[^A-Za-z0-9])([A-Za-z0-9]{5})(?![A-Za-z0-9])/g;
+    let hit;
+    while ((hit = re.exec(raw))) { const c = clean(hit[1]); if (c) return c; }
+    return null;
+  }
+
+  /* Panodan yapıştırma: davet bağlantısının tamamı ya da kod. Klavye olayı
+   * yerine `paste` olayı dinlenir (Ctrl+V tuvalde görünmez). Not: bu olayın
+   * doğabilmesi için klavye işleyicisinin Ctrl/Cmd+V'yi TÜKETMEMESİ gerekir
+   * (js/game.js > handleLobbyKey). */
   _bindPaste() {
     if (this._boundPaste || typeof window === "undefined" || !window.addEventListener) return;
     this._boundPaste = (e) => {
       if (!this.active) return;
+      if (this.step !== "role" && this.step !== "code") return;
       const text = (e.clipboardData && e.clipboardData.getData("text")) || "";
-      const m = /([A-Za-z0-9]{5})/.exec(String(text).replace(/[^A-Za-z0-9]/g, " ").replace(/\s+/g, " ")) ||
-        /oda=([A-Za-z0-9-]+)/.exec(String(text));
-      if (!m) return;
-      const code = netFormatRoomCode(m[1]).replace(/-/g, "").slice(0, ONLINE_CODE_LENGTH);
-      if (code.length < ONLINE_CODE_LENGTH) return;
-      if (this.step === "code" || this.step === "role") {
-        e.preventDefault?.();
-        this.typed = code;
-        this._joinRoom();
-      }
+      const code = this._parseCode(text);
+      if (!code) return;
+      e.preventDefault?.();
+      this.step = "code";
+      this.typed = code;
+      this._notice("online.notice.codePasted");
+      this.joinRoom();
     };
     window.addEventListener("paste", this._boundPaste);
   }
@@ -342,6 +365,7 @@ class OnlineLobby {
   // Bildirim metni (anahtarlar açık yazılır; bkz. _errorText).
   _noticeText(key) {
     if (key === "online.invite.copied") return t("online.invite.copied", "Bağlantı kopyalandı");
+    if (key === "online.notice.codePasted") return t("online.notice.codePasted", "Oda kodu yapıştırıldı");
     if (key === "online.invite.failed") return t("online.invite.failed", "Kopyalanamadı — kodu elle paylaş");
     if (key === "online.notice.joined") return t("online.notice.joined", "Rakip odaya katıldı");
     return "";
@@ -437,6 +461,9 @@ class OnlineLobby {
   // Klavye: Game.bindInput buraya devreder. true → olay tüketildi.
   handleKey(e) {
     if (!this.active) return false;
+    // Ctrl/Cmd/Alt + tuş: tarayıcı kısayolu (yapıştır/kopyala/kes). Tüketilmez;
+    // aksi hâlde `preventDefault` yapıştırmayı iptal eder.
+    if (e.ctrlKey || e.metaKey || e.altKey) return false;
     if (e.key === "Escape") {
       if (this.step === "room") { this.close(); this.step = "role"; this.game.state = "MODE_SELECT"; this.game.updateHud(); return true; }
       if (this.step === "code") { this.step = "role"; this.error = null; return true; }

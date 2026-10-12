@@ -99,6 +99,26 @@
         g.lobby.step = "code"; g.lobby.typed = "ABC";
       }
 
+      // Yapıştırma provası: gerçek tarayıcıda ClipboardEvent ile sınanır.
+      // `joinRoom` stub'lanır (ağa çıkmasın); asıl ölçülen, olayın doğması,
+      // ayrıştırma ve Ctrl+V'nin TÜKETİLMEMESİ.
+      try {
+        const l = g.lobby;
+        let joined = "";
+        l.joinRoom = function () { joined = this.typed; };
+        const keepStep = l.step;
+        l.step = "role";
+        const dt = new DataTransfer();
+        dt.setData("text", location.href.split("?")[0] + "?oda=QWERT");
+        window.dispatchEvent(new ClipboardEvent("paste", { clipboardData: dt, cancelable: true }));
+        console.log("PASTE-TEST typed=" + l.typed + " step=" + l.step + " joined=" + joined +
+          " ctrlVConsumed=" + g.handleLobbyKey({ key: "v", ctrlKey: true }) +
+          " notice=" + (l.notice ? l.notice.text : "-"));
+        l.step = keepStep;
+        l.typed = "";
+        l.notice = null;
+      } catch (e) { console.log("PASTE-TEST hata: " + e.message); }
+
       function draw() {
         g.render();   // içinde resize() çağrılır → W pencere oranına göre güncellenir
       }
