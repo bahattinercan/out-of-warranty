@@ -376,7 +376,10 @@ function upgradeEffectText(charDef, progress, branch) {
   if (!step.ok) return step.reason === "MAX_TIER" ? t("progression.maxTier", "Tam Kalibrasyon") : "";
   const before = resolveRobotBuild(charDef, progress, { upgradesEnabled: true });
   const up = sanitizeUpgrades(progress);
-  const afterProgress = { upgrades: Object.assign({}, up, { [branch]: step.nextTier }) };
+  // `progress` kopyalanır: loadout (takılı parçalar) korunmalı, yoksa "sonra"
+  // build'i parçaları kaybeder ve yükseltme zırhı DÜŞÜRÜYOR gibi görünür
+  // (ör. "Zırh %21 → %17"; gerçek bir kullanıcı hatası olarak bulundu).
+  const afterProgress = Object.assign({}, progress, { upgrades: Object.assign({}, up, { [branch]: step.nextTier }) });
   const after = resolveRobotBuild(charDef, afterProgress, { upgradesEnabled: true });
   const pct = (v) => Math.round(v * 100);
   switch (branch) {

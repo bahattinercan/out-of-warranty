@@ -235,6 +235,16 @@ group("Türetilmiş build ve yetenek adaptörleri");
   // Atölye etki metni ve maksimum durum
   check("maksimum kademede 'Tam Kalibrasyon'", P.upgradeEffectText(heal, { upgrades: { chassis: 3, module: 0, core: 0 } }, "chassis") === "Tam Kalibrasyon");
   check("Gövde I etkisi sayısal fark gösterir", P.upgradeEffectText(heal, { upgrades: { chassis: 0, module: 0, core: 0 } }, "chassis").includes("→"));
+  // Kademe önizlemesi takılı parçaları KORUMALI: yoksa yükseltme zırhı
+  // düşürüyor gibi görünür ("Zırh %21 → %17" hatası — EN çevirisi
+  // doğrulanırken bulundu). Aynı loadout iki tarafta da kullanılır.
+  const parcaliProgress = { upgrades: { chassis: 1, module: 0, core: 0 }, loadout: { helmet: null, body: ["kompozit_plaka", null], tool: null, feet: null } };
+  const tierII = P.upgradeEffectText(heal, parcaliProgress, "chassis");
+  const sayilar = (tierII.match(/\d+/g) || []).map(Number);
+  check("kademe önizlemesi takılı parçayı korur (zırh düşmez)", sayilar.length >= 2 && sayilar[1] > sayilar[0], tierII);
+  const beforeBuild = P.resolveRobotBuild(heal, parcaliProgress, { upgradesEnabled: true });
+  const afterBuild = P.resolveRobotBuild(heal, Object.assign({}, parcaliProgress, { upgrades: { chassis: 2, module: 0, core: 0 } }), { upgradesEnabled: true });
+  check("parçalı build'de Kademe II zırhı artırır", afterBuild.armor > beforeBuild.armor, `${beforeBuild.armor} → ${afterBuild.armor}`);
 }
 
 // ── 5) Kaynak veri dokunulmazlığı ───────────────────────────────────────────
