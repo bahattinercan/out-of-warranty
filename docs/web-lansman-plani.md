@@ -48,7 +48,12 @@ Sayılar üçüncü taraf tahminleridir (VG Insights/Gamalytic/SteamSpy türevi)
 - **Klip kuralı:** Her yeni silah/modül en az bir "izlenesi an" üretmeli (zincir patlama, uçurumdan düşme, son anda ıskalama, kendi kendini vurma). Yeni içerik eklerken bu test uygulanır.
 - **Görsel üretim hattı:** README'deki `_*_probe.html` + headless Chrome akışı pazarlama GIF/ekran görüntüsü üretimi için de kullanılır (ek araç gerekmez).
 - **Kadro kimliği (kullanıcı yönlendirmesi, 12 Ekim 2026):** Oyun "kurmalı oyuncak" metaforuyla değil **kadronun kendisiyle** gidiyor; isim buradan türetilir. `characters.js`: 34 robot — oyuncuya görünen kimlik **model kodu** (FIX-8, MIK-0, BOM-12, ZIP, ÇİFT-6, KES-9, SİREN-6, HAYALET-4 …), iç `id` alanları hayvan (kopek, kedi, ayi, timsah, ejderha …), `role` bir fabrika işi (Bakım, Yıkım, Soğutma, Raf Bakımı, Döküm …) ve her `personality` bir arıza/bakım şakası ("Fren modülü hiçbir zaman teslim edilmedi", "Filtre değişim uyarısını yıllardır erteliyor", "Basınç göstergesi hep kırmızı bölgededir").
-- **İsim (karar bekliyor):** Kaba arama 12 Ekim 2026; resmî marka/alan adı/sosyal hesap taraması kısa liste seçilince yapılır. Steam'de "Dökümhane-9" kullanılmaz; EN'de "Foundry" dolu.
+- **İsim — KARAR (12 Ekim 2026, kullanıcı onayı):** **Out of Warranty** — Türkçe arayüzde **Garanti Dışı**. Kimlik kararı **A**: marka robot **model kodlarıdır** (FIX-8, MIK-0, BOM-12 …); `characters.js` içindeki hayvan `id`'leri yalnız iç koddur, arayüzde gösterilmez. Uygulandı: `js/game.js > GAME_TITLE` (ekran başlıklarının tek kaynağı), `index.html` başlığı, README ve CLAUDE.md.
+
+**Tarama (12 Ekim 2026, kaba):** Steam'de bu adla oyun yok; itch.io'da yalnız "Wand out of Warranty" (farklı başlık, çakışma değil); `outofwarranty.com` / `.game` / `.io` ve `garanti-disi.com` DNS'te boş (kayıt kontrolü registrar'da tekrarlanmalı).
+**Kaydedilen riskler:** (a) "out of warranty" çok yaygın bir teknik destek ifadesi olduğu için ayırt ediciliği düşük → marka koruması zayıf olur; (b) Google/genel aramada oyun ilk sayfalara çıkmaz. **Karşı önlem:** marka her zaman **logoyla** ve tercihen bir alt başlıkla kullanılır (`Out of Warranty: Vardiya-9` gibi); web aramasına güvenilmez — oyuncu portal içinden gelir, Steam mağaza araması da uygulama adını birebir önceler.
+
+**Değerlendirilen diğer adaylar (kayıt için):**
 
 | EN adayı | TR karşılığı | Neden kadroya oturuyor | Kaba arama |
 |---|---|---|---|
@@ -63,7 +68,7 @@ Sayılar üçüncü taraf tahminleridir (VG Insights/Gamalytic/SteamSpy türevi)
 | ~~Scrap Shift~~ | — | — | **ALINMIŞ:** itch + CrazyGames roguelite |
 | ~~Industrial Animals~~ | — | — | Troma'nın 2016 korku filmi (kötü çağrışım) |
 
-**Kısa liste (öneri):** 1) **Out of Warranty / Garanti Dışı** — kadronun kimliği + ton tek adda; 2) **Shift Nine / Vardiya-9** — dünya kurulumu ve "9" soyu; 3) **Beast Crew / Hayvan Kadrosu** — hayvan-makine kadroyu öne çıkarır. Alternatif yön: model kodunu marka yapmak ("Codename: FIX-8") — tek karakteri öne çıkardığı için kadro oyununda zayıf kalır.
+**Kısa liste (kayıt):** 1) **Out of Warranty / Garanti Dışı** — seçildi. 2) **Shift Nine / Vardiya-9** — dünya kurulumu ve "9" soyu; marka **alt başlığı** veya seri/haftalık güncelleme adı olarak kullanılabilir. 3) Beast Crew / Hayvan Kadrosu — kimlik B/C seçilirse anlam kazanırdı. Alternatif yön olan "Codename: FIX-8" elendi: tek karakteri öne çıkarıyor, kadro oyununda zayıf kalıyor.
 
 ---
 
@@ -233,6 +238,7 @@ Referans gerçeklik: Steam medyanı $249/ömür; web'de ilk oyun $0–400/ay. Bu
 
 | # | Konu | Karar |
 |---|---|---|
+| 1 | Oyun adı + kimlik | **Out of Warranty / Garanti Dışı**; kimlik **A** — model kodları marka (FIX-8, MIK-0 …), hayvan `id`'leri yalnız iç kod |
 | 2 | Ödüllü reklam yerleşimi | **§8 aynen:** maç sonu "Hurdayı 2×" + elenince "geri dön"; maç başına ≤2; banner ve interstitial yok |
 | 3 | Sinyalleşme / TURN sağlayıcısı | **§4-C:** PeerJS Cloud + ücretsiz TURN ile başla; taşıma arayüzü korunarak kotayı/kesintiyi görünce Cloudflare Worker + Durable Object'e geç |
 | 4 | K1–K3 eşikleri | **§9 tablosu aynen** (özellikle K1: aylık ≥20.000 oynanış *veya* haftalık +%15) |
@@ -240,4 +246,4 @@ Referans gerçeklik: Steam medyanı $249/ömür; web'de ilk oyun $0–400/ay. Bu
 | 6 | Sıradaki iş | **F1b (R2) yapıldı** → sırada **F2 (i18n altyapısı + EN)**, sonra F3 (WebRTC P2P) |
 | 7 | Commit | Tüm çalışma ağacı commit edildi (4 commit: workshop düzeltmesi, okunabilirlik, bu plan, AI görsel planı); **push yapılmadı** |
 
-**Açık soru — oyun adı:** karar bekliyor; aday tablosu ve kısa liste §3'te. Resmî marka/alan adı/sosyal hesap taraması, kısa liste seçildikten sonra yapılır.
+**Açık soru kalmadı:** isim ve kimlik kararı §3'te kayıtlı. Sıradaki iş **F2 (i18n altyapısı + EN)**; marka adı o adımda `brand.title` anahtarına bağlanır.
