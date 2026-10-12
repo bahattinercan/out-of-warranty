@@ -404,7 +404,7 @@ class Game {
     }
     // Geri butonu
     this._backRect = { x: 20, y: H - 50, w: 80, h: 36 };
-    this.drawBackButton(ctx, "‹ Geri");
+    this.drawBackButton(ctx, t("common.back", "‹ Geri"));
   }
 
   handleDifficultySelectClick(mx, my) {
@@ -457,7 +457,7 @@ class Game {
     }
     // Geri butonu
     this._backRect = { x: 20, y: H - 50, w: 80, h: 36 };
-    this.drawBackButton(ctx, "‹ Geri");
+    this.drawBackButton(ctx, t("common.back", "‹ Geri"));
   }
 
   handleBotCountSelectClick(mx, my) {
@@ -596,7 +596,7 @@ class Game {
     return PARTS.filter((p) => p.slot === slot && owned.includes(p.id));
   }
 
-  // Yuva listesi satırları: sahip olunan parçalar + her zaman son "Boş bırak".
+  // Yuva listesi satırları: sahip olunan parçalar + her zaman son t("workshop.clearSlot", "Boş bırak").
   _workshopSlotRows(slot) {
     const rows = this.workshopSlotParts(slot).map((p) => ({ partId: p.id, part: p }));
     rows.push({ partId: null, part: null });
@@ -620,7 +620,7 @@ class Game {
     this.workshopPartPage = 0;
   }
 
-  // Liste sayfa boyu: yuva başına 6 parça + "Boş bırak" = 7 satır; panel
+  // Liste sayfa boyu: yuva başına 6 parça + t("workshop.clearSlot", "Boş bırak") = 7 satır; panel
   // alanına 4 satır sığdığı için liste sayfalanır (imleç sayfayı da kaydırır).
   _workshopPartPageSize() { return 4; }
 
@@ -743,12 +743,12 @@ class Game {
     ctx.font = uiTitleFont(26);
     ctx.textAlign = "center";
     ctx.textBaseline = "top";
-    ctx.fillText("ATÖLYE", W / 2, 20);
+    ctx.fillText(t("workshop.title", "ATÖLYE"), W / 2, 20);
     ctx.fillStyle = "#9fb6c9";
     ctx.font = uiTextFont(12);
     ctx.fillText(this.workshopMode === "parts"
-      ? "Parça tak — parçalar geliştirmelerle aynı maç kapsamında etkindir"
-      : "Robotlarını kalibre et — geliştirmeler yalnız bilgisayara karşı maçta etkindir", W / 2, 48);
+      ? t("workshop.subtitleParts", "Parça tak — parçalar geliştirmelerle aynı maç kapsamında etkindir")
+      : t("workshop.subtitleUpgrades", "Robotlarını kalibre et — geliştirmeler yalnız bilgisayara karşı maçta etkindir"), W / 2, 48);
 
     const scrap = this.profile ? this.profile.scrap : START_SCRAP;
     const perPage = WS_COLS * WS_ROWS;
@@ -797,7 +797,7 @@ class Game {
       ctx.fillText(ch.label, cx + cardW / 2, cyv + 58, cardW - 10);
       ctx.fillStyle = "#9fb6c9";
       ctx.font = uiTextFont(9);
-      ctx.fillText(`Sv. ${levelForXp(up.xp)} • ${totalTiers(up)}/9`, cx + cardW / 2, cyv + 72);
+      ctx.fillText(t("workshop.robotCardMeta", "Sv. {level} • {tiers}/9", { level: levelForXp(up.xp), tiers: totalTiers(up) }), cx + cardW / 2, cyv + 72);
     }
 
     // Sayfa gezinme (klavye ve fare ile aynı işlevi görür)
@@ -814,13 +814,13 @@ class Game {
       ctx.fillStyle = "#cfe0ee";
       ctx.font = uiTextFont(13, 700);
       ctx.textAlign = "center"; ctx.textBaseline = "middle";
-      ctx.fillText(b.dir < 0 ? "‹ Geri" : "İleri ›", b.x + b.w / 2, b.y + b.h / 2);
+      ctx.fillText(b.dir < 0 ? t("common.back", "‹ Geri") : t("common.forward", "İleri ›"), b.x + b.w / 2, b.y + b.h / 2);
       ctx.globalAlpha = 1;
     }
     ctx.fillStyle = "#9fb6c9";
     ctx.font = uiTextFont(13, 700);
     ctx.textAlign = "center"; ctx.textBaseline = "middle";
-    ctx.fillText(`Sayfa ${this.workshopPage + 1} / ${totalPages}`, gx + gridW / 2, navY + navH / 2);
+    ctx.fillText(t("common.page", "Sayfa {n} / {total}", { n: this.workshopPage + 1, total: totalPages }), gx + gridW / 2, navY + navH / 2);
 
     // ── Sağ: seçili robot detayı + üç dal paneli ──────────────────────
     const rx = 496, rw = W - rx - 24;
@@ -845,11 +845,14 @@ class Game {
     ctx.fillStyle = "#eef5ff";
     ctx.font = uiTitleFont(18);
     ctx.textAlign = "center"; ctx.textBaseline = "top";
-    ctx.fillText(`${def.label} · ${def.role}`, rx + rw / 2, gy + 100);
+    ctx.fillText(t("workshop.robotMeta", "{label} · {role}", { label: def.label, role: def.role }), rx + rw / 2, gy + 100);
 
     ctx.fillStyle = "#ffd166";
     ctx.font = uiTextFont(13, 700);
-    ctx.fillText(`Servis Seviyesi ${level}${nextXp != null ? ` — ${up.xp} / ${nextXp} XP` : " — Usta Servis"}`, rx + rw / 2, gy + 124);
+    ctx.fillText(t("workshop.serviceLevel", "Servis Seviyesi {level}{suffix}", {
+      level,
+      suffix: nextXp != null ? ` — ${up.xp} / ${nextXp} XP` : t("workshop.masterService", " — Usta Servis"),
+    }), rx + rw / 2, gy + 124);
 
     const barX = rx + 20, barW = rw - 40, barY = gy + 144;
     ctx.fillStyle = "#1e2a38";
@@ -862,11 +865,11 @@ class Game {
     const pulse = Math.max(0, 1 - fxT / WS_FX_DURATION);
     ctx.fillStyle = `rgba(255,228,94,${0.75 + 0.25 * pulse})`;
     ctx.font = uiTitleFont(Math.round(14 + 3 * pulse));
-    ctx.fillText(`Hurda: ${scrap}`, rx + rw / 2, barY + 14);
+    ctx.fillText(t("common.scrap", "Hurda: {scrap}", { scrap }), rx + rw / 2, barY + 14);
     if (level >= 4) {
       ctx.fillStyle = "#8fa8ba";
       ctx.font = uiTextFont(10);
-      ctx.fillText(`Maç ${up.stats.matches} • Galibiyet ${up.stats.wins}`, rx + rw / 2, barY + 36);
+      ctx.fillText(t("workshop.stats", "Maç {matches} • Galibiyet {wins}", { matches: up.stats.matches, wins: up.stats.wins }), rx + rw / 2, barY + 36);
     }
 
     // Mod sekmeleri (sağ panelin tepesi): GELİŞTİRME ↔ PARÇALAR. İki modda da
@@ -907,19 +910,19 @@ class Game {
       let label, reason = "", state;
       if (!step.ok) {
         state = "done";
-        label = "Tam Kalibrasyon";
-        reason = "Bu dal tamamlandı";
+        label = t("workshop.maxCalibration", "Tam Kalibrasyon");
+        reason = t("workshop.branchDone", "Bu dal tamamlandı");
       } else if (level < step.requiredLevel) {
         state = "locked";
-        label = `${BRANCH_LABELS[this.workshopBranch]} — Kademe ${romanTier(step.nextTier)} kilitli`;
-        reason = `Servis Seviyesi ${step.requiredLevel} gerekli`;
+        label = t("workshop.action.locked", "{branch} — Kademe {tier} kilitli", { branch: branchLabel(this.workshopBranch), tier: romanTier(step.nextTier) });
+        reason = t("workshop.reason.serviceLevel", "Servis Seviyesi {level} gerekli", { level: step.requiredLevel });
       } else if (scrap < step.cost) {
         state = "short";
-        label = `${BRANCH_LABELS[this.workshopBranch]} — Kademe ${romanTier(step.nextTier)} — ${step.cost} Hurda`;
-        reason = `${step.cost - scrap} Hurda eksik`;
+        label = t("workshop.action.short", "{branch} — Kademe {tier} — {cost} Hurda", { branch: branchLabel(this.workshopBranch), tier: romanTier(step.nextTier), cost: step.cost });
+        reason = t("workshop.reason.shortScrap", "{cost} Hurda eksik", { cost: step.cost - scrap });
       } else {
         state = "ready";
-        label = `${BRANCH_LABELS[this.workshopBranch]} — Kademe ${romanTier(step.nextTier)} geliştir — ${step.cost} Hurda`;
+        label = t("workshop.action.upgrade", "{branch} — Kademe {tier} geliştir — {cost} Hurda", { branch: branchLabel(this.workshopBranch), tier: romanTier(step.nextTier), cost: step.cost });
       }
       const ready = state === "ready";
       const hovBtn = ready && mx >= btn.x && mx <= btn.x + btn.w && my >= btn.y && my <= btn.y + btn.h;
@@ -964,7 +967,7 @@ class Game {
     }
 
     // Geri butonu (Esc ile aynı işlev)
-    this.drawBackButton(ctx, "‹ Ana Menü");
+    this.drawBackButton(ctx, t("common.mainMenu", "‹ Ana Menü"));
   }
 
   // Tek bir dal paneli: kademe, etki, maliyet ve devre dışı olma nedeni aynı
@@ -999,8 +1002,8 @@ class Game {
     ctx.textBaseline = "top";
     ctx.fillStyle = "#eef5ff";
     ctx.font = uiTextFont(12, 700);
-    const tierText = step.ok ? `Kademe ${romanTier(step.nextTier)}` : "Tam Kalibrasyon";
-    ctx.fillText(`${BRANCH_LABELS[branch]} — ${tierText}`, rect.x + 10, rect.y + 7);
+    const tierText = step.ok ? t("workshop.tier", "Kademe {tier}", { tier: romanTier(step.nextTier) }) : t("workshop.maxCalibration", "Tam Kalibrasyon");
+    ctx.fillText(t("workshop.branchPanel", "{branch} — {tier}", { branch: branchLabel(branch), tier: tierText }), rect.x + 10, rect.y + 7);
 
     ctx.fillStyle = "#8fd9c4";
     ctx.font = uiTextFont(10);
@@ -1010,9 +1013,13 @@ class Game {
     ctx.fillStyle = "#8fa8ba";
     ctx.font = uiTextFont(9);
     let status;
-    if (!step.ok) status = `Mevcut: ${romanTier(currentTier)} • geri alınamaz`;
-    else if (level < step.requiredLevel) status = `Mevcut: ${romanTier(currentTier)} • Sv. ${step.requiredLevel} gerekli • ${step.cost} Hurda`;
-    else status = `Mevcut: ${romanTier(currentTier)} • ${step.cost} Hurda • Sv. ${step.requiredLevel}`;
+    // Üç durum aynı bilgiyi taşır (kademe • servis seviyesi • maliyet): tek anahtar.
+    if (!step.ok) {
+      status = t("workshop.current.irreversible", "Mevcut: {tier} • geri alınamaz", { tier: romanTier(currentTier) });
+    } else {
+      status = t("workshop.current.needsLevel", "Mevcut: {tier} • Sv. {level} gerekli • {cost} Hurda",
+        { tier: romanTier(currentTier), level: step.requiredLevel, cost: step.cost });
+    }
     ctx.fillText(status, rect.x + 10, rect.y + 39, rect.w - 20);
   }
 
@@ -1020,7 +1027,7 @@ class Game {
   // pasif gri. Tıklama alanları _workshopModeRects'te toplanır.
   _renderWorkshopModeTabs(ctx, rx, gy, rw, mx, my) {
     const mode = this.workshopMode === "parts" ? "parts" : "upgrades";
-    const tabs = [{ id: "upgrades", label: "GELİŞTİRME" }, { id: "parts", label: "PARÇALAR" }];
+    const tabs = [{ id: "upgrades", label: t("workshop.tab.upgrades", "GELİŞTİRME") }, { id: "parts", label: t("workshop.tab.parts", "PARÇALAR") }];
     const w = 118, h = 22, gap = 8, y = gy + 7;
     const x0 = rx + (rw - (w * 2 + gap)) / 2;
     this._workshopModeRects = [];
@@ -1044,12 +1051,12 @@ class Game {
   // ── Parçalar modu: 4 yuva paneli + açık listede seçim ──────────────────
   // Yuva paneli takılı parçayı ve envanterdeki seçenek sayısını gösterir.
   // Yuvaya tıklanınca (veya Enter) liste açılır: sahip olunan parçalar (etki
-  // önizlemesiyle) + "Boş bırak". Seçim anında uygulanır ve liste kapanır.
+  // önizlemesiyle) + t("workshop.clearSlot", "Boş bırak"). Seçim anında uygulanır ve liste kapanır.
   // ── Parçalar modu: 4 yuva × PARTS_PER_SLOT alt yuva ─────────────────────
   // Her yuvanın İKİ alt yuvası vardır (şema v6): robot başına 8 parça. Yuva
   // satırında alt yuvalar yan yana hücrelerdir; hücreye tıklanınca (veya Enter)
   // O ALT YUVANIN listesi açılır. Liste, yuvanın sahip olunan parçalarını +
-  // "Boş bırak" satırını gösterir ve bir parçanın hangi alt yuvada takılı
+  // t("workshop.clearSlot", "Boş bırak") satırını gösterir ve bir parçanın hangi alt yuvada takılı
   // olduğunu yazar (aynı parça iki alt yuvada birden duramaz).
   _renderWorkshopParts(ctx, rx, rw, gy, barY, level, def, up, mx, my) {
     const panelH = 46, panelGap = 6;
@@ -1072,31 +1079,31 @@ class Game {
       const rows = rowsAll.slice(pageStart, pageStart + perPage);
       const equippedHere = loadout[slot][slotIndex] || null;
 
-      // Başlık: yuva + ALT YUVA numarası + sayfa göstergesi + "‹ Geri"
+      // Başlık: yuva + ALT YUVA numarası + sayfa göstergesi + t("common.back", "‹ Geri")
       _csPanel(ctx, rx, py, rw, panelH, { accent: "#63e6be", rivets: false, fillTop: "#18251d", fillBottom: "#101a14" });
       ctx.textAlign = "left"; ctx.textBaseline = "middle";
       ctx.fillStyle = "#8affc0"; ctx.font = uiTextFont(12, 700);
-      ctx.fillText(`${SLOT_LABELS[slot]} ${slotIndex + 1} — parça seç`, rx + 10, py + panelH / 2);
+      ctx.fillText(t("workshop.pickPart", "{slot} {index} — parça seç", { slot: slotLabel(slot), index: slotIndex + 1 }), rx + 10, py + panelH / 2);
       const backW = 74, backH = 26;
       const back = { x: rx + rw - backW - 8, y: py + (panelH - backH) / 2, w: backW, h: backH };
       this._workshopSlotBackRect = back;
       if (totalPages > 1) {
         ctx.textAlign = "right"; ctx.textBaseline = "middle";
         ctx.fillStyle = "#8fa8ba"; ctx.font = uiTextFont(10);
-        ctx.fillText(`${this.workshopPartPage + 1}/${totalPages}`, back.x - 10, py + panelH / 2);
+        ctx.fillText(t("common.pageShort", "{n}/{total}", { n: this.workshopPartPage + 1, total: totalPages }), back.x - 10, py + panelH / 2);
       }
       const hovBack = inside(back);
       _csPanel(ctx, back.x, back.y, back.w, back.h, { accent: hovBack ? "#ffe45e" : "#2a3848", hover: hovBack, glow: hovBack, rivets: false });
       ctx.textAlign = "center"; ctx.textBaseline = "middle";
       ctx.fillStyle = "#cfe0ee"; ctx.font = uiTextFont(12, 700);
-      ctx.fillText("‹ Geri", back.x + back.w / 2, back.y + back.h / 2);
+      ctx.fillText(t("common.back", "‹ Geri"), back.x + back.w / 2, back.y + back.h / 2);
       py += panelH + panelGap;
 
       // Bu yuvada hiç parça yoksa yönlendirme (Boş bırak satırı yine çizilir).
       if (rowsAll.length === 1) {
         ctx.textAlign = "left"; ctx.textBaseline = "middle";
         ctx.fillStyle = "#8fa8ba"; ctx.font = uiTextFont(10);
-        ctx.fillText(`${SLOT_LABELS[slot]} parçası envanterde yok — Pazar'dan al`, rx + 10, py + panelH / 2 - 8);
+        ctx.fillText(t("workshop.noPartInInventory", "{slot} parçası envanterde yok — Pazar'dan al", { slot: slotLabel(slot) }), rx + 10, py + panelH / 2 - 8);
       }
 
       for (let i = 0; i < rows.length; i++) {
@@ -1125,18 +1132,18 @@ class Game {
         ctx.textAlign = "left"; ctx.textBaseline = "top";
         ctx.fillStyle = row.part ? "#eef5ff" : "#9fb6c9";
         ctx.font = uiTextFont(12, 700);
-        ctx.fillText(row.part ? row.part.label : "Boş bırak", rx + 52, py + 6);
+        ctx.fillText(row.part ? row.part.label : t("workshop.clearSlot", "Boş bırak"), rx + 52, py + 6);
         ctx.fillStyle = "#8fd9c4"; ctx.font = uiTextFont(10);
         // Zaten bu alt yuvada takılı parçada fark "X → X" olurdu; onun yerine
         // açıklamayı göster (etiketler durumu zaten söylüyor).
         const detail = row.part
           ? (isEquippedHere ? row.part.desc : (partEffectText(def, up, row.partId, slotIndex) || row.part.desc))
-          : "Bu alt yuvayı boşalt";
+          : t("workshop.clearSubSlot", "Bu alt yuvayı boşalt");
         ctx.fillText(detail, rx + 52, py + 23, rw - 150);
 
         let badge = "", badgeColor = "#63e6be";
-        if (isEquippedHere) badge = "✓ burada";
-        else if (isElsewhere) { badge = `✓ ${inSlotIdx + 1}. yuvada`; badgeColor = "#8fd9c4"; }
+        if (isEquippedHere) badge = t("workshop.partHere", "✓ burada");
+        else if (isElsewhere) { badge = t("workshop.partInSlot", "✓ {index}. yuvada", { index: inSlotIdx + 1 }); badgeColor = "#8fd9c4"; }
         if (badge) {
           ctx.textAlign = "right"; ctx.textBaseline = "middle";
           ctx.fillStyle = badgeColor; ctx.font = uiTextFont(11, 700);
@@ -1157,7 +1164,7 @@ class Game {
       _csPanel(ctx, rx, rowY, rw, panelH, { accent: "#242f3b", rivets: false });
       ctx.textAlign = "left"; ctx.textBaseline = "middle";
       ctx.fillStyle = "#9fb6c9"; ctx.font = uiTextFont(10, 700);
-      ctx.fillText(SLOT_LABELS[slot].toUpperCase(), rx + 10, rowY + panelH / 2);
+      ctx.fillText(slotLabel(slot).toUpperCase(), rx + 10, rowY + panelH / 2);
 
       for (let i = 0; i < PARTS_PER_SLOT; i++) {
         const cx = rx + labelW + i * (cellW + cellGap);
@@ -1178,7 +1185,7 @@ class Game {
         }
         ctx.textAlign = "left"; ctx.textBaseline = "middle";
         ctx.fillStyle = part ? "#eef5ff" : "#5f6d78"; ctx.font = uiTextFont(11, 700);
-        ctx.fillText(part ? part.label : "Boş", rect.x + (part ? 35 : 10), rect.y + rect.h / 2, rect.w - 42);
+        ctx.fillText(part ? part.label : t("workshop.empty", "Boş"), rect.x + (part ? 35 : 10), rect.y + rect.h / 2, rect.w - 42);
       }
       py += panelH + panelGap;
     }
@@ -1186,7 +1193,7 @@ class Game {
     // İpucu satırı: ne yapılacağını yazıyla söyler.
     ctx.textAlign = "center"; ctx.textBaseline = "top";
     ctx.fillStyle = "#6d7f8d"; ctx.font = uiTextFont(10);
-    ctx.fillText(`Hücreye tıkla → parça seç • yuva başına ${PARTS_PER_SLOT} parça • sökme ücretsiz`, rx + rw / 2, py + 6);
+    ctx.fillText(t("workshop.partsHint", "Hücreye tıkla → parça seç • yuva başına {perSlot} parça • sökme ücretsiz", { perSlot: PARTS_PER_SLOT }), rx + rw / 2, py + 6);
   }
 
   handleWorkshopClick(mx, my) {
@@ -1214,7 +1221,7 @@ class Game {
       }
     }
     if (this.workshopMode === "parts") {
-      // Liste açıkken satırlar ve "‹ Geri" tıklanır.
+      // Liste açıkken satırlar ve t("common.back", "‹ Geri") tıklanır.
       if (this.workshopSlotOpen) {
         for (const r of this._workshopPartRects || []) {
           if (mx >= r.x && mx <= r.x + r.w && my >= r.y && my <= r.y + r.h) {
@@ -1380,7 +1387,7 @@ class Game {
     ctx.fillText("Basit bölüm: 1v1, rüzgârsız, adım adım rehberli", bx + bw / 2, by + bh + 12);
 
     // Geri: ana menüye dönüş (Esc ile aynı rota)
-    this.drawBackButton(ctx, "‹ Ana Menü");
+    this.drawBackButton(ctx, t("common.mainMenu", "‹ Ana Menü"));
   }
 
   handleTutorialClick(mx, my) {
@@ -1626,7 +1633,7 @@ class Game {
     if (PART_SLOTS.includes(this.marketTab)) this._renderMarketParts(ctx, L);
     else this._renderMarketAmmo(ctx, L);
 
-    this.drawBackButton(ctx, "‹ Ana Menü");
+    this.drawBackButton(ctx, t("common.mainMenu", "‹ Ana Menü"));
   }
 
   // Sekme çubuğu + Hurda + sekme başına özet satırı. Tıklama alanları
@@ -2091,7 +2098,7 @@ class Game {
     ctx.fillText("Bir sayıya tıkla — sonra her oyuncu sırayla robotunu seçer", W / 2, y + BTN + 24);
     ctx.fillText("Test için 2 oyuncu en hızlısıdır", W / 2, y + BTN + 44);
     // Geri: oyuncu sayısı ekranından ana menüye dönüş (Esc ile aynı rota).
-    this.drawBackButton(ctx, "‹ Ana Menü");
+    this.drawBackButton(ctx, t("common.mainMenu", "‹ Ana Menü"));
   }
 
   handleCountSelectClick(mx, my) {
@@ -3371,7 +3378,7 @@ class Game {
         ctx.fillStyle = "#cfe0ee";
         ctx.font = uiTextFont(13, 700);
         ctx.textAlign = "center"; ctx.textBaseline = "middle";
-        ctx.fillText(b.dir < 0 ? "‹ Geri" : "İleri ›", b.x + b.w / 2, b.y + b.h / 2);
+        ctx.fillText(b.dir < 0 ? t("common.back", "‹ Geri") : t("common.forward", "İleri ›"), b.x + b.w / 2, b.y + b.h / 2);
         ctx.globalAlpha = 1;
       }
 
@@ -3384,7 +3391,7 @@ class Game {
     // Geri butonu her fazda görünür: P2+ seçiminde önceki oyuncuya, ilk seçimde
     // bir önceki ekrana (bilgisayar modunda mod seçimi, yerelde oyuncu sayısı)
     // döner. Böylece yalnız fareyle oynayan da her ekrandan geri çıkabilir.
-    this.drawBackButton(ctx, "‹ Geri");
+    this.drawBackButton(ctx, t("common.back", "‹ Geri"));
   }
 
   // Karakter seçim sayfasını sınırlar içinde değiştir
@@ -3549,7 +3556,7 @@ class Game {
         ctx.fillStyle = "#cfe0ee";
         ctx.font = uiTextFont(13, 700);
         ctx.textAlign = "center"; ctx.textBaseline = "middle";
-        ctx.fillText(b.dir < 0 ? "‹ Geri" : "İleri ›", b.x + b.w / 2, b.y + b.h / 2);
+        ctx.fillText(b.dir < 0 ? t("common.back", "‹ Geri") : t("common.forward", "İleri ›"), b.x + b.w / 2, b.y + b.h / 2);
         ctx.globalAlpha = 1;
       }
 
@@ -3578,7 +3585,7 @@ class Game {
     this.mapPage = idx >= 0 ? Math.floor(idx / PER) : 0;
   }
 
-  // Sol-üst köşeye "‹ Geri" butonu çiz ve hit-test için _backRect'i sakla.
+  // Sol-üst köşeye t("common.back", "‹ Geri") butonu çiz ve hit-test için _backRect'i sakla.
   drawBackButton(ctx, label) {
     const x = 16, y = 16, w = 104, h = 32;
     this._backRect = { x, y, w, h };
@@ -3589,7 +3596,7 @@ class Game {
     ctx.fillStyle = "#cfe0ee";
     ctx.font = uiTextFont(13, 700);
     ctx.textAlign = "center"; ctx.textBaseline = "middle";
-    ctx.fillText(label || "‹ Geri", x + w / 2, y + h / 2);
+    ctx.fillText(label || t("common.back", "‹ Geri"), x + w / 2, y + h / 2);
     ctx.restore();
   }
 
@@ -4438,6 +4445,16 @@ function uiTextFont(px, weight) {
   // bildirimi, 2026-09-25). Açıkça 700 verilen etiket/buton/vurgu yazıları
   // kalır; gövde/açıklama/diyalog 600 olur.
   return `${weight || 600} ${px}px "Chakra Petch", "Segoe UI", sans-serif`;
+}
+
+// Atölye dalı ve parça yuvası adları: Türkçe kaynak metinler progression.js
+// (BRANCH_LABELS) ve parts.js (SLOT_LABELS) içindedir; çeviri anahtarı dal/yuva
+// kimliğinden üretilir (i18n.js > I18N_DYNAMIC_PREFIXES bu aileleri bildirir).
+function branchLabel(branch) {
+  return t("workshop.branch." + branch, BRANCH_LABELS[branch] || branch);
+}
+function slotLabel(slot) {
+  return t("workshop.slot." + slot, SLOT_LABELS[slot] || slot);
 }
 
 // Kart metni sığdırıcı: metni önce punto küçülterek, sonra satırlara bölerek

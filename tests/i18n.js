@@ -16,7 +16,7 @@ const path = require("path");
 const JS_DIR = path.join(__dirname, "..", "js");
 const I18N_SRC = fs.readFileSync(path.join(JS_DIR, "i18n.js"), "utf8");
 const EXPORT = "\n;globalThis.__I18N_TEST = { I18N, LANG_ORDER, LANG_LABELS, LANG_REQUIRED, " +
-  "I18N_STORAGE_KEY, t, setLocale, getLocale, normalizeLocale, applyDomTranslations };";
+  "I18N_DYNAMIC_PREFIXES, I18N_STORAGE_KEY, t, setLocale, getLocale, normalizeLocale, applyDomTranslations };";
 
 let pass = 0, fail = 0;
 const failures = [];
@@ -76,14 +76,31 @@ function boot(opts) {
 
 const I = boot().api;
 
+// Dinamik anahtar ailelerinin kapsadığı kimlikler gerçek kataloglardan gelir:
+// yeni bir dal/yuva eklenirse çeviri anahtarı da eklenmelidir (yoksa EN'de
+// sessizce Türkçe görünür).
+const idsSrc = ["progression.js", "parts.js"]
+  .map((f) => fs.readFileSync(path.join(JS_DIR, f), "utf8")).join("\n;\n") +
+  "\n;globalThis.__IDS = { BRANCHES, BRANCH_LABELS, SLOT_LABELS };";
+const idSandbox = { console, Math, Object, Array, Set, Map, String };
+idSandbox.globalThis = idSandbox;
+vm.createContext(idSandbox);
+vm.runInContext(idsSrc, idSandbox, { filename: "ids-bundle.js" });
+const IDS = idSandbox.__IDS;
+
 // ── 1) Kod içindeki anahtarlar ─────────────────────────────────────────────
 const codeFiles = fs.readdirSync(JS_DIR).filter((f) => f.endsWith(".js"));
-const usedKeys = new Set(), keysWithFallback = new Set();
-const callRe = /\bt\(\s*"([^"]+)"\s*(,)?/g;
+const usedKeys = new Set(), keysWithFallback = new Set(), dynamicUsed = new Set();
+// `\+` yakalaması: `t("workshop.branch." + branch, ...)` gibi ÇALIŞMA ZAMANINDA
+// üretilen anahtarlar. Bunlar sabit anahtar değildir; önek olarak bildirilmeleri
+// gerekir (I18N_DYNAMIC_PREFIXES) ve kapsadıkları kimlikler kataloglardan
+// doğrulanır.
+const callRe = /\bt\(\s*"([^"]+)"\s*(\+|,)?/g;
 for (const f of codeFiles) {
   const src = fs.readFileSync(path.join(JS_DIR, f), "utf8");
   let m;
   while ((m = callRe.exec(src))) {
+    if (m[2] === "+") { dynamicUsed.add(m[1]); continue; }
     usedKeys.add(m[1]);
     if (m[2] === ",") keysWithFallback.add(m[1]);
   }
@@ -101,8 +118,25 @@ check("index.html i18n özniteliği taşıyor", htmlKeys.size >= 15, `${htmlKeys
 
 const missingInEn = [...usedKeys].filter((k) => I.I18N.en[k] === undefined);check("kullanılan her anahtar `en` sözlüğünde var", missingInEn.length === 0, missingInEn.join(", "));
 
-const orphan = Object.keys(I.I18N.en).filter((k) => !usedKeys.has(k));
+const isDynamicKey = (k) => I.I18N_DYNAMIC_PREFIXES.some((p) => k.startsWith(p));
+const orphan = Object.keys(I.I18N.en).filter((k) => !usedKeys.has(k) && !isDynamicKey(k));
 check("sözlükte kodda kullanılmayan anahtar yok", orphan.length === 0, orphan.join(", "));
+
+// Dinamik aileler: önek gerçekten karşılık buluyor mu ve katalog kimlikleri
+// eksiksiz çevrilmiş mi?
+for (const pre of I.I18N_DYNAMIC_PREFIXES) {
+  check(`dinamik önek sözlükte var: ${pre}`, Object.keys(I.I18N.en).some((k) => k.startsWith(pre)));
+  check(`bildirilen önek kodda üretiliyor: ${pre}`, dynamicUsed.has(pre));
+}
+for (const pre of dynamicUsed) {
+  check(`kodda üretilen dinamik önek bildirilmiş: ${pre}`, I.I18N_DYNAMIC_PREFIXES.indexOf(pre) >= 0);
+}
+for (const b of IDS.BRANCHES) {
+  check(`dal çevirisi var: ${b}`, I.I18N.en["workshop.branch." + b] !== undefined);
+}
+for (const sl of Object.keys(IDS.SLOT_LABELS)) {
+  check(`yuva çevirisi var: ${sl}`, I.I18N.en["workshop.slot." + sl] !== undefined);
+}
 
 for (const lang of I.LANG_REQUIRED) {
   const dict = I.I18N[lang] || {};

@@ -23,6 +23,11 @@ const LANG_ORDER = ["tr", "en", "zh-Hans", "ru", "es-ES", "pt-BR"];
 // her anahtarın karşılığını arar; diğer diller eksik olabilir (kısmi çeviri
 // serbest, eksik yerler Türkçe görünür).
 const LANG_REQUIRED = ["en"];
+// Çalışma zamanında ÜRETİLEN anahtar aileleri (ör. dal/yuva adları: anahtar
+// kimlikten kurulur, `t("workshop.branch." + branch, ...)`). tests/i18n.js bu
+// öneklerle başlayan sözlük anahtarlarını "kodda kullanılıyor" sayar; hangi
+// kimliklerin gerçekten var olduğunu ayrıca kataloglardan doğrular.
+const I18N_DYNAMIC_PREFIXES = ["workshop.branch.", "workshop.slot."];
 const LANG_LABELS = {
   "tr": "Türkçe",
   "en": "English",
@@ -98,6 +103,51 @@ const I18N = {
     "hud.wind": "Wind: {dir} {value}",
     "hud.wind.changed": "Wind changed: {dir} {value}",
     "hud.wind.none": "Wind: -",
+    // ── Ortak metinler ────────────────────────────────────────────────────
+    "common.back": "‹ Back",
+    "common.forward": "Forward ›",
+    "common.mainMenu": "‹ Main Menu",
+    "common.page": "Page {n} / {total}",
+    "common.pageShort": "{n}/{total}",
+    "common.scrap": "Scrap: {scrap}",
+    // ── Atölye (F2b-2) ───────────────────────────────────────────────────
+    "workshop.title": "WORKSHOP",
+    "workshop.subtitleParts": "Install parts — parts apply in the same matches as upgrades",
+    "workshop.subtitleUpgrades": "Calibrate your robots — upgrades only apply in matches versus the computer",
+    "workshop.robotMeta": "{label} · {role}",
+    "workshop.serviceLevel": "Service Level {level}{suffix}",
+    "workshop.masterService": " — Master Service",
+    "workshop.robotCardMeta": "Lv. {level} • {tiers}/9",
+    "workshop.stats": "Matches {matches} • Wins {wins}",
+    "workshop.maxCalibration": "Full Calibration",
+    "workshop.branchDone": "This branch is complete",
+    "workshop.tier": "Tier {tier}",
+    "workshop.branchPanel": "{branch} — {tier}",
+    "workshop.action.locked": "{branch} — Tier {tier} locked",
+    "workshop.action.short": "{branch} — Tier {tier} — {cost} Scrap",
+    "workshop.action.upgrade": "{branch} — Upgrade tier {tier} — {cost} Scrap",
+    "workshop.reason.serviceLevel": "Service Level {level} required",
+    "workshop.reason.shortScrap": "{cost} Scrap short",
+    "workshop.current.irreversible": "Current: {tier} • cannot be undone",
+    "workshop.current.needsLevel": "Current: {tier} • Lv. {level} required • {cost} Scrap",
+    "workshop.tab.upgrades": "UPGRADES",
+    "workshop.tab.parts": "PARTS",
+    "workshop.pickPart": "{slot} {index} — pick a part",
+    "workshop.noPartInInventory": "No {slot} part in inventory — buy one in the Market",
+    "workshop.clearSlot": "Leave empty",
+    "workshop.clearSubSlot": "Clear this sub-slot",
+    "workshop.partHere": "✓ here",
+    "workshop.partInSlot": "✓ in slot {index}",
+    "workshop.empty": "Empty",
+    "workshop.partsHint": "Click a cell → pick a part • {perSlot} parts per slot • removal is free",
+    // Dinamik aile (I18N_DYNAMIC_PREFIXES): dal ve yuva adları
+    "workshop.branch.chassis": "Chassis",
+    "workshop.branch.module": "Attachment",
+    "workshop.branch.core": "Core",
+    "workshop.slot.helmet": "Helmet",
+    "workshop.slot.body": "Body",
+    "workshop.slot.tool": "Tool",
+    "workshop.slot.feet": "Feet",
   },
   "zh-Hans": {},
   ru: {},
