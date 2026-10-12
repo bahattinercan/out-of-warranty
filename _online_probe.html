@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <title>Çevrimiçi lobi sondası (F3c) — oyuna dâhil değil</title>
+  <style>
+    body { margin: 0; background: #060a10; }
+    canvas { display: block; }
+    .row { display: flex; }
+  </style>
+</head>
+<body>
+  <!-- Sonda: çevrimiçi lobi ekranının TÜM durumlarını tek karede çizer.
+       index.html'deki script sırası birebir kopyalanır (çevrimiçi katman dâhil);
+       lobiler gerçek döngü taşımasıyla bağlanır, yani koltuk/hazır durumu
+       GERÇEK el sıkışmadan gelir. -->
+  <div class="row">
+    <canvas id="c1" width="960" height="540"></canvas>
+    <canvas id="c2" width="960" height="540"></canvas>
+    <canvas id="c3" width="960" height="540"></canvas>
+  </div>
+  <div class="row">
+    <canvas id="c4" width="960" height="540"></canvas>
+    <canvas id="c5" width="960" height="540"></canvas>
+    <canvas id="c6" width="960" height="540"></canvas>
+  </div>
+
+  <script src="js/i18n.js"></script>
+  <script src="js/audio.js"></script>
+  <script src="js/characters.js"></script>
+  <script src="js/progression.js"></script>
+  <script src="js/profile.js"></script>
+  <script src="js/parts.js"></script>
+  <script src="js/market.js"></script>
+  <script src="js/maps.js"></script>
+  <script src="js/skills.js"></script>
+  <script src="js/skill-fx.js"></script>
+  <script src="js/robots.js"></script>
+  <script src="js/terrain.js"></script>
+  <script src="js/weapons.js"></script>
+  <script src="js/entity.js"></script>
+  <script src="js/projectile.js"></script>
+  <script src="js/ai.js"></script>
+  <script src="js/net/protocol.js"></script>
+  <script src="js/net/transport.js"></script>
+  <script src="js/net/state.js"></script>
+  <script src="js/net/session.js"></script>
+  <script src="js/net/adapter.js"></script>
+  <script src="js/online-lobby.js"></script>
+  <script src="js/game.js"></script>
+  <script>
+    // Dil: sonda query/hash okuyabilir (gerçek index.html okumaz).
+    (function () {
+      var m = /[?&]locale=([\w-]+)/.exec(location.search) || /^#(\w\w)/.exec(location.hash);
+      if (m) { try { setLocale(m[1], { persist: false }); } catch (e) {} }
+    })();
+
+    // Sahte oyun nesnesi: lobi yalnız W/H, input, profile ve renderTimeMs okur.
+    function fakeGame(mx, my) {
+      const g = Object.create(Game.prototype);
+      g.W = 960; g.H = 540;
+      g.input = { mouseX: mx == null ? -100 : mx, mouseY: my == null ? -100 : my };
+      g.profile = defaultProfile();
+      g.renderTimeMs = 1200;
+      g.state = "ONLINE_LOBBY";
+      g.updateHud = function () {};
+      return g;
+    }
+    function paint(id, fn) {
+      const cv = document.getElementById(id);
+      const ctx = cv.getContext("2d");
+      ctx.clearRect(0, 0, 960, 540);
+      fn(ctx);
+    }
+
+    // ── 1) Rol seçimi (fare "ODA KUR" kartının üstünde: hover durumu görünür)
+    const g1 = fakeGame(330, 250);
+    const l1 = new OnlineLobby(g1);
+    l1.open();
+    paint("c1", (ctx) => l1.render(ctx));
+
+    // ── 2) Kod girişi (3 harf yazılmış, dördüncü kutu odakta)
+    const g2 = fakeGame(480, 200);
+    const l2 = new OnlineLobby(g2);
+    l2.open();
+    l2.step = "code";
+    l2.typed = "ABC";
+    paint("c2", (ctx) => l2.render(ctx));
+
+    // ── 3-4) Oda: GERÇEK el sıkışma (host + misafir, döngü taşıması)
+    const [ta, tb] = LoopbackTransport.pair({ name: "host" }, { name: "guest" });
+    const gH = fakeGame(720, 260);          // fare "BAĞLANTIYI KOPYALA" üstünde
+    const gG = fakeGame(720, 260);          // fare "HAZIRIM" üstünde
+    const host = new OnlineLobby(gH);
+    const guest = new OnlineLobby(gG);
+    host.open();
+    guest.open();
+    host.adoptTransport(ta, { role: "host", code: "ABC-DE".replace("-", "") });
+    guest.adoptTransport(tb, { role: "guest", code: "ABCDE" });
+    guest.toggleReady();                    // hazır → hostta "MAÇI BAŞLAT" açılır
+    paint("c3", (ctx) => host.render(ctx));
+    paint("c4", (ctx) => guest.render(ctx));
+
+    // ── 5) Başlangıç paketi beklenirken (ONLINE_LOADING) perdesi
+    const g5 = fakeGame(-100, -100);
+    g5.state = "ONLINE_LOADING";
+    g5.online = { session: { matchId: "ABCDE" }, role: "guest", notice: null };
+    paint("c5", (ctx) => Game.prototype.renderOnlineLoading.call(g5, ctx));
+
+    // ── 6) Hata durumu (oda bulunamadı) + kısa bildirim
+    const g6 = fakeGame(-100, -100);
+    const l6 = new OnlineLobby(g6);
+    l6.open();
+    l6.step = "room";
+    l6.role = "guest";
+    l6.code = "QWERT";
+    l6._fail("ROOM_NOT_FOUND");
+    paint("c6", (ctx) => l6.render(ctx));
+
+    console.log("PROBE OK · rol/kod/oda(host)/oda(misafir)/yükleme/hata çizildi");
+  </script>
+</body>
+</html>

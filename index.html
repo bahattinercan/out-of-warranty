@@ -123,6 +123,16 @@
   <script src="js/entity.js"></script>
   <script src="js/projectile.js"></script>
   <script src="js/ai.js"></script>
+  <!-- Çevrimiçi katman (F3c): protokol → taşıma → durum → oturum → köprü →
+       lobi ekranı. game.js bunlara YALNIZ çalışma zamanında dokunur (sınıf
+       tanımları TDZ olduğu için sıra korunur). PeerJS CDN'i burada DEĞİL,
+       çevrimiçi ekrana ilk girişte tembel yüklenir (js/online-lobby.js). -->
+  <script src="js/net/protocol.js"></script>
+  <script src="js/net/transport.js"></script>
+  <script src="js/net/state.js"></script>
+  <script src="js/net/session.js"></script>
+  <script src="js/net/adapter.js"></script>
+  <script src="js/online-lobby.js"></script>
   <script src="js/game.js"></script>
   <script src="js/main.js"></script>
 </body>

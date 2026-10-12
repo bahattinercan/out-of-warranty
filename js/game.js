@@ -136,6 +136,11 @@ class Game {
     this.profile = loaded.profile;
     this.storageOk = loaded.storageOk;
     this.sessionId = createSessionId(); // matchKey'i oturumlar arası ayırır
+    // Çevrimiçi lobi ekranı (js/online-lobby.js): oda kodu, davet ve hazır
+    // akışı. Profil yüklendikten SONRA kurulur (varsayılan robot profilden).
+    this.lobby = new OnlineLobby(this);
+    this.online = null;        // maç sırasında ağ bağlamı (js/net/adapter.js)
+    this.onlineGuest = false;  // misafir: yetkili simülasyon yürütülmez
     this.workshopPage = 0;
     this.workshopSelectedId = null;
     this.workshopBranch = BRANCHES[0];
@@ -151,6 +156,9 @@ class Game {
   }
 
   reset() {
+    // Çevrimiçi oturum varsa kapatılır: taşıma kapanır, ağ bağlamı temizlenir.
+    // (Menüye dönüş/çıkış yollarının hepsi buradan geçer.)
+    if (this.online) this.closeOnline();
     this.bot.cancel();
     this.bots.forEach((b) => b.cancel());
     this.bots = [];
@@ -282,6 +290,281 @@ class Game {
     this.updateHud();
   }
 
+  // ── Çevrimiçi (F3c) ──────────────────────────────────────────────────────
+  // Çevrimiçi lobi ekranını açar (oda kur / koda katıl).
+  openOnline() {
+    hideOverlay();
+    this.clearTurnInput();
+    this.mode = null;
+    this.state = "ONLINE_LOBBY";
+    this.lobby.open();
+    this.updateHud();
+  }
+
+  // Ağ bağlamını kapatır (menüye dönüş, maç iptali). Taşıma da kapanır.
+  closeOnline() {
+    if (this.lobby) { try { this.lobby.close(); } catch (e) { /* yoksay */ } }
+    this.online = null;
+    this.onlineGuest = false;
+  }
+
+  /* Lobi maç başlatınca çağrılır: dünyayı kurar, oturumu oyuna bağlar.
+   * Host başlangıç paketini (arazi maskesi + tam durum) gönderir; misafir bu
+   * paketleri uygulayıp LOADED ile onaylar (aşama LOADING → PLAYING). */
+  beginOnlineMatch(opts) {
+    const o = opts || {};
+    const session = o.session || (this.lobby && this.lobby.session);
+    if (!session) return false;
+    const role = session.role === "guest" ? "guest" : "host";
+    const setup = role === "guest"
+      ? (session.startSetup || { mapId: null, roster: null })
+      : { mapId: session.lobbyMapId, roster: this.onlineRoster(session) };
+    this.state = "ONLINE_LOADING";
+    this.startOnlineMatch(setup);
+    netAttachOnline(this, session, { lobby: o.lobby || this.lobby });
+    if (role === "host") {
+      // Başlangıç paketi: arazi maskesi (arazi rastgele doğduğu için şart) +
+      // tam durum (build dahil: misafir profil verisi taşımaz).
+      session.sendTerrainSnapshot(netCaptureTerrain(this));
+      session.broadcastState(netCaptureState(this, { tick: this.turnId }));
+      // Host kendi koltuğunun yükleme onayını hemen verir (dünya hazır);
+      // misafirin onayı LOADED paketiyle gelir. İkisi tamamlanınca PLAYING.
+      session.loaded(0);
+      this.state = "AIMING";
+    } else {
+      // Misafir: maskeyi ve ilk durumu bekler; `rules.applyState` onayı gönderir.
+      this.state = "ONLINE_LOADING";
+    }
+    this.updateHud();
+    return true;
+  }
+
+  // Host kadrosu: [kendi robotum, misafirin robotu] (misafir robotu HELLO ile gelir).
+  onlineRoster(session) {
+    const host = (this.lobby && this.lobby.robotId) || (CHARACTERS[0] && CHARACTERS[0].id);
+    const guestSeat = session.seats.filter((s) => s.playerIdx !== 0)[0];
+    const guest = (guestSeat && guestSeat.robotId) || (CHARACTERS[1] && CHARACTERS[1].id);
+    return [host, guest];
+  }
+
+  /* Çevrimiçi maç kurulumu: kadro ve harita hostun START paketinden gelir
+   * (misafir kendi seçimini yapmaz). Kurulumun geri kalanı yerel maçla AYNI
+   * yoldur (startGame): arazi, spawn padleri, sayaçlar. Çevrimiçi maçta
+   * geliştirmeler ve depo KAPALIDIR (taban build kuralı): iki taraf aynı
+   * istatistiklerle oynar, misafirin profili gerekmez. */
+  startOnlineMatch(setup) {
+    const st = setup || {};
+    const ids = Array.isArray(st.roster) ? st.roster : [];
+    const chars = [];
+    for (const id of ids) {
+      const def = CHARACTERS.find((c) => c.id === id);
+      if (def) chars.push(def);
+    }
+    if (chars.length < 2) {
+      // Kadro eksikse ilk iki karakterle devam edilir (protokol hatası oyunu
+      // kilitlesin diye maç yine kurulur; iki taraf aynı listeyi kullanır).
+      for (let i = 0; i < 2; i++) if (CHARACTERS[i] && chars.indexOf(CHARACTERS[i]) < 0) chars.push(CHARACTERS[i]);
+    }
+    this.mode = "online";
+    this.selectedChars = chars.slice(0, 2);
+    this.selectedMap = getMapById(st.mapId) || MAPS[0];
+    this.playerControls = this.selectedChars.map(() => "human");
+    this.startGame();
+    return true;
+  }
+
+  /* Çevrimiçi komut: host KENDİ komutunu da misafirinkiyle aynı doğrulamadan
+   * geçirir (charge yaşam döngüsü, atış hakkı, tur denetimi tek yerde —
+   * docs/multiplayer-plan.md §6.1). */
+  onlineCommand(cmd) {
+    const o = this.online;
+    if (!o) return { ok: false, reason: "NO_ONLINE" };
+    if (o.role === "host") {
+      return o.session.handleHostMessage(0, {
+        v: NET_PROTOCOL_VERSION, t: NET_MSG.CMD, matchId: o.session.matchId,
+        authoritySessionId: o.session.authoritySessionId, turnId: o.session.turnId,
+        seq: o.nextSeq(), id: o.nextCommandId(), cmd,
+      });
+    }
+    // Misafir: kimliği oturum üretir ("s1-n" — koltuk ad alanı). Adapter'in
+    // sayacı hostun ad alanına ait olduğu için burada KULLANILMAZ (çakışırdı).
+    return o.session.sendCommand(cmd);
+  }
+
+  // Reddedilen komutun kısa bildirimi (ör. "sıra sende değil").
+  onlineNotice(reason) {
+    const o = this.online;
+    if (!o) return;
+    // Metin ÇAĞRI ANINDA çevrilir (anahtarlar burada açık yazılır: hem TR
+    // kaynağı görünür kalır hem i18n kapsam testi anahtarları kodda bulur).
+    let text;
+    if (reason === "NOT_YOUR_TURN") text = t("online.notice.notYourTurn", "Sıra sende değil");
+    else if (reason === "SHOT_ALREADY_USED") text = t("online.notice.shotUsed", "Bu turda atış hakkın doldu");
+    else if (reason === "NO_OPEN_CHARGE") text = t("online.notice.noCharge", "Güç doldurma kapandı");
+    else if (reason === "NO_AMMO") text = t("online.notice.noAmmo", "Bu silahın mühimmatı bitti");
+    else if (reason === "STALE_TURN") text = t("online.notice.staleTurn", "Tur kapandı — komut geçersiz");
+    else if (reason === "COMMAND_CONFLICT") text = t("online.notice.conflict", "Komut çakışması — tekrar dene");
+    else text = t("online.notice.rejected", "Komut uygulanmadı: {reason}", { reason });
+    o.notice = { text, age: 0 };
+  }
+
+  // Maç iptali (simülasyon borcu, kopma vb.): sonuç kartı yerine menüye dönülür.
+  onlineAbort(reason) {
+    const o = this.online;
+    if (!o || o.aborted) return;
+    o.aborted = true;
+    try { o.session.abort(reason); } catch (e) { /* yoksay */ }
+    // İptal nedeni metni (anahtarlar açık: i18n kapsamı kodda görünür).
+    let why;
+    if (reason === "LEFT") why = t("online.abort.LEFT", "Maçtan ayrıldın.");
+    else if (reason === "SIM_DEBT") why = t("online.abort.SIM_DEBT", "Simülasyon yetişemedi — maç iptal edildi.");
+    else if (reason === "REMATCH") why = t("online.abort.REMATCH", "Oda sahibi maçı yeniden başlattı.");
+    else why = t("online.abort.ABORTED", "Maç iptal edildi.");
+    showOverlay(t("online.abort.title", "Çevrimiçi maç bitti"), why, null);
+    this._applyOverlayMode(true);
+    this.updateHud();
+  }
+
+  // Host: maç sonucu paketi (kim kazandı).
+  onlineResult() {
+    const alive = this.players.filter((p) => p.alive);
+    const winner = alive.length === 1 ? this.players.indexOf(alive[0]) : null;
+    return { winner, turnId: this.turnId };
+  }
+
+  // Misafir: hostun RESULT paketini gösterir (kendi koltuğuna göre kazanç/kayıp).
+  onlineShowResult(result) {
+    const mine = this.online ? this.online.session.mySeat : null;
+    const r = result || {};
+    if (r.winner == null) {
+      showOverlay(t("overlay.match.drawTitle", "Tahsis berabere kaldı!"), t("overlay.match.drawSub", "İkisi de elendi."), null);
+    } else {
+      const winner = this.players[r.winner];
+      showOverlay(t("overlay.match.winTitle", "{name} parça hakkını kazandı! 🏆", { name: winner ? winner.name : "" }), "", null);
+    }
+    if (r.winner != null && r.winner !== mine) {
+      // Kaybeden tarafta alt yazı yeniden dene çağrısıdır.
+      const sub = document.getElementById("overlay-sub");
+      if (sub) sub.textContent = t("online.loss.sub", "Karşı taraf kazandı — yeni bir oda kurup tekrar dene.");
+    }
+    this._applyOverlayMode(true);
+  }
+
+  // Maç sonu kartı çevrimiçi modda sadeleşir: Atölye ve Tekrar Oyna yoktur
+  // (ödül/atölye tek oyunculu ilerlemeye ait; yeni maç için odaya dönülür).
+  _applyOverlayMode(online) {
+    const ws = document.getElementById("workshop-btn");
+    if (ws) ws.classList.toggle("hidden", !!online);
+    const rs = document.getElementById("restart-btn");
+    if (rs) rs.classList.toggle("hidden", !!online);
+  }
+
+  /* Bu CİHAZIN sırası mı? Yerel modlarda sıradaki her insan robot; çevrimiçide
+   * yalnız kendi koltuğumuz (aksi hâlde misafirin turunda hostun tuşları
+   * karşı tarafın robotunu sürerdi). */
+  isLocalTurn() {
+    if (!this.isHumanTurn()) return false;
+    if (this.mode !== "online" || !this.online) return true;
+    const seat = this.online.role === "host" ? 0 : this.online.session.mySeat;
+    return this.turn === seat;
+  }
+
+  /* Host sürücüsü: simülasyon oturumun SABİT ADIMLI saatinden yürür (ağ
+   * gecikmesi borç olarak taşınır, sessizce atlanmaz). Tur kapandığında oturuma
+   * bildirilir (TURN paketi), arazi oymaları ve periyodik durum yayınlanır. */
+  updateOnlineHost(dt) {
+    const o = this.online;
+    if (!o || o.role !== "host") { this.updateCore(dt); return; }
+    const res = o.session.update(dt * 1000);
+    if (res && res.ok === false && res.reason === "SIM_DEBT") { this.onlineAbort("SIM_DEBT"); return; }
+    // Oyun turu kapattıysa (turnId ilerledi) oturum da aynı kimliğe geçer.
+    if (this.turnId !== o.lastTurnId) {
+      o.lastTurnId = this.turnId;
+      o.session.endTurn(this.turnId);
+    }
+    netFlushTerrain(this, o.session);
+    o.stateTimerMs += dt * 1000;
+    if (o.stateTimerMs >= NET_STATE_INTERVAL_MS) {
+      o.stateTimerMs = 0;
+      o.session.broadcastState(netCaptureState(this, { tick: this.turnId, includeBuild: false }));
+    }
+    if (o.notice) { o.notice.age += dt * 1000; if (o.notice.age > 2400) o.notice = null; }
+    if (this.state === "GAMEOVER" && !o.finished) {
+      o.finished = true;
+      o.session.finish(this.onlineResult());
+      this._applyOverlayMode(true);
+    }
+    this.updateHud();
+  }
+
+  /* Misafir sürücüsü: YETKİLİ simülasyon YOK. Yalnız görsel yumuşatma —
+   * yerçekimi/animasyon, mermi uçuşu, patlama ve hasar yazıları. Tur sayacı,
+   * sıra geçişi, bot ve maç sonu kararı STATE/TURN/RESULT paketleriyle gelir. */
+  updateGuest(dt) {
+    const o = this.online;
+    if (!o) { this.updateCore(dt); return; }
+    // Hostun terminal paketleri: sonuç kartı / iptal bildirimi (bir kez).
+    if (!o.finished && o.session.phase === NET_PHASE.RESULTS) {
+      o.finished = true;
+      this.onlineShowResult(o.session.lastResult);
+    }
+    if (!o.finished && o.session.lastAbort) {
+      o.finished = true;
+      this.onlineAbort(o.session.lastAbort);
+    }
+    if (this.state === "GAMEOVER" || this.state === "ONLINE_LOADING") {
+      // Başlangıç paketi (maske + durum) gelene kadar yerel fizik ilerletilmez:
+      // arazi ve konumlar hostun paketiyle belirlenir.
+      if (o.notice) { o.notice.age += dt * 1000; if (o.notice.age > 2400) o.notice = null; }
+      this.updateHud();
+      return;
+    }
+    for (const p of this.players) if (p.alive) p.update(this.terrain);
+
+    // Nişan ve güç doldurma YEREL gösterilir (anında geri bildirim); yetkili
+    // sonuç RELEASE komutuyla atomik gider, host uygular.
+    if (this.state === "AIMING" && this.active && this.isLocalTurn()) {
+      this.active.aimTowards(this.input.mouseX, this.input.mouseY);
+      if (this.input.charging) {
+        this.input.power = Math.min(1, this.input.power + 0.012);
+        const marker = this.active.lastShot ? this.active.lastShot.power * 100 : null;
+        updatePowerBar(this.input.power, true, marker);
+      }
+    }
+
+    // Girdi paketi: yalnız sıra bizdeyken, 20 paket/sn (güvenilmez akış).
+    o.inputTimerMs += dt * 1000;
+    if (o.inputTimerMs >= NET_INPUT_INTERVAL_MS) {
+      o.inputTimerMs = 0;
+      if (o.session.phase === NET_PHASE.PLAYING && this.isLocalTurn()) {
+        const move = (this.input.left ? -1 : 0) + (this.input.right ? 1 : 0);
+        o.session.sendInput(move, { x: this.input.mouseX, y: this.input.mouseY });
+      }
+    }
+
+    // Mermi uçuşu: yerel adım yalnız yumuşatma içindir; konum/ölüm kararı
+    // 10 Hz snapshot ile düzeltilir. Patlama GÖRSELDİR (explode içinde dallanır).
+    if (this.state === "PROJECTILE") {
+      const current = this.projectiles;
+      this.projectiles = [];
+      for (const pr of current) {
+        if (pr.dead) continue;
+        const res = pr.update(this.terrain, this.wind);
+        if (res && res.hit) { this.explode(res.x, res.y, pr.spec); continue; }
+        if (res) continue;   // ekrandan çıktı
+        this.projectiles.push(pr);
+      }
+    }
+
+    for (const ex of this.explosions) ex.update();
+    this.explosions = this.explosions.filter((e) => !e.dead);
+    if (typeof updateSkillFx === "function") updateSkillFx(this);
+    for (const d of this.damagePopups) { d.age += dt; d.y -= 34 * dt; }
+    this.damagePopups = this.damagePopups.filter((d) => d.age < 1.1);
+    if (o.notice) { o.notice.age += dt * 1000; if (o.notice.age > 2400) o.notice = null; }
+    this.updateHud();
+  }
+
   beginMode(mode) {
     this.mode = mode === "computer" ? "computer" : "local";
     if (this.mode === "computer") {
@@ -323,6 +606,7 @@ class Game {
     const items = [
       { action: "computer", icon: "robot", accent: "#ff7b7b", title: t("menu.mode.computer.title", "Otomatik Birimlere Karşı"), sub: t("menu.mode.computer.sub", "1 operatör ve 1–3 fabrika robotu") },
       { action: "local", icon: "ikili", accent: "#7baeff", title: t("menu.mode.local.title", "Yerel Operatörler"), sub: t("menu.mode.local.sub", "Aynı cihazda 2–6 oyuncu") },
+      { action: "online", icon: "ağ", accent: "#63e6be", title: t("menu.mode.online.title", "Çevrimiçi"), sub: t("menu.mode.online.sub", "Oda koduyla 1v1 — internet üzerinden") },
       { action: "workshop", icon: "dişli", accent: "#d8a72f", title: t("menu.mode.workshop.title", "ATÖLYE"), sub: t("menu.mode.workshop.sub", "Robotlarını kalibre et • {scrap} Hurda", { scrap }) },
       { action: "market", icon: "mermi", accent: "#3fae8c", title: t("menu.mode.market.title", "CEPHANE PAZARI"), sub: depotTotal > 0 ? t("menu.mode.market.sub", "Depoda {n} mermi • {scrap} Hurda", { n: depotTotal, scrap }) : t("menu.mode.market.subEmpty", "Ortak mühimmat deposu • {scrap} Hurda", { scrap }) },
       { action: "tutorial", icon: "soru", accent: "#4fc3f7", title: t("menu.mode.tutorial.title", "NASIL OYNANIR"), sub: t("menu.mode.tutorial.sub", "Kontroller ve tur kuralları") },
@@ -1280,10 +1564,53 @@ class Game {
         if (r.action === "workshop") this.openWorkshop();
         else if (r.action === "market") this.openMarket();
         else if (r.action === "tutorial") this.openTutorial();
+        else if (r.action === "online") this.openOnline();
         else this.beginMode(r.action);
         return;
       }
     }
+  }
+
+  /* Başlangıç paketi beklenirken çizilen perde: iki taraf da aynı ekranı görür
+   * (misafir hostun arazi maskesini ve durumunu bekler). */
+  renderOnlineLoading(ctx) {
+    const W = this.W, H = this.H;
+    if (typeof drawClouds === "function") drawClouds(ctx, W, "rgba(190,215,240,0.14)");
+    _msBackdrop(ctx, W, H);
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillStyle = "#ffe45e";
+    ctx.font = uiTitleFont(22);
+    ctx.fillText(t("online.loading.title", "Dünya senkronize ediliyor"), W / 2, H / 2 - 34);
+    ctx.fillStyle = "#cfe0ee";
+    ctx.font = uiTextFont(13);
+    ctx.fillText(t("online.loading.sub", "Arazi ve başlangıç durumu hosttan alınıyor…"), W / 2, H / 2 + 2);
+    const code = this.online && this.online.session ? this.online.session.matchId : null;
+    if (code) {
+      ctx.fillStyle = "#8fa6bd";
+      ctx.font = uiTextFont(11, 700);
+      ctx.fillText(t("online.loading.code", "Oda: {code}", { code: netFormatRoomCode(code) }), W / 2, H / 2 + 34);
+    }
+  }
+
+  /* Çevrimiçi bildirim şeridi: reddedilen komut/tur uyarısı (ör. "sıra sende
+   * değil"). Kısa ömürlüdür; oyun akışını kesmez. */
+  drawOnlineNotice(ctx) {
+    const o = this.online;
+    if (!o || !o.notice) return;
+    const a = Math.min(1, (2400 - o.notice.age) / 500);
+    ctx.save();
+    ctx.globalAlpha = Math.max(0, a);
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    const text = o.notice.text || "";
+    ctx.font = uiTextFont(13, 700);
+    const w = Math.max(180, ctx.measureText(text).width + 28);
+    const x = this.W / 2 - w / 2, y = 64;
+    if (typeof _csPanel === "function") _csPanel(ctx, x, y, w, 30, { accent: "#ffd24a", fillTop: "#221f14" });
+    ctx.fillStyle = "#ffe45e";
+    ctx.fillText(text, this.W / 2, y + 16);
+    ctx.restore();
   }
 
   // ── Nasıl Oynanır (TUTORIAL) ─────────────────────────────────────────
@@ -2067,6 +2394,9 @@ class Game {
 
   // Oyun bitince aynı kadro + haritayla hızlı rövanş; kadro yoksa menüye düşer.
   replay() {
+    // Çevrimiçi maç: yeni maç odaya dönüşle kurulur (aynı odada yeniden eşleşme
+    // akışı F4'e bırakıldı); "Tekrar Oyna" bu modda gizlidir.
+    if (this.mode === "online") { this.quitToMenu(); return; }
     // Öğretici maçı: koç adımları sıfırlansın diye aynı kurulumla yeniden başlar
     if (this.mode === "tutorial") { this.beginTutorial(); return; }
     if (this.selectedChars.length && this.selectedChars.every(Boolean) && this.selectedMap) {
@@ -2158,6 +2488,14 @@ class Game {
 
   bindInput() {
     window.addEventListener("keydown", (e) => {
+      // Çevrimiçi lobi açıkken tüm klavye oraya gider (oda kodu yazımı, hazır,
+      // başlat). Lobi kendi Esc/Enter işleyişini yönetir.
+      if (this.state === "ONLINE_LOBBY") {
+        if (this.lobby.handleKey(e)) {
+          if (e.key !== "m" && e.key !== "M") e.preventDefault?.();
+          return;
+        }
+      }
       // Kaydırıcının ok tuşları ve butonun Space/Enter girdileri oyuna geçmez.
       if (e.target.closest?.("#audio-control") && !["m", "M", "Escape"].includes(e.key)) return;
       // Alt panel butonları odaktayken Space/Enter tarayıcının tıklamasına
@@ -2189,17 +2527,24 @@ class Game {
         if (e.key === "ArrowLeft" || e.key === "a" || e.key === "A") this.changeMapPage(-1);
         if (e.key === "ArrowRight" || e.key === "d" || e.key === "D") this.changeMapPage(1);
       }
-      if (this.state === "AIMING" && this.isHumanTurn() && (e.key === "a" || e.key === "A" || e.key === "ArrowLeft")) this.input.left = true;
-      if (this.state === "AIMING" && this.isHumanTurn() && (e.key === "d" || e.key === "D" || e.key === "ArrowRight")) this.input.right = true;
+      if (this.state === "AIMING" && this.isLocalTurn() && (e.key === "a" || e.key === "A" || e.key === "ArrowLeft")) this.input.left = true;
+      if (this.state === "AIMING" && this.isLocalTurn() && (e.key === "d" || e.key === "D" || e.key === "ArrowRight")) this.input.right = true;
       if (e.code === "Space") { e.preventDefault(); this.startCharge(); }
       if (e.key === "w" || e.key === "W" || e.key === "ArrowUp") {
         e.preventDefault();
-        if (this.state === "AIMING" && this.isHumanTurn() && this.active.jump()) {
-          SFX.jump();
-          if (this.mode === "tutorial") this._tutComplete(1); // rehber adımı: sıçrama
+        if (this.state === "AIMING" && this.isLocalTurn()) {
+          if (this.mode === "online") {
+            // Sıçrama yetkili tarafta uygulanır; misafir anında geri bildirim
+            // için kendi kopyasında da zıplatır (snapshot düzeltir).
+            if (this.online.role === "guest" && this.active.jump()) SFX.jump();
+            this.onlineCommand({ kind: NET_CMD.JUMP });
+          } else if (this.active.jump()) {
+            SFX.jump();
+            if (this.mode === "tutorial") this._tutComplete(1); // rehber adımı: sıçrama
+          }
         }
       }
-      if ((e.key === "q" || e.key === "Q") && this.state === "AIMING" && this.isHumanTurn()) {
+      if ((e.key === "q" || e.key === "Q") && this.state === "AIMING" && this.isLocalTurn()) {
         this.usePlayerSkill();
       }
       if ((e.key === "m" || e.key === "M") && !e.repeat) this.toggleMute();
@@ -2216,11 +2561,18 @@ class Game {
 
     const rect = () => this.canvas.getBoundingClientRect();
     this.canvas.addEventListener("mousemove", (e) => {
+      // Çevrimiçi host: sıra karşı taraftayken kendi faremiz nişanı ELE GEÇİRMEZ
+      // (karşı tarafın nişanı INPUT paketiyle `setInput` üzerinden yazılır).
+      if (this.mode === "online" && this.online && this.online.role === "host" && this.turn !== 0) return;
       const r = rect();
       this.input.mouseX = (e.clientX - r.left) * (this.W / r.width);
       this.input.mouseY = (e.clientY - r.top) * (this.H / r.height);
     });
     this.canvas.addEventListener("mousedown", (e) => {
+      if (this.state === "ONLINE_LOBBY") {
+        this.lobby.handleClick(this.input.mouseX, this.input.mouseY);
+        return;
+      }
       if (this.state === "WORKSHOP") {
         this.handleWorkshopClick(this.input.mouseX, this.input.mouseY);
         return;
@@ -2348,7 +2700,7 @@ class Game {
 
   // Silah seçimi (yalnız AIMING). Mühimmatı olmayan silah atlanır.
   selectWeapon(i) {
-    if (this.state !== "AIMING" || !this.isHumanTurn()) return;
+    if (this.state !== "AIMING" || !this.isLocalTurn()) return;
     const a = this.active;
     if (!a || i < 0 || i >= WEAPONS.length || !a.hasAmmo(i)) return;
     if (a.weapon !== i) SFX.weaponSwitch();
@@ -2359,7 +2711,21 @@ class Game {
 
   // Dahili modülü kullan (Q tuşu ve alt paneldeki modül yuvası aynı yolu kullanır).
   usePlayerSkill() {
-    if (this.state !== "AIMING" || !this.isHumanTurn()) return;
+    if (this.state !== "AIMING" || !this.isLocalTurn()) return;
+    if (this.mode === "online") {
+      // Modül hostta yetkili olarak uygulanır. Misafir ANINDA görsel geri
+      // bildirim için kendi kopyasında da çalıştırır; gerçek sonuç (hasar,
+      // cooldown, mühimmat) snapshot ile düzelir.
+      if (this.online && this.online.role === "guest") this._applyModule();
+      this.onlineCommand({ kind: NET_CMD.MODULE, angle: this.active.aim });
+      return;
+    }
+    this._applyModule();
+  }
+
+  /* Modül gövdesi: yerel yol ve çevrimiçi yetkili yol (js/net/adapter.js)
+   * AYNI bu gövdeyi çağırır — çevrimiçi dalına yeniden girip döngü kurmaz. */
+  _applyModule() {
     const kind = this.active.skillKind;
     if (useSkill(this.active, this)) {
       SFX.skill(kind);
@@ -2372,7 +2738,7 @@ class Game {
 
   // Önceki/sonraki kullanılabilir silaha geç (fare tekerleği)
   cycleWeapon(dir) {
-    if (this.state !== "AIMING" || !this.isHumanTurn()) return;
+    if (this.state !== "AIMING" || !this.isLocalTurn()) return;
     const a = this.active;
     if (!a) return;
     const n = WEAPONS.length;
@@ -2386,15 +2752,43 @@ class Game {
   }
 
   startCharge() {
-    if (this.state !== "AIMING" || !this.isHumanTurn()) return;
+    if (this.state !== "AIMING" || !this.isLocalTurn()) return;
     // Açık silah listesi varsa ilk tıklama yalnız listeyi kapatır: oyuncu
     // listeyi gezerken yanlışlıkla ateş başlamasın.
     if (this.weaponMenuOpen) { this.weaponMenuOpen = false; this.updateHud(); return; }
+    if (this.mode === "online") {
+      // Güç doldurma CHARGE komutuyla açılır (host kendi komutunu da aynı
+      // doğrulamadan geçirir); misafir anında güç barı için yerel bayrağı da
+      // kaldırır — yetkili sonuç RELEASE ile gider.
+      const o = this.online;
+      if (!o) return;
+      if (!o.chargeId) o.chargeId = "ch" + (++o.chargeSeq);
+      const res = this.onlineCommand({ kind: NET_CMD.CHARGE, chargeId: o.chargeId });
+      if (o.role === "guest" && (!res || res.ok !== false)) this.input.charging = true;
+      return;
+    }
     this.input.charging = true;
   }
 
   releaseFire() {
     if (this.state !== "AIMING" || !this.input.charging) return;
+    if (this.mode === "online") {
+      const o = this.online;
+      if (!o) return;
+      const power = this.input.power;
+      const a = this.active;
+      const cmd = {
+        kind: NET_CMD.RELEASE, chargeId: o.chargeId || "ch" + (++o.chargeSeq),
+        weaponId: a.weaponSpec.id, angle: a.aim, power,
+      };
+      this.input.charging = false;
+      this.input.power = 0;
+      updatePowerBar(0, false);
+      const res = this.onlineCommand(cmd);
+      o.chargeId = null;   // doldurma kapandı (yeni atış yeni chargeId açar)
+      if (res && res.ok === false && res.reason) this.onlineNotice(res.reason);
+      return;
+    }
     this.input.charging = false;
     const power = this.input.power;
     this.input.power = 0;
@@ -2405,6 +2799,10 @@ class Game {
   // Güç dolduruluyorsa atışı ateş etmeden iptal et. İptal edildiyse true döner.
   cancelCharge() {
     if (!this.input.charging) return false;
+    if (this.mode === "online" && this.online && this.online.chargeId) {
+      this.onlineCommand({ kind: NET_CMD.CANCEL, chargeId: this.online.chargeId });
+      this.online.chargeId = null;
+    }
     this.input.charging = false;
     this.input.power = 0;
     updatePowerBar(0, false);
@@ -2445,6 +2843,11 @@ class Game {
   // Oyundan çık: bekleyen bot kararını ve girdileri temizleyip mod menüsüne dön.
   quitToMenu() {
     this.clearTurnInput();
+    // Çevrimiçi maçtan çıkış: karşı tarafa iptal bildirilir, taşıma kapanır.
+    if (this.online) {
+      try { this.online.session.abort("LEFT"); } catch (e) { /* yoksay */ }
+      this.closeOnline();
+    }
     this.bot.cancel();
     for (const b of this.bots) b.cancel();
     // Yarıda bırakılan maçta da yüklenmiş cephane envantere geri döner.
@@ -2605,6 +3008,15 @@ class Game {
   }
 
   explode(x, y, spec) {
+    /* Çevrimiçi misafir: patlama YALNIZ görseldir. Arazi oyması ve hasar hostun
+     * yetkisinde (TERRAIN + STATE paketleriyle gelir); misafir kendi kopyasında
+     * ikinci kez oyarsa iki taraf ayrışır. */
+    if (this.onlineGuest) {
+      const r = Math.max(1, Math.round(spec.radius));
+      this.explosions.push(new Explosion(x, y, r));
+      SFX.explosion(r);
+      return;
+    }
     const shooter = this.shooterIdx !== null ? this.players[this.shooterIdx] : null;
     // nextShot yeteneği: yarıçap/hasar/knockback çarpanları
     const mod = this.shotMod;
@@ -2813,6 +3225,8 @@ class Game {
         winner ? "" : t("overlay.match.drawSub", "İkisi de elendi."),
         reward
       );
+      // Çevrimiçi maçta ödül/atölye yoktur: kart sadeleşir, yeni maç odaya dönüşle.
+      if (this.mode === "online") this._applyOverlayMode(true);
       this.updateHud();
       return;
     }
@@ -2878,8 +3292,21 @@ class Game {
     return res;
   }
 
+  /* Kare dağıtıcısı: çevrimiçi maçta host sabit adımlı ağ saatiyle, misafir
+   * görsel yumuşatmayla ilerler; yerel modlarda çekirdek gövde çağrılır. */
   update(dt) {
-    if (this.state === "MODE_SELECT" || this.state === "DIFFICULTY_SELECT" || this.state === "BOT_COUNT_SELECT" || this.state === "CHAR_SELECT" || this.state === "COUNT_SELECT" || this.state === "MAP_SELECT" || this.state === "WORKSHOP" || this.state === "MARKET" || this.state === "TUTORIAL") {
+    if (this.mode === "online" && this.online) {
+      if (this.onlineGuest) this.updateGuest(dt);
+      else this.updateOnlineHost(dt);
+      return;
+    }
+    this.updateCore(dt);
+  }
+
+  updateCore(dt) {
+    // ONLINE_LOBBY/ONLINE_LOADING: oyuncu listesi henüz yok — savaş döngüsüne
+    // girilirse `this.active` tanımsız olur (test yakaladı, tests/net-game.js).
+    if (this.state === "MODE_SELECT" || this.state === "DIFFICULTY_SELECT" || this.state === "BOT_COUNT_SELECT" || this.state === "CHAR_SELECT" || this.state === "COUNT_SELECT" || this.state === "MAP_SELECT" || this.state === "WORKSHOP" || this.state === "MARKET" || this.state === "TUTORIAL" || this.state === "ONLINE_LOBBY" || this.state === "ONLINE_LOADING") {
       if (this.state === "WORKSHOP") this.updateWorkshopFx(dt);
       if (this.state === "MARKET") this.updateMarketFx(dt);
       // Menülerde updateHud yalnız geçiş anında çağrıldığından, yarıda kalan ya
@@ -3117,6 +3544,16 @@ class Game {
     ctx.setTransform(this._scaleX, 0, 0, this._scaleY, 0, 0);
     ctx.clearRect(0, 0, this.W, this.H);
 
+    if (this.state === "ONLINE_LOBBY") {
+      this.lobby.render(ctx);
+      return;
+    }
+    if (this.state === "ONLINE_LOADING") {
+      // Başlangıç paketi beklenirken sade bir "hazırlanıyor" perdesi çizilir
+      // (arazi/durum uygulanınca aşama PLAYING'e döner ve savaş görünümü gelir).
+      this.renderOnlineLoading(ctx);
+      return;
+    }
     if (this.state === "COUNT_SELECT") {
       this.renderCountSelect(ctx);
       return;
@@ -3186,6 +3623,9 @@ class Game {
 
     // Öğretici koç paneli: turun tepesinde, vignette'in altında
     if (this.mode === "tutorial") this.drawTutorialCoach(ctx);
+
+    // Çevrimiçi bildirim şeridi (komut reddi/tur uyarısı)
+    if (this.mode === "online") this.drawOnlineNotice(ctx);
 
     // Sinematik vignette — tüm sahnenin üstüne, en son
     drawVignette(ctx, this.W, this.H);
@@ -3758,7 +4198,8 @@ class Game {
   updateHud() {
     // Seçim/menü ekranlarında HUD'u gizle: sıra/rüzgâr bilgisi anlamsız ve
     // ortadaki büyük başlığı/butonları kapatıyor.
-    const menuState = this.state === "MODE_SELECT" || this.state === "DIFFICULTY_SELECT" || this.state === "BOT_COUNT_SELECT" || this.state === "COUNT_SELECT" || this.state === "CHAR_SELECT" || this.state === "MAP_SELECT" || this.state === "WORKSHOP" || this.state === "MARKET" || this.state === "TUTORIAL";
+    // Çevrimiçi lobi de bir menüdür: HUD ve alt savaş paneli gizlenir.
+    const menuState = this.state === "MODE_SELECT" || this.state === "DIFFICULTY_SELECT" || this.state === "BOT_COUNT_SELECT" || this.state === "COUNT_SELECT" || this.state === "CHAR_SELECT" || this.state === "MAP_SELECT" || this.state === "WORKSHOP" || this.state === "MARKET" || this.state === "TUTORIAL" || this.state === "ONLINE_LOBBY";
     const hud = document.getElementById("hud");
     if (hud) hud.classList.toggle("hidden", menuState);
     // Alt savaş paneli de aynı kurala uyar (menülerde oyuncu kartı anlamsız).
@@ -3862,8 +4303,19 @@ class Game {
       } else if (this.state === "TUTORIAL") {
         banner.textContent = t("hud.banner.tutorial", "Nasıl Oynanır — kontroller ve tur kuralları");
         banner.style.color = "#fff";
+      } else if (this.state === "ONLINE_LOBBY") {
+        banner.textContent = t("hud.banner.online", "Çevrimiçi oda");
+        banner.style.color = "#63e6be";
+      } else if (this.state === "ONLINE_LOADING") {
+        banner.textContent = t("hud.banner.onlineLoading", "Dünya senkronize ediliyor…");
+        banner.style.color = "#ffe45e";
       } else if (this.state === "GAMEOVER") {
         banner.textContent = t("hud.banner.alloc", "Tahsis Tamamlandı");
+        banner.style.color = "#fff";
+      } else if (!this.active) {
+        // Emniyet: oyuncu listesi boşsa banner sıra yazmaz (durum geçişi
+        // sırasında bir kare için olabilir).
+        banner.textContent = t("hud.banner.mode", "Oyun modu seçiliyor…");
         banner.style.color = "#fff";
       } else {
         // Savaşta banner sade: yalnız sıra + süre. Bot durum yazıları ("nişan
@@ -4778,6 +5230,15 @@ function _msIcon(ctx, kind, cx, cy, accent, lit) {
     shell(cx - 7.5, 11);
     shell(cx, 14);
     shell(cx + 7.5, 11);
+  } else if (kind === "ağ") {
+    // Çevrimiçi: iki düğüm arasında bağlantı hattı (P2P imzası) + sinyal yayı
+    ctx.beginPath(); ctx.arc(cx - 8, cy + 5, 3.4, 0, 6.28); ctx.stroke();
+    ctx.beginPath(); ctx.arc(cx + 8, cy + 5, 3.4, 0, 6.28); ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(cx - 5.2, cy + 3.4); ctx.lineTo(cx + 5.2, cy + 3.4);
+    ctx.stroke();
+    ctx.beginPath(); ctx.arc(cx, cy - 4, 5.2, Math.PI * 1.15, Math.PI * 1.85); ctx.stroke();
+    ctx.beginPath(); ctx.arc(cx, cy - 4, 9.4, Math.PI * 1.2, Math.PI * 1.8); ctx.stroke();
   } else {
     // Nasıl Oynanır: halka içinde soru işareti (bilgi bölmesi glifi)
     ctx.beginPath(); ctx.arc(cx, cy, 10.5, 0, 6.28); ctx.stroke();

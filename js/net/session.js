@@ -56,34 +56,133 @@ class NetSession {
     this.stateSeq = new NetSequence();   // host → misafir durum akışı
     this.cmdSeq = 0;                     // misafirin gönderdiği komut sayacı
     this.charges = new Map();            // playerIdx → açık chargeId
-    this.seats = [];                     // { playerIdx, connected, disconnectedAt, seatToken, bot }
+    this.seats = [];                     // { playerIdx, connected, disconnectedAt, seatToken, bot, claimed, ready, robotId }
+    this.revision = 0;                   // lobi sürümü: her değişimde artar
+    this.lobbyMapId = null;              // lobide seçilen harita (host)
+    this.lobbyRoster = null;             // lobideki kadro: robot kimlikleri
+    this.lobbyState = null;              // misafir: son LOBBY paketi (arayüz okur)
+    this.lastResult = null;              // misafir: son RESULT paketi (sonuç kartı)
+    this.lastAbort = null;               // misafir: son ABORT nedeni
   }
 
   // ── Yaşam döngüsü ─────────────────────────────────────────────────────────
 
   // Oda kuruldu: aşama LOBBY, koltuklar tanımlı (host kendi koltuğunu da ekler).
-  openLobby(seats) {
+  openLobby(seats, opts) {
+    const o = opts || {};
     this.phase = NET_PHASE.LOBBY;
     this.ended = false;
+    this.revision = 0;
     this.seats = (seats || []).map((s, i) => ({
       playerIdx: s.playerIdx == null ? i : s.playerIdx,
       connected: s.connected !== false,
       disconnectedAt: null,
       seatToken: s.seatToken || "seat-" + i,
       bot: false,
+      // Lobi alanları: `claimed` = bir bağlantı bu koltuğa oturdu, `ready` = o
+      // oyuncu hazır. Maç başlayınca yalnız `connected`/`bot` anlam taşır.
+      claimed: s.playerIdx === 0 || s.claimed === true,
+      ready: s.playerIdx === 0 || s.ready === true,
+      robotId: s.robotId || null,
     }));
+    // Oda kimliği lobide belirlenir: WELCOME ve START aynı kimliği taşır.
+    this.matchId = o.matchId || this.matchId;
+    this.authoritySessionId = o.authoritySessionId || this.authoritySessionId;
+    this.lobbyMapId = o.mapId || null;
+    this.lobbyRoster = o.roster || null;
     return this.seats.length;
+  }
+
+  // ── Lobi (maç öncesi) ───────────────────────────────────────────────────
+  /* Misafir HELLO ile bağlanır. Aynı koltuk kimliğiyle (seatToken) dönen oyuncu
+   * kendi koltuğuna oturur — sayfa yenilense bile koltuğu kaybolmaz; kimlik
+   * taşımayan yeni bağlantı sıradaki boş koltuğu alır (koltuk yoksa ROOM_FULL).
+   * Gönderen kimliği taşımadan gelir; paketten okunmaz. */
+  handleHello(fromPlayer, msg) {
+    if (this.role !== "host") return { ok: false, reason: "NOT_HOST" };
+    if (this.phase !== NET_PHASE.LOBBY) return { ok: false, reason: "WRONG_PHASE" };
+    const hello = msg || {};
+    if (hello.protocolVersion !== NET_PROTOCOL_VERSION) return { ok: false, reason: "PROTOCOL_MISMATCH" };
+    let seat = null;
+    if (typeof hello.seatToken === "string" && hello.seatToken) {
+      seat = this.seats.filter((s) => s.seatToken === hello.seatToken)[0] || null;
+    }
+    if (!seat) seat = this.seats.filter((s) => s.playerIdx !== 0 && !s.claimed)[0] || null;
+    if (!seat) return { ok: false, reason: "ROOM_FULL" };
+    seat.claimed = true;
+    seat.connected = true;
+    seat.disconnectedAt = null;
+    if (typeof hello.robotId === "string" && hello.robotId) seat.robotId = hello.robotId;
+    if (seat.bot) {
+      seat.bot = false;
+      if (typeof this.rules.setBot === "function") this.rules.setBot(seat.playerIdx, false);
+    }
+    this.revision++;
+    this.transport.send(NET_MSG.WELCOME, {
+      v: NET_PROTOCOL_VERSION, t: NET_MSG.WELCOME,
+      matchId: this.matchId, authoritySessionId: this.authoritySessionId,
+      seat: seat.playerIdx, seatToken: seat.seatToken,
+    }, true);
+    this.broadcastLobby();
+    return { ok: true, seat: seat.playerIdx, seatToken: seat.seatToken };
+  }
+
+  // Hazır bildirimi. Host, tüm misafir koltukları hazır olana kadar başlatamaz.
+  handleReady(fromPlayer, msg) {
+    if (this.role !== "host") return { ok: false, reason: "NOT_HOST" };
+    if (this.phase !== NET_PHASE.LOBBY) return { ok: false, reason: "WRONG_PHASE" };
+    const seat = this._seat(fromPlayer);
+    if (!seat || !seat.claimed) return { ok: false, reason: "UNKNOWN_PLAYER" };
+    seat.ready = !!(msg && msg.ready);
+    this.revision++;
+    this.broadcastLobby();
+    return { ok: true, ready: seat.ready, canStart: this.canStart() };
+  }
+
+  // Oda durumu: misafir arayüzü koltukları/hazır durumunu buradan çizer.
+  lobbySnapshot() {
+    return {
+      revision: this.revision,
+      matchId: this.matchId,
+      hostIdx: 0,
+      mapId: this.lobbyMapId,
+      roster: this.lobbyRoster,
+      seats: this.seats.map((s) => ({
+        playerIdx: s.playerIdx, claimed: !!s.claimed, ready: !!s.ready,
+        connected: !!s.connected, bot: !!s.bot, robotId: s.robotId || null,
+      })),
+    };
+  }
+
+  broadcastLobby() {
+    const snap = this.lobbySnapshot();
+    this.transport.send(NET_MSG.LOBBY, Object.assign({
+      v: NET_PROTOCOL_VERSION, t: NET_MSG.LOBBY, matchId: this.matchId,
+      authoritySessionId: this.authoritySessionId,
+    }, snap), true);
+    return snap;
+  }
+
+  // Başlatma koşulu: en az bir misafir koltuk VAR ve hepsi hazır.
+  canStart() {
+    if (this.phase !== NET_PHASE.LOBBY) return false;
+    const guests = this.seats.filter((s) => s.playerIdx !== 0);
+    if (!guests.length) return false;
+    return guests.every((s) => s.claimed && s.ready);
   }
 
   // Host maçı başlatır. Yükleme onayları `loaded()` ile toplanır; hepsi
   // tamamlanmadan simülasyon ilerlemez (aşama LOADING kalır).
-  startMatch(matchId, authoritySessionId) {
+  startMatch(matchId, authoritySessionId, opts) {
     if (this.role !== "host") return { ok: false, reason: "NOT_HOST" };
     if (this.phase !== NET_PHASE.LOBBY) return { ok: false, reason: "WRONG_PHASE" };
     if (!matchId) return { ok: false, reason: "NO_MATCH_ID" };
+    const o = opts || {};
     this.matchId = matchId;
     this.authoritySessionId = authoritySessionId || "auth-" + matchId;
-    this.turnId = 0;
+    // Tur sayacı oyunun turnId'siyle aynı olmalı (oyun 1'den başlar); misafir
+    // START'tan okur, böylece iki taraf aynı tur kimliğinde konuşur.
+    this.turnId = Number.isInteger(o.turnId) ? o.turnId : 0;
     this.turnClosed = false;
     this.shotConsumed = false;
     this.terrainVersion = 0;
@@ -97,7 +196,12 @@ class NetSession {
     this.phase = NET_PHASE.LOADING;
     this.transport.send(NET_MSG.START, {
       v: NET_PROTOCOL_VERSION, t: NET_MSG.START, matchId: this.matchId,
-      authoritySessionId: this.authoritySessionId, turnId: 0,
+      authoritySessionId: this.authoritySessionId, turnId: this.turnId,
+      // Kadro ve harita: misafir kendi dünyasını bunlardan kurar (arazi hostun
+      // maskesiyle, rüzgâr/konumlar ilk snapshot'la gelir).
+      mapId: o.mapId !== undefined ? o.mapId : this.lobbyMapId,
+      roster: o.roster !== undefined ? o.roster : this.lobbyRoster,
+      hostIdx: 0,
     }, true);
     this._maybeBeginPlay();
     return { ok: true, matchId: this.matchId };
@@ -128,7 +232,10 @@ class NetSession {
     const env = netValidateEnvelope(msg, { matchId: this.matchId, authoritySessionId: this.authoritySessionId });
     if (!env.ok) return env;
     if (this.ended) return { ok: false, reason: "MATCH_ENDED" };
-    // Yükleme onayı LOADING aşamasında gelir; diğer mesajlar PLAYING ister.
+    // Lobi mesajları (HELLO/READY) maç başlamadan LOBBY aşamasında gelir; yükleme
+    // onayı LOADING aşamasında. Diğer mesajlar PLAYING ister.
+    if (msg.t === NET_MSG.HELLO) return this.handleHello(fromPlayer, msg);
+    if (msg.t === NET_MSG.READY) return this.handleReady(fromPlayer, msg);
     if (msg.t === NET_MSG.LOADED) return this.loaded(fromPlayer) ? { ok: true } : { ok: false, reason: "NOT_LOADING" };
     if (this.phase !== NET_PHASE.PLAYING) return { ok: false, reason: "WRONG_PHASE" };
     const seat = this._seat(fromPlayer);
@@ -350,7 +457,10 @@ class NetSession {
   /* Periyodik durum yayını: fizik adımını DEĞİŞTİRMEZ (değişmez 3); yalnız
    * hostun o anki durumunu gönderir. */
   broadcastState(state) {
-    if (this.role !== "host" || this.phase !== NET_PHASE.PLAYING || this.ended) return false;
+    // LOADING'de de gönderilir: maç başlangıç durumu (includeBuild) onay
+    // beklerken yollanır; PLAYING'de periyodik paketler.
+    if (this.role !== "host" || this.ended) return false;
+    if (this.phase !== NET_PHASE.PLAYING && this.phase !== NET_PHASE.LOADING) return false;
     this.stateSeq.accept(this.stateSeq.last + 1);
     this.transport.send(NET_MSG.STATE, {
       v: NET_PROTOCOL_VERSION, t: NET_MSG.STATE, matchId: this.matchId,
@@ -439,10 +549,12 @@ class NetSession {
     const env = netValidateEnvelope(msg, { matchId: this.matchId, authoritySessionId: this.authoritySessionId });
     if (!env.ok) return env;
     if (msg.t === NET_MSG.WELCOME) {
+      // WELCOME koltuğu verir; maç HENÜZ başlamadı → aşama LOBBY kalır (lobi
+      // ekranı hazır/başlat akışını sürdürür). LOADING'e geçiş START iledir.
       this.matchId = msg.matchId;
       this.authoritySessionId = msg.authoritySessionId;
       this.mySeat = msg.seat;
-      this.phase = NET_PHASE.LOADING;
+      this.phase = NET_PHASE.LOBBY;
       this.ended = false;
       return { ok: true };
     }
@@ -454,6 +566,17 @@ class NetSession {
       this.turnId = Number.isInteger(msg.turnId) ? msg.turnId : 0;
       this.ended = false;
       this.phase = NET_PHASE.LOADING;
+      // Misafir dünyayı bu iki alandan kurar (harita + kadro).
+      this.startSetup = { mapId: msg.mapId, roster: msg.roster, hostIdx: msg.hostIdx };
+      return { ok: true };
+    }
+    if (msg.t === NET_MSG.LOBBY) {
+      // Oda durumu (koltuklar/hazır/harita/kadro): arayüz buradan çizer.
+      this.lobbyState = {
+        revision: msg.revision, matchId: msg.matchId, hostIdx: msg.hostIdx,
+        mapId: msg.mapId, roster: msg.roster, seats: msg.seats,
+      };
+      if (Number.isInteger(msg.revision)) this.revision = msg.revision;
       return { ok: true };
     }
     if (msg.t === NET_MSG.STATE) {
@@ -482,14 +605,42 @@ class NetSession {
     if (msg.t === NET_MSG.ABORT) {
       this.ended = true;
       this.phase = NET_PHASE.LOBBY;
+      this.lastAbort = msg.reason || "ABORTED";
       return { ok: true, reason: msg.reason };
     }
     if (msg.t === NET_MSG.RESULT) {
       this.ended = true;
       this.phase = NET_PHASE.RESULTS;
+      this.lastResult = msg.result || null;
       return { ok: true, result: msg.result };
     }
     return { ok: false, reason: "UNEXPECTED_TYPE" };
+  }
+
+  /* Misafir odaya katılır. `seatToken` varsa (sayfa yenilendi / yeniden
+   * bağlanma) host aynı koltuğa oturtur; `robotId` lobide gösterilir ve kadroya
+   * girer. HELLO maç kimliği taşımaz (henüz maç yok). */
+  sendHello(opts) {
+    if (this.role !== "guest") return { ok: false, reason: "NOT_GUEST" };
+    const o = opts || {};
+    this.transport.send(NET_MSG.HELLO, {
+      v: NET_PROTOCOL_VERSION, t: NET_MSG.HELLO,
+      protocolVersion: NET_PROTOCOL_VERSION,
+      seatToken: o.seatToken || null,
+      robotId: o.robotId || null,
+    }, true);
+    return { ok: true };
+  }
+
+  // Misafir hazır bildirimi (host LOBBY paketiyle yanıtlar).
+  sendReady(ready) {
+    if (this.role !== "guest") return { ok: false, reason: "NOT_GUEST" };
+    this.transport.send(NET_MSG.READY, {
+      v: NET_PROTOCOL_VERSION, t: NET_MSG.READY, matchId: this.matchId,
+      authoritySessionId: this.authoritySessionId,
+      revision: this.revision, ready: ready !== false,
+    }, true);
+    return { ok: true };
   }
 
   // Misafir yükleme onayı: başlangıç durumu uygulandıktan sonra çağrılır.
@@ -510,7 +661,12 @@ class NetSession {
     const v = netValidateCommand(cmd);
     if (!v.ok) return v;
     this.cmdSeq++;
-    const commandId = id || "c" + this.cmdSeq;
+    // Kimlik KOLTUK BAŞINA ad alanında üretilir ("s1-7"): iki taraf kendi
+    // sayaçlarını bağımsız yürüttüğü için "c1" gibi ortak ad, hostun kendi
+    // komutuyla çakışır ve host onu YİNELENEN komut sanıp uygulamazdı
+    // (tests/net-game.js yakaladı).
+    const seat = this.mySeat == null ? "g" : this.mySeat;
+    const commandId = id || "s" + seat + "-" + this.cmdSeq;
     this.transport.send(NET_MSG.CMD, {
       v: NET_PROTOCOL_VERSION, t: NET_MSG.CMD, matchId: this.matchId,
       turnId: this.turnId, seq: this.cmdSeq, id: commandId, cmd,

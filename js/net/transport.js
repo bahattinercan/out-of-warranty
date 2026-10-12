@@ -122,7 +122,12 @@ class PeerJsTransport extends NetTransport {
     const o = opts || {};
     this.roomCode = o.roomCode || null;
     this.role = o.role === "guest" ? "guest" : "host";
-    this.peerFactory = o.peerFactory || (typeof Peer !== "undefined" ? (id) => new Peer(id) : null);
+    // ICE sunucuları: STUN her zaman, TURN (ücretsiz yedek) yapılandırıldıysa
+    // eklenir. Verilmezse PeerJS kendi varsayılanını kullanır.
+    this.iceServers = o.iceServers || null;
+    this.peerFactory = o.peerFactory || (typeof Peer !== "undefined"
+      ? (id) => (this.iceServers ? new Peer(id, { config: { iceServers: this.iceServers } }) : new Peer(id))
+      : null);
     this.hostId = o.hostId || null;           // misafir: hostun peer kimliği
     this.connection = null;
     this.peer = null;

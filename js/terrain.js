@@ -19,6 +19,11 @@ class Terrain {
     this.w = width;
     this.h = height;
     this.version = 0; // bot kararlarının arazi değişince geçersizleşmesi için
+    // Çevrimiçi (F3c): yetkili host, oyduğu kraterleri burada biriktirir ve
+    // misafire gönderir (js/net/adapter.js > netFlushTerrain). Misafir tarafında
+    // kayıt KAPALIDIR: hostun kayıtlarını oynatır, kendi kuyruğu büyümez.
+    this.changes = [];
+    this.recordChanges = false;
     // Harita teması: renkler + arazi stili. Eksik alanlar varsayılana düşer.
     this.theme = Object.assign({}, _DEFAULT_THEME, theme || {});
     this.solid = new Uint8Array(width * height); // 1 = dolu, 0 = boş (mantıksal çözünürlük)
@@ -359,6 +364,17 @@ class Terrain {
   }
 
   destroy(cx, cy, radius) {
+    /* Çevrimiçi (F3c): yetkili host oymayı kaydederken parametreleri YUVARLAR
+     * ve kazımayı da yuvarlanmış değerlerle yapar. Misafir aynı tam sayıları
+     * (netTerrainChange, 2 ondalık) uyguladığı için iki maske BİREBİR aynı
+     * olur; yalnız kaydı yuvarlayıp ham değerle kazımak birkaç piksellik
+     * kenar farkı bırakıyordu (tests/net-game.js yakaladı). */
+    if (this.recordChanges) {
+      cx = Math.round(cx * 100) / 100;
+      cy = Math.round(cy * 100) / 100;
+      radius = Math.round(radius * 100) / 100;
+      this.changes.push({ x: cx, y: cy, r: radius });
+    }
     this.version++;
     const { w, h } = this;
     const r2 = radius * radius;
