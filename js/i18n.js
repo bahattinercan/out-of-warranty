@@ -54,10 +54,50 @@ const I18N = {
     "menu.mode.workshop.sub": "Calibrate robots • {scrap} Scrap",
     "menu.mode.market.title": "AMMO MARKET",
     "menu.mode.market.sub": "In depot: {n} shells • {scrap} Scrap",
-    "menu.mode.market.subEmpty": "Shared ammo depot • {scrap} Scrap",
+    "menu.mode.market.subEmpty": "Shared depot • {scrap} Scrap",
     "menu.mode.tutorial.title": "HOW TO PLAY",
     "menu.mode.tutorial.sub": "Controls and turn rules",
     "tutorial.title": "HOW TO PLAY",
+    // ── Savaş HUD'u (dil seçici, üst şerit, alt panel) ──────────────────
+    "hud.language": "Language",
+    "hud.fullscreen": "Fullscreen",
+    "hud.fullscreen.title": "Fullscreen (F)",
+    "hud.quit": "Quit",
+    "hud.quit.title": "Back to menu (Esc)",
+    "hud.audio.group": "Sound settings",
+    "hud.volume": "Volume level",
+    "hud.mute.off": "Mute",
+    "hud.mute.on": "Unmute",
+    "hud.mute.labelOff": "Sound",
+    "hud.mute.labelOn": "Muted",
+    "hud.powerMarker": "Last shot power",
+    "hud.goWorkshop": "Go to workshop",
+    "hud.playAgain": "Play again",
+    "hud.mainMenu": "Main menu",
+    "hud.robots": "Robots",
+    "hud.weaponList.title": "Toggle weapon list (1–9)",
+    "hud.weaponToggle.a": "WEAPON",
+    "hud.weaponToggle.b": "SWITCH",
+    "hud.slot.weapon": "Selected weapon",
+    "hud.slot.skill": "Built-in module (Q)",
+    "hud.slot.teleport": "Teleport ball",
+    "hud.slot.hook": "Grapple",
+    "hud.slot.teleportShort": "Teleport",
+    // Durum şeridi (canvas ekranları) — {n}/{name}/{secs}/{dir}/{value} kalıpları
+    "hud.banner.mode": "Selecting game mode…",
+    "hud.banner.difficulty": "Selecting difficulty…",
+    "hud.banner.botCount": "Selecting opponent count…",
+    "hud.banner.playerCount": "Selecting player count…",
+    "hud.banner.charSelect": "Player {n} is picking a robot…",
+    "hud.banner.mapSelect": "Selecting factory zone…",
+    "hud.banner.workshop": "Workshop",
+    "hud.banner.market": "Ammo Market",
+    "hud.banner.tutorial": "How to Play — controls and turn rules",
+    "hud.banner.alloc": "Allocation Complete",
+    "hud.banner.turn": "Turn: {name}  ⏱ {secs}s",
+    "hud.wind": "Wind: {dir} {value}",
+    "hud.wind.changed": "Wind changed: {dir} {value}",
+    "hud.wind.none": "Wind: -",
   },
   "zh-Hans": {},
   ru: {},
@@ -95,6 +135,13 @@ function setLocale(lang, opts) {
     try { if (typeof localStorage !== "undefined" && localStorage) localStorage.setItem(I18N_STORAGE_KEY, next); } catch (e) { /* yoksay */ }
   }
   applyDomTranslations();
+  if (typeof document !== "undefined" && document && document.getElementById) {
+    const sel = document.getElementById("locale-select");
+    if (sel && sel.value !== next) sel.value = next;
+  }
+  if (typeof document !== "undefined" && document && document.dispatchEvent && typeof CustomEvent === "function") {
+    document.dispatchEvent(new CustomEvent("localechange", { detail: { locale: next } }));
+  }
   return next;
 }
 
@@ -134,7 +181,39 @@ function applyDomTranslations(root) {
     el.setAttribute("title", t(el.getAttribute("data-i18n-title"), el.getAttribute("title") || ""));
     n++;
   }
+  // aria-label ayrı öznitelik: ekran okuyucu metni görsel metinden farklı
+  // olabilir (ör. ikon düğmesinin "Sesi kapat" etiketi).
+  const aria = scope.querySelectorAll("[data-i18n-aria]");
+  for (let i = 0; i < aria.length; i++) {
+    const el = aria[i];
+    el.setAttribute("aria-label", t(el.getAttribute("data-i18n-aria"), el.getAttribute("aria-label") || ""));
+    n++;
+  }
   return n;
+}
+
+// Dil seçici: seçenekler LANG_ORDER/LANG_LABELS'ten üretilir — yeni dil
+// eklendiğinde HTML'de değişiklik gerekmez. Seçim değişince tercih depoya
+// yazılır, DOM metinleri uygulanır ve `localechange` olayı yayınlanır (oyun
+// HUD'u kendini yeniler: sıra/rüzgar/yuva adları).
+function buildLocaleSelect() {
+  if (typeof document === "undefined" || !document || !document.getElementById) return false;
+  const sel = document.getElementById("locale-select");
+  if (!sel) return false;
+  sel.textContent = "";
+  for (let i = 0; i < LANG_ORDER.length; i++) {
+    const lang = LANG_ORDER[i];
+    const opt = document.createElement("option");
+    opt.value = lang;
+    opt.textContent = LANG_LABELS[lang] || lang;
+    sel.appendChild(opt);
+  }
+  sel.value = _i18nLocale;
+  if (!sel._i18nWired) {
+    sel._i18nWired = true;
+    sel.addEventListener("change", () => setLocale(sel.value));
+  }
+  return true;
 }
 
 // İlk açılış: kayıtlı tercih → tarayıcı dili → tr. Kayıtlı tercih varsa
@@ -143,7 +222,17 @@ function applyDomTranslations(root) {
 (function initLocale() {
   let saved = null;
   try { if (typeof localStorage !== "undefined" && localStorage) saved = localStorage.getItem(I18N_STORAGE_KEY); } catch (e) { /* yoksay */ }
-  if (saved) { setLocale(saved, { persist: false }); return; }
-  const nav = typeof navigator !== "undefined" && navigator ? navigator.language : null;
-  setLocale(nav ? normalizeLocale(nav) : "tr", { persist: false });
+  if (saved) {
+    setLocale(saved, { persist: false });
+  } else {
+    const nav = typeof navigator !== "undefined" && navigator ? navigator.language : null;
+    setLocale(nav ? normalizeLocale(nav) : "tr", { persist: false });
+  }
+  // Dil seçici DOM'u hazırsa şimdi kur; betik <head>'e taşınırsa
+  // DOMContentLoaded'da yeniden denemek için kendini bağlar.
+  if (!buildLocaleSelect()) {
+    if (typeof document !== "undefined" && document && document.addEventListener) {
+      if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", buildLocaleSelect);
+    }
+  }
 })();

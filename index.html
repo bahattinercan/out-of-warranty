@@ -11,16 +11,20 @@
     <div id="stage">
       <header id="hud">
         <div class="center">
+          <!-- Bu iki metni savaş döngüsü her karede yazar (game.js > updateHud):
+               i18n anahtarı DOM'da değil kodda tutulur, aksi halde çift kaynak olur. -->
           <div id="turn-banner">Sıra: -</div>
           <div id="wind-indicator" role="status" aria-live="polite">Rüzgar: -</div>
-          <button id="fullscreen-btn" title="Tam ekran (F)">⛶ Tam Ekran</button>
-          <button id="quit-btn" title="Menüye dön (Esc)">⏏ Çıkış</button>
+          <!-- Simge ile metin ayrı düğümlerde: çeviri yalnız metni değiştirir,
+               glif (⛶ / ⏏) kaybolmaz. Öğenin kendi Türkçe metni fallback'tir. -->
+          <button id="fullscreen-btn" title="Tam ekran (F)" data-i18n-title="hud.fullscreen.title">⛶ <span data-i18n="hud.fullscreen">Tam Ekran</span></button>
+          <button id="quit-btn" title="Menüye dön (Esc)" data-i18n-title="hud.quit.title">⏏ <span data-i18n="hud.quit">Çıkış</span></button>
         </div>
       </header>
 
       <!-- Ses denetimi HUD'un dışında, sahneye sabit: HUD menülerde gizlenirken
            (karakter/harita/atölye ekranları) da erişilebilir kalır. -->
-      <div id="audio-control" role="group" aria-label="Ses ayarları">
+      <div id="audio-control" role="group" aria-label="Ses ayarları" data-i18n-aria="hud.audio.group">
         <button id="mute-btn" type="button" title="Sesi kapat (M)" aria-label="Sesi kapat" aria-pressed="false">
           <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
             <path d="M11 5 6 9H3v6h3l5 4Z" />
@@ -29,15 +33,24 @@
           </svg>
           <span id="mute-label">Ses</span>
         </button>
-        <input id="volume-slider" type="range" min="0" max="100" step="1" value="100" aria-label="Ses düzeyi" />
+        <input id="volume-slider" type="range" min="0" max="100" step="1" value="100" aria-label="Ses düzeyi" data-i18n-aria="hud.volume" />
         <output id="volume-value" for="volume-slider">100%</output>
+      </div>
+
+      <!-- Dil seçici: seçenekler js/i18n.js'teki LANG_ORDER'dan üretilir — yeni
+           dil eklenince burada değişiklik gerekmez. Ses denetimi gibi HUD
+           dışında durur; menülerde de erişilebilir kalır. -->
+      <div id="locale-control">
+        <span aria-hidden="true">🌐</span>
+        <label for="locale-select" data-i18n="hud.language">Dil</label>
+        <select id="locale-select" aria-label="Dil"></select>
       </div>
 
       <canvas id="game" width="960" height="540"></canvas>
 
       <div id="power-bar" class="hidden">
         <div id="power-fill"></div>
-        <div id="power-marker" class="hidden" title="Son atış gücü"></div>
+        <div id="power-marker" class="hidden" title="Son atış gücü" data-i18n-title="hud.powerMarker"></div>
       </div>
 
       <div id="overlay" class="hidden">
@@ -46,9 +59,9 @@
           <p id="overlay-sub"></p>
           <div id="overlay-reward" class="hidden" role="status"></div>
           <div class="overlay-actions">
-            <button id="workshop-btn">Atölyeye Git</button>
-            <button id="restart-btn">Tekrar Oyna</button>
-            <button id="menu-btn" class="secondary">Ana Menü</button>
+            <button id="workshop-btn" data-i18n="hud.goWorkshop">Atölyeye Git</button>
+            <button id="restart-btn" data-i18n="hud.playAgain">Tekrar Oyna</button>
+            <button id="menu-btn" class="secondary" data-i18n="hud.mainMenu">Ana Menü</button>
           </div>
         </div>
       </div>
@@ -60,24 +73,24 @@
            kanca yuvaları. Mesajlaşma ve sipariş (order snack) yuvaları
            bilinçli olarak yok. -->
       <footer id="battle-bar" class="hidden">
-        <div id="players" role="list" aria-label="Robotlar"></div>
+        <div id="players" role="list" aria-label="Robotlar" data-i18n-aria="hud.robots"></div>
         <div id="battle-actions">
-          <button id="weapon-toggle" type="button" title="Silah listesini aç/kapat (1–9)">
-            <span>SİLAH</span><span>DEĞİŞTİR</span>
+          <button id="weapon-toggle" type="button" title="Silah listesini aç/kapat (1–9)" data-i18n-title="hud.weaponList.title">
+            <span data-i18n="hud.weaponToggle.a">SİLAH</span><span data-i18n="hud.weaponToggle.b">DEĞİŞTİR</span>
           </button>
-          <button class="act-slot" id="slot-weapon" type="button" data-slot="weapon" title="Seçili silah">
+          <button class="act-slot" id="slot-weapon" type="button" data-slot="weapon" title="Seçili silah" data-i18n-title="hud.slot.weapon">
             <canvas class="slot-icon" width="44" height="44"></canvas>
             <span class="slot-count"></span><span class="slot-name"></span>
           </button>
-          <button class="act-slot" id="slot-skill" type="button" data-slot="skill" title="Dahili modül (Q)">
+          <button class="act-slot" id="slot-skill" type="button" data-slot="skill" title="Dahili modül (Q)" data-i18n-title="hud.slot.skill">
             <canvas class="slot-icon" width="44" height="44"></canvas>
             <span class="slot-count"></span><span class="slot-name"></span>
           </button>
-          <button class="act-slot" id="slot-teleport" type="button" data-slot="teleport" title="Işınlanma Topu">
+          <button class="act-slot" id="slot-teleport" type="button" data-slot="teleport" title="Işınlanma Topu" data-i18n-title="hud.slot.teleport">
             <canvas class="slot-icon" width="44" height="44"></canvas>
             <span class="slot-count"></span><span class="slot-name"></span>
           </button>
-          <button class="act-slot" id="slot-hook" type="button" data-slot="hook" title="Kanca">
+          <button class="act-slot" id="slot-hook" type="button" data-slot="hook" title="Kanca" data-i18n-title="hud.slot.hook">
             <canvas class="slot-icon" width="44" height="44"></canvas>
             <span class="slot-count"></span><span class="slot-name"></span>
           </button>

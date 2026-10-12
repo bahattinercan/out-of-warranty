@@ -2385,11 +2385,11 @@ class Game {
     const percent = Math.round(SFX.getVolume() * 100);
     if (btn) {
       btn.setAttribute("aria-pressed", String(muted));
-      btn.setAttribute("aria-label", muted ? "Sesi aç" : "Sesi kapat");
-      btn.title = `${muted ? "Sesi aç" : "Sesi kapat"} (M)`;
+      btn.setAttribute("aria-label", muted ? t("hud.mute.on", "Sesi aç") : t("hud.mute.off", "Sesi kapat"));
+      btn.title = `${muted ? t("hud.mute.on", "Sesi aç") : t("hud.mute.off", "Sesi kapat")} (M)`;
     }
     const label = document.getElementById("mute-label");
-    if (label) label.textContent = muted ? "Sessiz" : "Ses";
+    if (label) label.textContent = muted ? t("hud.mute.labelOn", "Sessiz") : t("hud.mute.labelOff", "Ses");
     const control = document.getElementById("audio-control");
     if (control) {
       control.dataset.muted = String(muted);
@@ -3795,42 +3795,44 @@ class Game {
     const banner = document.getElementById("turn-banner");
     if (banner) {
       if (this.state === "MODE_SELECT") {
-        banner.textContent = "Oyun modu seçiliyor…";
+        banner.textContent = t("hud.banner.mode", "Oyun modu seçiliyor…");
         banner.style.color = "#fff";
       } else if (this.state === "DIFFICULTY_SELECT") {
-        banner.textContent = "Zorluk seçiliyor…";
+        banner.textContent = t("hud.banner.difficulty", "Zorluk seçiliyor…");
         banner.style.color = "#fff";
       } else if (this.state === "BOT_COUNT_SELECT") {
-        banner.textContent = "Rakip sayısı seçiliyor…";
+        banner.textContent = t("hud.banner.botCount", "Rakip sayısı seçiliyor…");
         banner.style.color = "#fff";
       } else if (this.state === "COUNT_SELECT") {
-        banner.textContent = "Oyuncu sayısı seçiliyor…";
+        banner.textContent = t("hud.banner.playerCount", "Oyuncu sayısı seçiliyor…");
         banner.style.color = "#fff";
       } else if (this.state === "CHAR_SELECT") {
-        banner.textContent = `Oyuncu ${this.charSelectPhase + 1} robot seçiyor…`;
+        banner.textContent = t("hud.banner.charSelect", "Oyuncu {n} robot seçiyor…", { n: this.charSelectPhase + 1 });
         banner.style.color = "#fff";
       } else if (this.state === "MAP_SELECT") {
-        banner.textContent = "Fabrika bölgesi seçiliyor…";
+        banner.textContent = t("hud.banner.mapSelect", "Fabrika bölgesi seçiliyor…");
         banner.style.color = "#fff";
       } else if (this.state === "WORKSHOP") {
-        banner.textContent = "Atölye";
+        banner.textContent = t("hud.banner.workshop", "Atölye");
         banner.style.color = "#ffd166";
       } else if (this.state === "MARKET") {
-        banner.textContent = "Cephane Pazarı";
+        banner.textContent = t("hud.banner.market", "Cephane Pazarı");
         banner.style.color = "#63e6be";
       } else if (this.state === "TUTORIAL") {
-        banner.textContent = "Nasıl Oynanır — kontroller ve tur kuralları";
+        banner.textContent = t("hud.banner.tutorial", "Nasıl Oynanır — kontroller ve tur kuralları");
         banner.style.color = "#fff";
       } else if (this.state === "GAMEOVER") {
-        banner.textContent = "Tahsis Tamamlandı";
+        banner.textContent = t("hud.banner.alloc", "Tahsis Tamamlandı");
         banner.style.color = "#fff";
       } else {
         // Savaşta banner sade: yalnız sıra + süre. Bot durum yazıları ("nişan
         // alıyor…" vb. ve botların birleşik dizisi) üst bandı yazıyla dolduruyordu;
         // robotun ne yaptığını animasyon + ses zaten gösterdiği için kaldırıldı.
-        const t = Math.ceil(this.turnTimer);
-        banner.textContent = `Sıra: ${this.active.name}  ⏱ ${t}s`;
-        banner.style.color = t <= 5 ? "#ff6b6b" : (this.active.playerTint || this.active.color);
+        // Not: yerel değişken adı `secs` — `t` olsaydı bu blokta global t()
+        // çeviri fonksiyonunu gölgelerdi.
+        const secs = Math.ceil(this.turnTimer);
+        banner.textContent = t("hud.banner.turn", "Sıra: {name}  ⏱ {secs}s", { name: this.active.name, secs });
+        banner.style.color = secs <= 5 ? "#ff6b6b" : (this.active.playerTint || this.active.color);
       }
     }
     const wind = document.getElementById("wind-indicator");
@@ -3838,11 +3840,12 @@ class Game {
       let windText;
       if (this.wind != null) {
         const dir = this.wind > 0 ? "→" : this.wind < 0 ? "←" : "•";
+        const value = Math.abs(this.wind).toFixed(1);
         windText = this.windChangeFx
-          ? `Rüzgar değişti: ${dir} ${Math.abs(this.wind).toFixed(1)}`
-          : `Rüzgar: ${dir} ${Math.abs(this.wind).toFixed(1)}`;
+          ? t("hud.wind.changed", "Rüzgar değişti: {dir} {value}", { dir, value })
+          : t("hud.wind", "Rüzgar: {dir} {value}", { dir, value });
       } else {
-        windText = "Rüzgar: -";
+        windText = t("hud.wind.none", "Rüzgar: -");
       }
       // aria-live bölgesini her karede yeniden yazıp ekran okuyucuyu spamleme.
       if (wind.textContent !== windText) wind.textContent = windText;
@@ -4369,8 +4372,8 @@ function paintBattleSlots(game, a) {
   paintWeaponSlot(game, "weapon", a, a.weaponSpec, true);
   paintSkillSlot(a, a.resolvedSkill || a.charDef.skill);
   // Yardımcı cihaz adları kısa tutulur: yuva darlığında ellipsis'e düşmesin.
-  paintWeaponSlot(game, "teleport", a, WEAPONS.find((w) => w.id === "teleportball"), false, "Işınlanma");
-  paintWeaponSlot(game, "hook", a, WEAPONS.find((w) => w.id === "hook"), false, "Kanca");
+  paintWeaponSlot(game, "teleport", a, WEAPONS.find((w) => w.id === "teleportball"), false, t("hud.slot.teleportShort", "Işınlanma"));
+  paintWeaponSlot(game, "hook", a, WEAPONS.find((w) => w.id === "hook"), false, t("hud.slot.hook", "Kanca"));
 }
 
 // Silah/yardımcı yuvası: ikon (mermi çizicisi) + mühimmat sayacı + ad.

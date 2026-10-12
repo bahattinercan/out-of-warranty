@@ -26,13 +26,41 @@ function check(name, ok, detail) {
   failures.push(name + (detail ? ` — ${detail}` : ""));
 }
 
+// i18n.js'in DOM yolu (metin / title / aria-label) Node'da sınanabilsin diye
+// minik bir sahte document: querySelectorAll yalnız üç öznitelik seçicisine
+// yanıt verir, gerisi boş döner.
+function fakeDocument() {
+  const mk = (attrs, text) => ({
+    textContent: text,
+    _attrs: Object.assign({}, attrs),
+    getAttribute(k) { return this._attrs[k] === undefined ? null : this._attrs[k]; },
+    setAttribute(k, v) { this._attrs[k] = v; },
+  });
+  const textNode = mk({ "data-i18n": "hud.fullscreen" }, "Tam Ekran");
+  const titleNode = mk({ "data-i18n-title": "hud.quit.title", title: "Menüye dön (Esc)" }, "");
+  const ariaNode = mk({ "data-i18n-aria": "hud.robots" }, "");
+  ariaNode._attrs["aria-label"] = "Robotlar";
+  return {
+    textNode, titleNode, ariaNode,
+    querySelectorAll(sel) {
+      if (sel === "[data-i18n]") return [textNode];
+      if (sel === "[data-i18n-title]") return [titleNode];
+      if (sel === "[data-i18n-aria]") return [ariaNode];
+      return [];
+    },
+    getElementById() { return null; },
+  };
+}
+
 // i18n.js'i taze bir sandbox'ta yükler. `navigator: null` → tarayıcı dili yok;
-// `noStorage: true` → localStorage erişilemiyor (gizli sekme senaryosu).
+// `noStorage: true` → localStorage erişilemiyor (gizli sekme senaryosu);
+// `fakeDom: true` → DOM çeviri yolu sınanır.
 function boot(opts) {
   const o = opts || {};
   const storage = Object.assign({}, o.storage);
   const sandbox = { console, Math, Object, Array, Set, Map, String };
   if (o.navigator !== null) sandbox.navigator = o.navigator || { language: "tr-TR" };
+  if (o.fakeDom) sandbox.document = fakeDocument();
   if (o.noStorage !== true) {
     sandbox.localStorage = {
       getItem: (k) => (Object.prototype.hasOwnProperty.call(storage, k) ? storage[k] : null),
@@ -43,7 +71,7 @@ function boot(opts) {
   sandbox.globalThis = sandbox;
   vm.createContext(sandbox);
   vm.runInContext(I18N_SRC + EXPORT, sandbox, { filename: "i18n-bundle.js" });
-  return { api: sandbox.__I18N_TEST, storage };
+  return { api: sandbox.__I18N_TEST, storage, document: sandbox.document || null };
 }
 
 const I = boot().api;
@@ -62,8 +90,16 @@ for (const f of codeFiles) {
 }
 check("kodda t() anahtarı bulundu", usedKeys.size > 0, `${usedKeys.size} anahtar`);
 
-const missingInEn = [...usedKeys].filter((k) => I.I18N.en[k] === undefined);
-check("kullanılan her anahtar `en` sözlüğünde var", missingInEn.length === 0, missingInEn.join(", "));
+// index.html'deki data-i18n* öznitelikleri de anahtar kullanır; öğenin kendi
+// Türkçe metni/başlığı o anahtarın TR kaynağıdır (t() fallback'i gerekmez).
+const html = fs.readFileSync(path.join(__dirname, "..", "index.html"), "utf8");
+const htmlKeys = new Set();
+const attrRe = /data-i18n(?:-title|-aria)?="([^"]+)"/g;
+let hm;
+while ((hm = attrRe.exec(html))) { htmlKeys.add(hm[1]); usedKeys.add(hm[1]); }
+check("index.html i18n özniteliği taşıyor", htmlKeys.size >= 15, `${htmlKeys.size} anahtar`);
+
+const missingInEn = [...usedKeys].filter((k) => I.I18N.en[k] === undefined);check("kullanılan her anahtar `en` sözlüğünde var", missingInEn.length === 0, missingInEn.join(", "));
 
 const orphan = Object.keys(I.I18N.en).filter((k) => !usedKeys.has(k));
 check("sözlükte kodda kullanılmayan anahtar yok", orphan.length === 0, orphan.join(", "));
@@ -76,8 +112,8 @@ for (const lang of I.LANG_REQUIRED) {
 
 // Her t() çağrısı Türkçe kaynak metnini taşımalı: TR sözlüğü boş olduğu için
 // fallback'siz çağrı ekranda ham anahtar ("menu.mode.market.sub") gösterir.
-const noTrSource = [...usedKeys].filter((k) => !keysWithFallback.has(k) && I.I18N.tr[k] === undefined);
-check("her t() çağrısı Türkçe kaynak metni taşıyor", noTrSource.length === 0, noTrSource.join(", "));
+const noTrSource = [...usedKeys].filter((k) => !keysWithFallback.has(k) && !htmlKeys.has(k) && I.I18N.tr[k] === undefined);
+check("her t()/data-i18n anahtarı Türkçe kaynak taşıyor", noTrSource.length === 0, noTrSource.join(", "));
 
 // ── 2) Sözlük bütünlüğü ────────────────────────────────────────────────────
 const orderSet = new Set(I.LANG_ORDER);
@@ -134,6 +170,17 @@ check("seçim sonrası dil değişti", en.api.getLocale() === "en");
 const noStore = boot({ navigator: null, noStorage: true });
 check("localStorage yoksa çökmez", noStore.api.getLocale() === "tr");
 check("localStorage yokken setLocale çökmez", (() => { try { noStore.api.setLocale("en"); return noStore.api.getLocale() === "en"; } catch (e) { return false; } })());
+
+// ── 5) DOM çeviri yolu (metin / title / aria-label) ───────────────────────
+const dom = boot({ fakeDom: true });
+const dn = dom.document;
+check("DOM: tr'de metin değişmez", dn.textNode.textContent === "Tam Ekran");
+dom.api.setLocale("en");
+check("DOM: metin çevrilir", dn.textNode.textContent === "Fullscreen", dn.textNode.textContent);
+check("DOM: title çevrilir", dn.titleNode._attrs.title === "Back to menu (Esc)", dn.titleNode._attrs.title);
+check("DOM: aria-label çevrilir", dn.ariaNode._attrs["aria-label"] === "Robots", dn.ariaNode._attrs["aria-label"]);
+const domTrSources = [["data-i18n", "hud.fullscreen"]].length; // yalnız okunurluk için
+check("DOM: çevrilen düğüm sayısı döner", dom.api.applyDomTranslations() === 3, String(dom.api.applyDomTranslations()));
 
 // ── Özet ──────────────────────────────────────────────────────────────────
 console.log(`\ni18n: ${pass} geçti, ${fail} kaldı`);

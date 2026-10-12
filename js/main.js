@@ -60,4 +60,12 @@ window.addEventListener("DOMContentLoaded", () => {
   audioControl.addEventListener("pointerdown", clearGameInput);
   audioControl.addEventListener("focusin", clearGameInput);
   game.updateMuteButton();
+
+  // Dil değişimi: DOM metinleri i18n.js içinde uygulanır; oyunun kendi
+  // metinleri (sıra şeridi, rüzgar, yuva adları) bir sonraki kareyi
+  // beklememeli — menü ekranlarında çizim döngüsü metni yenilemez.
+  document.addEventListener("localechange", () => {
+    game.updateHud();
+    game.updateMuteButton();
+  });
 });

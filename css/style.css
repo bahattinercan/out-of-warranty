@@ -348,6 +348,42 @@ html, body {
 #quit-btn:hover { background: #ff5a5a33; border-color: #ff7b7b; }
 
 /* Ses: sahnenin sağ üstüne sabitlenir — HUD menülerde gizlenirken de görünür. */
+/* Dil seçici (F2): ses denetimiyle aynı görsel dil; HUD gizliyken de durur. */
+#locale-control {
+  position: absolute;
+  top: 52px;
+  right: 10px;
+  z-index: 7;
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 7px;
+  height: 32px;
+  padding: 0 10px;
+  border: 1px solid #7baeff40;
+  border-radius: 11px;
+  background: #101525ed;
+  box-shadow: 0 3px 12px #0003;
+  color: #cfe0ee;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .3px;
+}
+#locale-control > span { font-size: 13px; line-height: 1; }
+#locale-select {
+  max-width: 118px;
+  padding: 2px 4px;
+  border: 1px solid #ffffff26;
+  border-radius: 7px;
+  background: #0b1015;
+  color: #eaf2ff;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+#locale-select:focus-visible { outline: 2px solid #9fe8ff; outline-offset: 1px; }
+#locale-select option { background: #0b1015; color: #eaf2ff; }
+
 #audio-control {
   --volume-fill: 100%;
   --audio-accent: #ffe45e;
