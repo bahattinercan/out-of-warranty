@@ -29,6 +29,7 @@ node tests/run.js
 node tests/market.js
 node tests/audio.js
 node tests/i18n.js
+node tests/net.js       # çevrimiçi protokol + oturum (F3a)
 ```
 
 ## ⚠️ En kritik kural: klasik scriptler, ES module YOK
@@ -80,6 +81,8 @@ Oyun `file://` üzerinden çift tıklayınca çalışmak zorunda. Bu yüzden:
 | `js/projectile.js` | ~171   | Mermi (sekme/fitil/saçma) + patlama efekti                                                                                                      |
 | `js/i18n.js`       | ~165   | `I18N` sözlükleri, `t()`/`setLocale()`, dil etiketi normalizasyonu, `data-i18n` DOM çevirisi                                                                                |
 | `js/audio.js`      | ~380   | `SFX` — Web Audio ile prosedürel ses + sahne konuşmacısı bipleri                                                                                                            |
+| `js/net/protocol.js` | ~200 | Çevrimiçi protokol (F3a): zarf/komut doğrulama, sıra, komut tekilleştirme, girdi tazeliği — DOM/WebRTC bilmez                                                 |
+| `js/net/session.js`  | ~340 | Çevrimiçi oturum (F3a): host yetkili tur/komut akışı, saat ve borç, kopma/bot devralma, iptal; oyun kuralları `rules` adaptöründen gelir                       |
 
 ## Veri-güdümlü tasarım (uzantı noktaları)
 
