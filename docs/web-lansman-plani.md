@@ -47,7 +47,22 @@ Sayılar üçüncü taraf tahminleridir (VG Insights/Gamalytic/SteamSpy türevi)
 - **Yasak anlatım:** "Worms benzeri topçu oyunu" ve "prototip". Türe göre değil, *oynanış anına* göre satılır.
 - **Klip kuralı:** Her yeni silah/modül en az bir "izlenesi an" üretmeli (zincir patlama, uçurumdan düşme, son anda ıskalama, kendi kendini vurma). Yeni içerik eklerken bu test uygulanır.
 - **Görsel üretim hattı:** README'deki `_*_probe.html` + headless Chrome akışı pazarlama GIF/ekran görüntüsü üretimi için de kullanılır (ek araç gerekmez).
-- **İsim:** TR "Oyuncak Tantanası", EN çalışma adı "Toy Rumpus" [?] — yayın öncesi isim/marka taraması yapılacak (Steam'de "Dökümhane-9" kullanılmaz).
+- **İsim (karar bekliyor):** TR "Oyuncak Tantanası" + EN adayları aşağıda. Steam'de "Dökümhane-9" kullanılmaz. Kaba arama yapıldı (12 Ekim 2026); resmî marka/alan adı/sosyal hesap taraması kısa liste seçilince yapılır.
+
+| EN adayı | TR karşılığı | Neden işe yarar | Kaba arama (Steam/itch) |
+|---|---|---|---|
+| **Wind-Up Chaos** | Kurmalı Kaos | Kurmalı oyuncak teması + kaos; EN'de "wind up" hem *kur* hem *kızdır* demek → klip başlığı olarak çift anlam | Bulunan tek şey bir Yu-Gi-Oh destesi; **oyun adı boş görünüyor** |
+| **Rivet Rumble** | Perçin Rampası | Mekanik parça + kavga, aliterasyonlu ve akılda kalıcı | **Çakışma bulunamadı** |
+| **Toy Tantrum** | Oyuncak Tantanası | Mevcut TR adın birebir EN karşılığı; marka tek dilli kalır | Ad boş, ama "tantrum" etiketi kalabalık (Tantrum Teddies, Figure It Out) |
+| Bolt & Bedlam | Cıvata Curcunası | Mekanik + gürültülü kaos, karakterli | Taranmadı [?] |
+| Tin Brawlers | Teneke Kavgacılar | Türü ve malzemeyi tek bakışta söyler | Taranmadı [?] |
+| Rumpus Box | Tantana Kutusu | Kutudan oyuncak çıkarma teması; mevcut TR adın kardeşi | Taranmadı [?] |
+| Cog Riot | Çarklı Curcuna | Kısa, klip/etiket olarak güçlü | Taranmadı [?] |
+| Screw Loose | Vida Gevşek | "Bir vidası gevşek" deyimi; komik ve karakter odaklı | Aynı adlı içerikler var → marka riski [?] |
+| ~~Toybox Tussle~~ | — | — | **ALINMIŞ:** itch'te oyun + Steam'de app 383076 |
+| ~~Box Brawlers~~ | Kutu Savaşçıları | — | Jenerik, ayrışmıyor (önerilmez) |
+
+**Kısa liste (öneri):** 1) Wind-Up Chaos / Kurmalı Kaos — türü (atış = kurma), temayı (kurmalı oyuncak) ve tonu (kaos) tek adda söyler. 2) Rivet Rumble / Perçin Rampası. 3) Toy Tantrum / Oyuncak Tantanası — mevcut TR adı korur.
 
 ---
 
@@ -211,10 +226,17 @@ Referans gerçeklik: Steam medyanı $249/ömür; web'de ilk oyun $0–400/ay. Bu
 
 ---
 
-## 12. Kullanıcı onayı bekleyen kararlar
+## 12. Kararlar ve açık sorular
 
-- [ ] Oyun adı (TR + EN) ve marka/isim taraması
-- [ ] Ödüllü reklam yerleşimleri (§8) onayı
-- [ ] Sinyalleşme/TURN sağlayıcısı seçimi (Metered / Cloudflare / ikisi)
-- [ ] K1–K3 eşiklerinin onayı (özellikle "aylık 20.000 oynanış" hedefi)
-- [ ] F2 dil sırası: EN+TR ile başlanıp zh-Hans+ru ikinci turda mı?
+**Karar kaydı (kullanıcı onayı, 12 Ekim 2026):**
+
+| # | Konu | Karar |
+|---|---|---|
+| 2 | Ödüllü reklam yerleşimi | **§8 aynen:** maç sonu "Hurdayı 2×" + elenince "geri dön"; maç başına ≤2; banner ve interstitial yok |
+| 3 | Sinyalleşme / TURN sağlayıcısı | **§4-C:** PeerJS Cloud + ücretsiz TURN ile başla; taşıma arayüzü korunarak kotayı/kesintiyi görünce Cloudflare Worker + Durable Object'e geç |
+| 4 | K1–K3 eşikleri | **§9 tablosu aynen** (özellikle K1: aylık ≥20.000 oynanış *veya* haftalık +%15) |
+| 5 | Dil sırası | **§5-A:** tr+en → zh-Hans+ru → es-ES+pt-BR |
+| 6 | Sıradaki iş | **F1b (R2) yapıldı** → sırada **F2 (i18n altyapısı + EN)**, sonra F3 (WebRTC P2P) |
+| 7 | Commit | Tüm çalışma ağacı commit edildi (4 commit: workshop düzeltmesi, okunabilirlik, bu plan, AI görsel planı); **push yapılmadı** |
+
+**Açık soru — oyun adı:** karar bekliyor; aday tablosu ve kısa liste §3'te. Resmî marka/alan adı/sosyal hesap taraması, kısa liste seçildikten sonra yapılır.
