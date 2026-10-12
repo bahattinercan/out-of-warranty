@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <title>Nasıl Oynanır + eğitim koçu sondası</title>
+  <link rel="stylesheet" href="css/style.css" />
+  <style>
+    /* İki ekran tek karede: üstte eğitim ekranı (960×540), altta koç paneli.
+       Sondalar sahne dışında kaldığı için position:fixed ile üst üste konur
+       (bkz. verify-canvas-visuals-headless becerisi). */
+    body { margin: 0; background: #0b1015; }
+    canvas { position: fixed; left: 0; display: block; }
+    #tut { top: 0; }
+    #coach { top: 544px; }
+  </style>
+</head>
+<body>
+  <canvas id="tut" width="960" height="540"></canvas>
+  <canvas id="coach" width="960" height="112"></canvas>
+
+  <script src="js/i18n.js"></script>
+  <script src="js/audio.js"></script>
+  <script src="js/characters.js"></script>
+  <script src="js/progression.js"></script>
+  <script src="js/profile.js"></script>
+  <script src="js/parts.js"></script>
+  <script src="js/market.js"></script>
+  <script src="js/maps.js"></script>
+  <script src="js/skills.js"></script>
+  <script src="js/skill-fx.js"></script>
+  <script src="js/robots.js"></script>
+  <script src="js/terrain.js"></script>
+  <script src="js/weapons.js"></script>
+  <script src="js/entity.js"></script>
+  <script src="js/projectile.js"></script>
+  <script src="js/ai.js"></script>
+  <script src="js/game.js"></script>
+  <script>
+    // Dil varyantı: ?locale=en (veya #en) ile İngilizce metin sığdırması ölçülür.
+    const params = new URLSearchParams(location.search);
+    if (location.hash.indexOf("en") >= 0 || params.get("locale") === "en") setLocale("en", { persist: false });
+
+    function makeFake(w, h) {
+      const g = Object.create(Game.prototype);
+      g.W = w; g.H = h;
+      g.input = { mouseX: -1, mouseY: -1 };
+      g.renderTimeMs = 0;
+      g.profile = normalizeProfile({ version: 3, scrap: 260 });
+      g.state = "TUTORIAL";
+      return g;
+    }
+
+    makeFake(960, 540).renderTutorial(document.getElementById("tut").getContext("2d"));
+
+    // Koç paneli: savaş durumunda bir insan turu taklit edilir ki adım metni
+    // (tutorial.coach.N) ve rozet çizilsin.
+    const cg = makeFake(960, 112);
+    cg.state = "AIMING";
+    cg.turn = 0;
+    cg.playerControls = ["human", "bot"];
+    cg.players = [{ charDef: CHARACTERS[0], name: "FIX-8", alive: true }];
+    cg.tutorial = { step: 3, done: [true, true, false, false], flash: 0 };
+    cg.drawTutorialCoach(document.getElementById("coach").getContext("2d"));
+  </script>
+</body>
+</html>

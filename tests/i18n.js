@@ -216,6 +216,37 @@ check("DOM: aria-label çevrilir", dn.ariaNode._attrs["aria-label"] === "Robots"
 const domTrSources = [["data-i18n", "hud.fullscreen"]].length; // yalnız okunurluk için
 check("DOM: çevrilen düğüm sayısı döner", dom.api.applyDomTranslations() === 3, String(dom.api.applyDomTranslations()));
 
+// ── 6) Yerel `t` gölgelemesi bekçisi ─────────────────────────────────────
+// `const t = this.tutorial;` gibi bir yerel değişken, aynı fonksiyon içindeki
+// t() çağrılarını gölgeler ve çalışma zamanında "t is not a function" üretir
+// (bu hata iki kez yaşandı: durum şeridi ve eğitim koçu). Kapsamlar süslü
+// parantez derinliğiyle bulunur; yorumlar ve string literalleri soyulur.
+function clearCode(line) {
+  return line
+    .replace(/\/\/.*$/, "")
+    .replace(/"(?:\\.|[^"\\])*"/g, '""')
+    .replace(/'(?:\\.|[^'\\])*'/g, "''")
+    .replace(/`(?:\\.|[^`\\])*`/g, "``");
+}
+const shadowed = [];
+for (const f of codeFiles) {
+  const src = fs.readFileSync(path.join(JS_DIR, f), "utf8");
+  const srcLines = src.split("\n");
+  let depth = 0, decl = null;
+  const scopes = [];
+  for (let i = 0; i < srcLines.length; i++) {
+    const code = clearCode(srcLines[i]);
+    if (decl !== null && depth < decl.depth) { scopes.push({ start: decl.line, end: i }); decl = null; }
+    if (decl === null && /\b(const|let|var)\s+t\s*=/.test(code)) decl = { depth, line: i + 1 };
+    depth += (code.match(/{/g) || []).length - (code.match(/}/g) || []).length;
+  }
+  for (const sc of scopes) {
+    const body = srcLines.slice(sc.start - 1, sc.end).join("\n");
+    if (/\bt\("/.test(body)) shadowed.push(`${f}:${sc.start}`);
+  }
+}
+check("yerel `t` değişkeni t() çağrısını gölgelemiyor", shadowed.length === 0, shadowed.join(", "));
+
 // ── Özet ──────────────────────────────────────────────────────────────────
 console.log(`\ni18n: ${pass} geçti, ${fail} kaldı`);
 if (fail) {

@@ -1294,37 +1294,38 @@ class Game {
 
     const KEY_COL = 116;          // tuş sütunu genişliği
     const ROW_FONT = 12, ROW_GAP = 14;
+    // Tuş/ad metinleri veri: her satır [tus, aciklama] ve ikisi de çevrilir.
     const panels = [
       {
-        title: "SIRA SENDE — ATIŞ", accent: "#ffe45e", keyColor: "#ffe45e",
+        title: t("tutorial.panel.aim.title", "SIRA SENDE — ATIŞ"), accent: "#ffe45e", keyColor: "#ffe45e",
         rows: [
-          ["Fare", "Nişan al — nişan çizgisi fareyi izler"],
-          ["Sol tık", "Basılı tut → güç çubuğu dolar, bırak → ateş et"],
-          ["Sağ tık / Esc", "Atışı iptal et"],
+          [t("tutorial.aim.mouse.key", "Fare"), t("tutorial.aim.mouse.desc", "Nişan al — nişan çizgisi fareyi izler")],
+          [t("tutorial.aim.click.key", "Sol tık"), t("tutorial.aim.click.desc", "Basılı tut → güç çubuğu dolar, bırak → ateş et")],
+          [t("tutorial.aim.cancel.key", "Sağ tık / Esc"), t("tutorial.aim.cancel.desc", "Atışı iptal et")],
         ],
       },
       {
-        title: "HAREKET", accent: "#8ee7ff", keyColor: "#8ee7ff",
+        title: t("tutorial.panel.move.title", "HAREKET"), accent: "#8ee7ff", keyColor: "#8ee7ff",
         rows: [
-          ["A / D  ← →", "Yürü (enerji harcar)"],
-          ["W / ↑", "Sıçra (enerji harcar)"],
-          ["⚡ Enerji", "Her turda yenilenir — kısa sürede biter"],
+          [t("tutorial.move.walk.key", "A / D  ← →"), t("tutorial.move.walk.desc", "Yürü (enerji harcar)")],
+          [t("tutorial.move.jump.key", "W / ↑"), t("tutorial.move.jump.desc", "Sıçra (enerji harcar)")],
+          [t("tutorial.move.energy.key", "⚡ Enerji"), t("tutorial.move.energy.desc", "Her turda yenilenir — kısa sürede biter")],
         ],
       },
       {
-        title: "SİLAHLAR VE MODÜLLER", accent: "#ff8f5e", keyColor: "#ff8f5e",
+        title: t("tutorial.panel.weapons.title", "SİLAHLAR VE MODÜLLER"), accent: "#ff8f5e", keyColor: "#ff8f5e",
         rows: [
-          ["1–9 / Tekerlek", "Silah seç (mühimmat sınırlıdır)"],
-          ["Q", "Dahili modülü kullan — hasar verenler o turun atış hakkını doldurur"],
-          ["Alt panel", "Seçili silahın açıklaması ekranın altında görünür"],
+          [t("tutorial.weapons.select.key", "1–9 / Tekerlek"), t("tutorial.weapons.select.desc", "Silah seç (mühimmat sınırlıdır)")],
+          [t("tutorial.weapons.module.key", "Q"), t("tutorial.weapons.module.desc", "Dahili modülü kullan — hasar verenler o turun atış hakkını doldurur")],
+          [t("tutorial.weapons.panel.key", "Alt panel"), t("tutorial.weapons.panel.desc", "Seçili silahın açıklaması ekranın altında görünür")],
         ],
       },
       {
-        title: "KURALLAR VE İPUÇLARI", accent: "#63e6be", keyColor: "#63e6be",
+        title: t("tutorial.panel.rules.title", "KURALLAR VE İPUÇLARI"), accent: "#63e6be", keyColor: "#63e6be",
         rows: [
-          ["⏱ 25 sn", "Süre dolunca sıra rakibe geçer"],
-          ["🌀 Rüzgâr", "Mermiyi saptırır — üstteki göstergeyi izle"],
-          ["M • Esc / ⏏", "Sesi aç/kapat • maçtan çık, menüye dön"],
+          [t("tutorial.rules.timer.key", "⏱ 25 sn"), t("tutorial.rules.timer.desc", "Süre dolunca sıra rakibe geçer")],
+          [t("tutorial.rules.wind.key", "🌀 Rüzgâr"), t("tutorial.rules.wind.desc", "Mermiyi saptırır — üstteki göstergeyi izle")],
+          [t("tutorial.rules.audio.key", "M • Esc / ⏏"), t("tutorial.rules.audio.desc", "Sesi aç/kapat • maçtan çık, menüye dön")],
         ],
       },
     ];
@@ -1367,9 +1368,9 @@ class Game {
     _csPanel(ctx, stripX, stripY, stripW, 44, { accent: "#3b526b" });
     ctx.textAlign = "center"; ctx.textBaseline = "middle";
     ctx.fillStyle = "#eef5ff"; ctx.font = uiTextFont(13, 700);
-    ctx.fillText("Bir tur: hareket et → nişan al → gücü doldur → ateş et", stripX + stripW / 2, stripY + 15);
+    ctx.fillText(t("tutorial.strip.flow", "Bir tur: hareket et → nişan al → gücü doldur → ateş et"), stripX + stripW / 2, stripY + 15);
     ctx.fillStyle = "#9fb6c9"; ctx.font = uiTextFont(12);
-    ctx.fillText("Atış çözümlenince veya süre dolunca sıra sıradaki robota geçer — son ayakta kalan kazanır", stripX + stripW / 2, stripY + 32);
+    ctx.fillText(t("tutorial.strip.turn", "Atış çözümlenince veya süre dolunca sıra sıradaki robota geçer — son ayakta kalan kazanır"), stripX + stripW / 2, stripY + 32);
 
     // Öğreticiyi oyna butonu: basit rehberli bölümü başlatır (yeşil = başlat)
     const bw = Math.min(320, stripW), bx = stripX + (stripW - bw) / 2, by = stripY + 58, bh = 42;
@@ -1382,9 +1383,9 @@ class Game {
     });
     ctx.fillStyle = playHover ? "#ffe45e" : "#8aff8a";
     ctx.font = uiTitleFont(15);
-    ctx.fillText("▶ ÖĞRETİCİYİ OYNA", bx + bw / 2, by + bh / 2);
+    ctx.fillText(t("tutorial.play", "▶ ÖĞRETİCİYİ OYNA"), bx + bw / 2, by + bh / 2);
     ctx.fillStyle = "#9fb6c9"; ctx.font = uiTextFont(11);
-    ctx.fillText("Basit bölüm: 1v1, rüzgârsız, adım adım rehberli", bx + bw / 2, by + bh + 12);
+    ctx.fillText(t("tutorial.play.desc", "Basit bölüm: 1v1, rüzgârsız, adım adım rehberli"), bx + bw / 2, by + bh + 12);
 
     // Geri: ana menüye dönüş (Esc ile aynı rota)
     this.drawBackButton(ctx, t("common.mainMenu", "‹ Ana Menü"));
@@ -1458,32 +1459,32 @@ class Game {
 
   // Eğitim maçının koç paneli: turun tepesinde adım metni + ilerleme noktaları.
   drawTutorialCoach(ctx) {
-    const t = this.tutorial;
+    const tut = this.tutorial;
     if (!t || this.state === "GAMEOVER") return;
     const W = this.W;
     const pw = Math.min(430, W - 140), px = (W - pw) / 2, py = 58, ph = 48;
     const humanTurn = this.isHumanTurn();
-    const stepIdx = Math.min(t.step, TUTORIAL_COACH_STEPS.length - 1);
+    const stepIdx = Math.min(tut.step, TUTORIAL_COACH_STEPS.length - 1);
     let text, color = "#eef5ff";
     if (this.state !== "AIMING") {
-      text = "Atış çözümleniyor…";
+      text = t("tutorial.status.resolving", "Atış çözümleniyor…");
     } else if (!humanTurn) {
-      text = "Sıra rakipte — izle ve öğren";
+      text = t("tutorial.status.opponent", "Sıra rakipte — izle ve öğren");
       color = "#9fb6c9";
-    } else if (t.flash > 0) {
-      text = "✓ Tamam! Sıradaki adım…";
+    } else if (tut.flash > 0) {
+      text = t("tutorial.status.done", "✓ Tamam! Sıradaki adım…");
       color = "#8aff8a";
     } else {
-      text = TUTORIAL_COACH_STEPS[stepIdx];
+      text = t("tutorial.coach." + stepIdx, TUTORIAL_COACH_STEPS[stepIdx]);
     }
     _csPanel(ctx, px, py, pw, ph, { accent: "#ffe45e" });
     ctx.textBaseline = "middle";
     // Başlık satırı: ÖĞRETİCİ + ilerleme noktaları (tamamlanan yeşil)
     ctx.textAlign = "left";
     ctx.fillStyle = "#ffe45e"; ctx.font = uiTitleFont(10);
-    ctx.fillText("ÖĞRETİCİ", px + 12, py + 12);
+    ctx.fillText(t("tutorial.badge", "ÖĞRETİCİ"), px + 12, py + 12);
     for (let i = 0; i < 4; i++) {
-      ctx.fillStyle = t.done[i] ? "#5fdc6b" : "#2c3a4c";
+      ctx.fillStyle = tut.done[i] ? "#5fdc6b" : "#2c3a4c";
       ctx.beginPath(); ctx.arc(px + pw - 16 - (3 - i) * 14, py + 12, 3.5, 0, 6.28); ctx.fill();
     }
     // Adım metni
