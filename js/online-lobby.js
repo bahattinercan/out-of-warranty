@@ -101,9 +101,7 @@ class OnlineLobby {
   close() {
     this.active = false;
     this._unbindPaste();
-    if (this.transport) { try { this.transport.close(); } catch (e) { /* yoksay */ } }
-    this.transport = null;
-    this.session = null;
+    this._teardownTransport();
     this.peerSeats.clear();
     return true;
   }
@@ -208,31 +206,57 @@ class OnlineLobby {
 
   // ── Oda kurma / katılma ─────────────────────────────────────────────────
 
+  /* Yeniden giriş koruması: çift tıklama (ya da iki hızlı dokunuş) ikinci bir
+   * taşıma açmasın. Aksi hâlde ilk taşıma sahipsiz kalır, ekranda yeni bir kod
+   * görünür ama o oda ayakta olmaz → "butonlar çalışmıyor" gibi görünür. */
+  _busy() {
+    if (this._connecting) return true;
+    return !!(this.transport && this.transport.isOpen());
+  }
+
+  // Eski taşımayı kapatır (lobi açık kalır).
+  _teardownTransport() {
+    if (this.transport) { try { this.transport.close(); } catch (e) { /* yoksay */ } }
+    this.transport = null;
+    this.session = null;
+    this._connecting = false;
+    this.statusText = null;
+  }
+
   hostRoom() {
+    if (this._busy()) return false;
+    this._teardownTransport();
     this.role = "host";
     this.code = netRoomCode();
     this.error = null;
+    this.ready = false;
     this.step = "room";
     this._openTransport({ role: "host", roomCode: this.code });
+    return true;
   }
 
   joinRoom() {
+    if (this._busy()) return false;
     const code = this.typed.replace(/[^A-Za-z0-9]/g, "").toUpperCase();
     if (code.length < ONLINE_CODE_LENGTH) {
       this._fail("BAD_CODE");
-      return;
+      return false;
     }
+    this._teardownTransport();
     this.role = "guest";
     this.code = code;
     this.error = null;
     this.step = "room";
     this._openTransport({ role: "guest", hostId: code });
+    return true;
   }
 
   _openTransport(opts) {
+    this._connecting = true;
     this.connectStartedAt = this.elapsedMs;
     this._ensurePeerJs((ok) => {
       if (!this.active || this.role !== opts.role) return;
+      this._connecting = false;
       if (!ok) { this._fail("NO_PEERJS"); return; }
       const ice = ONLINE_ICE_SERVERS.concat(ONLINE_TURN_SERVERS);
       this.transport = new PeerJsTransport({
@@ -366,6 +390,8 @@ class OnlineLobby {
   _noticeText(key) {
     if (key === "online.invite.copied") return t("online.invite.copied", "Bağlantı kopyalandı");
     if (key === "online.notice.codePasted") return t("online.notice.codePasted", "Oda kodu yapıştırıldı");
+    if (key === "online.notice.roomNotReady") return t("online.notice.roomNotReady", "Oda henüz hazır değil — bir saniye sonra tekrar dene");
+    if (key === "online.notice.startNeedsReady") return t("online.notice.startNeedsReady", "Karşı taraf hazır olunca başlar");
     if (key === "online.invite.failed") return t("online.invite.failed", "Kopyalanamadı — kodu elle paylaş");
     if (key === "online.notice.joined") return t("online.notice.joined", "Rakip odaya katıldı");
     return "";
@@ -410,6 +436,7 @@ class OnlineLobby {
 
   // `code`: _errorText'in çözdüğü hata kodu (ör. "TIMEOUT", "online.err.BAD_CODE").
   _fail(code, vars) {
+    this._connecting = false;
     this.error = { code, text: this._errorText(code), vars };
     this.step = this.step === "role" ? "role" : "room";
   }
@@ -498,8 +525,15 @@ class OnlineLobby {
     if (!this.active) return false;
     for (const r of this._rects) {
       if (mx < r.x || mx > r.x + r.w || my < r.y || my > r.y + r.h) continue;
-      if (r.disabled) return true;
-      if (typeof SFX !== "undefined" && SFX.uiClick) SFX.uiClick();
+      // Devre dışı düğme sessiz kalmaz: nedenini söyle (yoksa "çalışmıyor"
+      // sanılır — ör. karşı taraf hazır değilken MAÇI BAŞLAT).
+      if (r.disabled) {
+        if (r.action === "start") this._notice("online.notice.startNeedsReady");
+        else if (r.action === "copy") this._notice("online.notice.roomNotReady");
+        return true;
+      }
+      // Eylem ÖNCE, ses SONRA: ses kurulumu bir kez hata verse bile düğme
+      // işlevini kaybetmesin.
       if (r.action === "host") this.hostRoom();
       else if (r.action === "join") this.step = "code";
       else if (r.action === "back") {
@@ -513,6 +547,11 @@ class OnlineLobby {
       else if (r.action === "ready") this.toggleReady();
       else if (r.action === "robotPrev") this._cycleRobot(-1);
       else if (r.action === "robotNext") this._cycleRobot(1);
+      // Tıklama alanları TÜKETİLİR: ekran değiştiyse bir sonraki kare çizilene
+      // kadar eski ekranın düğmeleriyle ikinci bir eylem tetiklenmesin
+      // (bayat kare → yanlış eylem).
+      this._rects = [];
+      if (typeof SFX !== "undefined" && SFX.uiClick) { try { SFX.uiClick(); } catch (e) { /* yoksay */ } }
       return true;
     }
     return true;   // lobi açıkken tuvale tıklama oyuna geçmez
@@ -756,8 +795,12 @@ class OnlineLobby {
     const by = hintY + (compact ? 15 : 22);
     const bh = compact ? 34 : 40;
     if (this.role === "host") {
-      this._button(ctx, { x, y: by, w: bw, h: bh, action: "copy" }, {
-        title: t("online.invite.copy", "BAĞLANTIYI KOPYALA"), accent: "#3fae8c", small: true,
+      // Oda (PeerJS kimliği) HAZIR OLMADAN davet kopyalanamaz: kod kopyalanıp
+      // paylaşılırsa karşı taraf "oda bulunamadı" alır.
+      const live = !!(this.transport && this.transport.isOpen());
+      this._button(ctx, { x, y: by, w: bw, h: bh, action: "copy", disabled: !live }, {
+        title: live ? t("online.invite.copy", "BAĞLANTIYI KOPYALA") : t("online.status.preparing", "Oda hazırlanıyor…"),
+        accent: live ? "#3fae8c" : "#3b526b", small: true, disabled: !live,
       });
       const can = !!(this.session && this.session.canStart());
       this._button(ctx, { x, y: by + bh + 6, w: bw, h: bh + 4, action: "start", disabled: !can }, {

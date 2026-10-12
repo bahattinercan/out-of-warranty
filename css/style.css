@@ -494,6 +494,9 @@ canvas#game {
   display: block;
   width: 100%;
   height: 100%;
+  /* Dokunmatikte tarayıcı jestleri (kaydırma/yakınlaştırma) oyun girdisini
+     çalmasın: pointer olaylarını biz işliyoruz (game.js > pressCanvas). */
+  touch-action: none;
   background: linear-gradient(#7ec8ff, #cfefff);
 }
 

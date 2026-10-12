@@ -119,6 +119,41 @@
         l.notice = null;
       } catch (e) { console.log("PASTE-TEST hata: " + e.message); }
 
+      const keepStep0 = g.lobby.step;
+      // Gerçek girdi bağları (mousedown/touchstart dinleyicileri bindInput'ta
+      // kurulur; sahte oyun nesnesi kurucuyu çalıştırmadığı için elle çağrılır).
+      Game.prototype.bindInput.call(g);
+
+      // TIKLAMA provası: `mousemove` HİÇ gelmeden doğrudan basım. Eski kod
+      // koordinatı önbellekten (0,0) okuduğu için düğme tutmuyordu.
+      try {
+        const l = g.lobby;
+        const cv = document.getElementById("game");
+        const cr = cv.getBoundingClientRect();
+        l.step = "role";
+        l.render(cv.getContext("2d"));
+        const toClient = (r) => ({
+          x: cr.left + ((r.x + r.w / 2) / g.W) * cr.width,
+          y: cr.top + ((r.y + r.h / 2) / g.H) * cr.height,
+        });
+        const joinRect = l._rects.filter((x) => x.action === "join")[0];
+        g.input.mouseX = -1; g.input.mouseY = -1;    // mousemove gelmemiş gibi
+        const pt = toClient(joinRect);
+        cv.dispatchEvent(new MouseEvent("mousedown", { clientX: pt.x, clientY: pt.y, button: 0, bubbles: true }));
+        const mouseOk = l.step === "code";
+        // Dokunmatik provası: sentetik `mousedown` bastırılır, tek dokunuş işlenir.
+        l.step = "role";
+        l.render(cv.getContext("2d"));
+        const pt2 = toClient(l._rects.filter((x) => x.action === "join")[0]);
+        cv.dispatchEvent(new TouchEvent("touchstart", {
+          cancelable: true, bubbles: true,
+          changedTouches: [new Touch({ identifier: 1, target: cv, clientX: pt2.x, clientY: pt2.y })],
+        }));
+        console.log("CLICK-TEST mouseOk=" + mouseOk + " touchStep=" + l.step +
+          " staleCache=" + (g.input.mouseX > 0) + " rectsAfterClick=" + l._rects.length);
+        l.step = keepStep0;
+      } catch (e) { console.log("CLICK-TEST hata: " + e.message); }
+
       function draw() {
         g.render();   // içinde resize() çağrılır → W pencere oranına göre güncellenir
       }

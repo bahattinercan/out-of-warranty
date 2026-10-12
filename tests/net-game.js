@@ -495,7 +495,80 @@ pl._boundPaste({ clipboardData: { getData: () => inviteUrl }, preventDefault() {
 check("oda ekranında yapıştırma yok sayılır", joined === before);
 pl._unbindPaste();
 
-// ── 12) Yerleşim: dar/geniş dünyada çakışma yok, denetimlerin altında kalınmaz
+// ── 12) Tıklama güvenilirliği (kullanıcı bildirimi: "bazen butonlar çalışmıyor")
+/* Nedenler ve karşılığı: (a) koordinat önbellekten (`input.mouseX/Y`) okunuyordu
+ * → dokunmatik/çizim kaleminde `mousemove` hiç gelmediği için düğmeler (0,0) ile
+ * sınanıyordu; artık koordinat OLAYIN kendisinden gelir (`Game.pointerWorld` +
+ * `pressCanvas`). (b) Tıklama alanları ekran değişiminden sonra bir kare boyunca
+ * bayat kalıyordu → ikinci tıklama yanlış ekranın düğmesini çalıştırabiliyordu;
+ * artık her tıklamadan sonra tüketilir. (c) Çift tıklama ikinci bir taşıma
+ * açabiliyordu; `_busy()` koruması var. (d) Devre dışı düğme sessiz kalmıyor. */
+const clickGame = (() => {
+  const g = Object.create(G.Game.prototype);
+  g.canvas = dom.document.createElement("canvas");   // pointerWorld tuvali okur
+  g.W = 960; g.H = 540; g.terrain = null;
+  g.input = { mouseX: -100, mouseY: -100 };
+  g.profile = null; g.renderTimeMs = 0; g.state = "ONLINE_LOBBY";
+  g.hudTopInset = 0; g.hudRightInset = 0;
+  g.updateHud = function () {};
+  g.lobby = new G.OnlineLobby(g);
+  g.lobby.open();
+  return g;
+})();
+const cg = clickGame;
+const cl = cg.lobby;
+const clickCtx = dom.document.createElement("canvas").getContext("2d");
+const rectOf = (action) => (cl._rects.filter((r) => r.action === action)[0] || null);
+const clickAt = (r, button) => cg.pressCanvas({
+  clientX: (r.x + r.w / 2) * 960 / cg.W, clientY: (r.y + r.h / 2) * 540 / cg.H,
+  shiftKey: false, ctrlKey: false,
+}, button == null ? 0 : button);
+
+// (a) Koordinat olaydan: önbellek (0,0)/eski değer olsa bile düğme tutar.
+cl.render(clickCtx);
+const joinRect = rectOf("join");
+check("rol ekranında KODA KATIL düğmesi çizildi", !!joinRect);
+cg.input.mouseX = -100; cg.input.mouseY = -100;   // mousemove hiç gelmemiş gibi
+clickAt(joinRect, 0);
+check("tıklama koordinatı OLAYDAN alınır (önbellek bayat olsa bile)",
+  cl.step === "code", `step=${cl.step}`);
+check("olay koordinatı input'a da yazıldı", cg.input.mouseX > 0 && cg.input.mouseY > 0,
+  `${Math.round(cg.input.mouseX)},${Math.round(cg.input.mouseY)}`);
+
+// (b) Tıklama alanları tüketilir: bayat kareyle ikinci eylem olmaz.
+check("tıklamadan sonra alanlar tüketilir (bayat kare yok)", cl._rects.length === 0);
+
+// (c) Sağ tık lobide eylem başlatmaz.
+cl.step = "role";
+cl.render(clickCtx);
+clickAt(rectOf("join"), 2);
+check("sağ tık lobide eylem başlatmaz", cl.step === "role", `step=${cl.step}`);
+
+// (d) Çift tıklama tek oda açar.
+cl.hostRoom();
+const firstCode = cl.code;
+const second = cl.hostRoom();
+check("çift ODA KUR ikinci taşıma açmaz", second === false && cl.code === firstCode && cl._connecting === true,
+  `second=${second} code=${cl.code}`);
+
+// (e) Oda ayakta değilken davet kopyalanamaz; tıklama nedenini söyler.
+cl.render(clickCtx);
+const copyRect = rectOf("copy");
+check("oda hazır değilken kopyala düğmesi devre dışı", !!copyRect && copyRect.disabled === true);
+cl.notice = null;
+clickAt(copyRect, 0);
+check("devre dışı düğme nedenini bildirir",
+  !!(cl.notice && cl.notice.key === "online.notice.roomNotReady"),
+  cl.notice ? cl.notice.key : "yok");
+// Başlat da aynı şekilde: karşı taraf hazır değil.
+cl.notice = null;
+clickAt(rectOf("start"), 0);
+check("hazır olmayan başlat düğmesi nedenini bildirir",
+  !!(cl.notice && cl.notice.key === "online.notice.startNeedsReady"),
+  cl.notice ? cl.notice.key : "yok");
+cl.close();
+
+// ── 13) Yerleşim: dar/geniş dünyada çakışma yok, denetimlerin altında kalınmaz
 /* Kullanıcı bildirimi: "küçük ekranlarda çevrimiçi sayfasının tasarımı
  * bozuluyor". Dünya genişliği pencere oranına göre 648–1620 arasında değişir ve
  * sağ üstteki DOM denetimleri sabit CSS px kalır; lobi bu ikisine uyarlı

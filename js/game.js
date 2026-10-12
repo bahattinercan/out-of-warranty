@@ -2567,6 +2567,11 @@ class Game {
       if (e.code === "Space" && !e.target.closest?.("#audio-control")) this.releaseFire();
     });
 
+    /* Tuval basımı: koordinat OLAYIN kendisinden hesaplanır. Önbellekteki
+     * `input.mouseX/mouseY` yalnız `mousemove` ile güncellenir; dokunmatik
+     * ekranda/çizim kaleminde hiç `mousemove` gelmez, değer (0,0) kalır ve
+     * menü düğmelerinin HİÇBİRİ tutmaz — "bazen butonlar çalışmıyor"un bir
+     * nedeni buydu. */
     const rect = () => this.canvas.getBoundingClientRect();
     this.canvas.addEventListener("mousemove", (e) => {
       // Çevrimiçi host: sıra karşı taraftayken kendi faremiz nişanı ELE GEÇİRMEZ
@@ -2576,47 +2581,33 @@ class Game {
       this.input.mouseX = (e.clientX - r.left) * (this.W / r.width);
       this.input.mouseY = (e.clientY - r.top) * (this.H / r.height);
     });
-    this.canvas.addEventListener("mousedown", (e) => {
-      if (this.state === "ONLINE_LOBBY") {
-        this.lobby.handleClick(this.input.mouseX, this.input.mouseY);
-        return;
-      }
-      if (this.state === "WORKSHOP") {
-        this.handleWorkshopClick(this.input.mouseX, this.input.mouseY);
-        return;
-      }
-      if (this.state === "MARKET") {
-        this.handleMarketClick(this.input.mouseX, this.input.mouseY, e.shiftKey, e.ctrlKey || e.altKey || e.metaKey);
-        return;
-      }
-      if (this.state === "TUTORIAL") { this.handleTutorialClick(this.input.mouseX, this.input.mouseY); return; }
-      if (this.state === "COUNT_SELECT") {
-        this.handleCountSelectClick(this.input.mouseX, this.input.mouseY);
-        return;
-      }
-      if (this.state === "MODE_SELECT") {
-        this.handleModeSelectClick(this.input.mouseX, this.input.mouseY);
-        return;
-      }
-      if (this.state === "DIFFICULTY_SELECT") {
-        this.handleDifficultySelectClick(this.input.mouseX, this.input.mouseY);
-        return;
-      }
-      if (this.state === "BOT_COUNT_SELECT") {
-        this.handleBotCountSelectClick(this.input.mouseX, this.input.mouseY);
-        return;
-      }
-      if (this.state === "CHAR_SELECT") {
-        this.handleCharSelectClick(this.input.mouseX, this.input.mouseY);
-        return;
-      }
-      if (this.state === "MAP_SELECT") {
-        this.handleMapSelectClick(this.input.mouseX, this.input.mouseY);
-        return;
-      }
-      if (e.button === 2) { this.cancelCharge(); return; } // sağ tık: atışı iptal
-      if (e.button === 0) this.startCharge();
-    });
+    this.canvas.addEventListener("mousedown", (e) => this.pressCanvas(e, e.button));
+
+    /* Dokunmatik: `touchstart` ayrıca dinlenir ve sentetik `mousedown`
+     * bastırılır (preventDefault) ki tek dokunuş iki kez işlenmesin. Sürükleme
+     * nişanı günceller, parmağı kaldırmak atışı bırakır (battle); menülerde
+     * tek dokunuş düğmeyi çalıştırır. */
+    this.canvas.addEventListener("touchstart", (e) => {
+      const t = e.changedTouches && e.changedTouches[0];
+      if (!t) return;
+      e.preventDefault();
+      this.pressCanvas(t, 0);
+    }, { passive: false });
+    this.canvas.addEventListener("touchmove", (e) => {
+      const t = e.changedTouches && e.changedTouches[0];
+      if (!t) return;
+      e.preventDefault();
+      const pt = this.pointerWorld(t);
+      this.input.mouseX = pt.x;
+      this.input.mouseY = pt.y;
+    }, { passive: false });
+    const endTouch = (e) => {
+      if (e.cancelable) e.preventDefault();
+      if (this.state === "AIMING") this.releaseFire();
+    };
+    this.canvas.addEventListener("touchend", endTouch, { passive: false });
+    this.canvas.addEventListener("touchcancel", endTouch, { passive: false });
+
     window.addEventListener("mouseup", (e) => {
       if (e.button === 0) this.releaseFire();
     });
@@ -2713,6 +2704,43 @@ class Game {
   handleLobbyKey(e) {
     if (this.state !== "ONLINE_LOBBY" || !this.lobby) return false;
     return this.lobby.handleKey(e) !== false;
+  }
+
+  // Olay koordinatını dünya koordinatına çevirir (tuval CSS kutusuna göre).
+  pointerWorld(e) {
+    const c = this.canvas;
+    // Sondalar/sahte oyun nesneleri tuval taşımayabilir (Object.create(Game.prototype)).
+    if (!c || !c.getBoundingClientRect) return { x: this.input.mouseX, y: this.input.mouseY };
+    const r = c.getBoundingClientRect();
+    if (!r || !r.width || !r.height) return { x: this.input.mouseX, y: this.input.mouseY };
+    return {
+      x: (e.clientX - r.left) * (this.W / r.width),
+      y: (e.clientY - r.top) * (this.H / r.height),
+    };
+  }
+
+  /* Tuval basımı (fare sol/sağ, dokunma, kalem). Tek giriş noktası: koordinat
+   * olaydan alınır, `input` güncellenir ve ekranın kendi işleyicisi çağrılır. */
+  pressCanvas(e, button) {
+    const pt = this.pointerWorld(e);
+    this.input.mouseX = pt.x;
+    this.input.mouseY = pt.y;
+    if (this.state === "ONLINE_LOBBY") {
+      // Lobi: yalnız sol tuş/dokunuş (sağ tık menü açmasın).
+      if (button === 0) this.lobby.handleClick(pt.x, pt.y);
+      return;
+    }
+    if (this.state === "WORKSHOP") { this.handleWorkshopClick(pt.x, pt.y); return; }
+    if (this.state === "MARKET") { this.handleMarketClick(pt.x, pt.y, !!e.shiftKey, !!(e.ctrlKey || e.altKey || e.metaKey)); return; }
+    if (this.state === "TUTORIAL") { this.handleTutorialClick(pt.x, pt.y); return; }
+    if (this.state === "COUNT_SELECT") { this.handleCountSelectClick(pt.x, pt.y); return; }
+    if (this.state === "MODE_SELECT") { this.handleModeSelectClick(pt.x, pt.y); return; }
+    if (this.state === "DIFFICULTY_SELECT") { this.handleDifficultySelectClick(pt.x, pt.y); return; }
+    if (this.state === "BOT_COUNT_SELECT") { this.handleBotCountSelectClick(pt.x, pt.y); return; }
+    if (this.state === "CHAR_SELECT") { this.handleCharSelectClick(pt.x, pt.y); return; }
+    if (this.state === "MAP_SELECT") { this.handleMapSelectClick(pt.x, pt.y); return; }
+    if (button === 2) { this.cancelCharge(); return; } // sağ tık: atışı iptal
+    if (button === 0) this.startCharge();
   }
 
   // Silah seçimi (yalnız AIMING). Mühimmatı olmayan silah atlanır.
