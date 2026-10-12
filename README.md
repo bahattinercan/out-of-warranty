@@ -317,7 +317,8 @@ Oyunun kaynak dili Türkçedir: Türkçe metinler **kodun içinde** durur, diğe
 - **Anahtarlama:** `<ekran>.<öğe>[.<alan>]` (örn. `menu.mode.workshop.title`). Kalıplarda `{ad}` yer tutucusu kullanılır: `t("menu.mode.workshop.sub", "… {scrap} Hurda", { scrap })`.
 - **Dil seçimi:** `setLocale("en")`; tercih `nwo_locale` anahtarında saklanır. İlk açılışta kayıtlı tercih → tarayıcı dili → Türkçe sırası izlenir.
 - **DOM metinleri:** HTML düğümlerine `data-i18n="anahtar"` (metin) veya `data-i18n-title="anahtar"` (title) eklenir; `setLocale` bunları kendiliğinden uygular.
-- **Kapsam durumu:** marka başlığı ve ana menü çevrildi (İngilizce); savaş HUD'u, Atölye/Pazar ekranları ve veri katalogları sıradaki dilimlerde.
+- **Kapsam durumu:** marka başlığı, ana menü, **savaş HUD'u** (sıra şeridi, rüzgar, alt panel yuvaları, düğmeler, ses/dil denetimleri) ve **dil seçici** çevrildi (İngilizce, ~55 anahtar). Atölye/Pazar ekranları ve veri katalogları (robot/silah/parça/harita adları) sıradaki dilimlerde.
+- **Dil seçici:** sağ üstteki menü (`#locale-select`) tercihi `nwo_locale`'a yazar; `data-i18n` DOM metinlerini ve oyun HUD'unu (`localechange` olayı) anında günceller. Seçenekler `LANG_ORDER`'dan üretilir, HTML'de liste tutulmaz.
 - **Bekçi test:** `node tests/i18n.js` — kodda kullanılan her anahtarın sözlükte olmasını, sözlükte kodda kullanılmayan anahtar kalmamasını, her `t()` çağrısının Türkçe fallback taşımasını ve dil etiketi normalizasyonunu denetler.
 
 ## Testler
