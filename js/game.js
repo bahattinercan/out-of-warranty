@@ -647,10 +647,10 @@ class Game {
     if (!id || !PART_SLOTS.includes(slot)) return;
     const res = equipPart(this.profile, id, slot, partId, { index: slotIndex });
     if (!res.ok) {
-      let msg = "Takma başarısız";
-      if (res.reason === "NOT_OWNED") msg = "Bu parça envanterde yok";
-      else if (res.reason === "SLOT_MISMATCH") msg = "Parça bu yuvaya uymuyor";
-      else if (res.reason === "INVALID_INDEX") msg = "Geçersiz alt yuva";
+      let msg = t("workshop.failEquip", "Takma başarısız");
+      if (res.reason === "NOT_OWNED") msg = t("workshop.notOwned", "Bu parça envanterde yok");
+      else if (res.reason === "SLOT_MISMATCH") msg = t("workshop.slotMismatch", "Parça bu yuvaya uymuyor");
+      else if (res.reason === "INVALID_INDEX") msg = t("workshop.invalidIndex", "Geçersiz alt yuva");
       this._workshopNotice(msg, "#ff9b9b");
       SFX.uiClick();
       return;
@@ -661,8 +661,10 @@ class Game {
       SFX.partMount(); // parça montaj imzası (metal klik + yay)
       if (!res.persisted) notifyStorageFailure();
       // Parçalar robota kilitli değildir: başka robotlarda takılı kalır.
-      const where = `${SLOT_LABELS[slot]} ${slotIndex + 1}`;
-      const msg = partId ? `${partById(partId).label} takıldı (${where})` : `${where} yuvası boşaltıldı`;
+      const where = t("workshop.slotWhere", "{slot} {index}", { slot: slotLabel(slot), index: slotIndex + 1 });
+      const msg = partId
+        ? t("workshop.equipped", "{part} takıldı ({where})", { part: partById(partId).label, where })
+        : t("workshop.cleared", "{where} yuvası boşaltıldı", { where });
       this._workshopNotice(msg, "#8affc0");
       this.updateHud();
     }
@@ -1538,20 +1540,20 @@ class Game {
   // bir yazıyla gösterilir.
   purchaseMarketAmmo(weaponId, qty) {
     const spec = weaponById(weaponId);
-    const label = spec ? spec.name : "Cephane";
+    const label = spec ? spec.name : t("market.ammoFallback", "Cephane");
     const res = buyAmmo(this.profile, weaponId, qty || 1);
     if (!res.ok) {
-      let msg = "Satın alma başarısız";
-      if (res.reason === "DEPOT_FULL") msg = `${label} deposu dolu (üst sınır ${AMMO_DEPOT_CAP})`;
-      else if (res.reason === "SCRAP_REQUIRED") msg = `${label} için ${res.cost} Hurda gerekli`;
-      else if (res.reason === "NOT_SELLABLE") msg = `${label} satılmıyor`;
+      let msg = t("market.fail", "Satın alma başarısız");
+      if (res.reason === "DEPOT_FULL") msg = t("market.ammoDepotFull", "{label} deposu dolu (üst sınır {cap})", { label, cap: AMMO_DEPOT_CAP });
+      else if (res.reason === "SCRAP_REQUIRED") msg = t("market.scrapRequired", "{label} için {cost} Hurda gerekli", { label, cost: res.cost });
+      else if (res.reason === "NOT_SELLABLE") msg = t("market.notSellable", "{label} satılmıyor", { label });
       this._marketNotice(msg, "#ff9b9b");
       SFX.uiClick();
       return;
     }
     this.profile = res.profile;
     this.marketFx = { weaponId, t: 0 };
-    this._marketNotice(`${res.bought}× ${label} alındı  (−${res.cost} Hurda)`, "#8affc0");
+    this._marketNotice(t("market.ammoBought", "{qty}× {label} alındı  (−{cost} Hurda)", { qty: res.bought, label, cost: res.cost }), "#8affc0");
     SFX.weaponSwitch(); // kısa metal klik'i
     if (!res.persisted) notifyStorageFailure();
     this.updateHud();
@@ -1618,7 +1620,7 @@ class Game {
     ctx.textBaseline = "top";
     ctx.fillStyle = "#ffe45e";
     ctx.font = uiTitleFont(22);
-    ctx.fillText("PAZAR", W / 2, 14);
+    ctx.fillText(t("market.title", "PAZAR"), W / 2, 14);
     this._renderMarketTabs(ctx, scrap);
 
     const gap = 12;
@@ -1661,7 +1663,7 @@ class Game {
       ctx.font = uiTextFont(12, 700);
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
-      ctx.fillText(t.label, x + MK_TAB_W / 2, MK_TAB_Y + MK_TAB_H / 2);
+      ctx.fillText(marketTabLabel(t.id), x + MK_TAB_W / 2, MK_TAB_Y + MK_TAB_H / 2);
     });
 
     // Bilgi satırı: soldan başlar — Hurda (sarı) + sekme özeti (gri). Sağ uç
@@ -1671,19 +1673,23 @@ class Game {
     let summary;
     if (activeTab === "ammo") {
       const depot = getAmmoDepot(this.profile);
-      summary = `Ortak depo: ${ammoDepotTotal(depot)} mermi • ${Object.keys(depot).length} silah`;
+      summary = t("market.depotSummary", "Ortak depo: {total} mermi • {weapons} silah", {
+        total: ammoDepotTotal(depot), weapons: Object.keys(depot).length,
+      });
     } else {
       const slotParts = PARTS.filter((p) => p.slot === activeTab);
       const owned = this.profile ? getOwnedParts(this.profile) : [];
       const have = slotParts.filter((p) => owned.includes(p.id)).length;
-      summary = `${SLOT_LABELS[activeTab]} yuvası: ${have}/${slotParts.length} parça • takma Atölye'de`;
+      summary = t("market.partsSummary", "{slot} yuvası: {have}/{total} parça • takma Atölye'de", {
+        slot: slotLabel(activeTab), have, total: slotParts.length,
+      });
     }
 
     ctx.textAlign = "left";
     ctx.textBaseline = "middle";
     ctx.fillStyle = `rgba(255,228,94,${0.8 + 0.2 * pulse})`;
     ctx.font = uiTitleFont(Math.round(13 + 3 * pulse));
-    const scrapText = `Hurda: ${scrap}`;
+    const scrapText = t("common.scrap", "Hurda: {scrap}", { scrap });
     ctx.fillText(scrapText, 24, MK_INFO_Y);
     const scrapW = ctx.measureText(scrapText).width;
     ctx.fillStyle = "#9fb6c9";
@@ -1755,7 +1761,7 @@ class Game {
       ctx.textAlign = "right";
       ctx.fillStyle = full ? "#8b9aa5" : affordable ? "#ffd166" : "#ff9b9b";
       ctx.font = uiTextFont(12, 700);
-      ctx.fillText(full ? "Dolu" : `${price} Hurda`, cx + cardW - 10, cyv + 8);
+      ctx.fillText(full ? t("market.full", "Dolu") : t("market.price", "{price} Hurda", { price }), cx + cardW - 10, cyv + 8);
 
       ctx.textAlign = "left";
       ctx.fillStyle = "#8fd9c4";
@@ -1763,12 +1769,14 @@ class Game {
       ctx.fillText(spec.special, tx, cyv + 26, cardW - 70);
 
       ctx.fillStyle = full ? "#ffb347" : "#8fa8ba";
-      ctx.fillText(`Taban ${spec.ammo} • Savaş ≤${battleMax} • Depo ${have}/${AMMO_DEPOT_CAP}`, tx, cyv + 43, cardW - 112);
+      ctx.fillText(t("market.ammoMeta", "Taban {base} • Savaş ≤{max} • Depo {have}/{cap}", {
+          base: spec.ammo, max: battleMax, have, cap: AMMO_DEPOT_CAP,
+        }), tx, cyv + 43, cardW - 112);
       if (!full) {
         ctx.textAlign = "right";
         ctx.fillStyle = "#6d7f8d";
         ctx.font = uiTextFont(9);
-        ctx.fillText(`Shift ×${AMMO_BULK_QTY}`, cx + cardW - 10, cyv + 45);
+        ctx.fillText(t("market.bulkShift", "Shift ×{qty}", { qty: AMMO_BULK_QTY }), cx + cardW - 10, cyv + 45);
       }
     }
 
@@ -1783,7 +1791,11 @@ class Game {
     ctx.font = uiTextFont(10);
     ctx.textAlign = "center";
     ctx.textBaseline = "top";
-    ctx.fillText(`Depo ${AMMO_DEPOT_CAP}'a kadar birikir; maça yalnız savaş tavanı kadar yüklenir, artanı maç sonunda geri döner • Shift ×${AMMO_BULK_QTY} / Ctrl ×${AMMO_BULK_QTY_BIG}`, this.W / 2, navY + MK_FOOT_NOTE_DY);
+    ctx.fillText(
+      t("market.ammoNote",
+        "Depo {cap}'a kadar birikir; maça yalnız savaş tavanı kadar yüklenir, artanı maç sonunda geri döner • Shift ×{qty} / Ctrl ×{big}",
+        { cap: AMMO_DEPOT_CAP, qty: AMMO_BULK_QTY, big: AMMO_BULK_QTY_BIG }),
+      this.W / 2, navY + MK_FOOT_NOTE_DY);
     this._renderMarketNotice(ctx, navY + MK_FOOT_NOTICE_DY);
   }
 
@@ -1854,12 +1866,12 @@ class Game {
       ctx.textAlign = "right";
       ctx.fillStyle = isOwned ? "#8b9aa5" : affordable ? "#ffd166" : "#ff9b9b";
       ctx.font = uiTextFont(12, 700);
-      ctx.fillText(isOwned ? "Alındı" : `${part.price} Hurda`, cx + cardW - 10, cyv + 8);
+      ctx.fillText(isOwned ? t("market.owned", "Alındı") : t("market.price", "{price} Hurda", { price: part.price }), cx + cardW - 10, cyv + 8);
 
       // Sağ alt: yuva rozeti — parçanın nereye takıldığını söyler.
       ctx.fillStyle = isOwned ? "#5f6d78" : "#8fa8ba";
       ctx.font = uiTextFont(9, 700);
-      ctx.fillText(SLOT_LABELS[part.slot].toUpperCase(), cx + cardW - 10, cyv + 45);
+      ctx.fillText(slotLabel(part.slot).toUpperCase(), cx + cardW - 10, cyv + 45);
 
       // Etki satırı (ad + kısa açıklama + durum).
       ctx.textAlign = "left";
@@ -1870,16 +1882,16 @@ class Game {
       let status, statusColor;
       if (isOwned && wearers.length === 1) {
         const owner = CHARACTERS.find((c) => c.id === wearers[0]);
-        status = `Takılı → ${owner ? owner.label : wearers[0]}`;
+        status = t("market.equippedOne", "Takılı → {robot}", { robot: owner ? owner.label : wearers[0] });
         statusColor = "#8affc0";
       } else if (isOwned && wearers.length > 1) {
-        status = `Takılı → ${wearers.length} robotta`;
+        status = t("market.equippedMany", "Takılı → {count} robotta", { count: wearers.length });
         statusColor = "#8affc0";
       } else if (isOwned) {
-        status = "Envanterde • Atölye'den tak";
+        status = t("market.inInventory", "Envanterde • Atölye'den tak");
         statusColor = "#ffd166";
       } else {
-        status = `${SLOT_LABELS[part.slot]} yuvası • her robota takılır`;
+        status = t("market.partUsable", "{slot} yuvası • her robota takılır", { slot: slotLabel(part.slot) });
         statusColor = "#8fa8ba";
       }
       ctx.fillStyle = isOwned ? statusColor : "#6d7f8d";
@@ -1894,7 +1906,11 @@ class Game {
     ctx.font = uiTextFont(10);
     ctx.textAlign = "center";
     ctx.textBaseline = "top";
-    ctx.fillText(`${SLOT_LABELS[slot]} parçaları tek seferlik alınır • aynı parça her robota takılabilir (kopya gerekmez) • takma Atölye'de`, this.W / 2, navY + MK_FOOT_NOTE_DY);
+    ctx.fillText(
+      t("market.partsNote",
+        "{slot} parçaları tek seferlik alınır • aynı parça her robota takılabilir (kopya gerekmez) • takma Atölye'de",
+        { slot: slotLabel(slot) }),
+      this.W / 2, navY + MK_FOOT_NOTE_DY);
     this._renderMarketNotice(ctx, navY + MK_FOOT_NOTICE_DY);
   }
 
@@ -1917,7 +1933,7 @@ class Game {
       ctx.fillStyle = "#cfe0ee";
       ctx.font = uiTextFont(13, 700);
       ctx.textAlign = "center"; ctx.textBaseline = "middle";
-      ctx.fillText(b.dir < 0 ? "‹ Önceki" : "Sonraki ›", b.x + b.w / 2, b.y + b.h / 2);
+      ctx.fillText(b.dir < 0 ? t("market.prev", "‹ Önceki") : t("market.next", "Sonraki ›"), b.x + b.w / 2, b.y + b.h / 2);
       ctx.globalAlpha = 1;
     }
     const pageStart = page * perPage;
@@ -1967,20 +1983,20 @@ class Game {
   // bakiye/envantere doğrudan dokunmaz. Başarısızlık sessiz kalmaz.
   purchaseMarketPart(partId) {
     const part = partById(partId);
-    const label = part ? part.label : "Parça";
+    const label = part ? part.label : t("market.partFallback", "Parça");
     const res = buyPart(this.profile, partId);
     if (!res.ok) {
-      let msg = "Satın alma başarısız";
-      if (res.reason === "ALREADY_OWNED") msg = `${label} zaten envanterinde — Atölye'den tak`;
-      else if (res.reason === "SCRAP_REQUIRED") msg = `${label} için ${res.cost} Hurda gerekli`;
-      else if (res.reason === "INVALID_PART") msg = "Bilinmeyen parça";
+      let msg = t("market.fail", "Satın alma başarısız");
+      if (res.reason === "ALREADY_OWNED") msg = t("market.alreadyOwned", "{label} zaten envanterinde — Atölye'den tak", { label });
+      else if (res.reason === "SCRAP_REQUIRED") msg = t("market.scrapRequired", "{label} için {cost} Hurda gerekli", { label, cost: res.cost });
+      else if (res.reason === "INVALID_PART") msg = t("market.unknownPart", "Bilinmeyen parça");
       this._marketNotice(msg, "#ff9b9b");
       SFX.uiClick();
       return;
     }
     this.profile = res.profile;
     this.marketFx = { partId, t: 0 };
-    this._marketNotice(`${label} alındı (−${res.cost} Hurda) — Atölye'den bir robota tak`, "#8affc0");
+    this._marketNotice(t("market.partBought", "{label} alındı (−{cost} Hurda) — Atölye'den bir robota tak", { label, cost: res.cost }), "#8affc0");
     SFX.partMount(); // parça alımı: montaj klik'i
     if (!res.persisted) notifyStorageFailure();
     this.updateHud();
@@ -2767,17 +2783,20 @@ class Game {
         // Öğretici maç: ödül yok, sonucu rehber diliyle anlat.
         const won = winner && winner === this.players[humanIdx];
         showOverlay(
-          won ? "Öğretici tamamlandı! 🎓" : winner ? "Öğretici maçını kaybettin" : "Berabere!",
-          won ? "Artık hazırsın — Ana Menü'den gerçek maçlara çıkabilirsin."
-              : "Endişelenme — 'Tekrar Oyna' ile aynı bölümü yeniden dene.",
+          won ? t("overlay.tutorial.winTitle", "Öğretici tamamlandı! 🎓")
+              : winner ? t("overlay.tutorial.lossTitle", "Öğretici maçını kaybettin")
+                       : t("overlay.tutorial.drawTitle", "Berabere!"),
+          won ? t("overlay.tutorial.winSub", "Artık hazırsın — Ana Menü'den gerçek maçlara çıkabilirsin.")
+              : t("overlay.tutorial.lossSub", "Endişelenme — 'Tekrar Oyna' ile aynı bölümü yeniden dene."),
           null
         );
         this.updateHud();
         return;
       }
       showOverlay(
-        winner ? `${winner.name} parça hakkını kazandı! 🏆` : "Tahsis berabere kaldı!",
-        winner ? "" : "İkisi de elendi.",
+        winner ? t("overlay.match.winTitle", "{name} parça hakkını kazandı! 🏆", { name: winner.name })
+               : t("overlay.match.drawTitle", "Tahsis berabere kaldı!"),
+        winner ? "" : t("overlay.match.drawSub", "İkisi de elendi."),
         reward
       );
       this.updateHud();
@@ -4457,6 +4476,12 @@ function branchLabel(branch) {
 function slotLabel(slot) {
   return t("workshop.slot." + slot, SLOT_LABELS[slot] || slot);
 }
+// Pazar sekme başlıkları: sekme kimliğinden türetilir (market.tab.*) ve kaynak
+// metin MARKET_TABS > label'dır — yuva sekmeleri Atölye ile aynı adı taşır.
+function marketTabLabel(id) {
+  const tab = MARKET_TABS.find((x) => x.id === id);
+  return t("market.tab." + id, tab ? tab.label : id);
+}
 
 // Kart metni sığdırıcı: metni önce punto küçülterek, sonra satırlara bölerek
 // verilen genişliğe oturtur (Russo One Segoe UI'dan geniş olduğu için uzun
@@ -4811,19 +4836,22 @@ function statRow(label, n) {
 // Her gösterimde düğmeler varsayılana döner.
 function showOverlay(title, sub, reward) {
   const defWorkshop = document.getElementById("workshop-btn");
-  if (defWorkshop) defWorkshop.textContent = "Atölyeye Git";
+    if (defWorkshop) defWorkshop.textContent = t("hud.goWorkshop", "Atölyeye Git");
   const defRestart = document.getElementById("restart-btn");
-  if (defRestart) defRestart.textContent = "Tekrar Oyna";
+    if (defRestart) defRestart.textContent = t("hud.playAgain", "Tekrar Oyna");
   const defMenu = document.getElementById("menu-btn");
-  if (defMenu) defMenu.textContent = "Ana Menü";
+    if (defMenu) defMenu.textContent = t("hud.mainMenu", "Ana Menü");
   document.getElementById("overlay-title").textContent = title;
   document.getElementById("overlay-sub").textContent = sub || "";
   const detail = document.getElementById("overlay-reward");
   if (detail) {
     if (reward && reward.ok) {
-      const lines = [`+${reward.scrap} Hurda  •  +${reward.xp} Servis XP`];
+      const lines = [t("overlay.reward", "+{scrap} Hurda  •  +{xp} Servis XP", { scrap: reward.scrap, xp: reward.xp })];
       if (reward.levelAfter > reward.levelBefore) {
-        lines.push(`${reward.robotLabel ? reward.robotLabel + " " : ""}Servis Seviyesi ${reward.levelBefore} → ${reward.levelAfter}`);
+        lines.push(t("overlay.levelUp", "{robot}Servis Seviyesi {before} → {after}", {
+          robot: reward.robotLabel ? reward.robotLabel + " " : "",
+          before: reward.levelBefore, after: reward.levelAfter,
+        }));
       }
       if (reward.message) lines.push(reward.message);
       detail.textContent = lines.join("\n");

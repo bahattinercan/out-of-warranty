@@ -137,6 +137,16 @@ for (const b of IDS.BRANCHES) {
 for (const sl of Object.keys(IDS.SLOT_LABELS)) {
   check(`yuva çevirisi var: ${sl}`, I.I18N.en["workshop.slot." + sl] !== undefined);
 }
+// Pazar sekme kimlikleri game.js'teki MARKET_TABS verisinden okunur: sekme
+// başlıkları çalışma zamanında üretildiği için (market.tab.*) kapsam burada
+// doğrulanır — sekmeye yeni yuva eklenirse sözlük eksik kalırsa test kırılır.
+const gameFileSrc = fs.readFileSync(path.join(JS_DIR, "game.js"), "utf8");
+const tabsBlock = (gameFileSrc.match(/const MARKET_TABS = \[([\s\S]*?)\];/) || [])[1] || "";
+const tabIds = [...tabsBlock.matchAll(/id:\s*"([a-z]+)"/g)].map((m) => m[1]);
+check("MARKET_TABS kimlikleri okundu", tabIds.length >= 5, tabIds.join(", "));
+for (const id of tabIds) {
+  check(`pazar sekme çevirisi var: ${id}`, I.I18N.en["market.tab." + id] !== undefined);
+}
 
 for (const lang of I.LANG_REQUIRED) {
   const dict = I.I18N[lang] || {};

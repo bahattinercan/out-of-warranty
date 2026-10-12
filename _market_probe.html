@@ -33,6 +33,10 @@
   <script src="js/ai.js"></script>
   <script src="js/game.js"></script>
   <script>
+    // Dil varyantı: ?locale=en (veya #en) ile İngilizce metin sığdırması ölçülür.
+    const params = new URLSearchParams(location.search);
+    if (location.hash.indexOf("en") >= 0 || params.get("locale") === "en") setLocale("en", { persist: false });
+
     // Sahte oyun nesnesi: renderMarket yalnız bu alanları okur (DOM'a dokunmaz).
     function makeFake(profile, tab) {
       const g = Object.create(Game.prototype);
@@ -83,7 +87,9 @@
     const g1 = makeFake({ version: 5, scrap: 1450, ammo: { grenade: 3, sniper: 1, mine: 2, nuke: 1 } }, "ammo");
     g1.input.mouseX = 150; g1.input.mouseY = 130;
     g1.marketFx = { weaponId: "grenade", t: 0.15 };
-    g1.marketNotice = { text: "3× El Bombası alındı  (−90 Hurda)", color: "#8affc0", t: 0.3 };
+    // Bildirim metni de oyunun anahtarından üretilir (sonda oyunla birlikte
+    // çevrilsin diye); silah adı hâlâ veri kataloğundan gelir (F2c).
+    g1.marketNotice = { text: t("market.ammoBought", "3× {label} alındı  (−{cost} Hurda)", { qty: 3, label: "El Bombası", cost: 90 }), color: "#8affc0", t: 0.3 };
     g1.renderMarket(document.getElementById("c1").getContext("2d"));
     audioGuide(document.getElementById("c1").getContext("2d"));
 
@@ -91,7 +97,7 @@
     const g2 = makeFake(PARTS_PROFILE, "body");
     g2.input.mouseX = 150; g2.input.mouseY = 130;
     g2.marketFx = { partId: "takviyeli_govde", t: 0.15 };
-    g2.marketNotice = { text: "Takviyeli Gövde alındı (−100 Hurda) — Atölye'den bir robota tak", color: "#8affc0", t: 0.25 };
+    g2.marketNotice = { text: t("market.partBought", "{label} alındı (−{cost} Hurda) — Atölye'den bir robota tak", { label: "Takviyeli Gövde", cost: 100 }), color: "#8affc0", t: 0.25 };
     g2.renderMarket(document.getElementById("c2").getContext("2d"));
     audioGuide(document.getElementById("c2").getContext("2d"));
 

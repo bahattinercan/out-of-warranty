@@ -34,7 +34,7 @@ function notifyStorageFailure() {
   if (typeof document === "undefined" || !document || typeof document.getElementById !== "function") return;
   const el = document.getElementById("storage-warning");
   if (!el) return;
-  el.textContent = "İlerleme bu oturumda saklanamadı.";
+  el.textContent = t("storage.warning", "İlerleme bu oturumda saklanamadı.");
   el.classList.remove("hidden");
 }
 
