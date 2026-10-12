@@ -94,6 +94,8 @@ Sayılar üçüncü taraf tahminleridir (VG Insights/Gamalytic/SteamSpy türevi)
 
 **Ölçülen paket bütçesi (F3b, 6 oyuncu, `tests/net-state.js`):** başlangıç snapshot'ı (build dahil) 4.087 bayt · periyodik snapshot (build hariç) 2.519 bayt · arazi maskesi (RLE, tek seferlik) 1.436 bayt. Arazi ilk durumu `Math.random` ile üretildiği için her istemcide farklıdır → host maskeyi RLE ile gönderir, sonraki değişiklikler `destroy(x,y,r)` kaydı olarak yayınlanır ve misafir aynı çağrıları oynatır (deterministik). Türetilmiş istatistikler (can üst sınırı, zırh, hız çarpanları) yalnız başlangıç paketinde gider: çevrimiçi maçta taban build kuralı böyle uygulanır ve misafir profil verisine ihtiyaç duymaz.
 
+**F3c-1 (taşıma):** `js/net/transport.js` üç uygulama sunar — `LoopbackTransport` (aynı süreç, gecikme/kayıp simülasyonu; testler ve aynı makinede iki sekme provası), `PeerJsTransport` (PeerJS bulut sinyalleşmesi; `peerFactory` enjekte edilebilir olduğu için sahte Peer ile mesaj akışı ve yeniden bağlanma headless sınanır) ve PeerJS yoksa `UNAVAILABLE` durumu (oyun çevrimdışı modlarla devam eder). Oda kodu 5 karakter, karışan harfler (0/O, 1/I) çıkarılmış, gösterimde `ABC-DE` biçiminde. `tests/net-integration.js` host+misafir yığınını birlikte çalıştırır: el sıkışması (START → maske + tam durum → LOADED → PLAYING), 5 turluk senkron turu (her turda iki tarafın durum hash'i AYNI), oyma sonrası arazi birebir, komut tekilleştirme ve çakışma, kopma → bot → aynı koltuğa dönüş, gecikmeli+kayıplı girdi akışı.
+
 **Doğrulama (F3 çıkış ölçütü):** iki farklı ağdan (biri mobil hotspot) 2 oyuncu, aynı harita, 5 tur; kurulum <20 sn; kopma <%5; tur sırası her iki tarafta aynı; yeniden bağlanma aynı koltuğa döner.
 
 ---
@@ -218,7 +220,8 @@ Referans gerçeklik: Steam medyanı $249/ömür; web'de ilk oyun $0–400/ay. Bu
 | **F2** (altyapı + menü yapıldı) | `js/i18n.js` + ilk ekranların anahtarlanması | i18n altyapısı, menü/marka çevirisi, `tests/i18n.js` | `node tests/i18n.js` 46/46 · diğer 5 paket yeşil · headless EN menü ekranı |
 | **F3a** (yapıldı) | Çevrimiçi protokol + oturum çekirdeği (saf, taşımadan bağımsız) | `js/net/protocol.js`, `js/net/session.js`, `tests/net.js` | `node tests/net.js` 95/95 (zarf/komut doğrulama, tekilleştirme, değişmezler, saat/borç, kopma) |
 | **F3b** (yapıldı) | Durum anlık görüntüsü + arazi senkronu (capture/apply) | `js/net/state.js`, `tests/net-state.js` | `node tests/net-state.js` 45/45 (gidiş-dönüş hash'i, arazi birebir, savunmacı apply, boyut bütçesi) |
-| **F3c** | WebRTC taşıma (PeerJS) + lobi ekranı + oyun akışı bağlantısı | `js/net/transport.js`, `js/online-lobby.js`, `index.html` | §4 çıkış ölçütü (iki ağdan 5 tur, kurulum <20 sn) |
+| **F3c-1** (yapıldı) | Taşıma katmanı (PeerJS + döngü) ve uçtan uca entegrasyon testi | `js/net/transport.js`, `tests/net-integration.js` | `node tests/net-integration.js` 43/43 (el sıkışma, 5 tur senkron, oyma, kopma, gecikme/kayıp, sahte Peer ile PeerJS akışı) |
+| **F3c-2** | Lobi ekranı (oda kodu, hazır akışı) + oyun akışı bağlantısı | `js/online-lobby.js`, `index.html`, i18n anahtarları | §4 çıkış ölçütü (iki ağdan 5 tur, kurulum <20 sn) |
 | **F4** | 6 oyuncu, oda/davet akışı, bot devralma | lobi + yeniden bağlanma | 6 oyuncu simülasyonu + kopma senaryoları, `tests/multiplayer/` |
 | **F5** | Portal uyumu: SDK, reklam yerleri, event ölçümü | `js/portal.js` | iframe testi, 16:9 ölçekleme, reklam ödülü doğru veriliyor |
 | **F6** | Kapalı test (20–50 kişi, itch.io) → demo yayını | yayın + geri bildirim notu | Kapalı test raporu |
