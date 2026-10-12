@@ -14,6 +14,7 @@
   <canvas id="wide" width="960" height="540"></canvas>
   <canvas id="narrow" width="700" height="540"></canvas>
 
+  <script src="js/i18n.js"></script>
   <script src="js/audio.js"></script>
   <script src="js/characters.js"></script>
   <script src="js/progression.js"></script>
@@ -47,6 +48,11 @@
     }
     // Yeni kart yerleşiminde (gap 14, bh 132, y=H/2-38) hover ATÖLYE kartında:
     // kart içi merkez ~ (startX + 3.5*(bw+gap), H/2-38+60). 700 px'de sığdırma kontrolü.
+    // Dil varyantı: #en (veya ?locale=en) ile İngilizce menü çizilir; EN metin
+    // uzunluğu kartlara sığıyor mu diye headless ekran alınır (F2 doğrulaması).
+    const params = new URLSearchParams(location.search);
+    const wantEn = location.hash.indexOf("en") >= 0 || params.get("locale") === "en";
+    if (wantEn) setLocale("en", { persist: false });
     const wide = makeFake(960, 540, [558, 292]);
     wide.renderModeSelect(document.getElementById("wide").getContext("2d"));
     const narrow = makeFake(700, 540, [-1, -1]);

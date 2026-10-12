@@ -299,11 +299,14 @@ class Game {
     ctx.textAlign = "center"; ctx.textBaseline = "top";
     // Başlık: koyu gölge kopyası + sarı üst kopya — hafif derinlik
     ctx.fillStyle = "#000000aa"; ctx.font = uiTitleFont(34);
-    ctx.fillText(GAME_TITLE, W / 2 + 2, H / 2 - 164);
+    ctx.fillText(t("brand.title", GAME_TITLE), W / 2 + 2, H / 2 - 164);
     ctx.fillStyle = "#ffe45e"; ctx.font = uiTitleFont(34);
-    ctx.fillText(GAME_TITLE, W / 2, H / 2 - 166);
+    ctx.fillText(t("brand.title", GAME_TITLE), W / 2, H / 2 - 166);
     ctx.fillStyle = "#cfe0ee"; ctx.font = uiTextFont(15);
-    ctx.fillText("Arena tahsis protokolünü başlat", W / 2, H / 2 - 112);
+    ctx.fillText(
+      t("menu.tagline", "Arena tahsis protokolünü başlat"),
+      W / 2, H / 2 - 112
+    );
     // Başlık altı tehlike şeridi: endüstriyel imza detayı (Faz 2 pilot)
     _csHazardStrip(ctx, W / 2 - 130, H / 2 - 86, 260, 5);
     const scrap = this.profile ? this.profile.scrap : START_SCRAP;
@@ -314,11 +317,11 @@ class Game {
     // plakası ve hover parıltısı aynı accent'ten türetilir — menü tek bakışta
     // bölme bölme okunur (robot/ikili/dişli/mermi/soru glifleri).
     const items = [
-      { action: "computer", icon: "robot", accent: "#ff7b7b", title: "Otomatik Birimlere Karşı", sub: "1 operatör ve 1–3 fabrika robotu" },
-      { action: "local", icon: "ikili", accent: "#7baeff", title: "Yerel Operatörler", sub: "Aynı cihazda 2–6 oyuncu" },
-      { action: "workshop", icon: "dişli", accent: "#d8a72f", title: "ATÖLYE", sub: `Robotlarını kalibre et • ${scrap} Hurda` },
-      { action: "market", icon: "mermi", accent: "#3fae8c", title: "CEPHANE PAZARI", sub: depotTotal > 0 ? `Depoda ${depotTotal} mermi • ${scrap} Hurda` : `Ortak mühimmat deposu • ${scrap} Hurda` },
-      { action: "tutorial", icon: "soru", accent: "#4fc3f7", title: "NASIL OYNANIR", sub: "Kontroller ve tur kuralları" },
+      { action: "computer", icon: "robot", accent: "#ff7b7b", title: t("menu.mode.computer.title", "Otomatik Birimlere Karşı"), sub: t("menu.mode.computer.sub", "1 operatör ve 1–3 fabrika robotu") },
+      { action: "local", icon: "ikili", accent: "#7baeff", title: t("menu.mode.local.title", "Yerel Operatörler"), sub: t("menu.mode.local.sub", "Aynı cihazda 2–6 oyuncu") },
+      { action: "workshop", icon: "dişli", accent: "#d8a72f", title: t("menu.mode.workshop.title", "ATÖLYE"), sub: t("menu.mode.workshop.sub", "Robotlarını kalibre et • {scrap} Hurda", { scrap }) },
+      { action: "market", icon: "mermi", accent: "#3fae8c", title: t("menu.mode.market.title", "CEPHANE PAZARI"), sub: depotTotal > 0 ? t("menu.mode.market.sub", "Depoda {n} mermi • {scrap} Hurda", { n: depotTotal, scrap }) : t("menu.mode.market.subEmpty", "Ortak mühimmat deposu • {scrap} Hurda", { scrap }) },
+      { action: "tutorial", icon: "soru", accent: "#4fc3f7", title: t("menu.mode.tutorial.title", "NASIL OYNANIR"), sub: t("menu.mode.tutorial.sub", "Kontroller ve tur kuralları") },
     ];
     // Kart sayısı ve pencere genişliği ne olursa olsun taşmasın diye genişlik
     // kart sayısına göre uyarlanır (kilit belgesi D-08); sığmayan pencerede
@@ -362,7 +365,7 @@ class Game {
     // Alt bilgi: sessiz yardımcı ipucu — sayfanın altını boş bırakmamak için
     ctx.textAlign = "center"; ctx.textBaseline = "middle";
     ctx.fillStyle = "#5e7488"; ctx.font = uiTextFont(11);
-    ctx.fillText("Fare ile bir bölme seç", W / 2, H - 26);
+    ctx.fillText(t("menu.hint", "Fare ile bir bölme seç"), W / 2, H - 26);
   }
 
   // ── Zorluk seçimi (DIFFICULTY_SELECT) ────────────────────────────────────
@@ -1279,7 +1282,7 @@ class Game {
     ctx.textAlign = "left"; ctx.textBaseline = "top";
     ctx.fillStyle = "#ffe45e"; ctx.font = uiTitleFont(26);
     ctx.textAlign = "center";
-    ctx.fillText("NASIL OYNANIR", W / 2, 12);
+    ctx.fillText(t("tutorial.title", "NASIL OYNANIR"), W / 2, 12);
     _csHazardStrip(ctx, W / 2 - 100, 48, 200, 4);
 
     const KEY_COL = 116;          // tuş sütunu genişliği
@@ -2046,8 +2049,7 @@ class Game {
     ctx.font = uiTitleFont(30);
     ctx.textAlign = "center";
     ctx.textBaseline = "top";
-    ctx.fillText(GAME_TITLE, W / 2, H / 2 - 132);
-
+    ctx.fillText(t("brand.title", GAME_TITLE), W / 2, H / 2 - 132);
     ctx.fillStyle = "#cfe0ee";
     ctx.font = uiTitleFont(18);
     ctx.fillText("Kaç oyuncu?", W / 2, H / 2 - 84);
