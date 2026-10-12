@@ -147,6 +147,21 @@ yapıştırmada "Oda kodu yapıştırıldı" bildirimi çıkar. Gerçek tarayıc
 `_online_small.html` içindedir (`ClipboardEvent` ile yapıştırma →
 `PASTE-TEST typed=QWERT step=code joined=QWERT ctrlVConsumed=false`).
 
+(4) **"Bazen butonlar çalışmıyor":** dört ayrı neden vardı. (a) Tıklama
+koordinatı önbellekten (`input.mouseX/mouseY`) okunuyordu; bu değer yalnız
+`mousemove` ile güncellendiği için dokunmatik ekranda/çizim kaleminde (0,0)
+kalıyor ve HİÇBİR düğme tutmuyordu → koordinat artık olayın kendisinden
+hesaplanır (`Game.pointerWorld` + `pressCanvas`), dokunmatik için
+`touchstart/touchmove/touchend` dinlenir (sentetik `mousedown` bastırılır) ve
+CSS'e `touch-action: none` eklendi. (b) Tıklama alanları ekran değişiminden
+sonra bir kare boyunca bayat kalıyordu → her tıklamadan sonra tüketilir (yanlış
+ekranın düğmesi çalışmaz). (c) Çift tıklama ikinci bir taşıma açıp odayı
+bozabiliyordu → `_busy()` koruması + `_teardownTransport()`. (d) Devre dışı
+düğmeler sessiz kalıyordu ("çalışmıyor" sanılıyordu) → tıklamada nedeni
+bildirilir ve oda ayakta değilken davet kopyalama düğmesi "Oda hazırlanıyor…"
+olarak devre dışı durur. Ayrıca düğme eylemi UI sesinden ÖNCE çalışır (ses
+kurulumu hata verse bile düğme işlevini kaybetmez).
+
 **Doğrulama (F3 çıkış ölçütü):** iki farklı ağdan (biri mobil hotspot) 2 oyuncu, aynı harita, 5 tur; kurulum <20 sn; kopma <%5; tur sırası her iki tarafta aynı; yeniden bağlanma aynı koltuğa döner.
 
 ---
@@ -272,7 +287,7 @@ Referans gerçeklik: Steam medyanı $249/ömür; web'de ilk oyun $0–400/ay. Bu
 | **F3a** (yapıldı) | Çevrimiçi protokol + oturum çekirdeği (saf, taşımadan bağımsız) | `js/net/protocol.js`, `js/net/session.js`, `tests/net.js` | `node tests/net.js` 95/95 (zarf/komut doğrulama, tekilleştirme, değişmezler, saat/borç, kopma) |
 | **F3b** (yapıldı) | Durum anlık görüntüsü + arazi senkronu (capture/apply) | `js/net/state.js`, `tests/net-state.js` | `node tests/net-state.js` 45/45 (gidiş-dönüş hash'i, arazi birebir, savunmacı apply, boyut bütçesi) |
 | **F3c-1** (yapıldı) | Taşıma katmanı (PeerJS + döngü) ve uçtan uca entegrasyon testi | `js/net/transport.js`, `tests/net-integration.js` | `node tests/net-integration.js` 43/43 (el sıkışma, 5 tur senkron, oyma, kopma, gecikme/kayıp, sahte Peer ile PeerJS akışı) |
-| **F3c-2** (yapıldı) | Lobi ekranı (oda kodu, davet, hazır) + oyun akışı bağlantısı | `js/online-lobby.js`, `js/net/adapter.js`, `index.html`, i18n | `node tests/net-game.js` 81/81 (lobi → maç → 5 tur → sonuç + yerleşim + yapıştırma) + headless sondalar `_online_probe.html`, `_online_small.html` |
+| **F3c-2** (yapıldı) | Lobi ekranı (oda kodu, davet, hazır) + oyun akışı bağlantısı | `js/online-lobby.js`, `js/net/adapter.js`, `index.html`, i18n | `node tests/net-game.js` 90/90 (lobi → maç → 5 tur → sonuç + yerleşim + yapıştırma + tıklama) + headless sondalar `_online_probe.html`, `_online_small.html` |
 | **F3c-3** (kullanıcı) | İki farklı ağdan gerçek deneme | — | §4 çıkış ölçütü: 5 tur, kurulum <20 sn, kopma <%5 |
 | **F4** | 6 oyuncu, oda/davet akışı, bot devralma | lobi + yeniden bağlanma | 6 oyuncu simülasyonu + kopma senaryoları, `tests/multiplayer/` |
 | **F5** | Portal uyumu: SDK, reklam yerleri, event ölçümü | `js/portal.js` | iframe testi, 16:9 ölçekleme, reklam ödülü doğru veriliyor |

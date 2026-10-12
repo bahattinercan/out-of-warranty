@@ -123,6 +123,14 @@ Yeni içerik çoğunlukla **kod değil veri** eklemekle yapılır:
   (`_parseCode`) kod alfabesine ve simge sınırlarına uyar (`oda=` parametresi →
   `ABC-DE` → tek başına 5 karakter), böylece panodaki URL'nin içindeki rastgele
   sözcük kod sanılmaz.
+  **Tıklama koordinatı OLAYIN kendisinden gelir** (`Game.pointerWorld` +
+  `pressCanvas`): önbellekteki `input.mouseX/Y` yalnız `mousemove` ile
+  güncellenir, dokunmatik/çizim kaleminde hiç güncellenmez ve menü düğmelerinin
+  hiçbiri tutmaz (yaşandı: "bazen butonlar çalışmıyor"). Dokunmatik için
+  `touchstart/touchmove/touchend` dinlenir (sentetik `mousedown` bastırılır) ve
+  `canvas#game` üzerinde `touch-action: none` vardır. Lobi tıklamadan sonra
+  `_rects` tüketilir (bayat kareyle yanlış ekranın düğmesi çalışmasın) ve
+  `hostRoom/joinRoom` `_busy()` ile çift tıklamaya karşı korunur.
   Ayrıntılı akış ve ölçütler: `docs/web-lansman-plani.md` §4.
 - Süreli yetenek durumları **entity üzerinde** tutulur (`nextShotMod`, `damageReduce`, `poison`, `dashAttack`, `glideTurns`) ve her tur sonunda (`endTurn`) işlenir/azaltılır.
 
