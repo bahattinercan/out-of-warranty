@@ -120,6 +120,21 @@ aldığı için lobi ekranı "maç başladı" sanıyordu → aşama LOBBY kalır
 robot seçici rol ekranında `cx` yerine `W` ile çağrıldığı için sağ kenara
 taşıyordu (headless sonda yakaladı).
 
+**İlk kullanıcı denemesinden çıkan iki hata (düzeltildi):**
+(1) **HOST atış yapamıyordu:** host kendi girdisini ağdan almadığı (INPUT paketi
+göndermediği) için girdi tazelik denetimi onu "bayat" sayıp güç doldurmayı ve
+yürümeyi HER KAREDE siliyordu; `session.touchLocalInput(0)` eklendi (regresyon
+testi: kareler arasında `input.charging` korunuyor mu).
+(2) **Küçük ekranda lobi tasarımı bozuluyordu:** dünya genişliği pencere oranına
+göre 648'e kadar iniyor ama lobi yerleşimi 960 varsayıyordu (sütunlar üst üste
+biniyordu) ve sağ üstteki DOM denetimleri (ses + dil) sabit CSS px kaldığı için
+dar dünyada başlığı kapatıyordu. `Game.resize > measureHudInsets()` denetim
+bölgesini dünya pikselinde ölçer; lobi yerleşimi tamamen `W`/`H`/güvenli alandan
+türetilir, dar dünyada tek sütuna iner, metinler `_fitTextLines` ile sığdırılır.
+Yerleşim bekçisi: `tests/net-game.js` §11 (6 dünya genişliği × 3 denetim bölgesi
+× 4 ekran; ekran dışı/çakışan/denetim altında kalan düğme aranır) — kasten
+bozularak doğrulandı.
+
 **Doğrulama (F3 çıkış ölçütü):** iki farklı ağdan (biri mobil hotspot) 2 oyuncu, aynı harita, 5 tur; kurulum <20 sn; kopma <%5; tur sırası her iki tarafta aynı; yeniden bağlanma aynı koltuğa döner.
 
 ---
@@ -245,7 +260,7 @@ Referans gerçeklik: Steam medyanı $249/ömür; web'de ilk oyun $0–400/ay. Bu
 | **F3a** (yapıldı) | Çevrimiçi protokol + oturum çekirdeği (saf, taşımadan bağımsız) | `js/net/protocol.js`, `js/net/session.js`, `tests/net.js` | `node tests/net.js` 95/95 (zarf/komut doğrulama, tekilleştirme, değişmezler, saat/borç, kopma) |
 | **F3b** (yapıldı) | Durum anlık görüntüsü + arazi senkronu (capture/apply) | `js/net/state.js`, `tests/net-state.js` | `node tests/net-state.js` 45/45 (gidiş-dönüş hash'i, arazi birebir, savunmacı apply, boyut bütçesi) |
 | **F3c-1** (yapıldı) | Taşıma katmanı (PeerJS + döngü) ve uçtan uca entegrasyon testi | `js/net/transport.js`, `tests/net-integration.js` | `node tests/net-integration.js` 43/43 (el sıkışma, 5 tur senkron, oyma, kopma, gecikme/kayıp, sahte Peer ile PeerJS akışı) |
-| **F3c-2** (yapıldı) | Lobi ekranı (oda kodu, davet, hazır) + oyun akışı bağlantısı | `js/online-lobby.js`, `js/net/adapter.js`, `index.html`, i18n | `node tests/net-game.js` 64/64 (lobi → maç → 5 tur → sonuç) + headless sonda `_online_probe.html` |
+| **F3c-2** (yapıldı) | Lobi ekranı (oda kodu, davet, hazır) + oyun akışı bağlantısı | `js/online-lobby.js`, `js/net/adapter.js`, `index.html`, i18n | `node tests/net-game.js` 67/67 (lobi → maç → 5 tur → sonuç + yerleşim) + headless sondalar `_online_probe.html`, `_online_small.html` |
 | **F3c-3** (kullanıcı) | İki farklı ağdan gerçek deneme | — | §4 çıkış ölçütü: 5 tur, kurulum <20 sn, kopma <%5 |
 | **F4** | 6 oyuncu, oda/davet akışı, bot devralma | lobi + yeniden bağlanma | 6 oyuncu simülasyonu + kopma senaryoları, `tests/multiplayer/` |
 | **F5** | Portal uyumu: SDK, reklam yerleri, event ölçümü | `js/portal.js` | iframe testi, 16:9 ölçekleme, reklam ödülü doğru veriliyor |

@@ -107,6 +107,15 @@ Yeni içerik çoğunlukla **kod değil veri** eklemekle yapılır:
   yuvarlanmış parametrelerle kazınır (`terrain.recordChanges`) ki iki maske
   birebir olsun. Komut kimlikleri koltuk ad alanındadır (`s0-1`, `s1-1`) —
   çakışırsa host karşı tarafın komutunu "yinelenen" sanıp uygulamaz.
+  **Host kendi girdisini tazeler** (`session.touchLocalInput(0)`): host INPUT
+  paketi göndermediği için tazelik denetimi ona uygulanırsa yürüme ve güç
+  doldurma HER KAREDE silinir ve host atış yapamaz (yaşandı).
+  **Lobi yerleşimi sabit koordinat kullanmaz:** dünya genişliği pencere oranına
+  göre 648–1620 arasında değişir (`Game.resize`) ve sağ üstteki DOM denetimleri
+  (ses + dil) sabit CSS px kalır; `Game.resize > measureHudInsets()` bunların
+  dünya-piksel kaplamasını (`hudTopInset`/`hudRightInset`) ölçer, lobi başlığı ve
+  sütunları bu güvenli alana uyar (dar dünyada tek sütuna iner). `tests/net-game.js`
+  §11 bu yerleşimi 6 dünya genişliği × 3 denetim bölgesi için denetler.
   Ayrıntılı akış ve ölçütler: `docs/web-lansman-plani.md` §4.
 - Süreli yetenek durumları **entity üzerinde** tutulur (`nextShotMod`, `damageReduce`, `poison`, `dashAttack`, `glideTurns`) ve her tur sonunda (`endTurn`) işlenir/azaltılır.
 
