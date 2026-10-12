@@ -27,7 +27,7 @@ const LANG_REQUIRED = ["en"];
 // kimlikten kurulur, `t("workshop.branch." + branch, ...)`). tests/i18n.js bu
 // öneklerle başlayan sözlük anahtarlarını "kodda kullanılıyor" sayar; hangi
 // kimliklerin gerçekten var olduğunu ayrıca kataloglardan doğrular.
-const I18N_DYNAMIC_PREFIXES = ["workshop.branch.", "workshop.slot.", "tutorial.coach.", "market.tab.", "weapon.", "part.", "char.", "map.", "mapzone.", "arena."];
+const I18N_DYNAMIC_PREFIXES = ["workshop.branch.", "workshop.slot.", "tutorial.coach.", "market.tab.", "weapon.", "part.", "char.", "map.", "mapzone.", "arena.", "service."];
 const LANG_LABELS = {
   "tr": "Türkçe",
   "en": "English",
@@ -554,6 +554,33 @@ const I18N = {
     "mapzone.waste.zoneLabel": "Waste Treatment",
     "mapzone.foundry.zoneLabel": "Foundry",
     "mapzone.sandblast.zoneLabel": "Sandblast Unit",
+    // ── Servis seviyesi ödülleri + Atölye etki özetleri (F2c-5) ────────
+    "service.1.unlock": "Base robot",
+    "service.2.unlock": "Tier I upgrades",
+    "service.3.unlock": "Profile badge",
+    "service.4.unlock": "Detailed match stats",
+    "service.5.unlock": "Tier II upgrades",
+    "service.6.unlock": "Attachment accent effect",
+    "service.7.unlock": "Profile badge II",
+    "service.8.unlock": "Tier III upgrades",
+    "service.9.unlock": "Hull wear cosmetic (future)",
+    "service.10.unlock": "Master Service title",
+    "progression.unlockOpened": "{unlock} unlocked",
+    "progression.maxTier": "Full Calibration",
+    "progression.hp": "HP {from} → {to}",
+    "progression.armor": "Armor {from}% → {to}%",
+    "progression.hpKnockback": "HP {from} → {to} • Knockback −10%",
+    "progression.energy": "Energy {from} → {to}",
+    "progression.energyWeaponDamage": "Energy {from} → {to} • Weapon damage +{pct}% total",
+    "progression.modulePower": "Module power +{pct}%",
+    "progression.modulePowerTotal": "Module power +{pct}% total • Attachment accent light",
+    "progression.modulePowerRange": "Module power +{from}% → +{to}%",
+    "progression.weaponDamage": "Weapon damage +{pct}%",
+    "progression.weaponDamageRange": "Weapon damage +{from}% → +{to}%",
+    "progression.cooldown": "Module cooldown {from} → {to} turns",
+    "progression.knockback": "Knockback taken {from}% → {to}%",
+    "progression.jump": "Jump +{from}% → +{to}%",
+    "progression.moveSpeed": "Move speed +{from}% → +{to}%",
     "mapSelect.back": "‹ Robots",
     "mapSelect.yourRobot": "★ your robot",
     "arena.arena": "Close arena",
@@ -736,6 +763,13 @@ const DATA_CATALOGS = [
       { key: "skill.label", id: "id", at: ["skill", "label"] },
       { key: "skill.desc", id: "id", at: ["skill", "desc"] },
     ],
+  },
+  {
+    // Servis seviyesi ödülleri (progression.js): "açılan içerik" adları maç
+    // sonu kaplamasında görünür. Kimlik seviye numarasıdır.
+    get: () => { try { return SERVICE_LEVELS; } catch (e) { return null; } },
+    prefix: "service",
+    paths: [{ key: "unlock", id: "level", at: ["unlock"] }],
   },
   {
     get: () => { try { return MAPS; } catch (e) { return null; } },

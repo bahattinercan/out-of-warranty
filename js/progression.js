@@ -132,7 +132,9 @@ function levelUpMessage(levelBefore, levelAfter) {
   const after = toSafeInt(levelAfter, 1);
   const opened = [];
   for (const s of SERVICE_LEVELS) {
-    if (s.level > before && s.level <= after && s.unlock) opened.push(`${s.unlock} açıldı`);
+    if (s.level > before && s.level <= after && s.unlock) {
+      opened.push(t("progression.unlockOpened", "{unlock} açıldı", { unlock: s.unlock }));
+    }
   }
   return opened.join(" • ");
 }
@@ -173,7 +175,8 @@ function totalTiers(progress) {
 // "Gövde II • Aparat I • Çekirdek 0" biçiminde kısa özet.
 function robotUpgradeSummary(progress) {
   const up = sanitizeUpgrades(progress);
-  return BRANCHES.map((b) => `${BRANCH_LABELS[b]} ${romanTier(up[b])}`).join(" • ");
+  // Dal adı Atölye ile aynı anahtardan gelir (workshop.branch.*).
+  return BRANCHES.map((b) => `${t("workshop.branch." + b, BRANCH_LABELS[b])} ${romanTier(up[b])}`).join(" • ");
 }
 
 // Sonraki kademenin önkoşulları. `ok:false` ise reason: MAX_TIER/INVALID_BRANCH.
@@ -370,7 +373,7 @@ function resolveRobotBuild(charDef, robotProgress, options) {
  * build farkından okunur; kaynak tanımlar yalnız okunur. */
 function upgradeEffectText(charDef, progress, branch) {
   const step = nextUpgradeStep(progress, branch);
-  if (!step.ok) return step.reason === "MAX_TIER" ? "Tam Kalibrasyon" : "";
+  if (!step.ok) return step.reason === "MAX_TIER" ? t("progression.maxTier", "Tam Kalibrasyon") : "";
   const before = resolveRobotBuild(charDef, progress, { upgradesEnabled: true });
   const up = sanitizeUpgrades(progress);
   const afterProgress = { upgrades: Object.assign({}, up, { [branch]: step.nextTier }) };
@@ -378,17 +381,17 @@ function upgradeEffectText(charDef, progress, branch) {
   const pct = (v) => Math.round(v * 100);
   switch (branch) {
     case "chassis":
-      if (step.nextTier === 1) return `Can ${before.maxHp} → ${after.maxHp}`;
-      if (step.nextTier === 2) return `Zırh %${pct(before.armor)} → %${pct(after.armor)}`;
-      return `Can ${before.maxHp} → ${after.maxHp} • Savrulma −%10`;
+      if (step.nextTier === 1) return t("progression.hp", "Can {from} → {to}", { from: before.maxHp, to: after.maxHp });
+      if (step.nextTier === 2) return t("progression.armor", "Zırh %{from} → %{to}", { from: pct(before.armor), to: pct(after.armor) });
+      return t("progression.hpKnockback", "Can {from} → {to} • Savrulma −%10", { from: before.maxHp, to: after.maxHp });
     case "module":
-      if (step.nextTier === 1) return "Modül gücü +%6";
-      if (step.nextTier === 2) return `Modül cooldown ${before.skill.cooldown} → ${after.skill.cooldown} tur`;
-      return "Modül gücü toplam +%15 • Aparat vurgu ışığı";
+      if (step.nextTier === 1) return t("progression.modulePower", "Modül gücü +%{pct}", { pct: 6 });
+      if (step.nextTier === 2) return t("progression.cooldown", "Modül cooldown {from} → {to} tur", { from: before.skill.cooldown, to: after.skill.cooldown });
+      return t("progression.modulePowerTotal", "Modül gücü toplam +%{pct} • Aparat vurgu ışığı", { pct: 15 });
     case "core":
-      if (step.nextTier === 1) return `Enerji ${before.maxStamina} → ${after.maxStamina}`;
-      if (step.nextTier === 2) return "Silah hasarı +%4";
-      return `Enerji ${before.maxStamina} → ${after.maxStamina} • Silah hasarı toplam +%7`;
+      if (step.nextTier === 1) return t("progression.energy", "Enerji {from} → {to}", { from: before.maxStamina, to: after.maxStamina });
+      if (step.nextTier === 2) return t("progression.weaponDamage", "Silah hasarı +%{pct}", { pct: 4 });
+      return t("progression.energyWeaponDamage", "Enerji {from} → {to} • Silah hasarı toplam +%{pct}", { from: before.maxStamina, to: after.maxStamina, pct: 7 });
     default:
       return "";
   }
@@ -419,14 +422,19 @@ function partEffectText(charDef, progress, candidatePartId, index) {
   const after = resolveRobotBuild(charDef, { upgrades, loadout: afterLoadout }, { upgradesEnabled: true });
   const pct = (v) => Math.round(v * 100);
   const seg = [];
-  if (fx.maxHpPct != null || fx.maxHpFlat != null) seg.push(`Can ${before.maxHp} → ${after.maxHp}`);
-  if (fx.armorFlat != null) seg.push(`Zırh %${pct(before.armor)} → %${pct(after.armor)}`);
-  if (fx.staminaFlat != null) seg.push(`Enerji ${before.maxStamina} → ${after.maxStamina}`);
-  if (fx.weaponDamagePct != null) seg.push(`Silah hasarı +%${pct(before.weaponDamageMult - 1)} → +%${pct(after.weaponDamageMult - 1)}`);
-  if (fx.powerPct != null) seg.push(`Modül gücü +%${pct(before.skill ? before.skill.powerMult - 1 : 0)} → +%${pct(after.skill ? after.skill.powerMult - 1 : 0)}`);
-  if (fx.knockbackRedPct != null) seg.push(`Savrulma %${pct(before.knockbackTakenMult)} → %${pct(after.knockbackTakenMult)}`);
-  if (fx.cooldownFlat != null) seg.push(`Modül cooldown ${before.skill.cooldown} → ${after.skill.cooldown} tur`);
-  if (fx.jumpPowerMult != null) seg.push(`Sıçrama +%${pct(before.jumpPowerMult - 1)} → +%${pct(after.jumpPowerMult - 1)}`);
-  if (fx.moveSpeedMult != null) seg.push(`Hareket hızı +%${pct(before.moveSpeedMult - 1)} → +%${pct(after.moveSpeedMult - 1)}`);
+  if (fx.maxHpPct != null || fx.maxHpFlat != null) seg.push(t("progression.hp", "Can {from} → {to}", { from: before.maxHp, to: after.maxHp }));
+  if (fx.armorFlat != null) seg.push(t("progression.armor", "Zırh %{from} → %{to}", { from: pct(before.armor), to: pct(after.armor) }));
+  if (fx.staminaFlat != null) seg.push(t("progression.energy", "Enerji {from} → {to}", { from: before.maxStamina, to: after.maxStamina }));
+  if (fx.weaponDamagePct != null) seg.push(t("progression.weaponDamageRange", "Silah hasarı +%{from} → +%{to}", { from: pct(before.weaponDamageMult - 1), to: pct(after.weaponDamageMult - 1) }));
+  if (fx.powerPct != null) seg.push(t("progression.modulePowerRange", "Modül gücü +%{from} → +%{to}", {
+    from: pct(before.skill ? before.skill.powerMult - 1 : 0), to: pct(after.skill ? after.skill.powerMult - 1 : 0),
+  }));
+  if (fx.knockbackRedPct != null) seg.push(t("progression.knockback", "Savrulma %{from} → %{to}", { from: pct(before.knockbackTakenMult), to: pct(after.knockbackTakenMult) }));
+  if (fx.cooldownFlat != null) seg.push(t("progression.cooldown", "Modül cooldown {from} → {to} tur", { from: before.skill.cooldown, to: after.skill.cooldown }));
+  if (fx.jumpPowerMult != null) seg.push(t("progression.jump", "Sıçrama +%{from} → +%{to}", { from: pct(before.jumpPowerMult - 1), to: pct(after.jumpPowerMult - 1) }));
+  if (fx.moveSpeedMult != null) seg.push(t("progression.moveSpeed", "Hareket hızı +%{from} → +%{to}", { from: pct(before.moveSpeedMult - 1), to: pct(after.moveSpeedMult - 1) }));
   return seg.join(" • ");
 }
+
+// Çeviri katmanı: katalog yüklendiği anda seçili dili uygula (bkz. i18n.js).
+if (typeof applyDataTranslations === "function") applyDataTranslations();
