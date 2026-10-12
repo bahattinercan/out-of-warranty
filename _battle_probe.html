@@ -115,7 +115,13 @@ window.addEventListener("DOMContentLoaded", () => {
   const game = new Game(canvas);
   const mode = location.hash.replace("#", "");
   const count = mode === "p6" ? 6 : mode === "p2" ? 2 : 4;
-  game.selectedChars = CHARACTERS.slice(0, count);
+  // ?char=<id> ile ilk robot seçilir: uzun modül etiketlerinin yuva kutusuna
+  // sığdığı böyle sınanır (ör. sirtlan → EN "Frequency Overflow").
+  const charParam = new URLSearchParams(location.search).get("char");
+  const picked = charParam ? CHARACTERS.find((c) => c.id === charParam) : null;
+  game.selectedChars = picked
+    ? [picked].concat(CHARACTERS.filter((c) => c.id !== picked.id).slice(0, count - 1))
+    : CHARACTERS.slice(0, count);
   game.selectedMap = MAPS[0];
   game.playerControls = game.selectedChars.map((_, i) => i === 0 ? "human" : "bot");
   game.mode = "computer";

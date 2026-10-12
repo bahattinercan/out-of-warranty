@@ -300,9 +300,14 @@ html, body {
   font-size: 10px;
   font-weight: 700;
   opacity: .85;
-  white-space: nowrap;
+  /* Uzun modül/silah adları iki satıra sarılır: tek satırda TR'de
+     "Basınç Yüklemesi" (85px) ve EN'de "Frequency Overflow" (96px) 66px'lik
+     kutuya sığmıyor, kırpılıyordu (headless ölçümü). Bantta ~15px dikey boşluk
+     olduğu için iki satır taşma yapmaz. */
+  white-space: normal;
+  line-height: 1.05;
+  text-align: center;
   overflow: hidden;
-  text-overflow: ellipsis;
   text-shadow: 0 1px 2px #000c;
 }
 
