@@ -128,6 +128,8 @@ class NetSession {
     const env = netValidateEnvelope(msg, { matchId: this.matchId, authoritySessionId: this.authoritySessionId });
     if (!env.ok) return env;
     if (this.ended) return { ok: false, reason: "MATCH_ENDED" };
+    // Yükleme onayı LOADING aşamasında gelir; diğer mesajlar PLAYING ister.
+    if (msg.t === NET_MSG.LOADED) return this.loaded(fromPlayer) ? { ok: true } : { ok: false, reason: "NOT_LOADING" };
     if (this.phase !== NET_PHASE.PLAYING) return { ok: false, reason: "WRONG_PHASE" };
     const seat = this._seat(fromPlayer);
     if (!seat || !seat.connected) return { ok: false, reason: "UNKNOWN_PLAYER" };
@@ -197,12 +199,7 @@ class NetSession {
       this._commitCharge(fromPlayer, msg.cmd);
       if (res.consumesShot) this.shotConsumed = true;
       if (applied && applied.terrainChanges && applied.terrainChanges.length) {
-        this.terrainVersion++;
-        this.transport.send(NET_MSG.TERRAIN, {
-          v: NET_PROTOCOL_VERSION, t: NET_MSG.TERRAIN, matchId: this.matchId,
-          authoritySessionId: this.authoritySessionId, turnId: this.turnId,
-          terrainVersion: this.terrainVersion, changes: applied.terrainChanges,
-        }, true);
+        this.sendTerrainChanges(applied.terrainChanges);
       }
     }
     this.cache.remember(msg.id, msg.cmd, res);
@@ -321,6 +318,35 @@ class NetSession {
     return { ok: true, steps };
   }
 
+  /* Arazi değişikliklerini yayınlar ve sürümü ilerletir. Oyma simülasyon
+   * adımında (patlama) oluştuğu için oyun katmanı her adımdan sonra kuyruğu
+   * buraya boşaltır; komut sırasında oluşan oymalar da aynı yoldan gider. */
+  sendTerrainChanges(records) {
+    if (this.role !== "host" || !this.matchId || !Array.isArray(records) || !records.length) {
+      return { ok: false, reason: "NOTHING_TO_SEND" };
+    }
+    this.terrainVersion++;
+    this.transport.send(NET_MSG.TERRAIN, {
+      v: NET_PROTOCOL_VERSION, t: NET_MSG.TERRAIN, matchId: this.matchId,
+      authoritySessionId: this.authoritySessionId, turnId: this.turnId,
+      terrainVersion: this.terrainVersion, changes: records,
+    }, true);
+    return { ok: true, terrainVersion: this.terrainVersion, count: records.length };
+  }
+
+  /* Maç başında host arazi maskesini gönderir: arazi Math.random ile üretildiği
+   * için misafirin kendi arazisi hostunkinden farklıdır (F3b). */
+  sendTerrainSnapshot(mask) {
+    if (this.role !== "host" || !this.matchId) return { ok: false, reason: "NOT_HOST" };
+    if (mask && Number.isInteger(mask.version)) this.terrainVersion = mask.version;
+    this.transport.send(NET_MSG.TERRAIN, {
+      v: NET_PROTOCOL_VERSION, t: NET_MSG.TERRAIN, matchId: this.matchId,
+      authoritySessionId: this.authoritySessionId, turnId: this.turnId,
+      terrainVersion: this.terrainVersion, mask, changes: [],
+    }, true);
+    return { ok: true, terrainVersion: this.terrainVersion };
+  }
+
   /* Periyodik durum yayını: fizik adımını DEĞİŞTİRMEZ (değişmez 3); yalnız
    * hostun o anki durumunu gönderir. */
   broadcastState(state) {
@@ -420,6 +446,16 @@ class NetSession {
       this.ended = false;
       return { ok: true };
     }
+    // Maç başlangıcı: misafir aşamayı LOADING yapar; başlangıç durumu uygulanıp
+    // LOADED gönderilene kadar simülasyon ilerlemez (host onayları bekler).
+    if (msg.t === NET_MSG.START) {
+      this.matchId = msg.matchId;
+      this.authoritySessionId = msg.authoritySessionId;
+      this.turnId = Number.isInteger(msg.turnId) ? msg.turnId : 0;
+      this.ended = false;
+      this.phase = NET_PHASE.LOADING;
+      return { ok: true };
+    }
     if (msg.t === NET_MSG.STATE) {
       if (!this.stateSeq.accept(msg.seq)) return { ok: false, reason: "STALE_STATE" };
       if (typeof this.rules.applyState === "function") this.rules.applyState(msg.state);
@@ -430,6 +466,8 @@ class NetSession {
         return { ok: false, reason: "STALE_TERRAIN" };
       }
       this.terrainVersion = msg.terrainVersion;
+      // İlk paket maskeyi (tam arazi), sonrakiler oyma kayıtlarını taşır.
+      if (msg.mask && typeof this.rules.applyTerrainMask === "function") this.rules.applyTerrainMask(msg.mask);
       if (typeof this.rules.applyTerrain === "function") this.rules.applyTerrain(msg.changes);
       return { ok: true };
     }
@@ -452,6 +490,17 @@ class NetSession {
       return { ok: true, result: msg.result };
     }
     return { ok: false, reason: "UNEXPECTED_TYPE" };
+  }
+
+  // Misafir yükleme onayı: başlangıç durumu uygulandıktan sonra çağrılır.
+  sendLoaded() {
+    if (this.role !== "guest") return { ok: false, reason: "NOT_GUEST" };
+    this.phase = NET_PHASE.PLAYING;
+    this.transport.send(NET_MSG.LOADED, {
+      v: NET_PROTOCOL_VERSION, t: NET_MSG.LOADED, matchId: this.matchId,
+      authoritySessionId: this.authoritySessionId, turnId: this.turnId,
+    }, true);
+    return { ok: true };
   }
 
   // Misafir komut gönderir: kimlik sıralı üretilir (tekrar denemede aynı id

@@ -24,6 +24,7 @@ const NET_MSG = {
   LOBBY: "lobby",     // host → misafir: oda durumu (seçim/hazır)
   READY: "ready",     // misafir → host: hazır (lobbyRevision taşır)
   START: "start",     // host → misafir: maç başlangıcı (seed, harita, kadro)
+  LOADED: "loaded",   // misafir → host: başlangıç durumu uygulandı (yükleme onayı)
   INPUT: "input",     // misafir → host: hareket/nişan (güvenilmez, seq'li)
   CMD: "cmd",         // misafir → host: tek seferlik eylem (güvenilir, id'li)
   ACK: "ack",         // host → misafir: komut sonucu
@@ -36,8 +37,8 @@ const NET_MSG = {
   PONG: "pong",
 };
 const NET_RELIABLE = [NET_MSG.HELLO, NET_MSG.WELCOME, NET_MSG.LOBBY, NET_MSG.READY,
-  NET_MSG.START, NET_MSG.CMD, NET_MSG.ACK, NET_MSG.TERRAIN, NET_MSG.TURN,
-  NET_MSG.RESULT, NET_MSG.ABORT];
+  NET_MSG.START, NET_MSG.LOADED, NET_MSG.CMD, NET_MSG.ACK, NET_MSG.TERRAIN,
+  NET_MSG.TURN, NET_MSG.RESULT, NET_MSG.ABORT];
 
 // Komut türleri: host bu türleri doğrular, `rules` (oyun kuralları) uygular.
 const NET_CMD = {
@@ -114,8 +115,8 @@ function netValidateEnvelope(msg, ctx) {
   if (typeof msg.t !== "string" || !Object.prototype.hasOwnProperty.call(NET_MSG, Object.keys(NET_MSG).find((k) => NET_MSG[k] === msg.t) || "")) {
     return { ok: false, reason: "UNKNOWN_TYPE" };
   }
-  const needsMatch = [NET_MSG.START, NET_MSG.INPUT, NET_MSG.CMD, NET_MSG.ACK, NET_MSG.STATE,
-    NET_MSG.TERRAIN, NET_MSG.TURN, NET_MSG.RESULT, NET_MSG.ABORT].indexOf(msg.t) >= 0;
+  const needsMatch = [NET_MSG.START, NET_MSG.LOADED, NET_MSG.INPUT, NET_MSG.CMD, NET_MSG.ACK,
+    NET_MSG.STATE, NET_MSG.TERRAIN, NET_MSG.TURN, NET_MSG.RESULT, NET_MSG.ABORT].indexOf(msg.t) >= 0;
   if (needsMatch && c.matchId && msg.matchId !== c.matchId) return { ok: false, reason: "WRONG_MATCH" };
   // Yetki kimliği: bağlantı yenilendiğinde artan authoritySessionId; eski
   // bağlantının kuyrukta kalan paketleri böylece reddedilir.
