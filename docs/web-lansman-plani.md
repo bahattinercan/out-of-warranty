@@ -1,12 +1,13 @@
 # Web Lansman Planı — Dökümhane-9
 
-Tarih: 12 Ekim 2026 · Durum: **Yol A seçildi**; okunabilirlik dilimi R1 uygulandı, F2 ve sonrası planlı.
+Tarih: 12 Ekim 2026 · Durum: **Yol A seçildi**; F1–F3c-2 tamamlandı (okunabilirlik, yerelleştirme, çevrimiçi yığın). Sıradaki iş **F3c-3**: iki farklı ağdan gerçek deneme (`docs/cevrimici-deneme.md`).
 
 İlişkili belgeler:
 
 - [steam-yayin-plan.md](./steam-yayin-plan.md) — **ertelendi**, K3 kapısına bağlandı (bkz. §9).
 - [multiplayer-plan.md](./multiplayer-plan.md) — host-yetkili simülasyon ve maç saati kuralları (§2, §6) burada **aynen** kullanılır; Steam lobi/SDR taşıması WebRTC ile değiştirilir.
 - [ui-theme-plan.md](./ui-theme-plan.md), [map-combat-layout-plan.md](./map-combat-layout-plan.md), [market-parts-plan.md](./market-parts-plan.md) — mevcut içerik planları; ekonomi kararları §8 ile uyumlu olmalı.
+- [cevrimici-deneme.md](./cevrimici-deneme.md) — F3c-3 (kullanıcı) gerçek ağ denemesi kılavuzu, kontrol listesi ve çıkış ölçütü.
 
 ---
 
@@ -288,7 +289,7 @@ Referans gerçeklik: Steam medyanı $249/ömür; web'de ilk oyun $0–400/ay. Bu
 | **F3b** (yapıldı) | Durum anlık görüntüsü + arazi senkronu (capture/apply) | `js/net/state.js`, `tests/net-state.js` | `node tests/net-state.js` 45/45 (gidiş-dönüş hash'i, arazi birebir, savunmacı apply, boyut bütçesi) |
 | **F3c-1** (yapıldı) | Taşıma katmanı (PeerJS + döngü) ve uçtan uca entegrasyon testi | `js/net/transport.js`, `tests/net-integration.js` | `node tests/net-integration.js` 43/43 (el sıkışma, 5 tur senkron, oyma, kopma, gecikme/kayıp, sahte Peer ile PeerJS akışı) |
 | **F3c-2** (yapıldı) | Lobi ekranı (oda kodu, davet, hazır) + oyun akışı bağlantısı | `js/online-lobby.js`, `js/net/adapter.js`, `index.html`, i18n | `node tests/net-game.js` 90/90 (lobi → maç → 5 tur → sonuç + yerleşim + yapıştırma + tıklama) + headless sondalar `_online_probe.html`, `_online_small.html` |
-| **F3c-3** (kullanıcı) | İki farklı ağdan gerçek deneme | — | §4 çıkış ölçütü: 5 tur, kurulum <20 sn, kopma <%5 |
+| **F3c-3** (kullanıcı) | İki farklı ağdan gerçek deneme (kılavuz: `docs/cevrimici-deneme.md`) | — | §4 çıkış ölçütü: 5 tur, kurulum <20 sn, kopma <%5 |
 | **F4** | 6 oyuncu, oda/davet akışı, bot devralma | lobi + yeniden bağlanma | 6 oyuncu simülasyonu + kopma senaryoları, `tests/multiplayer/` |
 | **F5** | Portal uyumu: SDK, reklam yerleri, event ölçümü | `js/portal.js` | iframe testi, 16:9 ölçekleme, reklam ödülü doğru veriliyor |
 | **F6** | Kapalı test (20–50 kişi, itch.io) → demo yayını | yayın + geri bildirim notu | Kapalı test raporu |
@@ -321,7 +322,7 @@ Referans gerçeklik: Steam medyanı $249/ömür; web'de ilk oyun $0–400/ay. Bu
 | 3 | Sinyalleşme / TURN sağlayıcısı | **§4-C:** PeerJS Cloud + ücretsiz TURN ile başla; taşıma arayüzü korunarak kotayı/kesintiyi görünce Cloudflare Worker + Durable Object'e geç |
 | 4 | K1–K3 eşikleri | **§9 tablosu aynen** (özellikle K1: aylık ≥20.000 oynanış *veya* haftalık +%15) |
 | 5 | Dil sırası | **§5-A:** tr+en → zh-Hans+ru → es-ES+pt-BR |
-| 6 | Sıradaki iş | **F1b (R2) yapıldı** → sırada **F2 (i18n altyapısı + EN)**, sonra F3 (WebRTC P2P) |
-| 7 | Commit | Tüm çalışma ağacı commit edildi (4 commit: workshop düzeltmesi, okunabilirlik, bu plan, AI görsel planı); **push yapılmadı** |
+| 6 | Sıradaki iş | **F1b–F3c-2 tamamlandı** (F2a–F2c-5 yerelleştirme; protokol → durum → taşıma → lobi) → sırada **F3c-3**: iki farklı ağdan gerçek deneme (`docs/cevrimici-deneme.md`), sonra F4 (6 oyuncu) |
+| 7 | Commit | Faz başına commit'lendi (okunabilirlik, i18n, `js/net/*`, lobi, çevrimiçi düzeltmeleri); **push yapılmadı** |
 
-**Açık soru kalmadı:** isim ve kimlik kararı §3'te kayıtlı. Sıradaki iş **F2 (i18n altyapısı + EN)**; marka adı o adımda `brand.title` anahtarına bağlanır.
+**Açık soru kalmadı:** isim ve kimlik kararı §3'te kayıtlı. Sıradaki iş **F3c-3 (kullanıcı denemesi)**: aynı makinede iki sekme duman testi, ardından iki farklı ağdan 5 turluk maç — ölçütler ve kontrol listesi `docs/cevrimici-deneme.md` içinde. Kod tarafında F4 (6 oyuncu) sırada bekliyor.
