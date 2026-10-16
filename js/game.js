@@ -553,6 +553,13 @@ class Game {
     }
     for (const p of this.players) if (p.alive) p.update(this.terrain);
 
+    /* Snapshot'lar arası GÖRSEL YUMUŞATMA: konum ve animasyon alanları yetkili
+     * hedefe doğru enterpole edilir. Aksi hâlde robot 10 paket/sn'lik (100 ms)
+     * adımlarla zıplar ve yürüyüş animasyonu paket aralarında yerel sönümle
+     * bozulur — kullanıcı bildirimi: "hareketleri kesik kesik görüyor full fps
+     * değil", "yürüyüş animasyonu oynamıyor". */
+    if (typeof netAdvanceVisuals === "function") netAdvanceVisuals(this, dt * 1000);
+
     // Nişan ve güç doldurma YEREL gösterilir (anında geri bildirim); yetkili
     // sonuç RELEASE komutuyla atomik gider, host uygular.
     if (this.state === "AIMING" && this.active && this.isLocalTurn()) {

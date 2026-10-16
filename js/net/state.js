@@ -167,6 +167,19 @@ const NET_BUILD_FIELDS = [
   "shieldStaminaRefund", "apparatusGlow", "aiDamageMult",
 ];
 
+/* Görsel yumuşatma (misafir): snapshot 10 paket/sn gelir; bu alanlar doğrudan
+ * yazılırsa robot 100 ms'lik adımlarla ZIPLAR (kullanıcı bildirimi: "misafir host
+ * playerin hareketlerini kesik kesik görüyor full fps değil") ve yürüyüş
+ * animasyonu paket aralarında yerel sönümle (walkAnim *= 0.82) bozulur — bacaklar
+ * 1 ↔ 0.55 arasında gidip gelir ("yürüyüş animasyonu oynamıyor"). Yetkili değer
+ * `_net_<alan>`da tutulur, GÖRÜNEN alan her kare hedefe doğru enterpole edilir. */
+const NET_PLAYER_VISUAL_FIELDS = ["x", "y", "facing", "walkAnim", "walkBlend", "walkPhase", "rollPhase", "aim"];
+// Enterpolasyonu en kısa yay üzerinden yapılacak alanlar (2π'de dönerler).
+const NET_VISUAL_ANGLE_FIELDS = ["aim", "walkPhase", "rollPhase"];
+// Yumuşatma AÇIKKEN doğrudan uygulanan alanlar (görsel alanlar hariç).
+const NET_PLAYER_DIRECT_FIELDS = NET_PLAYER_NUM_FIELDS.filter((f) => NET_PLAYER_VISUAL_FIELDS.indexOf(f) < 0);
+function _netIsVisualField(f) { return NET_PLAYER_VISUAL_FIELDS.indexOf(f) >= 0; }
+
 /* Sayı taşıma: sonlu değer 3 ondalığa yuvarlanır. Yuvarlama hem paketi küçültür
  * (15-20 paket/sn bütçesi) hem de hash'i kayan nokta gürültüsünden arındırır:
  * 0.001 px farkı iki tarafı "farklı durum" saymaya yetmemeli. */
@@ -205,7 +218,13 @@ function _netAmmo(ammo) {
 function _netCapturePlayer(e, includeBuild) {
   if (!e) return null;
   const p = { id: e.charDef ? e.charDef.id : null };
-  for (const f of NET_PLAYER_NUM_FIELDS) { const v = _netNum(e[f]); if (v !== null) p[f] = v; }
+  for (const f of NET_PLAYER_NUM_FIELDS) {
+    // Misafirde görsel alanlar enterpole edilir; capture YETKİLİ değeri taşır
+    // ("host ne gönderdi ↔ misafir ne uyguladı" hash karşılaştırması bozulmasın).
+    const src = _netIsVisualField(f) && e["_net_" + f] != null ? e["_net_" + f] : e[f];
+    const v = _netNum(src);
+    if (v !== null) p[f] = v;
+  }
   for (const f of NET_PLAYER_BOOL_FIELDS) p[f] = !!e[f];
   p.ammo = _netAmmo(e.ammo);
   // Build (türetilmiş istatistikler) maç boyunca DEĞİŞMEZ: yalnız başlangıç
@@ -246,6 +265,21 @@ function _netCaptureFire(f) {
   return { x: _netNum(f.x), y: _netNum(f.y), life: _netNum(f.life), max: _netNum(f.max), dps: _netNum(f.dps), tick: _netNum(f.tick) };
 }
 
+/* Yetenek (modül) cast efekti: saf görsel (js/skill-fx.js). Snapshot'la
+ * taşınmasaydı misafir hostun modül animasyonlarını HİÇ görmezdi (kullanıcı
+ * bildirimi: "bazı silahların efektleri gözükmüyor"). */
+function _netCaptureSkillFx(fx) {
+  if (!fx || typeof fx.shape !== "string" || !fx.shape) return null;
+  return {
+    shape: fx.shape, kind: typeof fx.kind === "string" ? fx.kind : null,
+    x: _netNum(fx.x), y: _netNum(fx.y), r: _netNum(fx.r),
+    facing: _netNum(fx.facing), aim: _netNum(fx.aim),
+    t: _netNum(fx.t), life: _netNum(fx.life), seed: _netNum(fx.seed),
+    tint: typeof fx.tint === "string" ? fx.tint : null,
+    accent: typeof fx.accent === "string" ? fx.accent : null,
+  };
+}
+
 function _netCaptureTether(t) {
   if (!t) return null;
   return { owner: _netNum(t.owner), ax: _netNum(t.ax), ay: _netNum(t.ay), speed: _netNum(t.speed), life: _netNum(t.life), blocked: _netNum(t.blocked) };
@@ -269,6 +303,7 @@ function netCaptureState(game, opts) {
     projectiles: [],
     mines: [],
     fires: [],
+    fx: [],
     tether: _netCaptureTether(game.tether),
   };
   const includeBuild = o.includeBuild !== false;   // başlangıç: true, periyodik: false
@@ -276,6 +311,7 @@ function netCaptureState(game, opts) {
   for (const pr of game.projectiles || []) { const c = _netCaptureProjectile(pr); if (c) snap.projectiles.push(c); }
   for (const m of game.mines || []) { const c = _netCaptureMine(m); if (c) snap.mines.push(c); }
   for (const f of game.fires || []) { const c = _netCaptureFire(f); if (c) snap.fires.push(c); }
+  for (const f of game.skillFx || []) { const c = _netCaptureSkillFx(f); if (c) snap.fx.push(c); }
   return snap;
 }
 
@@ -303,10 +339,17 @@ function _netApplyNumbers(target, src, fields) {
 /* Misafir tarafı: snapshot'ı mevcut nesnelere uygular. Nesne KURMAZ (constructor
  * çalıştırılmaz), yalnız alan yazar; bu yüzden render işlevleri yeniden kurulmaz
  * (docs/multiplayer-plan.md §6.1/8). Eksik oyuncu/mermi listesi kabul edilir:
- * host kaç oyuncu gönderdiyse o kadar eşlenir. */
-function netApplyState(game, snap) {
+ * host kaç oyuncu gönderdiyse o kadar eşlenir.
+ *
+ * `opts.visMs` verilirse (oyun yolu: paket aralığı) konum/animasyon alanları
+ * GÖRSEL YUMUŞATMAYA alınır: yetkili değer `_net_<alan>`a yazılır ve görünen
+ * alanı her kare `netAdvanceVisuals` ilerletir. Verilmezse (saf test/sade
+ * yol) eski davranış: alanlar doğrudan yazılır. */
+function netApplyState(game, snap, opts) {
   if (!game || !snap || typeof snap !== "object") return { ok: false, reason: "BAD_SNAPSHOT", applied: 0 };
   if (snap.v !== NET_STATE_VERSION) return { ok: false, reason: "STATE_VERSION", applied: 0 };
+  const o = opts || {};
+  const visMs = Number.isFinite(o.visMs) && o.visMs > 0 ? o.visMs : 0;
   let applied = 0;
 
   const meta = ["turn", "turnTimer", "wind"];
@@ -325,7 +368,23 @@ function netApplyState(game, snap) {
   for (let i = 0; i < list.length && i < players.length; i++) {
     const e = players[i], s = list[i];
     if (!e || !s) continue;
-    applied += _netApplyNumbers(e, s, NET_PLAYER_NUM_FIELDS);
+    if (visMs > 0) {
+      // Görsel alanlar: mevcut GÖRÜNEN değer başlangıç, yeni yetkili değer
+      // hedef. Çok kare süren enterpolasyon bitmeden yeni paket gelirse
+      // hareket geriye sıçramaz (başlangıç daima görünen değerdir).
+      for (const f of NET_PLAYER_VISUAL_FIELDS) e["_visFrom_" + f] = e[f];
+      e._visMs = visMs;
+      e._visT = 0;
+      applied += _netApplyNumbers(e, s, NET_PLAYER_DIRECT_FIELDS);
+      for (const f of NET_PLAYER_VISUAL_FIELDS) {
+        const v = _netNum(s[f]);
+        if (v === null) continue;
+        e["_net_" + f] = v;
+        applied++;
+      }
+    } else {
+      applied += _netApplyNumbers(e, s, NET_PLAYER_NUM_FIELDS);
+    }
     for (const f of NET_PLAYER_BOOL_FIELDS) if (typeof s[f] === "boolean") e[f] = s[f];
     if (s.build && typeof s.build === "object") {
       applied += _netApplyNumbers(e, s.build, NET_BUILD_FIELDS);
@@ -364,17 +423,21 @@ function netApplyState(game, snap) {
     if (game.fires) game.fires = fires;
   }
   if (Object.prototype.hasOwnProperty.call(snap, "tether")) game.tether = _netCaptureTether(snap.tether);
+  // Yetenek cast efektleri: hostun listesi oynatılır (misafirin kendi kopyası
+  // da hostta uygulandığı için aynı listede gelir — çift efekt olmaz).
+  if (Array.isArray(snap.fx) && Array.isArray(game.skillFx)) netRebuildSkillFx(game, snap.fx);
   return { ok: true, applied };
 }
 
-/* Misafirde mermileri yeniden kurar (görsel katman). Spec kimliği bilinmiyorsa
- * mermi atlanır; mermi listesi tamamen hostun yetkisindedir. */
+/* Misafirde mermileri yeniden kurar (görsel katman). Spec kimliğiyle çözülür
+ * (`projectileSpecById`): ana cephane + misket/tepe parçacıkları + yetenek
+ * mermileri. Bilinmeyen kimlikte mermi atlanır; liste hostun yetkisindedir. */
 function netRebuildProjectiles(game, list) {
   if (!game || !Array.isArray(list)) return 0;
   const out = [];
   for (const p of list) {
     if (!p || p.dead) continue;
-    const spec = typeof weaponById === "function" ? weaponById(p.weaponId) : null;
+    const spec = netProjectileSpec(p.weaponId);
     if (!spec || typeof Projectile !== "function") continue;
     const pr = new Projectile(p.x || 0, p.y || 0, p.vx || 0, p.vy || 0, spec);
     if (typeof p.fuse === "number") pr.fuse = p.fuse;
@@ -387,13 +450,81 @@ function netRebuildProjectiles(game, list) {
   return out.length;
 }
 
+/* Spec çözücü: `projectileSpecById` (weapons.js) varsa onu kullan — parçacık ve
+ * yetenek mermilerini de bilir. Yoksa (eski/sade sandbox) `weaponById`ye düş. */
+function netProjectileSpec(id) {
+  if (typeof projectileSpecById === "function") return projectileSpecById(id);
+  return typeof weaponById === "function" ? weaponById(id) : null;
+}
+
+/* Misafir: yetkili hedefe doğru görsel alanları yumuşatır (her kare çağrılır).
+ * `_visMs` kurulmamışsa (yumuşatma kapalı, host, saf test) hiçbir şey yapmaz. */
+function netAdvanceVisuals(game, dtMs) {
+  const players = game && game.players;
+  if (!Array.isArray(players)) return 0;
+  const dt = Number.isFinite(dtMs) ? Math.max(0, dtMs) : 0;
+  let n = 0;
+  for (const e of players) {
+    if (!e || !Number.isFinite(e._visMs) || e._visMs <= 0) continue;
+    e._visT = Math.min(e._visMs, (Number.isFinite(e._visT) ? e._visT : e._visMs) + dt);
+    const t = e._visMs > 0 ? e._visT / e._visMs : 1;
+    for (const f of NET_PLAYER_VISUAL_FIELDS) {
+      const target = e["_net_" + f];
+      if (target == null) continue;
+      const from = Number.isFinite(e["_visFrom_" + f]) ? e["_visFrom_" + f] : target;
+      e[f] = NET_VISUAL_ANGLE_FIELDS.indexOf(f) >= 0
+        ? _netLerpAngle(from, target, t)
+        : from + (target - from) * t;
+    }
+    n++;
+  }
+  return n;
+}
+
+/* Açı enterpolasyonu: EN KISA yay üzerinden. walkPhase/rollPhase 2π'de döner,
+ * düz lerp 5.9 → 0.2 geçişini geriye doğru çevirir ve bacaklar ters yönde
+ * savrulurdu. */
+function _netLerpAngle(a, b, t) {
+  const TAU = Math.PI * 2;
+  let d = (b - a) % TAU;
+  if (d > Math.PI) d -= TAU;
+  else if (d < -Math.PI) d += TAU;
+  return a + d * t;
+}
+
+/* Yetenek cast efektlerini yeniden kurar. Şekil (`shape`) ve yaş (`t`) hosttan
+ * gelir; çizim `SKILL_FX_SHAPES[shape]` üzerinden yapıldığı için misafir aynı
+ * animasyonu oynatır. `params` (modüle özel ölçüler) taşınmaz: çiziciler
+ * çoğunlukla `seed`/`t`/`aim`/`facing` ile çalışır. */
+function netRebuildSkillFx(game, list) {
+  if (!game || !Array.isArray(game.skillFx) || !Array.isArray(list)) return 0;
+  if (typeof SKILL_FX_SHAPES !== "object" || !SKILL_FX_SHAPES) return 0;
+  const out = [];
+  for (const f of list) {
+    if (!f || typeof f.shape !== "string") continue;
+    const entry = SKILL_FX_SHAPES[f.shape];
+    if (!entry) continue;
+    out.push({
+      shape: f.shape, family: entry.family, kind: f.kind || null,
+      x: f.x || 0, y: f.y || 0, r: f.r || 12,
+      facing: f.facing < 0 ? -1 : 1,
+      aim: typeof f.aim === "number" && Number.isFinite(f.aim) ? f.aim : -Math.PI / 4,
+      tint: f.tint || "#ffd166", accent: f.accent || "#ffffff",
+      params: {}, t: f.t || 0, life: f.life || entry.life || 28,
+      dead: false, seed: f.seed || 0,
+    });
+  }
+  game.skillFx = out;
+  return out.length;
+}
+
 // Mayınlar: `{x, y, weaponId, arm, owner}` → nesne yeniden kurulur.
 function netRebuildMines(game, list) {
   if (!game || !Array.isArray(list)) return 0;
   const out = [];
   for (const m of list) {
     if (!m) continue;
-    const spec = typeof weaponById === "function" ? weaponById(m.weaponId) : null;
+    const spec = netProjectileSpec(m.weaponId);
     if (!spec) continue;
     out.push({ x: m.x || 0, y: m.y || 0, spec, arm: m.arm || 0, owner: m.owner == null ? 0 : m.owner });
   }

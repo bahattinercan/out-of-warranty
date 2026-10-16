@@ -22,7 +22,7 @@ const EXPORT = "\n;globalThis.__S = { Game, Entity, Projectile, Terrain, CHARACT
   "getMapById, weaponById, resolveRobotBuild, defaultRobotProgress, NET_STATE_VERSION, " +
   "netHashText, netHashMask, netEncodeMask, netDecodeMask, netHeightsFromMask, netCaptureTerrain, " +
   "netApplyTerrain, netTerrainChange, netApplyTerrainChanges, netCaptureState, netSnapshotHash, " +
-  "netApplyState, netRebuildProjectiles, netRebuildMines };";
+  "netApplyState, netRebuildProjectiles, netRebuildMines, netRebuildSkillFx, projectileSpecById };";
 
 /* Terrain gerçek sınıfını kullanabilmek için minik canvas taklidi: çizim
  * çağrıları hiçbir şey yapmaz, ölçüm sabit döner. Böylece MASK ve oyma mantığı
@@ -215,6 +215,46 @@ check("bozuk paketten sonra geçerli paket durumu geri kurar", (() => {
   return JSON.stringify(S.netCaptureState(replica)) === before;
 })());
 check("dizi olmayan mermi listesi sorun çıkarmaz", S.netRebuildProjectiles(replica, "yok") === 0);
+
+// ── 4c) Yetenek (modül) cast efektleri taşınır ─────────────────────────────
+/* Efektler saf görsel olduğu için snapshot'a girmezse misafir hostun modül
+ * animasyonlarını HİÇ görmez (kullanıcı bildirimi: "efektler gözükmüyor"). */
+const fxGame = makeGame(null, 2);
+fxGame.skillFx = [{ shape: "patchWeld", kind: "heal", x: 100, y: 200, r: 14, facing: 1, aim: -0.5, t: 6, life: 30, seed: 42, tint: "#ffd166", accent: "#fff" }];
+const fxWire = S.netCaptureState(fxGame, { tick: 0 });
+check("cast efekti snapshot'a girer",
+  fxWire.fx.length === 1 && fxWire.fx[0].shape === "patchWeld" && fxWire.fx[0].t === 6,
+  JSON.stringify(fxWire.fx));
+const fxReplica = makeGame(null, 2);
+fxReplica.skillFx = [];   // gerçek Game kurucusu bu listeyi açar
+S.netApplyState(fxReplica, fxWire);
+check("misafir cast efektini aynı şekil ve yaşla kurar",
+  fxReplica.skillFx.length === 1 && fxReplica.skillFx[0].shape === "patchWeld" &&
+  fxReplica.skillFx[0].t === 6 && fxReplica.skillFx[0].life === 30);
+check("bilinmeyen efekt şekli atlanır",
+  S.netRebuildSkillFx(fxReplica, [{ shape: "yok" }, null]) === 0 && fxReplica.skillFx.length === 0);
+
+// ── 4b) Parçacık ve yetenek mermileri kurulur ──────────────────────────────
+/* `weaponById` YALNIZ ana cephaneyi (WEAPONS) bilir; misket/tepe PARÇACIKLARI
+ * (clusterSpec) ve yetenek mermileri (SKILL_PROJECTILES) orada değildir. Çevrimiçi
+ * misafir yalnız KİMLİK taşıdığı için bu mermiler kurulmuyor ve görünmüyordu
+ * (kullanıcı bildirimi: "misket silahının parçaları görünmüyor"). */
+check("parçacık spec'i kimlikten çözülür (bomblet)",
+  !!S.projectileSpecById("bomblet") && S.projectileSpecById("bomblet").id === "bomblet" &&
+  S.weaponById("bomblet") === null);
+check("yetenek mermisi spec'i çözülür (fireball)",
+  !!S.projectileSpecById("fireball") && S.weaponById("fireball") === null);
+check("ana cephane çözücüsü bozulmadı", S.projectileSpecById("nuke") === S.weaponById("nuke"));
+check("bilinmeyen kimlik null", S.projectileSpecById("yok-boyle-silah") === null && S.projectileSpecById("") === null);
+const pelletWire = [
+  { weaponId: "bomblet", x: 100, y: 200, vx: 1, vy: 2 },
+  { weaponId: "fireball", x: 110, y: 210, vx: 1, vy: 2 },
+];
+check("misket parçacıkları ve yetenek mermileri yeniden kurulur",
+  S.netRebuildProjectiles(replica, pelletWire) === 2 &&
+  replica.projectiles[0].spec.id === "bomblet" && replica.projectiles[1].spec.id === "fireball",
+  String(replica.projectiles.map((p) => p.spec && p.spec.id).join(",")));
+S.netApplyState(replica, wire);   // sonraki testler temiz durumla sürsün
 
 // ── 5) Boyut bütçesi ──────────────────────────────────────────────────────
 const big = makeGame(null, 6);

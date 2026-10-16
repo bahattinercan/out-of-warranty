@@ -134,6 +134,17 @@ Yeni içerik çoğunlukla **kod değil veri** eklemekle yapılır:
   `tests/net-game.js` §2b (farklı genişlikte misafir; onarım kapatılınca 4 assert
   kırmızı, dikey genlik 13 px). Pencere oranı farklıysa misafir hostun dünyasını
   kendi ekranına ölçekler (uç oranlarda görüntü gerilir — bilinen sınırlama).
+  **Misafirde görsel yumuşatma + eksik efekt katmanları:** snapshot 10/sn geldiği
+  için konum/animasyon DOĞRUDAN yazılırsa robot 100 ms'lik adımlarla zıplar ve
+  yürüyüş zarfı paket aralarında söner (yaşandı: "hareketler kesik kesik",
+  "yürüyüş animasyonu oynamıyor"). `netApplyState({ visMs })` yetkili değeri
+  `_net_<alan>`a yazar, `netAdvanceVisuals` görünen alanı her kare enterpole eder
+  (açılar en kısa yay); capture `_net_*`i yeğler ki hash karşılaştırması bozulmasın.
+  Misafirde mermi/mayın spec'i KİMLİKLE çözülür → `projectileSpecById`
+  (WEAPONS + clusterSpec + SKILL_PROJECTILES) kullan; yalnız `weaponById` misket
+  parçacıklarını ve yetenek mermilerini bulamaz (yaşandı). `game.skillFx` (modül
+  cast efektleri) snapshot `fx` listesiyle taşınır. Bekçi: `tests/net-game.js`
+  §2c/§2d/§2e + `tests/net-state.js` §4b/§4c.
   **Lobi yerleşimi sabit koordinat kullanmaz:** dünya genişliği pencere oranına
   göre 648–1620 arasında değişir (`Game.resize`) ve sağ üstteki DOM denetimleri
   (ses + dil) sabit CSS px kalır; `Game.resize > measureHudInsets()` bunların

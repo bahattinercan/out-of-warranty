@@ -293,6 +293,72 @@ check("misafirin robotu snapshot sonrası zıplamıyor (dikey genlik < 1px)",
   bounceAmp < 1, `genlik=${bounceAmp.toFixed(2)}px`);
 check("zıplama yokken durum hash'i de eşit", syncedWithLastState(p2).ok);
 
+// ── 2c) Misafir hostun hareketini HER KAREDE ve animasyonlu görür ──────────
+/* Snapshot 10 paket/sn gelir; misafir konumu doğrudan yazınca robot 100 ms'lik
+ * 13 px'lik adımlarla ZIPLIYORDU ve yürüyüş animasyonu paket aralarında yerel
+ * sönümle bozulduğu için bacaklar 1 ↔ 0.55 arasında gidip geliyordu (kullanıcı
+ * bildirimi: "hareketleri kesik kesik görüyor full fps değil", "yürüyüş
+ * animasyonu oynamıyor"). Bekçi: misafirin gördüğü x her karede küçük adımlarla
+ * ilerlemeli ve yürüyüş zarfı sönmemeli. */
+p2.host.input.right = true;
+const walkRows = [];
+for (let i = 0; i < 90; i++) {
+  p2.host.update(1 / 60);
+  p2.guest.update(1 / 60);
+  const g = p2.guest.players[0];
+  walkRows.push([g.x, g.walkPhase, g.walkAnim, g.walkBlend]);
+}
+p2.host.input.right = false;
+const movedFrames = walkRows.filter((r, i) => i > 0 && Math.abs(r[0] - walkRows[i - 1][0]) > 0.05).length;
+let maxStep = 0;
+for (let i = 1; i < walkRows.length; i++) maxStep = Math.max(maxStep, Math.abs(walkRows[i][0] - walkRows[i - 1][0]));
+const phaseFrames = walkRows.filter((r, i) => i > 0 && Math.abs(r[1] - walkRows[i - 1][1]) > 0.01).length;
+// İlk ~10 kare enterpolasyon rampasıdır (0 → hedef); zarf ölçümü rampADAN SONRA.
+const tail = walkRows.slice(12);
+const minAnim = Math.min(...tail.map((r) => r[2]));
+const minBlend = Math.min(...tail.map((r) => r[3]));
+check("misafir hostun hareketini HER KAREDE görür (kesik kesik değil)",
+  movedFrames >= 80, `${movedFrames}/90 kare`);
+check("konum adımları paket boyunda değil (yumuşak)", maxStep < 6, `en büyük adım ${maxStep.toFixed(2)}px`);
+check("yürüyüş fazı her karede ilerler", phaseFrames >= 80, `${phaseFrames}/90 kare`);
+check("yürüyüş zarfı paket aralarında sönmez (bacaklar oynar)",
+  minAnim > 0.8 && minBlend > 0.8, `anim=${minAnim.toFixed(2)} blend=${minBlend.toFixed(2)}`);
+syncFrames(p2, 14);
+syncToLatestState(p2);
+check("yumuşatma yetkili durumu bozmaz (gönderilen paket = misafirin hedefi)",
+  syncedWithLastState(p2).ok);
+
+// ── 2d) Misket PARÇACIKLARI ve yetenek mermileri misafirde görünür ────────
+/* Mermi listesi misafire KİMLİKLE taşınır; `weaponById` yalnız ana cephaneyi
+ * bilir, misket parçacıkları (`clusterSpec`) orada değildir → misafirde hiç
+ * kurulmuyorlardı (kullanıcı bildirimi: "misket silahının parçaları"). */
+const clusterSpec = G.WEAPONS.filter((w) => w.id === "cluster")[0];
+check("misket spec'i ve parçacık sayısı tanımlı",
+  !!clusterSpec && clusterSpec.cluster === true && clusterSpec.clusterCount > 0 &&
+  !!clusterSpec.clusterSpec && clusterSpec.clusterSpec.id === "bomblet");
+p2.host.explode(400, 120, clusterSpec);
+check("host misket parçacıklarını üretti",
+  p2.host.projectiles.length === clusterSpec.clusterCount, String(p2.host.projectiles.length));
+syncToLatestState(p2);
+const guestPellets = p2.guest.projectiles.filter((pr) => pr.spec && pr.spec.id === "bomblet");
+check("misafir misket parçacıklarını GÖRÜR",
+  guestPellets.length === clusterSpec.clusterCount && p2.guest.projectiles.length === p2.host.projectiles.length,
+  `misafir ${guestPellets.length} parçacık / host ${p2.host.projectiles.length} mermi`);
+
+// ── 2e) Modül (yetenek) cast efektleri misafirde de oynar ─────────────────
+/* `game.skillFx` saf görsel bir listedir; snapshot'la taşınmazsa misafir hostun
+ * modül animasyonlarını HİÇ görmez (kullanıcı bildirimi: "efektler/
+ * animasyonlar gözükmüyor"). */
+p2.host.usePlayerSkill();
+check("host modülü cast etti (efekt üretildi)", p2.host.skillFx.length >= 1, String(p2.host.skillFx.length));
+const hostFxShape = p2.host.skillFx[0].shape;
+syncFrames(p2, 4);
+syncToLatestState(p2);
+const guestFx = (p2.guest.skillFx || []).filter((f) => f && f.shape === hostFxShape);
+check("misafir hostun modül efektini görür",
+  guestFx.length >= 1 && p2.guest.skillFx.length === p2.host.skillFx.length,
+  `misafir ${(p2.guest.skillFx || []).map((f) => f.shape).join(",") || "yok"} / host ${p2.host.skillFx.map((f) => f.shape).join(",")}`);
+
 // ── 3) Host kendi komutunu da aynı doğrulamadan geçirir ───────────────────
 // Nişan: sahte DOM'da fare (0,0) kalır ve atış dik yukarı giderdi; gerçek
 // oyuncu gibi bir hedef noktası verilir (aim her karede hedefe döner).

@@ -144,7 +144,9 @@ function netGameRules(game, opts) {
 
     // ── Misafir tarafı ─────────────────────────────────────────────────────
     applyState(snap) {
-      const res = netApplyState(game, snap);
+      // `visMs`: paket aralığı → konum/animasyon GÖRSEL YUMUŞATMAYA alınır
+      // (10 paket/sn'lik adımlar yerine her karede akıcı hareket).
+      const res = netApplyState(game, snap, { visMs: NET_STATE_INTERVAL_MS });
       // Tur sayacı: snapshot turnId taşımaz (TURN paketi taşır) — misafirin oyun
       // sayacı oturumun sayacıyla hizalanır ki iki taraf aynı tur kimliğinde
       // konuşsun (komut tombstone'ları bu kimliğe bağlı).

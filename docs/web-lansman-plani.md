@@ -212,6 +212,31 @@ yatay/dikey gerilir — bilinen sınırlama, oynanışı bozmaz). Bekçi:
 birebir uygulanır, robotun dikey genliği < 1 px; onarım kapatılınca 4 assert
 kırmızı) ve `tests/net.js` maske sürüm sırası.
 
+(8) **Misafir hostun hareketini kesik kesik görüyordu; yürüyüş animasyonu
+oynamıyordu; bazı mermi/efekt katmanları hiç görünmüyordu.** Üç ayrı hata:
+(a) Konum/animasyon alanları snapshot'tan DOĞRUDAN yazılıyordu: paket 10/sn
+geldiği için robot 100 ms'lik 13.2 px adımlarla zıplıyordu (ölçüm: 90 karenin
+yalnız 15'inde hareket) ve yürüyüş zarfı (`walkAnim`/`walkBlend`) paket
+aralarında yerel sönümle (`walkAnim *= 0.82`) 1 ↔ 0.55 arasında gidip geldiği
+için bacaklar "oynamıyor" gibi duruyordu. Düzeltme: `netApplyState({visMs})`
+yetkili değerleri `_net_<alan>`a yazar, görünen alanı her kare
+`netAdvanceVisuals` hedefe enterpole eder (açılar en kısa yay üzerinden;
+`walkPhase` 2π'de döndüğü için düz lerp bacakları ters çevirirdi).
+(b) Misafirde mermiler KİMLİKLE yeniden kurulur, ama çözücü yalnız `WEAPONS`a
+bakıyordu: misket/tepe PARÇACIKLARI (`clusterSpec`) ve yetenek mermileri
+(`SKILL_PROJECTILES`) orada olmadığı için kurulmuyorlardı → "misket silahının
+parçaları" misafirde görünmüyordu (ölçüm: host 5 parçacık, misafir 0). Düzeltme:
+`weapons.js > projectileSpecById` (ana cephane + `clusterSpec` + yetenek
+mermileri) ve `netProjectileSpec` çözücüsü.
+(c) `game.skillFx` (modül cast efektleri) saf görsel bir listeydi ve snapshot'ta
+YOKTU → misafir hostun modül animasyonlarını hiç görmüyordu. Düzeltme: snapshot
+`fx` listesi taşır (`_netCaptureSkillFx` + `netRebuildSkillFx`; şekil/yaş/aim
+korunur, `params` taşınmaz). Paket bütçesi: periyodik snapshot 2519 → 2527
+bayt. Bekçiler: `tests/net-game.js` §2c (her karede hareket, adım < 6 px,
+yürüyüş zarfı sönmez; yumuşatma kapatılınca 4 assert kırmızı), §2d (misket
+parçacıkları), §2e (modül efekti), `tests/net-state.js` §4b/§4c (spec çözücü +
+efekt round-trip).
+
 **Doğrulama (F3 çıkış ölçütü):** iki farklı ağdan (biri mobil hotspot) 2 oyuncu, aynı harita, 5 tur; kurulum <20 sn; kopma <%5; tur sırası her iki tarafta aynı; yeniden bağlanma aynı koltuğa döner.
 
 ---
@@ -335,9 +360,9 @@ Referans gerçeklik: Steam medyanı $249/ömür; web'de ilk oyun $0–400/ay. Bu
 | **F1b** (yapıldı) | Okunabilirlik R2 (çizim ölçeği 1.10 + yürüyüş fazı senkronu) | `robots.js`, `entity.js`, `tests/run.js` | `node tests/run.js` 1109/1109 (nişan hizası + kayma grupları) · `_aim_probe`/`_battle_probe` ekran görüntüsü |
 | **F2** (altyapı + menü yapıldı) | `js/i18n.js` + ilk ekranların anahtarlanması | i18n altyapısı, menü/marka çevirisi, `tests/i18n.js` | `node tests/i18n.js` 46/46 · diğer 5 paket yeşil · headless EN menü ekranı |
 | **F3a** (yapıldı) | Çevrimiçi protokol + oturum çekirdeği (saf, taşımadan bağımsız) | `js/net/protocol.js`, `js/net/session.js`, `tests/net.js` | `node tests/net.js` 101/101 (zarf/komut doğrulama, tekilleştirme, değişmezler, saat/borç, kopma, maske sürüm sırası) |
-| **F3b** (yapıldı) | Durum anlık görüntüsü + arazi senkronu (capture/apply) | `js/net/state.js`, `tests/net-state.js` | `node tests/net-state.js` 45/45 (gidiş-dönüş hash'i, arazi birebir, savunmacı apply, boyut bütçesi) |
+| **F3b** (yapıldı) | Durum anlık görüntüsü + arazi senkronu (capture/apply) | `js/net/state.js`, `tests/net-state.js` | `node tests/net-state.js` 53/53 (gidiş-dönüş hash'i, arazi birebir, savunmacı apply, parçacık/yetenek mermisi kurulumu, cast efekti, boyut bütçesi) |
 | **F3c-1** (yapıldı) | Taşıma katmanı (PeerJS + döngü) ve uçtan uca entegrasyon testi | `js/net/transport.js`, `tests/net-integration.js` | `node tests/net-integration.js` 43/43 (el sıkışma, 5 tur senkron, oyma, kopma, gecikme/kayıp, sahte Peer ile PeerJS akışı) |
-| **F3c-2** (yapıldı) | Lobi ekranı (oda kodu, davet, hazır) + oyun akışı bağlantısı | `js/online-lobby.js`, `js/net/adapter.js`, `index.html`, i18n | `node tests/net-game.js` 113/113 (lobi → maç → 5 tur → sonuç + yerleşim + yapıştırma + tıklama + robot/silah seçimi + dünya boyutu) + headless sondalar `_online_probe.html`, `_online_small.html`, `_robot_picker_probe.html` |
+| **F3c-2** (yapıldı) | Lobi ekranı (oda kodu, davet, hazır) + oyun akışı bağlantısı | `js/online-lobby.js`, `js/net/adapter.js`, `index.html`, i18n | `node tests/net-game.js` 123/123 (lobi → maç → 5 tur → sonuç + yerleşim + yapıştırma + tıklama + robot/silah seçimi + dünya boyutu + akıcı hareket/animasyon + parçacık/efekt) + headless sondalar `_online_probe.html`, `_online_small.html`, `_robot_picker_probe.html` |
 | **F3c-3** (kullanıcı) | İki farklı ağdan gerçek deneme (kılavuz: `docs/cevrimici-deneme.md`) | — | §4 çıkış ölçütü: 5 tur, kurulum <20 sn, kopma <%5 |
 | **F4** | 6 oyuncu, oda/davet akışı, bot devralma | lobi + yeniden bağlanma | 6 oyuncu simülasyonu + kopma senaryoları, `tests/multiplayer/` |
 | **F5** | Portal uyumu: SDK, reklam yerleri, event ölçümü | `js/portal.js` | iframe testi, 16:9 ölçekleme, reklam ödülü doğru veriliyor |

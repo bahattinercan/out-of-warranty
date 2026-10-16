@@ -359,6 +359,26 @@ const SKILL_PROJECTILES = {
   },
 };
 
+/* Mermi spec'ini KİMLİKTEN çözer: ana cephane (`WEAPONS`), misket/tepe
+ * PARÇACIKLARI (`clusterSpec`) ve yetenek mermileri (`SKILL_PROJECTILES`).
+ * Çevrimiçi misafir yalnız kimlik taşır (`js/net/state.js >
+ * netRebuildProjectiles` / `netRebuildMines`); yalnız `WEAPONS`'a bakan
+ * `weaponById` parçacıkları ve yetenek mermilerini BULAMIYORDU, bu yüzden
+ * misafirde hiç kurulmuyorlardı (kullanıcı bildirimi: "misket silahının
+ * parçaları görünmüyor"). */
+function projectileSpecById(id) {
+  if (typeof id !== "string" || !id) return null;
+  if (Array.isArray(WEAPONS)) {
+    for (const w of WEAPONS) {
+      if (!w) continue;
+      if (w.id === id) return w;
+      if (w.clusterSpec && w.clusterSpec.id === id) return w.clusterSpec;
+    }
+  }
+  const skill = SKILL_PROJECTILES ? SKILL_PROJECTILES[id] : null;
+  return skill || null;
+}
+
 // Çeviri katmanı: katalog yüklendiği anda seçili dili uygula. i18n.js bu
 // dosyadan önce yüklenir; katalog çevirisi (DATA_CATALOGS) dil değişiminde
 // setLocale içinde, ilk yüklemede ise burada uygulanır — böylece sondalar gibi
