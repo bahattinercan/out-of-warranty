@@ -593,12 +593,23 @@ class NetSession {
       return { ok: true };
     }
     if (msg.t === NET_MSG.TERRAIN) {
-      if (!Number.isInteger(msg.terrainVersion) || msg.terrainVersion <= this.terrainVersion) {
+      /* Sürüm denetimi: oyma KAYITLARI (changes) sıraya bağlıdır ve yalnız
+       * daha yeni sürümde uygulanır. TAM MASKE (maç başı / kurtarma) ise durumun
+       * kendisidir: eşit sürümde de kabul edilir. Aksi hâlde taze arazi
+       * (sürüm 0) misafirin başlangıç sürümüne (0) eşit olduğu için maske
+       * STALE_TERRAIN ile reddediliyor ve misafir hostunkinden FARKLI arazide
+       * oynuyordu (arazi rastgele üretildiğinde robotun zıplamasına yol açar).
+       * ESKİ sürümlü maske yine reddedilir (oymaları geri almamak için). */
+      const v = msg.terrainVersion;
+      const hasMask = !!msg.mask;
+      const fresh = Number.isInteger(v) && v > this.terrainVersion;
+      if (!hasMask && !fresh) return { ok: false, reason: "STALE_TERRAIN" };
+      if (hasMask && Number.isInteger(v) && v < this.terrainVersion) {
         return { ok: false, reason: "STALE_TERRAIN" };
       }
-      this.terrainVersion = msg.terrainVersion;
+      if (Number.isInteger(v)) this.terrainVersion = v;
       // İlk paket maskeyi (tam arazi), sonrakiler oyma kayıtlarını taşır.
-      if (msg.mask && typeof this.rules.applyTerrainMask === "function") this.rules.applyTerrainMask(msg.mask);
+      if (hasMask && typeof this.rules.applyTerrainMask === "function") this.rules.applyTerrainMask(msg.mask);
       if (typeof this.rules.applyTerrain === "function") this.rules.applyTerrain(msg.changes);
       return { ok: true };
     }

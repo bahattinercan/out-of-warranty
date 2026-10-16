@@ -342,6 +342,31 @@ class Game {
     return true;
   }
 
+  /* Çevrimiçi arazi maskesi boyut uyuşmazlığında misafir kendini onarır:
+   * dünya GENİŞLİĞİ pencere en-boy oranına göre türetildiği için (resize(),
+   * 648–1620) iki taraf farklı genişlikte olabilir ve hostun maskesi eski
+   * boyutta reddedilirdi (netApplyTerrain > SIZE_MISMATCH). Yetkili boyut
+   * hostunkidir: dünya bu boyuta çekilir, arazi yeniden kurulur (misafir hostun
+   * oyma kayıtlarını OYNATIR, kendi kuyruğunu tutmaz) ve tuval ölçeği yenilenir.
+   * Onarım olmadan maske reddedilir; misafirin yerel tahmini her snapshot'ta
+   * düzeltildiği için robot sürekli yukarı-aşağı ZIPLAR (yaşandı: "misafir
+   * karakter sürekli yukarı aşağı zıplıyor"). */
+  adoptTerrainSize(w, h) {
+    if (!Number.isFinite(w) || !Number.isFinite(h) || w < 2 || h < 2 || w > 4096 || h > 4096) return false;
+    this.W = Math.round(w);
+    this.H = Math.round(h);
+    // Tuval geri tamponu aynı kalır; yalnız hangi dünya boyutunun çizildiği
+    // değişir (resize() ile aynı türetme: geri tampon / dünya).
+    const c = this.canvas;
+    const pxW = c && c.width ? c.width : this.W;
+    const pxH = c && c.height ? c.height : this.H;
+    this._scaleX = pxW / this.W;
+    this._scaleY = pxH / this.H;
+    this.terrain = new Terrain(this.W, this.H, this.selectedMap);
+    this.terrain.recordChanges = !!(this.online && this.online.role === "host");
+    return true;
+  }
+
   // Host kadrosu: [kendi robotum, misafirin robotu] (misafir robotu HELLO ile gelir).
   onlineRoster(session) {
     const host = (this.lobby && this.lobby.robotId) || (CHARACTERS[0] && CHARACTERS[0].id);

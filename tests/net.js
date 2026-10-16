@@ -50,7 +50,7 @@ function fakeTransport() {
 // ── Sahte oyun kuralları: çağrıları sayar, kararı test belirler ─────────────
 function fakeRules(opts) {
   const o = opts || {};
-  const calls = { step: 0, apply: [], clearInput: [], setBot: [], onTurnEnd: [], applyState: [], applyTerrain: [] };
+  const calls = { step: 0, apply: [], clearInput: [], setBot: [], onTurnEnd: [], applyState: [], applyTerrain: [], mask: [] };
   return {
     calls,
     active: o.active == null ? 0 : o.active,
@@ -65,6 +65,7 @@ function fakeRules(opts) {
     setBot(idx, on) { calls.setBot.push({ idx, on }); },
     applyState(s) { calls.applyState.push(s); },
     applyTerrain(ch) { calls.applyTerrain.push(ch); },
+    applyTerrainMask(m) { calls.mask.push(m); },
     onAck(id, res) { calls.lastAck = { id, res }; },
   };
 }
@@ -264,7 +265,21 @@ check("durum uygulanır", g.g.handleGuestMessage(env(N.NET_MSG.STATE, { seq: 0, 
 check("eski durum paketi düşer", g.g.handleGuestMessage(env(N.NET_MSG.STATE, { seq: 0, state: { hp: 1 } })).reason === "STALE_STATE");
 check("yanlış maçtan durum reddedilir", g.g.handleGuestMessage({ v: V, t: N.NET_MSG.STATE, matchId: "m9", authoritySessionId: "a1", seq: 5 }).reason === "WRONG_MATCH");
 check("eski arazi sürümü reddedilir", g.g.handleGuestMessage(env(N.NET_MSG.TERRAIN, { terrainVersion: 0, changes: [] })).reason === "STALE_TERRAIN");
-check("yeni arazi sürümü uygulanır", g.g.handleGuestMessage(env(N.NET_MSG.TERRAIN, { terrainVersion: 2, changes: [{ x: 1 }] })).ok === true && g.r.calls.applyTerrain.length === 1);
+// Maç başındaki TAM MASKE taze araziyle AYNI sürümü (0) taşır; `>` denetimi
+// maskeyi "eski" sayıp reddediyordu → misafir hostunkinden farklı arazide
+// oynuyordu (arazi rastgele üretildiğinde robot sürekli zıplar).
+check("eşit sürümlü TAM MASKE kabul edilir",
+  g.g.handleGuestMessage(env(N.NET_MSG.TERRAIN, { terrainVersion: 0, mask: { w: 4, h: 4 }, changes: [] })).ok === true &&
+  g.r.calls.mask.length === 1, `mask=${g.r.calls.mask.length}`);
+check("yeni arazi sürümü uygulanır", g.g.handleGuestMessage(env(N.NET_MSG.TERRAIN, { terrainVersion: 2, changes: [{ x: 1 }] })).ok === true && g.r.calls.applyTerrain.length === 2);
+check("maskeyi takip eden eski sürümlü oyma reddedilir",
+  g.g.handleGuestMessage(env(N.NET_MSG.TERRAIN, { terrainVersion: 2, changes: [{ x: 2 }] })).reason === "STALE_TERRAIN");
+check("maskeyle birlikte gelen oyma kayıtları da uygulanır",
+  g.g.handleGuestMessage(env(N.NET_MSG.TERRAIN, { terrainVersion: 3, mask: { w: 4, h: 4 }, changes: [{ x: 3 }] })).ok === true &&
+  g.r.calls.applyTerrain.length === 3 && g.r.calls.mask.length === 2,
+  `applyTerrain=${g.r.calls.applyTerrain.length} mask=${g.r.calls.mask.length}`);
+check("ESKİ sürümlü maske yine reddedilir (oymalar geri alınmaz)",
+  g.g.handleGuestMessage(env(N.NET_MSG.TERRAIN, { terrainVersion: 1, mask: { w: 4, h: 4 }, changes: [] })).reason === "STALE_TERRAIN");
 check("ACK arayüze iletilir", g.g.handleGuestMessage(env(N.NET_MSG.ACK, { id: "c1", result: { ok: true } })).ok === true && g.r.calls.lastAck.id === "c1");
 check("misafir komut gönderir", g.g.sendCommand({ kind: N.NET_CMD.JUMP }).ok === true && g.t.count(N.NET_MSG.CMD) === 1);
 check("misafir girdi gönderir", g.g.sendInput(1, 0.5).ok === true && g.t.last(N.NET_MSG.INPUT).payload.move === 1);

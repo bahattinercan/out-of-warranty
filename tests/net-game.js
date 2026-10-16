@@ -262,6 +262,37 @@ check("başlangıçta durum hash'i aynı", stateHash(p.host) === stateHash(p.gue
 check("misafir yetkili simülasyon yürütmüyor", p.guest.onlineGuest === true && p.host.onlineGuest === false);
 check("arazi kaydı yalnız hostta açık", p.host.terrain.recordChanges === true && p.guest.terrain.recordChanges === false);
 
+// ── 2b) Farklı pencere oranı: misafir dünyayı hosttan alır ─────────────────
+/* Dünya GENİŞLİĞİ pencere en-boy oranına göre türetilir (`Game.resize`, 648–1620)
+ * ve arazi/doğuş konumları bu boyuta göre doğar. İki oyuncunun penceresi farklı
+ * olduğunda hostun arazi maskesi misafirin arazisinden farklı boyutta geliyordu
+ * ve `netApplyTerrain > SIZE_MISMATCH` ile REDDEDİLİYORDU; misafir kendi
+ * (hostunkinden farklı) arazisinde tahmin yürütüp her snapshot'ta düzeltildiği
+ * için robotu sürekli yukarı-aşağı zıplıyordu (kullanıcı bildirimi: "misafir
+ * karakter sürekli yukarı aşağı zıplıyor"). Onarım: maske boyutu yetkilidir,
+ * misafir dünyasını + arazisini o boyuta çeker (`Game.adoptTerrainSize`). */
+const p2 = makePair();
+p2.guest.W = 1260;                 // misafirin penceresi daha geniş (misal)
+p2.guest.lobby.toggleReady();
+check("geniş pencereli misafirle maç kuruldu", p2.host.lobby.startMatch() === true);
+syncFrames(p2, 12);
+check("misafir dünyasını hostun genişliğine çekti",
+  p2.guest.W === p2.host.W && p2.guest.terrain.w === p2.host.terrain.w,
+  `host ${p2.host.W}/${p2.host.terrain.w} · misafir ${p2.guest.W}/${p2.guest.terrain.w}`);
+check("arazi maskesi boyut farkına rağmen birebir uygulandı",
+  maskEqual(p2.host.terrain, p2.guest.terrain) &&
+  G.netCaptureTerrain(p2.guest).hash === G.netCaptureTerrain(p2.host).hash);
+const bounceYs = [];
+for (let i = 0; i < 150; i++) {
+  p2.host.update(1 / 60);
+  p2.guest.update(1 / 60);
+  bounceYs.push(p2.guest.players[1].y);
+}
+const bounceAmp = Math.max(...bounceYs) - Math.min(...bounceYs);
+check("misafirin robotu snapshot sonrası zıplamıyor (dikey genlik < 1px)",
+  bounceAmp < 1, `genlik=${bounceAmp.toFixed(2)}px`);
+check("zıplama yokken durum hash'i de eşit", syncedWithLastState(p2).ok);
+
 // ── 3) Host kendi komutunu da aynı doğrulamadan geçirir ───────────────────
 // Nişan: sahte DOM'da fare (0,0) kalır ve atış dik yukarı giderdi; gerçek
 // oyuncu gibi bir hedef noktası verilir (aim her karede hedefe döner).

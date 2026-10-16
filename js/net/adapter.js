@@ -157,7 +157,18 @@ function netGameRules(game, opts) {
       }
       return res;
     },
-    applyTerrainMask(mask) { return netApplyTerrain(game, mask); },
+    /* Arazi maskesi: boyut uyuşmazlığında önce dünyayı hostun maskesine uydur.
+     * Dünya genişliği pencere en-boy oranına göre türetilir (Game.resize), yani
+     * iki oyuncunun dünyası farklı genişlikte olabilir; yetkili boyut hostunki.
+     * Onarım olmadan maske SIZE_MISMATCH ile reddedilir ve misafirin yerel
+     * tahmini her snapshot'ta düzeltilir → robot sürekli zıplar (yaşandı). */
+    applyTerrainMask(mask) {
+      if (mask && game.terrain && (game.terrain.w !== mask.w || game.terrain.h !== mask.h) &&
+          typeof game.adoptTerrainSize === "function") {
+        game.adoptTerrainSize(mask.w, mask.h);
+      }
+      return netApplyTerrain(game, mask);
+    },
     applyTerrain(changes) { return netApplyTerrainChanges(game, changes); },
     onAck(id, result) {
       const ctx = game.online;

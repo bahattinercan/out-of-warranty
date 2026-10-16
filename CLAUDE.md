@@ -123,6 +123,17 @@ Yeni içerik çoğunlukla **kod değil veri** eklemekle yapılır:
   yayınlar, komut göndermez. Bu yeni komut türü `NET_PROTOCOL_VERSION`'ı 2 yaptı.
   Bekçi: `tests/net-game.js` §3 + §5a (selectWeapon/cycleWeapon/NO_AMMO reddi),
   `tests/net.js` komut doğrulaması.
+  **Dünya boyutu (genişlik) HOSTUNkidir:** `Game.resize` W'yi pencere en-boy
+  oranından türetir (648–1620), arazi ve doğuş konumları bu boyuta göre doğar.
+  Misafir kendi boyutunu kullanırsa arazi yüzeyi farklı olur ve TAM
+  ARAZİ MASKESİ'ne rağmen robot her snapshot'ta düzeltilir → sürekli yukarı-aşağı
+  zıplar (yaşandı). Maske boyutu yetkilidir: `rules.applyTerrainMask` boyut
+  uyuşmazlığında `Game.adoptTerrainSize(w,h)` ile dünyayı/araziyi hostun boyutuna
+  çeker. Ayrıca maske paketi TAM durumdur: eşit sürümde de kabul edilir (oyma
+  KAYITLARI kesin artan sürüm ister; eski sürümlü maske reddedilir). Bekçi:
+  `tests/net-game.js` §2b (farklı genişlikte misafir; onarım kapatılınca 4 assert
+  kırmızı, dikey genlik 13 px). Pencere oranı farklıysa misafir hostun dünyasını
+  kendi ekranına ölçekler (uç oranlarda görüntü gerilir — bilinen sınırlama).
   **Lobi yerleşimi sabit koordinat kullanmaz:** dünya genişliği pencere oranına
   göre 648–1620 arasında değişir (`Game.resize`) ve sağ üstteki DOM denetimleri
   (ses + dil) sabit CSS px kalır; `Game.resize > measureHudInsets()` bunların
