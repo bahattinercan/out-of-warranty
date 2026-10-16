@@ -558,9 +558,15 @@ class OnlineLobby {
   }
 
   _cycleRobot(dir) {
-    if (!this.session || this.session.phase !== NET_PHASE.LOBBY) return;
+    // Maç kurulduktan sonra kadro sabitlenir; seçici yalnız lobide serbest.
+    if (this.session && this.session.phase !== NET_PHASE.LOBBY) return;
     this.robotIndex = (this.robotIndex + dir + CHARACTERS.length) % CHARACTERS.length;
     this.robotId = this.robot.id;
+    // Oda HENÜZ yok (rol ekranı: ODA KUR / KODA KATIL): seçim yalnız yerelde
+    // tutulur, oda kurulurken/katılırken kullanılır. Eski sürüm burada erken
+    // dönüyordu; rol ekranındaki robot seçicisi çizildiği hâlde okları ve
+    // ← → tuşları hiçbir şey yapmıyordu (kullanıcı bildirimi).
+    if (!this.session) return;
     if (this.role === "host") {
       // Oda sahibi: kadro + arena haritası kendi robotuna bağlıdır; kendi
       // koltuğundaki robot da güncellenir (misafir oda listesinde görür).

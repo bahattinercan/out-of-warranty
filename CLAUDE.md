@@ -110,6 +110,12 @@ Yeni içerik çoğunlukla **kod değil veri** eklemekle yapılır:
   **Host kendi girdisini tazeler** (`session.touchLocalInput(0)`): host INPUT
   paketi göndermediği için tazelik denetimi ona uygulanırsa yürüme ve güç
   doldurma HER KAREDE silinir ve host atış yapamaz (yaşandı).
+  **Robot seçici oda kurulmadan da çalışır** (`OnlineLobby._cycleRobot`): seçici
+  rol ekranında (ODA KUR / KODA KATIL) da çizilir; oturum yokken erken dönmek
+  okları ve ← → tuşlarını ölü bırakıyordu (yaşandı: "bu sayfada karakter
+  değiştiremiyorum"). Seçim yerelde tutulur, oda kurulurken/katılırken kullanılır
+  (host: kadro + arena haritası; misafir: HELLO). Bekçi: `tests/net-game.js` §12(d),
+  gerçek tıklama yolu `_robot_picker_probe.html`.
   **Lobi yerleşimi sabit koordinat kullanmaz:** dünya genişliği pencere oranına
   göre 648–1620 arasında değişir (`Game.resize`) ve sağ üstteki DOM denetimleri
   (ses + dil) sabit CSS px kalır; `Game.resize > measureHudInsets()` bunların

@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8" />
+  <title>robot seçici sondası</title>
+  <style>
+    html, body { margin: 0; background: #0b1119; }
+    /* Oyun gibi ÖLÇEKLİ tuval: dünya 960×540, CSS 1200×675 (×1.25). Tıklama
+     * koordinatı bu yüzden gerçek sayfa ile aynı yoldan geçer. */
+    canvas#game { display: block; width: 1200px; height: 675px; }
+  </style>
+</head>
+<body>
+  <canvas id="game" width="960" height="540"></canvas>
+
+  <script src="js/i18n.js"></script>
+  <script src="js/audio.js"></script>
+  <script src="js/characters.js"></script>
+  <script src="js/progression.js"></script>
+  <script src="js/profile.js"></script>
+  <script src="js/parts.js"></script>
+  <script src="js/market.js"></script>
+  <script src="js/maps.js"></script>
+  <script src="js/skills.js"></script>
+  <script src="js/skill-fx.js"></script>
+  <script src="js/robots.js"></script>
+  <script src="js/terrain.js"></script>
+  <script src="js/weapons.js"></script>
+  <script src="js/entity.js"></script>
+  <script src="js/projectile.js"></script>
+  <script src="js/ai.js"></script>
+  <script src="js/net/protocol.js"></script>
+  <script src="js/net/transport.js"></script>
+  <script src="js/net/state.js"></script>
+  <script src="js/net/session.js"></script>
+  <script src="js/net/adapter.js"></script>
+  <script src="js/online-lobby.js"></script>
+  <script src="js/game.js"></script>
+
+  <script>
+    /* Sonda: ROL ekranındaki (ODA KUR / KODA KATIL) robot seçicisinin GERÇEK
+     * tarayıcıda, ÖLÇEKLİ tuvalde ve GERÇEK MouseEvent ile çalıştığını kanıtlar.
+     * Kullanıcı bildirimi: "bu sayfada karakter değiştiremiyorum". */
+    (function () {
+      const cv = document.getElementById("game");
+      const g = Object.create(Game.prototype);
+      g.canvas = cv;
+      g.ctx = cv.getContext("2d");
+      g.W = 960; g.H = 540;
+      g.input = { mouseX: -100, mouseY: -100 };
+      g.profile = defaultProfile();
+      g.renderTimeMs = 1200;
+      g.state = "ONLINE_LOBBY";
+      g.hudTopInset = 0; g.hudRightInset = 0;
+      g.updateHud = function () {};
+      g.lobby = new OnlineLobby(g);
+      g.lobby.open();
+
+      // game.js > bindInput ile AYNI dinleyici imzası.
+      cv.addEventListener("mousedown", (e) => g.pressCanvas(e, e.button));
+
+      const ctx = g.ctx;
+      const paint = () => { ctx.clearRect(0, 0, g.W, g.H); g.lobby.render(ctx); };
+      const rectOf = (a) => g.lobby._rects.filter((r) => r.action === a)[0] || null;
+      const click = (r) => {
+        const b = cv.getBoundingClientRect();
+        const clientX = b.left + (r.x + r.w / 2) * (b.width / g.W);
+        const clientY = b.top + (r.y + r.h / 2) * (b.height / g.H);
+        cv.dispatchEvent(new MouseEvent("mousedown", { clientX, clientY, button: 0, bubbles: true }));
+      };
+
+      const out = [];
+      paint();
+      const idx0 = g.lobby.robotIndex;
+      const before = g.lobby.robotId;
+      const expectNext = CHARACTERS[(idx0 + 1) % CHARACTERS.length].id;
+      const next = rectOf("robotNext");
+      const prev = rectOf("robotPrev");
+      out.push("OKLAR=" + !!prev + "," + !!next);
+      click(next);
+      const after = g.lobby.robotId;
+      out.push("SONRAKI=" + before + ">" + after);
+      paint();
+      click(rectOf("robotPrev"));
+      out.push("ONCEKI=" + after + ">" + g.lobby.robotId);
+      paint();
+      const ok = !!prev && !!next && after === expectNext && after !== before &&
+        g.lobby.robotId === before;
+      document.body.setAttribute("data-result", (ok ? "PASS" : "FAIL") + " " + out.join(" | "));
+      console.log("PROBE " + (ok ? "PASS" : "FAIL") + " · " + out.join(" | "));
+      window.__result = document.body.getAttribute("data-result");
+    })();
+  </script>
+</body>
+</html>

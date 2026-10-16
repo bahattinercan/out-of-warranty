@@ -544,14 +544,37 @@ cl.render(clickCtx);
 clickAt(rectOf("join"), 2);
 check("sağ tık lobide eylem başlatmaz", cl.step === "role", `step=${cl.step}`);
 
-// (d) Çift tıklama tek oda açar.
+// (d) ROL EKRANINDA robot seçici çalışır: oda HENÜZ kurulmamışken (session
+// yok) oklar ve ← → robotu değiştirmeli. Eski `_cycleRobot` oturum yokken
+// erken dönüyordu; seçici çizildiği hâlde hiçbir şey yapmıyordu (kullanıcı
+// bildirimi: "bu sayfada karakter değiştiremiyorum").
+check("rol ekranı testi oturumsuz başlar (oda kurulmadı)", !cl.session, String(!!cl.session));
+const robot0 = cl.robotId;
+cl.render(clickCtx);
+check("rol ekranında robot okları çizildi", !!rectOf("robotPrev") && !!rectOf("robotNext"));
+clickAt(rectOf("robotNext"), 0);
+check("rol ekranında › robotu değiştirir", cl.robotId !== robot0, `${robot0} → ${cl.robotId}`);
+check("robot seçimi robotIndex ile tutarlı",
+  cl.robotId === G.CHARACTERS[cl.robotIndex].id, String(cl.robotId));
+const robot1 = cl.robotId;
+cl.render(clickCtx);
+clickAt(rectOf("robotPrev"), 0);
+check("rol ekranında ‹ geri döndürür", cl.robotId === robot0, `${robot1} → ${cl.robotId}`);
+const idxBeforeKey = cl.robotIndex;
+const keyHandled = cl.handleKey({ key: "ArrowRight" });
+const expectIdx = (idxBeforeKey + 1) % G.CHARACTERS.length;
+check("← → tuşları rol ekranında robotu değiştirir",
+  keyHandled === true && cl.robotIndex === expectIdx, `tuş sonrası ${cl.robotId}`);
+check("tuş seçimi robotId'ye yansır", cl.robotId === G.CHARACTERS[expectIdx].id, String(cl.robotId));
+
+// (e) Çift tıklama tek oda açar.
 cl.hostRoom();
 const firstCode = cl.code;
 const second = cl.hostRoom();
 check("çift ODA KUR ikinci taşıma açmaz", second === false && cl.code === firstCode && cl._connecting === true,
   `second=${second} code=${cl.code}`);
 
-// (e) Oda ayakta değilken davet kopyalanamaz; tıklama nedenini söyler.
+// (f) Oda ayakta değilken davet kopyalanamaz; tıklama nedenini söyler.
 cl.render(clickCtx);
 const copyRect = rectOf("copy");
 check("oda hazır değilken kopyala düğmesi devre dışı", !!copyRect && copyRect.disabled === true);
