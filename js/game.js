@@ -2743,13 +2743,29 @@ class Game {
     if (button === 0) this.startCharge();
   }
 
+  /* Silah değişimini yetkili tarafa bildirir. Host zaten yetkilidir (yerel
+   * değişikliği durum paketiyle misafire gider); MİSAFİRİN seçimi ise hosttan
+   * gelen snapshot'ta `weapon` alanı her pakette geri yazıldığı için komutla
+   * bildirilmezse ~100 ms sonra siliniyordu — misafir silah değiştiremiyordu
+   * (kullanıcı bildirimi). Yerel seçim anında gösterilir (iyimser); host
+   * reddederse (ör. mühimmat yok) snapshot ve ACK bildirimi düzeltir. */
+  _syncWeaponOnline() {
+    const o = this.online;
+    if (this.mode !== "online" || !o || o.role === "host") return;
+    const a = this.active;
+    if (!a || !a.weaponSpec) return;
+    this.onlineCommand({ kind: NET_CMD.WEAPON, weaponId: a.weaponSpec.id });
+  }
+
   // Silah seçimi (yalnız AIMING). Mühimmatı olmayan silah atlanır.
   selectWeapon(i) {
     if (this.state !== "AIMING" || !this.isLocalTurn()) return;
     const a = this.active;
     if (!a || i < 0 || i >= WEAPONS.length || !a.hasAmmo(i)) return;
-    if (a.weapon !== i) SFX.weaponSwitch();
+    const changed = a.weapon !== i;
+    if (changed) SFX.weaponSwitch();
     a.weapon = i;
+    if (changed) this._syncWeaponOnline();
     this.weaponMenuOpen = false; // seçim yapıldı: açılır liste kapanır
     this.updateHud();
   }
@@ -2787,11 +2803,13 @@ class Game {
     const a = this.active;
     if (!a) return;
     const n = WEAPONS.length;
+    const before = a.weapon;
     let i = a.weapon;
     for (let k = 0; k < n; k++) {
       i = (i + dir + n) % n;
       if (a.hasAmmo(i)) { if (a.weapon !== i) SFX.weaponSwitch(); a.weapon = i; break; }
     }
+    if (a.weapon !== before) this._syncWeaponOnline();
     this.weaponMenuOpen = false;
     this.updateHud();
   }

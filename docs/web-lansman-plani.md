@@ -91,7 +91,7 @@ Sayılar üçüncü taraf tahminleridir (VG Insights/Gamalytic/SteamSpy türevi)
 - **Portal uyumu:** CrazyGames multiplayer gereksinimleri oda bilgisini SDK'ya bildirmeyi ve davet linki üretmeyi ister (`docs.crazygames.com/requirements/multiplayer`). Kendi sunucumuz olmadığı için davet akışı "oda kodu + SDK davet linki" olarak kurgulanır [?] — portal başvurusundan önce doğrulanacak.
 - **Kabul edilen riskler:** Arkadaş oyununda hile yapan host (sıralama olmadığı için kabul); mobil sekmede uyku → host saati durur, bot devralır; aynı anda 6 insan oyuncu pilot kapsam **değildir** (F3: 2, F4: 6).
 
-**Uygulama durumu:** F3a tamamlandı — protokol ve oturum çekirdeği `js/net/protocol.js` + `js/net/session.js` altında, `tests/net.js` ile tarayıcısız sınanıyor (95 assert). Çekirdek metin üretmez: hata/iptal NEDENLERİ kod olarak dolaşır, arayüz bunları `t()` ile çevirir. `js/net/*` henüz `index.html`'e eklenmedi; F3c'de oyun akışına bağlanınca eklenecek (şimdilik yalnız testler yükler).
+**Uygulama durumu:** F3a tamamlandı — protokol ve oturum çekirdeği `js/net/protocol.js` + `js/net/session.js` altında, `tests/net.js` ile tarayıcısız sınanıyor (97 assert). Çekirdek metin üretmez: hata/iptal NEDENLERİ kod olarak dolaşır, arayüz bunları `t()` ile çevirir. `js/net/*` henüz `index.html`'e eklenmedi; F3c'de oyun akışına bağlanınca eklenecek (şimdilik yalnız testler yükler).
 
 **Ölçülen paket bütçesi (F3b, 6 oyuncu, `tests/net-state.js`):** başlangıç snapshot'ı (build dahil) 4.087 bayt · periyodik snapshot (build hariç) 2.519 bayt · arazi maskesi (RLE, tek seferlik) 1.436 bayt. Arazi ilk durumu `Math.random` ile üretildiği için her istemcide farklıdır → host maskeyi RLE ile gönderir, sonraki değişiklikler `destroy(x,y,r)` kaydı olarak yayınlanır ve misafir aynı çağrıları oynatır (deterministik). Türetilmiş istatistikler (can üst sınırı, zırh, hız çarpanları) yalnız başlangıç paketinde gider: çevrimiçi maçta taban build kuralı böyle uygulanır ve misafir profil verisine ihtiyaç duymaz.
 
@@ -101,7 +101,8 @@ Sayılar üçüncü taraf tahminleridir (VG Insights/Gamalytic/SteamSpy türevi)
 katılma, davet bağlantısı (`?oda=KOD` ile tek tık katılma), koltuk listesi, hazır
 akışı ve robot seçicisini çizer; PeerJS CDN'i **ilk girişte** tembel yüklenir
 (çevrimdışı açılış etkilenmez). `js/net/adapter.js` oturumun `rules` arayüzünü
-oyuna bağlar: CHARGE/CANCEL/RELEASE/MODULE/JUMP/MOVE komutları oyun çağrısına
+oyuna bağlar: CHARGE/CANCEL/RELEASE/MODULE/JUMP/MOVE/WEAPON komutları oyun
+çağrısına
 çevrilir, host sabit adımlı ağ saatini yürütür (`updateOnlineHost`), tur kapanınca
 TURN yayınlanır, arazi oymaları ve periyodik durum gönderilir. Misafir
 `updateGuest` ile yalnız görsel yumuşatma yapar; hasar/arazi/tur kararı hostta.
@@ -162,6 +163,29 @@ düğmeler sessiz kalıyordu ("çalışmıyor" sanılıyordu) → tıklamada ned
 bildirilir ve oda ayakta değilken davet kopyalama düğmesi "Oda hazırlanıyor…"
 olarak devre dışı durur. Ayrıca düğme eylemi UI sesinden ÖNCE çalışır (ses
 kurulumu hata verse bile düğme işlevini kaybetmez).
+
+(5) **Rol ekranında robot değiştirilemiyordu:** `OnlineLobby._cycleRobot` oturum
+yokken erken dönüyordu, oysa seçici tam da oda kurulmadan gösterilen rol
+ekranında (ODA KUR / KODA KATIL) çiziliyor; ‹ › okları ve ← → tuşları ölüydü.
+Erken dönüş `session && phase !== LOBBY` ile sınırlandı; oda yokken seçim yalnız
+yerelde tutulur ve oda kurulurken/katılırken kullanılır (host: kadro + arena
+haritası, misafir: HELLO). Bekçi: `tests/net-game.js` §12(d) (düzeltme geri
+alınınca 3 assert kırmızı) + gerçek tarayıcı sondası `_robot_picker_probe.html`
+(ölçekli tuval + gerçek `MouseEvent`).
+
+(6) **Misafir silah değiştiremiyordu:** misafirin seçimi hosta hiç
+bildirilmiyordu ve hostun snapshot'ı `weapon` alanını her pakette geri yazdığı
+için seçim ~100 ms içinde siliniyordu (host kendi tarafında seçebildiği için
+hata yalnız misafirde görünüyordu). Planın §6'sında zaten sayılan "silah seçimi"
+komutu protokolde eksikti: `NET_CMD.WEAPON` (`weaponId`) eklendi,
+`rules.applyCommand` mühimmat ve sıra denetimiyle uygular, atış hakkını
+TÜKETMEZ; misafir seçimi iyimser olarak anında gösterir, host reddederse
+(ör. mühimmat bitti) ACK bildirimi ve snapshot düzeltir. Bu yeni komut türü
+nedeniyle `NET_PROTOCOL_VERSION` 1 → 2 (eski istemci komutu sessizce
+UNKNOWN_COMMAND diye reddetmek yerine el sıkışmada sürüm uyuşmazlığı alır).
+Bekçi: `tests/net-game.js` §3 (host → misafir snapshot yolu) ve §5a
+(selectWeapon + cycleWeapon + NO_AMMO reddi; `_syncWeaponOnline` kapatılınca 3
+assert kırmızı) ve `tests/net.js` komut doğrulaması.
 
 **Doğrulama (F3 çıkış ölçütü):** iki farklı ağdan (biri mobil hotspot) 2 oyuncu, aynı harita, 5 tur; kurulum <20 sn; kopma <%5; tur sırası her iki tarafta aynı; yeniden bağlanma aynı koltuğa döner.
 
@@ -285,10 +309,10 @@ Referans gerçeklik: Steam medyanı $249/ömür; web'de ilk oyun $0–400/ay. Bu
 | **F1** (yapıldı) | Okunabilirlik R1 (arka plan gürültüsü, HP barı, takım halkası, HUD puntosu) | maps/entity/css değişiklikleri | `node tests/run.js` 1109 · `tests/maps.js` 960 · ekran `screenshots/r2-battle-readability.png` |
 | **F1b** (yapıldı) | Okunabilirlik R2 (çizim ölçeği 1.10 + yürüyüş fazı senkronu) | `robots.js`, `entity.js`, `tests/run.js` | `node tests/run.js` 1109/1109 (nişan hizası + kayma grupları) · `_aim_probe`/`_battle_probe` ekran görüntüsü |
 | **F2** (altyapı + menü yapıldı) | `js/i18n.js` + ilk ekranların anahtarlanması | i18n altyapısı, menü/marka çevirisi, `tests/i18n.js` | `node tests/i18n.js` 46/46 · diğer 5 paket yeşil · headless EN menü ekranı |
-| **F3a** (yapıldı) | Çevrimiçi protokol + oturum çekirdeği (saf, taşımadan bağımsız) | `js/net/protocol.js`, `js/net/session.js`, `tests/net.js` | `node tests/net.js` 95/95 (zarf/komut doğrulama, tekilleştirme, değişmezler, saat/borç, kopma) |
+| **F3a** (yapıldı) | Çevrimiçi protokol + oturum çekirdeği (saf, taşımadan bağımsız) | `js/net/protocol.js`, `js/net/session.js`, `tests/net.js` | `node tests/net.js` 97/97 (zarf/komut doğrulama, tekilleştirme, değişmezler, saat/borç, kopma) |
 | **F3b** (yapıldı) | Durum anlık görüntüsü + arazi senkronu (capture/apply) | `js/net/state.js`, `tests/net-state.js` | `node tests/net-state.js` 45/45 (gidiş-dönüş hash'i, arazi birebir, savunmacı apply, boyut bütçesi) |
 | **F3c-1** (yapıldı) | Taşıma katmanı (PeerJS + döngü) ve uçtan uca entegrasyon testi | `js/net/transport.js`, `tests/net-integration.js` | `node tests/net-integration.js` 43/43 (el sıkışma, 5 tur senkron, oyma, kopma, gecikme/kayıp, sahte Peer ile PeerJS akışı) |
-| **F3c-2** (yapıldı) | Lobi ekranı (oda kodu, davet, hazır) + oyun akışı bağlantısı | `js/online-lobby.js`, `js/net/adapter.js`, `index.html`, i18n | `node tests/net-game.js` 90/90 (lobi → maç → 5 tur → sonuç + yerleşim + yapıştırma + tıklama) + headless sondalar `_online_probe.html`, `_online_small.html` |
+| **F3c-2** (yapıldı) | Lobi ekranı (oda kodu, davet, hazır) + oyun akışı bağlantısı | `js/online-lobby.js`, `js/net/adapter.js`, `index.html`, i18n | `node tests/net-game.js` 108/108 (lobi → maç → 5 tur → sonuç + yerleşim + yapıştırma + tıklama + robot/silah seçimi) + headless sondalar `_online_probe.html`, `_online_small.html`, `_robot_picker_probe.html` |
 | **F3c-3** (kullanıcı) | İki farklı ağdan gerçek deneme (kılavuz: `docs/cevrimici-deneme.md`) | — | §4 çıkış ölçütü: 5 tur, kurulum <20 sn, kopma <%5 |
 | **F4** | 6 oyuncu, oda/davet akışı, bot devralma | lobi + yeniden bağlanma | 6 oyuncu simülasyonu + kopma senaryoları, `tests/multiplayer/` |
 | **F5** | Portal uyumu: SDK, reklam yerleri, event ölçümü | `js/portal.js` | iframe testi, 16:9 ölçekleme, reklam ödülü doğru veriliyor |

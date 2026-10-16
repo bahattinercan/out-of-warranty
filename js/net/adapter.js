@@ -120,6 +120,16 @@ function netGameRules(game, opts) {
         if (ok && typeof SFX !== "undefined" && SFX.jump) SFX.jump();
         return { ok: ok !== false, consumesShot: false };
       }
+      if (cmd.kind === NET_CMD.WEAPON) {
+        // Misafirin silah seçimi buraya gelir. Atış hakkını tüketmez; mühimmat
+        // yoksa reddedilir (misafir kendi kopyasında iyimser seçim yapmış
+        // olabilir — snapshot hatayı düzeltir, ACK bildirimi gösterilir).
+        const wi = netWeaponIndex(cmd.weaponId);
+        if (wi < 0) return { ok: false, reason: "BAD_WEAPON" };
+        if (typeof a.hasAmmo === "function" && !a.hasAmmo(wi)) return { ok: false, reason: "NO_AMMO" };
+        a.weapon = wi;
+        return { ok: true, consumesShot: false };
+      }
       if (cmd.kind === NET_CMD.MOVE) {
         rules.setInput(idx, { move: cmd.dir });
         return { ok: true, consumesShot: false };

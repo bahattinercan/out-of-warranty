@@ -89,6 +89,8 @@ check("bilinmeyen silah reddedilir", N.netValidateCommand({ kind: N.NET_CMD.RELE
 check("hava desteğinde hedef zorunlu", N.netValidateCommand({ kind: N.NET_CMD.RELEASE, chargeId: "x", weaponId: "airstrike", angle: 0.5, power: 0.5, airdrop: true }).reason === "BAD_TARGET");
 check("hava desteği hedefle geçerli", N.netValidateCommand({ kind: N.NET_CMD.RELEASE, chargeId: "x", weaponId: "airstrike", angle: 0.5, power: 0.5, airdrop: true, targetX: 400 }).ok === true);
 check("geçersiz hareket yönü reddedilir", N.netValidateCommand({ kind: N.NET_CMD.MOVE, dir: 2 }).reason === "BAD_DIR");
+check("silah seçimi kimlikle geçerli", N.netValidateCommand({ kind: N.NET_CMD.WEAPON, weaponId: "bazooka" }).ok === true);
+check("silah seçimi kimliksiz reddedilir", N.netValidateCommand({ kind: N.NET_CMD.WEAPON, weaponId: "" }).reason === "BAD_WEAPON");
 check("geçerli komut kabul edilir", N.netValidateCommand({ kind: N.NET_CMD.CHARGE, chargeId: "c1" }).ok === true);
 check("güvenilirlik sınıflandırması", N.netIsReliable(N.NET_MSG.CMD) && !N.netIsReliable(N.NET_MSG.INPUT) && N.netIsReliable(N.NET_MSG.TERRAIN));
 check("mesaj boyutu ölçülür", N.netEncodedSize({ a: 1 }) > 0);

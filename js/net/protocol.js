@@ -14,7 +14,10 @@
 
 // Protokol sürümü: uyuşmayan istemci maç başlamadan reddedilir. Sürüm artışı
 // mesaj şekli değiştiğinde yapılır (yeni alan eklemek sürüm artışı gerektirir).
-const NET_PROTOCOL_VERSION = 1;
+// 1: F3a iskeleti · 2: `NET_CMD.WEAPON` eklendi (misafir silah seçimini hosta
+// bildirir; eski istemci bu komutu UNKNOWN_COMMAND diye sessizce reddederdi —
+// sürüm uyuşmazlığı daha erken ve daha anlaşılır bir hata verir).
+const NET_PROTOCOL_VERSION = 2;
 
 // Mesaj türleri. Güvenilir (tek seferlik eylem/onay) ve güvenilmez (güncel
 // hareket/nişan, periyodik durum) ayrımı `NET_RELIABLE` kümesiyle yapılır.
@@ -48,6 +51,7 @@ const NET_CMD = {
   MODULE: "module",   // dahili modülü kullan
   JUMP: "jump",       // sıçra
   MOVE: "move",       // yürüme yönü (-1|0|1)
+  WEAPON: "weapon",   // silah seç (weaponId) — misafirin seçimi hosta gider
 };
 
 // Kopma toleransı: bu süre boyunca robot maçta kalır (ölü sayılmaz, hasar almaya
@@ -98,6 +102,12 @@ function netValidateCommand(cmd) {
     return { ok: true };
   }
   if (kind === NET_CMD.JUMP) return { ok: true };
+  if (kind === NET_CMD.WEAPON) {
+    // Silah seçimi tek başına geçerlidir (atış değil): yalnız kimlik denetlenir.
+    // Mühimmat/oyun sırası denetimi `rules.applyCommand` tarafında yapılır.
+    if (typeof cmd.weaponId !== "string" || !cmd.weaponId) return { ok: false, reason: "BAD_WEAPON" };
+    return { ok: true };
+  }
   if (kind === NET_CMD.MOVE) {
     if (!netFinite(cmd.dir) || Math.abs(cmd.dir) > 1) return { ok: false, reason: "BAD_DIR" };
     return { ok: true };

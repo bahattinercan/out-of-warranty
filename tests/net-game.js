@@ -23,7 +23,7 @@ const FILES = ["i18n.js", "audio.js", "characters.js", "progression.js", "profil
   "net/session.js", "net/adapter.js", "online-lobby.js", "game.js"];
 const EXPORT = "\n;globalThis.__G = { Game, OnlineLobby, CHARACTERS, MAPS, getMapById, NET_MSG, NET_CMD, NET_PHASE, " +
   "NET_PROTOCOL_VERSION, NET_TRANSPORT_STATUS, NetSession, LoopbackTransport, netRoomCode, " +
-  "netFormatRoomCode, netCaptureState, netSnapshotHash, netCaptureTerrain, netApplyState };";
+  "netFormatRoomCode, netCaptureState, netSnapshotHash, netCaptureTerrain, netApplyState, WEAPONS };";
 
 // ── Sahte DOM ──────────────────────────────────────────────────────────────
 function stubCtx() {
@@ -283,6 +283,23 @@ check("host yürüme girdisi de korunuyor", (() => {
   p.host.input.left = false;
   return held;
 })());
+
+// Hostun silah seçimi misafire snapshot ile gider (host yetkilidir; misafir
+// tarafı komut göndermez). Bölüm 5a'daki misafir yoluyla bakışık davranış.
+const hostWeapon0 = p.host.players[0].weapon;
+let hostWeapon1 = hostWeapon0;
+for (let k = 1; k <= G.WEAPONS.length; k++) {
+  const cand = (hostWeapon0 + k) % G.WEAPONS.length;
+  if (p.host.players[0].hasAmmo(cand)) { hostWeapon1 = cand; break; }
+}
+p.host.selectWeapon(hostWeapon1);
+syncToLatestState(p);
+check("hostun silah seçimi misafire snapshot ile gider",
+  p.host.players[0].weapon === hostWeapon1 && p.guest.players[0].weapon === hostWeapon1,
+  `host ${p.host.players[0].weapon} / misafir ${p.guest.players[0].weapon}`);
+p.host.selectWeapon(hostWeapon0);   // atış sınaması ilk silahla sürsün
+syncToLatestState(p);
+
 p.host.input.power = 0.75;
 p.host.releaseFire();
 check("host atışı PROJECTILE'a geçti", p.host.state === "PROJECTILE", p.host.state);
@@ -325,6 +342,63 @@ check("tur sonu: hostun gönderdiği durum misafirde birebir", sync1.ok,
 
 // ── 5) Misafir atışı (yetki hostta) ───────────────────────────────────────
 check("misafirin sırası (yerel tur)", p.guest.isLocalTurn() === true && p.host.isLocalTurn() === false);
+
+// ── 5a) Misafir SİLAH DEĞİŞTİRİR (yetki hostta) ───────────────────────────
+/* Regresyon (kullanıcı bildirimi: "misafir oyuncu silah değiştiremiyor"):
+ * misafirin yerel seçimi hosta HİÇ bildirilmiyordu ve hostun snapshot'ı
+ * `weapon` alanını her pakette geri yazdığı için seçim ~100 ms sonra
+ * siliniyordu. Artık seçim NET_CMD.WEAPON ile hosta gider; host uygular ve
+ * snapshot AYNI silahı geri getirir. */
+const guestP = p.guest.players[1];
+const weapon0 = guestP.weapon;
+// Mühimmatı olan başka bir silah seç (yerel koruma mühimmatsızı zaten atlar).
+let weapon1 = weapon0;
+for (let k = 1; k <= G.WEAPONS.length; k++) {
+  const cand = (weapon0 + k) % G.WEAPONS.length;
+  if (guestP.hasAmmo(cand)) { weapon1 = cand; break; }
+}
+check("sınamak için ikinci bir silah bulundu", weapon1 !== weapon0, `${weapon0} → ${weapon1}`);
+p.guest.selectWeapon(weapon1);
+check("misafirin seçimi yerelde ANINDA görünür", guestP.weapon === weapon1, String(guestP.weapon));
+syncFrames(p, 4);
+check("host misafirin silah seçimini uyguladı", p.host.players[1].weapon === weapon1,
+  `host ${p.host.players[1].weapon} / misafir ${weapon1}`);
+syncToLatestState(p);
+check("snapshot sonrası misafirin silahı KORUNUR", p.guest.players[1].weapon === weapon1,
+  String(p.guest.players[1].weapon));
+const syncWeapon = syncedWithLastState(p);
+check("silah değişimi sonrası gönderilen durum misafirde birebir", syncWeapon.ok,
+  `${syncWeapon.hostHash} / ${syncWeapon.guestHash}`);
+
+// Fare tekerleği (cycleWeapon) aynı yoldan gider.
+const wheelFrom = p.guest.players[1].weapon;
+p.guest.cycleWeapon(1);
+const wheelTo = p.guest.players[1].weapon;
+syncFrames(p, 4);
+check("tekerlek silah değişimi de hosta gider",
+  wheelTo !== wheelFrom && p.host.players[1].weapon === wheelTo,
+  `host ${p.host.players[1].weapon} / misafir ${wheelTo}`);
+
+// Mühimmatı biten silah seçilirse host reddeder: seçim uygulanmaz, misafir
+// ACK bildirimiyle uyarılır (yetenek/snapshot düzeltmesi).
+p.host.players[1].ammo[G.WEAPONS[weapon1].id] = 0;
+p.guest.players[1].ammo[G.WEAPONS[weapon1].id] = 0;
+p.guest.online.notice = null;
+p.guest.lobby.session.sendCommand({ kind: G.NET_CMD.WEAPON, weaponId: G.WEAPONS[weapon1].id });
+syncFrames(p, 4);
+check("mühimmatı biten silah hostta reddedilir", p.host.players[1].weapon !== weapon1,
+  String(p.host.players[1].weapon));
+const noAmmoAck = (p.guest.online.acks || []).filter((a) => a.result && a.result.reason === "NO_AMMO");
+check("reddedilen komut ACK ile reason taşır", noAmmoAck.length === 1, String(noAmmoAck.length));
+check("reddedilen komut misafire bildirilir", !!p.guest.online.notice,
+  p.guest.online.notice ? p.guest.online.notice.text : "bildirim yok");
+
+// Bölüm 5 atışı ilk silahla yapıyor: seçimi geri al (komut yolu yine sınanır).
+p.guest.selectWeapon(weapon0);
+syncFrames(p, 4);
+check("misafir ilk silahına geri dönebildi",
+  p.guest.players[1].weapon === weapon0 && p.host.players[1].weapon === weapon0,
+  `host ${p.host.players[1].weapon} / misafir ${p.guest.players[1].weapon}`);
 p.guest.input.mouseX = 160; p.guest.input.mouseY = 300;
 syncFrames(p, 2);
 p.guest.startCharge();

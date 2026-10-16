@@ -116,6 +116,13 @@ Yeni içerik çoğunlukla **kod değil veri** eklemekle yapılır:
   değiştiremiyorum"). Seçim yerelde tutulur, oda kurulurken/katılırken kullanılır
   (host: kadro + arena haritası; misafir: HELLO). Bekçi: `tests/net-game.js` §12(d),
   gerçek tıklama yolu `_robot_picker_probe.html`.
+  **Misafirin silah seçimi `NET_CMD.WEAPON` ile hosta gider** (`Game.selectWeapon`
+  / `cycleWeapon` → `_syncWeaponOnline`): snapshot `weapon` alanını her pakette
+  geri yazdığı için misafirin yerel seçimi ~100 ms sonra siliniyordu (yaşandı:
+  "misafir oyuncu silah değiştiremiyor"); host kendi seçimini snapshot ile
+  yayınlar, komut göndermez. Bu yeni komut türü `NET_PROTOCOL_VERSION`'ı 2 yaptı.
+  Bekçi: `tests/net-game.js` §3 + §5a (selectWeapon/cycleWeapon/NO_AMMO reddi),
+  `tests/net.js` komut doğrulaması.
   **Lobi yerleşimi sabit koordinat kullanmaz:** dünya genişliği pencere oranına
   göre 648–1620 arasında değişir (`Game.resize`) ve sağ üstteki DOM denetimleri
   (ses + dil) sabit CSS px kalır; `Game.resize > measureHudInsets()` bunların
