@@ -19,6 +19,12 @@
  * düzeyinde değil UYGULAMA düzeyinde elenir (protokoldeki `seq` sayesinde eski
  * paket uygulanmaz). Bu yüzden `reliable` bayrağı taşımada saklanır ama kanal
  * seçimi yapmaz; ileride çift kanal desteklenirse burada kullanılır.
+ *
+ * Çok koltuk (F4): host birden çok misafir bağlantısı tutar. `send()` YAYIN
+ * yapar (herkese), `sendTo(peerId, ...)` TEK hedefe gönderir. Hedefli gönderim
+ * olmadan WELCOME gibi koltuk kimliği taşıyan paketler bütün misafirlere gider
+ * ve yeni katılan oyuncunun kimliği başkalarına sızardı. Bağlantı kapanınca
+ * `onPeerClose(peerId)` yayınlanır; oturum bunu kopan KOLTUĞA çevirir.
  */
 
 const NET_TRANSPORT_STATUS = {
@@ -37,11 +43,12 @@ class NetTransport {
     const o = opts || {};
     this.status = NET_TRANSPORT_STATUS.IDLE;
     this.lastError = null;
-    this._handlers = { message: [], status: [] };
+    this._handlers = { message: [], status: [], peerClose: [] };
     this.onLog = o.onLog || (() => {});
   }
   onMessage(fn) { this._handlers.message.push(fn); return this; }
   onStatus(fn) { this._handlers.status.push(fn); return this; }
+  onPeerClose(fn) { this._handlers.peerClose.push(fn); return this; }
   _emitMessage(from, msg) {
     for (const fn of this._handlers.message) fn(from, msg);
   }
@@ -49,8 +56,14 @@ class NetTransport {
     this.status = status;
     for (const fn of this._handlers.status) fn(status, detail);
   }
+  // Tek bağlantı koptu (host: bir misafir ayrıldı; oturum yine açık kalır).
+  _emitPeerClose(peerId) {
+    for (const fn of this._handlers.peerClose) fn(peerId);
+  }
   // Alt sınıflar uygular.
   send() { return { ok: false, reason: "NOT_IMPLEMENTED" }; }
+  sendTo() { return { ok: false, reason: "NOT_IMPLEMENTED" }; }
+  peers() { return []; }
   close() {}
   isOpen() { return this.status === NET_TRANSPORT_STATUS.OPEN; }
 }
@@ -71,6 +84,8 @@ class LoopbackTransport extends NetTransport {
     this.schedule = o.schedule || ((fn) => fn());
     this.name = o.name || "loopback";
     this.other = null;
+    // Host tarafı çok koltuk: `others` doluysa gönderim YAYINA dönüşür.
+    this.others = null;
     this.pending = 0;
   }
   static pair(optsA, optsB) {
@@ -82,32 +97,90 @@ class LoopbackTransport extends NetTransport {
     b._setStatus(NET_TRANSPORT_STATUS.OPEN);
     return [a, b];
   }
-  send(type, payload, reliable) {
-    if (!this.other || this.status !== NET_TRANSPORT_STATUS.OPEN) {
+  _targets() {
+    if (this.others && this.others.length) return this.others;
+    return this.other ? [this.other] : [];
+  }
+  peers() {
+    return this._targets().map((t) => t.name);
+  }
+  _deliverTo(target, msg) {
+    const deliver = () => {
+      this.pending--;
+      if (target.status !== NET_TRANSPORT_STATUS.OPEN) return;
+      target._emitMessage(this.name, msg);
+    };
+    if (this.latencyMs > 0) this.schedule(deliver, this.latencyMs);
+    else deliver();
+  }
+  _sendToTargets(targets, payload, reliable) {
+    if (!targets.length || this.status !== NET_TRANSPORT_STATUS.OPEN) {
       return { ok: false, reason: "NOT_OPEN" };
     }
     if (!reliable && this.lossRate > 0 && this.rng() < this.lossRate) {
       return { ok: true, dropped: true };
     }
-    const msg = payload;
-    const from = this.name;
-    const deliver = () => {
-      this.pending--;
-      if (this.other.status !== NET_TRANSPORT_STATUS.OPEN) return;
-      this.other._emitMessage(from, msg);
-    };
-    this.pending++;
-    if (this.latencyMs > 0) this.schedule(deliver, this.latencyMs);
-    else deliver();
-    return { ok: true };
+    for (const target of targets) {
+      this.pending++;
+      this._deliverTo(target, payload);
+    }
+    return { ok: true, delivered: targets.length };
+  }
+  send(type, payload, reliable) {
+    return this._sendToTargets(this._targets(), payload, reliable);
+  }
+  sendTo(peerId, type, payload, reliable) {
+    const target = this._targets().filter((t) => t.name === peerId)[0] || null;
+    if (!target) return { ok: false, reason: "NO_SUCH_PEER" };
+    return this._sendToTargets([target], payload, reliable);
   }
   // Test yardımcısı: bekleyen teslimat var mı (gecikmeli taşımada).
   hasPending() { return this.pending > 0; }
   close() {
+    const wasOpen = this.status === NET_TRANSPORT_STATUS.OPEN;
     this._setStatus(NET_TRANSPORT_STATUS.CLOSED);
-    if (this.other && this.other.status === NET_TRANSPORT_STATUS.OPEN) {
-      this.other._setStatus(NET_TRANSPORT_STATUS.CLOSED, { reason: "PEER_CLOSED" });
+    if (!wasOpen) return;
+    if (this.other) this.other._dropLink(this.name);
+    for (const t of this.others || []) t._dropLink(this.name);
+  }
+  /* Karşı uç bu bağlantıyı kaybetti. Host havuzunda (`others`) yalnız İLGİLİ
+   * bağlantı düşer ve oturum açık kalır; havuzyoksa (ikili eşleşme) eskisi gibi
+   * karşı uç da kapanır. */
+  _dropLink(name) {
+    this._emitPeerClose(name);
+    if (this.others && this.others.length) {
+      const i = this.others.findIndex((t) => t.name === name);
+      if (i >= 0) this.others.splice(i, 1);
+      if (!this.others.length) this._setStatus(NET_TRANSPORT_STATUS.CLOSED, { reason: "PEER_CLOSED" });
+      return;
     }
+    this._setStatus(NET_TRANSPORT_STATUS.CLOSED, { reason: "PEER_CLOSED" });
+  }
+}
+
+/* Host + N misafir döngü taşıması (F4): altı oyunculu akışı ve kopma
+ * senaryolarını tarayıcısız sınamak için. Host `send()` yayın yapar,
+ * `sendTo(name, ...)` tek misafire gider; bir misafiri `close()` etmek diğer
+ * koltukları ETKİLEMEZ (gerçek WebRTC davranışı). */
+class LoopbackHub {
+  constructor(opts) {
+    const o = opts || {};
+    this.host = new LoopbackTransport({
+      name: "host", latencyMs: o.latencyMs, lossRate: o.lossRate,
+      rng: o.rng, schedule: o.schedule,
+    });
+    this.host.others = [];
+    this.host._setStatus(NET_TRANSPORT_STATUS.OPEN);
+  }
+  addGuest(name, opts) {
+    const g = new LoopbackTransport(Object.assign({ name: name }, opts || {}));
+    g.other = this.host;
+    g._setStatus(NET_TRANSPORT_STATUS.OPEN);
+    this.host.others.push(g);
+    return g;
+  }
+  close() {
+    this.host.close();
   }
 }
 
@@ -129,10 +202,12 @@ class PeerJsTransport extends NetTransport {
       ? (id) => (this.iceServers ? new Peer(id, { config: { iceServers: this.iceServers } }) : new Peer(id))
       : null);
     this.hostId = o.hostId || null;           // misafir: hostun peer kimliği
-    this.connection = null;
+    this.connection = null;                   // misafir: tek bağlantı (uyum)
+    this.conns = new Map();                   // host: peer kimliği → bağlantı
     this.peer = null;
     this.remoteId = null;
   }
+  peers() { return [...this.conns.keys()]; }
   // Taşıma kullanılabilir mi? (PeerJS CDN yüklendi mi)
   static available() {
     return typeof Peer !== "undefined";
@@ -178,36 +253,65 @@ class PeerJsTransport extends NetTransport {
   }
   _bindConnection(conn) {
     if (!conn) return;
-    this.connection = conn;
+    const pid = conn.peer;
+    this.conns.set(pid, conn);
+    if (this.role === "guest") this.connection = conn;
     conn.on("open", () => {
-      this.remotePeer = conn.peer;
-      this._setStatus(NET_TRANSPORT_STATUS.OPEN, { id: conn.peer });
+      this.remotePeer = pid;
+      this._setStatus(NET_TRANSPORT_STATUS.OPEN, { id: pid });
     });
     conn.on("data", (data) => {
       let msg = data;
       if (typeof data === "string") { try { msg = JSON.parse(data); } catch (e) { return; } }
-      this._emitMessage(conn.peer, msg);
+      this._emitMessage(pid, msg);
     });
-    conn.on("close", () => this._setStatus(NET_TRANSPORT_STATUS.CLOSED, { reason: "PEER_CLOSED" }));
+    /* Host: bir misafir koptuğunda taşıma KAPANMAZ (diğer koltuklar oynamaya
+     * devam eder); yalnız o bağlantı havuzdan düşer ve `onPeerClose` yayınlanır.
+     * Hiç bağlantı kalmazsa durum CLOSED olur. */
+    conn.on("close", () => {
+      this.conns.delete(pid);
+      if (this.connection === conn) this.connection = null;
+      this._emitPeerClose(pid);
+      if (!this.conns.size && this.status === NET_TRANSPORT_STATUS.OPEN) {
+        this._setStatus(NET_TRANSPORT_STATUS.CLOSED, { reason: "PEER_CLOSED" });
+      }
+    });
     conn.on("error", (err) => {
       this.lastError = String(err && err.type ? err.type : err);
-      this._setStatus(NET_TRANSPORT_STATUS.ERROR, { reason: this.lastError });
+      this._setStatus(NET_TRANSPORT_STATUS.ERROR, { reason: this.lastError, peer: pid });
     });
   }
-  send(type, payload, reliable) {
-    if (!this.connection || this.status !== NET_TRANSPORT_STATUS.OPEN) {
-      return { ok: false, reason: "NOT_OPEN" };
-    }
+  _sendOne(conn, payload) {
     try {
-      this.connection.send(payload);
-      return { ok: true, reliable: reliable !== false };
+      conn.send(payload);
+      return true;
     } catch (e) {
       this.lastError = String(e && e.message ? e.message : e);
-      return { ok: false, reason: "SEND_FAILED" };
+      return false;
     }
   }
+  // Yayın: host tüm açık bağlantılara, misafir tek bağlantısına gönderir.
+  send(type, payload, reliable) {
+    if (this.status !== NET_TRANSPORT_STATUS.OPEN) return { ok: false, reason: "NOT_OPEN" };
+    const conns = [...this.conns.values()];
+    if (!conns.length) return { ok: false, reason: "NOT_OPEN" };
+    let sent = 0;
+    for (const c of conns) if (this._sendOne(c, payload)) sent++;
+    if (!sent) return { ok: false, reason: "SEND_FAILED" };
+    return { ok: true, delivered: sent, reliable: reliable !== false };
+  }
+  // Tek hedefe: WELCOME/ACK gibi koltuk kimliği taşıyan paketler için.
+  sendTo(peerId, type, payload, reliable) {
+    if (this.status !== NET_TRANSPORT_STATUS.OPEN) return { ok: false, reason: "NOT_OPEN" };
+    const conn = this.conns.get(peerId);
+    if (!conn) return { ok: false, reason: "NO_SUCH_PEER" };
+    if (!this._sendOne(conn, payload)) return { ok: false, reason: "SEND_FAILED" };
+    return { ok: true, delivered: 1, reliable: reliable !== false };
+  }
   close() {
-    try { if (this.connection) this.connection.close(); } catch (e) { /* yoksay */ }
+    for (const c of [...this.conns.values()]) { try { c.close(); } catch (e) { /* yoksay */ } }
+    this.conns.clear();
+    this.connection = null;
     try { if (this.peer) this.peer.destroy(); } catch (e) { /* yoksay */ }
     this._setStatus(NET_TRANSPORT_STATUS.CLOSED);
   }

@@ -410,7 +410,9 @@ class OnlineLobby {
     if (!this.session) return;
     if (this.role === "host") {
       const known = this.peerSeats.has(from) ? this.peerSeats.get(from) : null;
-      const res = this.session.handleHostMessage(known, msg);
+      // `peerId`: WELCOME/ACK gibi hedefli paketler doğru bağlantıya gitsin
+      // (altı koltukta yayın yapılırsa koltuk kimliği herkese sızardı).
+      const res = this.session.handleHostMessage(known, msg, { peerId: from });
       if (msg && msg.t === NET_MSG.HELLO && res && res.ok) {
         this.peerSeats.set(from, res.seat);
         this._notice("online.notice.joined");

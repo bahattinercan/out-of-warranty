@@ -52,7 +52,14 @@ class NetSession {
 
     this.cache = new NetCommandCache();
     this.inputs = new NetInputTracker();
-    this.inputSeq = new NetSequence();   // misafir → host hareket/nişan akışı
+    this.inputSeq = new NetSequence();   // MİSAFİR: kendi hareket/nişan akışı
+    // HOST: koltuk başına giriş akışı (F4). Ortak tek sayaç kullanılırsa altı
+    // misafirin INPUT paketleri birbirini "eski" diye düşürür ve yalnız biri
+    // oynayabilir; her koltuk kendi `seq` uzayını yürütür.
+    this.inputSeqs = new Map();          // playerIdx → NetSequence
+    // Koltuk ↔ bağlantı eşlemesi: hedefli paket (WELCOME/ACK) buradan gider.
+    this.seatPeers = new Map();          // playerIdx → peerId
+    this.peerSeats = new Map();          // peerId → playerIdx
     this.stateSeq = new NetSequence();   // host → misafir durum akışı
     this.cmdSeq = 0;                     // misafirin gönderdiği komut sayacı
     this.charges = new Map();            // playerIdx → açık chargeId
@@ -98,7 +105,7 @@ class NetSession {
    * kendi koltuğuna oturur — sayfa yenilense bile koltuğu kaybolmaz; kimlik
    * taşımayan yeni bağlantı sıradaki boş koltuğu alır (koltuk yoksa ROOM_FULL).
    * Gönderen kimliği taşımadan gelir; paketten okunmaz. */
-  handleHello(fromPlayer, msg) {
+  handleHello(fromPlayer, msg, opts) {
     if (this.role !== "host") return { ok: false, reason: "NOT_HOST" };
     if (this.phase !== NET_PHASE.LOBBY) return { ok: false, reason: "WRONG_PHASE" };
     const hello = msg || {};
@@ -113,12 +120,14 @@ class NetSession {
     seat.connected = true;
     seat.disconnectedAt = null;
     if (typeof hello.robotId === "string" && hello.robotId) seat.robotId = hello.robotId;
+    // Koltuğu gönderen BAĞLANTIYA bağla: WELCOME ve ACK yalnız oyuncuya gider.
+    if (opts && opts.peerId) this.bindPeer(seat.playerIdx, opts.peerId);
     if (seat.bot) {
       seat.bot = false;
       if (typeof this.rules.setBot === "function") this.rules.setBot(seat.playerIdx, false);
     }
     this.revision++;
-    this.transport.send(NET_MSG.WELCOME, {
+    this._sendSeat(seat.playerIdx, NET_MSG.WELCOME, {
       v: NET_PROTOCOL_VERSION, t: NET_MSG.WELCOME,
       matchId: this.matchId, authoritySessionId: this.authoritySessionId,
       seat: seat.playerIdx, seatToken: seat.seatToken,
@@ -191,6 +200,7 @@ class NetSession {
     this.cache = new NetCommandCache();
     this.inputs = new NetInputTracker();
     this.inputSeq = new NetSequence();
+    this.inputSeqs = new Map();
     this.charges.clear();
     this.pendingLoads = this.seats.filter((s) => s.connected).map((s) => s.playerIdx);
     this.phase = NET_PHASE.LOADING;
@@ -228,13 +238,13 @@ class NetSession {
 
   /* Host, misafirden gelen mesajı işler. `fromPlayer` taşıma katmanından gelir
    * (paketin içinden OKUNMAZ — sahte gönderen engellenir). */
-  handleHostMessage(fromPlayer, msg) {
+  handleHostMessage(fromPlayer, msg, opts) {
     const env = netValidateEnvelope(msg, { matchId: this.matchId, authoritySessionId: this.authoritySessionId });
     if (!env.ok) return env;
     if (this.ended) return { ok: false, reason: "MATCH_ENDED" };
     // Lobi mesajları (HELLO/READY) maç başlamadan LOBBY aşamasında gelir; yükleme
     // onayı LOADING aşamasında. Diğer mesajlar PLAYING ister.
-    if (msg.t === NET_MSG.HELLO) return this.handleHello(fromPlayer, msg);
+    if (msg.t === NET_MSG.HELLO) return this.handleHello(fromPlayer, msg, opts);
     if (msg.t === NET_MSG.READY) return this.handleReady(fromPlayer, msg);
     if (msg.t === NET_MSG.LOADED) return this.loaded(fromPlayer) ? { ok: true } : { ok: false, reason: "NOT_LOADING" };
     if (this.phase !== NET_PHASE.PLAYING) return { ok: false, reason: "WRONG_PHASE" };
@@ -250,9 +260,11 @@ class NetSession {
     return { ok: false, reason: "UNEXPECTED_TYPE" };
   }
 
-  // Hareket/nişan: güvenilmez akış, yalnız artan sequence; eski paket düşer.
+  // Hareket/nişan: güvenilmez akış, koltuk başına artan sequence; eski paket düşer.
   _hostInput(fromPlayer, msg) {
-    if (!this.inputSeq.accept(msg.seq)) return { ok: false, reason: "STALE_INPUT" };
+    let seq = this.inputSeqs.get(fromPlayer);
+    if (!seq) { seq = new NetSequence(); this.inputSeqs.set(fromPlayer, seq); }
+    if (!seq.accept(msg.seq)) return { ok: false, reason: "STALE_INPUT" };
     this.inputs.touch(fromPlayer, this.now());
     if (typeof this.rules.setInput === "function") {
       this.rules.setInput(fromPlayer, { move: msg.move, aim: msg.aim });
@@ -349,7 +361,7 @@ class NetSession {
   }
 
   _ack(playerIdx, id, result) {
-    this.transport.send(NET_MSG.ACK, {
+    this._sendSeat(playerIdx, NET_MSG.ACK, {
       v: NET_PROTOCOL_VERSION, t: NET_MSG.ACK, matchId: this.matchId,
       authoritySessionId: this.authoritySessionId, turnId: this.turnId,
       id, result,
@@ -547,6 +559,55 @@ class NetSession {
   _seat(playerIdx) {
     for (const s of this.seats) if (s.playerIdx === playerIdx) return s;
     return null;
+  }
+
+  // ── Koltuk ↔ bağlantı ───────────────────────────────────────────────────
+  /* Host birden çok misafir taşıdığı için paketin kime gideceği bilinmeli:
+   * `send()` yayın yapar, hedefli paketler `seatPeers` üzerinden gider.
+   * Eşleme yoksa (tek koltuklu testler, döngü eşleşmesi) yayına düşülür. */
+  bindPeer(playerIdx, peerId) {
+    if (!peerId) return false;
+    const old = this.seatPeers.get(playerIdx);
+    if (old && old !== peerId) this.peerSeats.delete(old);
+    this.seatPeers.set(playerIdx, peerId);
+    this.peerSeats.set(peerId, playerIdx);
+    return true;
+  }
+
+  seatForPeer(peerId) {
+    const s = this.peerSeats.get(peerId);
+    return s === undefined ? null : s;
+  }
+
+  peerForSeat(playerIdx) {
+    return this.seatPeers.get(playerIdx) || null;
+  }
+
+  _sendSeat(playerIdx, type, payload, reliable) {
+    const peerId = this.peerForSeat(playerIdx);
+    if (peerId && typeof this.transport.sendTo === "function") {
+      const res = this.transport.sendTo(peerId, type, payload, reliable);
+      if (res && res.ok !== false) return res;
+    }
+    return this.transport.send(type, payload, reliable);
+  }
+
+  /* Bir bağlantı koptu (host): o bağlantının koltuğu varsa kopma işlenir.
+   * Koltuk yoksa (henüz HELLO gelmemiş) yalnız eşleme temizlenir. */
+  disconnectPeer(peerId) {
+    const idx = this.seatForPeer(peerId);
+    this.peerSeats.delete(peerId);
+    if (idx == null) return { ok: false, reason: "NO_SEAT" };
+    if (this.seatPeers.get(idx) === peerId) this.seatPeers.delete(idx);
+    if (this.phase === NET_PHASE.LOBBY) {
+      const seat = this._seat(idx);
+      if (seat) { seat.connected = false; seat.claimed = false; seat.ready = false; }
+      this.revision++;
+      this.broadcastLobby();
+      return { ok: true, seat: idx, phase: "lobby" };
+    }
+    const res = this.playerDisconnected(idx);
+    return Object.assign({ seat: idx, phase: this.phase }, res);
   }
 
   // ── Misafir tarafı ───────────────────────────────────────────────────────

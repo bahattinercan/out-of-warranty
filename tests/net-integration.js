@@ -24,7 +24,7 @@ const FILES = ["i18n.js", "audio.js", "characters.js", "progression.js", "profil
   "net/state.js", "net/transport.js"];
 const EXPORT = "\n;globalThis.__I = { Game, Entity, Projectile, Terrain, CHARACTERS, MAPS, weaponById, " +
   "resolveRobotBuild, defaultRobotProgress, NET_MSG, NET_CMD, NET_PHASE, NET_PROTOCOL_VERSION, " +
-  "NET_TRANSPORT_STATUS, NetSession, LoopbackTransport, PeerJsTransport, netRoomCode, netFormatRoomCode, " +
+  "NET_TRANSPORT_STATUS, NetSession, LoopbackTransport, LoopbackHub, PeerJsTransport, netRoomCode, netFormatRoomCode, " +
   "netCaptureState, netApplyState, netSnapshotHash, netCaptureTerrain, netApplyTerrain, " +
   "netTerrainChange, netApplyTerrainChanges, netValidateEnvelope };";
 
@@ -304,7 +304,11 @@ const delivered = s.flush();
 check("kayıplı akışta paketler teslim edildi (kayıp uygulamada elenir)", delivered > 0 && delivered < 10, String(delivered));
 check("kayıp olsa da girdi uygulandı", (s.hostWorld.inputCount || 0) > beforeInputs && (s.hostWorld.inputCount || 0) - beforeInputs <= delivered,
   `uygulanan ${(s.hostWorld.inputCount || 0) - beforeInputs} / teslim ${delivered}`);
-check("eski girdi paketi birikmedi (monoton sequence)", s.host.inputSeq.last >= 0);
+// Koltuk başına sequence (F4): ortak tek sayaç altı misafirde birbirini düşürür.
+const guestSeq = s.host.inputSeqs.get(1);
+check("eski girdi paketi birikmedi (koltuk başına monoton sequence)",
+  !!guestSeq && guestSeq.last > 0 && guestSeq.last <= s.guest.inputSeq.last,
+  `host ${guestSeq ? guestSeq.last : "yok"} / misafir ${s.guest.inputSeq.last}`);
 
 // ── 7) PeerJS taşıması: sahte Peer ile mesaj akışı ────────────────────────
 /* Sahte PeerJS ağı: gerçek PeerJS'te olduğu gibi İKİ ayrı bağlantı ucu olur
@@ -384,6 +388,35 @@ check("kapalı taşımada gönderim reddedilir", guestTransport.send(I.NET_MSG.C
 const noPeer = new I.PeerJsTransport({ role: "host", roomCode: "ABCDE", peerFactory: null });
 check("PeerJS yoksa taşıma UNAVAILABLE", noPeer.open().reason === "NO_PEERJS" && noPeer.status === I.NET_TRANSPORT_STATUS.UNAVAILABLE);
 check("kapalı taşımada oyun çevrimdışı kalır (durum bildirilir)", noPeer.isOpen() === false);
+
+// ── 7b) Çok koltuklu taşıma (F4) ────────────────────────────────────────────
+/* Host N bağlantı tutar: `send()` yayın, `sendTo()` TEK hedef (WELCOME/ACK),
+ * bir misafirin kopması diğer koltukları kapatmaz. */
+const hub = new I.LoopbackHub({});
+const g1 = hub.addGuest("peer-1");
+const g2 = hub.addGuest("peer-2");
+const heard1 = [], heard2 = [];
+g1.onMessage((from, m) => heard1.push(m.t));
+g2.onMessage((from, m) => heard2.push(m.t));
+check("hub iki misafir bağlar", hub.host.peers().length === 2 && hub.host.isOpen() === true);
+hub.host.send(I.NET_MSG.LOBBY, { v: V, t: I.NET_MSG.LOBBY }, true);
+check("host yayını iki misafire de gider", heard1.length === 1 && heard2.length === 1);
+check("hedefli gönderim yalnız hedefe gider",
+  hub.host.sendTo("peer-2", I.NET_MSG.WELCOME, { v: V, t: I.NET_MSG.WELCOME, seat: 2 }, true).ok === true &&
+  heard1.length === 1 && heard2.length === 2);
+check("bilinmeyen hedef reddedilir", hub.host.sendTo("yok", I.NET_MSG.ACK, {}).reason === "NO_SUCH_PEER");
+const hostPeerCloses = [];
+hub.host.onPeerClose((pid) => hostPeerCloses.push(pid));
+g1.close();
+check("bir misafir kopunca host açık kalır", hub.host.isOpen() === true && hub.host.peers().length === 1);
+check("kopan bağlantı kimliği bildirilir", hostPeerCloses.length === 1 && hostPeerCloses[0] === "peer-1");
+check("kalan koltuk yayını almaya devam eder", (() => {
+  const n = heard2.length;
+  hub.host.send(I.NET_MSG.STATE, { v: V, t: I.NET_MSG.STATE }, false);
+  return heard2.length === n + 1;
+})());
+g2.close();
+check("son misafir de kopunca host kapanır", hub.host.isOpen() === false);
 
 // ── 8) Oda kodu ──────────────────────────────────────────────────────────
 const codes = new Set();
