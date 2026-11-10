@@ -271,7 +271,11 @@ Bekçiler: `tests/net-multi.js` (55 assert: 6 koltuk, hedefli WELCOME, ROOM_FULL
 kapasite sınırı, sıra 1→6→1, eşzamanlı INPUT, her turda altı taraf senkron) ve
 `tests/net-reconnect.js` (30 assert: lobide koltuk boşalması, grace → bot, botun
 kendi turunu oynaması, iki bağımsız kopma, sayfa yenilenmesiyle dönüş). Ortak
-ortam `tests/harness.js`. **Bilinen sınır:** altı oyunculu odada host bir
+ortam `tests/harness.js`. **Yerleşim:** koltuk satırı yüksekliği kalan
+yükseklikten türetilir; dar dünyada (telefon/dikey pencere, `W` ≈ 648) 4+ koltuk
+İKİ SÜTUNA bölünür — aksi hâlde altı satır kod/düğme bloğunu ekrandan taşırıyordu
+(headless sonda kareleri: `screenshots/f4-six-host-crop.png`,
+`screenshots/f4-narrow-six.png`). **Bilinen sınır:** altı oyunculu odada host bir
 makinede tek sekmedir; 6 farklı insan pilotu gerçek ağda henüz denenmedi
 (F3c-3).
 

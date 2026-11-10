@@ -784,12 +784,16 @@ class OnlineLobby {
     const rows = this._seatRows();
     /* 2–6 koltuk (F4): sabit 54 px satır altı koltuğa sığmaz ve panel alttaki
      * AYRIL düğmesini/ipucu şeridini örtüyordu. Satır yüksekliği kalan
-     * yükseklikten türetilir (alt sınır 30 px: robot + iki satır metin). */
+     * yükseklikten türetilir (alt sınır 26 px: robot + iki satır metin).
+     * DAR dünyada (telefon, dikey pencere) 4+ koltuk İKİ SÜTUNA bölünür;
+     * aksi hâlde altı satır kod/düğme bloğunu aşağı itip ekrandan taşıyordu. */
+    const cols = !L.wide && rows.length >= 4 ? 2 : 1;
+    const rowsPerCol = Math.ceil(rows.length / cols);
     const topMin = L.wide ? L.top + 12 : Math.max(L.top + 8, 92);
-    const reserve = L.wide ? 130 : 230;
+    const reserve = L.wide ? 130 : 200;
     const avail = Math.max(150, L.H - topMin - reserve);
-    const rowH = Math.max(30, Math.min(54, Math.floor((avail - 38) / Math.max(2, rows.length))));
-    const seatsH = 38 + rows.length * rowH;
+    const rowH = Math.max(26, Math.min(54, Math.floor((avail - 38) / Math.max(2, rowsPerCol))));
+    const seatsH = 38 + rowsPerCol * rowH;
     if (L.wide) {
       // İki sütunlu blok ORTALANIR: çok geniş dünyada (ultra geniş ekran) sol
       // kenara yapışıp sağda büyük boşluk bırakmasın.
@@ -799,12 +803,12 @@ class OnlineLobby {
       const x0 = Math.round(L.cx - blockW / 2);
       // Dikey ortalama: koltuk panelinin GERÇEK yüksekliğine göre.
       const top = Math.max(L.top + 12, Math.round((L.H - seatsH) / 2) - 12);
-      this._renderSeats(ctx, { x: x0, y: top, w: colW, h: seatsH, rowH }, rows);
+      this._renderSeats(ctx, { x: x0, y: top, w: colW, h: seatsH, rowH, cols }, rows);
       this._renderRoomInfo(ctx, L, x0 + colW + 24 + rw / 2, top, rw, false);
     } else {
-      // Dar dünya: tek sütun — koltuklar üstte, kod/düğmeler altta (kompakt).
+      // Dar dünya: koltuklar üstte, kod/düğmeler altta (kompakt).
       const top = Math.max(L.top + 8, 92);
-      this._renderSeats(ctx, { x: L.margin, y: top, w: L.contentW, h: seatsH, rowH }, rows);
+      this._renderSeats(ctx, { x: L.margin, y: top, w: L.contentW, h: seatsH, rowH, cols }, rows);
       this._renderRoomInfo(ctx, L, L.cx, top + seatsH + 8, L.contentW, true);
     }
     // Sol alt: durum metni bu düğmenin SAĞINDAKİ şeritte çizilir, böylece
@@ -851,16 +855,22 @@ class OnlineLobby {
     for (let i = 0; i < rows.length; i++) {
       const row = rows[i];
       const rowH = rect.rowH || 54;
-      const ry = rect.y + 32 + i * rowH;
+      const cols = rect.cols || 1;
+      const rowsPerCol = Math.ceil(rows.length / cols);
+      const col = Math.floor(i / rowsPerCol);
+      const rowIdx = i % rowsPerCol;
+      const cardW = Math.floor((rect.w - 24 - (cols - 1) * 8) / cols);
+      const cardX = rect.x + 12 + col * (cardW + 8);
+      const ry = rect.y + 32 + rowIdx * rowH;
       const cy = ry + (rowH - 4) / 2;
-      _csPanel(ctx, rect.x + 12, ry, rect.w - 24, rowH - 4, {
+      _csPanel(ctx, cardX, ry, cardW, rowH - 4, {
         accent: row.you ? "#ffe45e" : row.claimed ? "#4fc3f7" : "#2a3848",
         fillTop: row.you ? "#233046" : "#161f2a",
       });
       const ch = row.robotId ? CHARACTERS.find((c) => c.id === row.robotId) : null;
       if (ch) {
         drawRobot(ctx, {
-          cx: rect.x + 42, cy, r: Math.max(7, Math.min(11, (rowH - 12) / 2)), facing: 1, charDef: ch,
+          cx: cardX + 30, cy, r: Math.max(7, Math.min(11, (rowH - 12) / 2)), facing: 1, charDef: ch,
           timeMs: this.game.renderTimeMs || 0,
           motion: { vx: 0, vy: 0, onGround: true },
         });
@@ -868,7 +878,7 @@ class OnlineLobby {
       ctx.textAlign = "left"; ctx.textBaseline = "middle";
       ctx.fillStyle = ch ? "#eef5ff" : "#7f93a6";
       ctx.font = uiTitleFont(rowH < 40 ? 11 : 13);
-      ctx.fillText(ch ? ch.label : t("online.seat.empty", "Bekleniyor…"), rect.x + 70, ry + rowH * 0.33);
+      ctx.fillText(ch ? ch.label : t("online.seat.empty", "Bekleniyor…"), cardX + 56, ry + rowH * 0.33);
       ctx.fillStyle = "#8fa6bd"; ctx.font = uiTextFont(rowH < 40 ? 9 : 11);
       // Kalabalık odada "MİSAFİR" tekrarı yerine koltuk numarası okunur.
       const roleLabel = row.host
@@ -876,7 +886,7 @@ class OnlineLobby {
         : rows.length > 2
           ? t("online.seat.number", "KOLTUK {n}", { n: row.playerIdx + 1 })
           : t("online.seat.guest", "MİSAFİR");
-      ctx.fillText(roleLabel, rect.x + 70, ry + rowH * 0.7);
+      ctx.fillText(roleLabel, cardX + 56, ry + rowH * 0.7);
       const badge = !row.claimed ? t("online.seat.waiting", "BAĞLANMADI")
         : row.bot ? t("online.seat.bot", "BOT")
         : row.ready ? t("online.seat.ready", "HAZIR")
@@ -884,10 +894,10 @@ class OnlineLobby {
       ctx.textAlign = "right"; ctx.textBaseline = "middle";
       ctx.fillStyle = !row.claimed ? "#7f93a6" : row.bot ? "#c89bff" : row.ready ? "#7bdc8e" : "#ffd24a";
       ctx.font = uiTextFont(rowH < 40 ? 9 : 11, 700);
-      ctx.fillText(badge, rect.x + rect.w - 22, row.you ? cy - 4 : cy);
+      ctx.fillText(badge, cardX + cardW - 12, row.you ? cy - 4 : cy);
       if (row.you) {
         ctx.fillStyle = "#ffe45e"; ctx.font = uiTextFont(9, 700);
-        ctx.fillText(t("online.seat.you", "SEN"), rect.x + rect.w - 22, ry + rowH - 12);
+        ctx.fillText(t("online.seat.you", "SEN"), cardX + cardW - 12, ry + rowH - 12);
       }
     }
   }
