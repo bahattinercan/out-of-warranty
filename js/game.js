@@ -132,6 +132,9 @@ class Game {
     this.turnId = 0;
     this.bot = new BotController();
     this.bots = [];              // birden fazla bot kontrolcüsü
+    // Portal (F5): oynanış sayacının son durumu ve maç sonu ödülü (2× reklamı).
+    this._portalGameplay = false;
+    this.lastMatchReward = null;
     this.difficulty = "normal";  // bilgisayar modu zorluk seviyesi
     // Profil sayfa açılışında bir kez yüklenir; kayıt yoksa varsayılan gelir.
     // storageOk false ise ekonomi çalışır ama kalıcı olmaz (tek seferlik uyarı).
@@ -289,8 +292,87 @@ class Game {
     this.players.forEach((p) => p.refreshStamina());
     this.clearTurnInput();
 
+    // Portal (F5): maç başladı — ilk maçta yükleme biter, oynanış sayacı açılır.
+    // Reklam ödülü maç başına bir kezdir; yeni maçta sıfırlanır.
+    this.lastMatchReward = null;
+    this.portalGameplay(true);
+
     updatePowerBar(0, false);
     this.updateHud();
+  }
+
+  // ── Portal (F5) ─────────────────────────────────────────────────────────
+  /* Oynanış sayacını SDK'ya bildirir; AYNI durumu tekrar göndermez (portal
+   * panelleri ardışık gameplayStart/Stop çiftlerini hata sayar). Portal yoksa
+   * hiçbir şey yapmaz. */
+  portalGameplay(on) {
+    if (typeof PORTAL === "undefined") return false;
+    const want = !!on;
+    if (this._portalGameplay === want) return false;
+    this._portalGameplay = want;
+    if (!PORTAL.isActive()) return false;
+    if (want) { PORTAL.loadingStop(); PORTAL.gameplayStart(); }
+    else PORTAL.gameplayStop();
+    return true;
+  }
+
+  /* Portalın `muteAudio` ayarı oyun içi ses tercihini EZER (CrazyGames
+   * gereksinimi). Ayar değiştiğinde main.js çağırır. */
+  setMuted(on) {
+    if (typeof SFX === "undefined") return false;
+    if (SFX.isMuted() === !!on) { this.updateMuteButton(); return false; }
+    SFX.toggleMute();
+    this.updateMuteButton();
+    return true;
+  }
+
+  /* Ödüllü reklam: maç sonu Hurda'yı 2× yapar. XP çarpılmaz — reklam ilerlemeyi
+   * hızlandırır, güç vermez (docs/web-lansman-plani.md §8). Maç başına bir kez. */
+  doubleMatchScrap() {
+    const r = this.lastMatchReward;
+    if (!r || !r.ok || r.doubled) return false;
+    // Yalnız portal reklamıyla erişilen bir yol: reklam yoksa (file:///SDK'sız)
+    // ödül katlanmaz — aksi hâlde konsoldan tek çağrıyla bedava Hurda üretilirdi.
+    if (typeof PORTAL === "undefined" || !PORTAL.isActive()) return false;
+    if (typeof normalizeProfile !== "function" || typeof saveProfile !== "function") return false;
+    const current = normalizeProfile(this.profile);
+    current.scrap += r.scrap;
+    const persisted = saveProfile(current);
+    this.profile = current;
+    r.scrap *= 2;
+    r.doubled = true;
+    if (!persisted && typeof notifyStorageFailure === "function") notifyStorageFailure();
+    renderOverlayReward(r);
+    return true;
+  }
+
+  /* Overlay'deki "2×" düğmesi: reklamı ister, TAM izlenirse ödülü ikiye katlar.
+   * Reklam açılamazsa düğme yeniden denenebilir kalır (oyuncu kaybetmez). */
+  watchRewardAd() {
+    if (typeof PORTAL === "undefined" || !PORTAL.canReward()) return false;
+    const r = this.lastMatchReward;
+    if (!r || !r.ok || r.doubled) return false;
+    const btn = document.getElementById("reward-ad-btn");
+    if (btn) {
+      btn.disabled = true;
+      btn.textContent = t("overlay.ad.loading", "Reklam yükleniyor…");
+    }
+    const reset = (label) => {
+      const el = document.getElementById("reward-ad-btn");
+      if (!el) return;
+      el.disabled = false;
+      el.textContent = label;
+    };
+    PORTAL.requestRewarded((res) => {
+      if (res && res.ok) {
+        this.doubleMatchScrap();
+        const el = document.getElementById("reward-ad-btn");
+        if (el) el.classList.add("hidden");
+      } else {
+        reset(t("overlay.ad.failed", "Reklam açılamadı — tekrar dene"));
+      }
+    });
+    return true;
   }
 
   // ── Çevrimiçi (F3c) ──────────────────────────────────────────────────────
@@ -298,6 +380,7 @@ class Game {
   openOnline() {
     hideOverlay();
     this.clearTurnInput();
+    this.portalGameplay(false);
     this.mode = null;
     this.state = "ONLINE_LOBBY";
     this.lobby.open();
@@ -491,11 +574,14 @@ class Game {
 
   // Maç sonu kartı çevrimiçi modda sadeleşir: Atölye ve Tekrar Oyna yoktur
   // (ödül/atölye tek oyunculu ilerlemeye ait; yeni maç için odaya dönülür).
+  // Reklam düğmesi de gizlenir: çevrimiçi maçta ödül verilmez.
   _applyOverlayMode(online) {
     const ws = document.getElementById("workshop-btn");
     if (ws) ws.classList.toggle("hidden", !!online);
     const rs = document.getElementById("restart-btn");
     if (rs) rs.classList.toggle("hidden", !!online);
+    const ad = document.getElementById("reward-ad-btn");
+    if (ad && online) ad.classList.add("hidden");
   }
 
   /* Bu CİHAZIN sırası mı? Yerel modlarda sıradaki her insan robot; çevrimiçide
@@ -870,6 +956,7 @@ class Game {
   // Kalıcı profil üzerinde geliştirme satın alınan ayrı durum. Ana menüden
   // açılır; maç sonu overlay'inden de buraya geçilebilir.
   openWorkshop() {
+    this.portalGameplay(false);
     if (!this.workshopSelectedId || !CHARACTERS.some((c) => c.id === this.workshopSelectedId)) {
       const humanId = this.selectedChars && this.selectedChars[0] ? this.selectedChars[0].id : null;
       this.workshopSelectedId = humanId || CHARACTERS[0].id;
@@ -1925,6 +2012,7 @@ class Game {
   // malıdır; parçalar tek adettir ve tek bir robotun yuvasında durur.
   // Bazuka sınırsız olduğu için pazarda hiç görünmez.
   openMarket() {
+    this.portalGameplay(false);
     this.marketWeaponPage = 0;
     this.marketPartPage = 0;
     this.marketFx = null;
@@ -2473,18 +2561,44 @@ class Game {
   }
 
   // Oyun bitince aynı kadro + haritayla hızlı rövanş; kadro yoksa menüye düşer.
+  /* Portaldan maç arası reklam fırsatı (en fazla 3 dakikada bir; `file://` ve
+   * SDK'sız açılışta hiçbir şey olmaz). Yalnız maç sonu kartından ayrılırken
+   * çağrılır — banner/interstitial yok, oyuncuyu oynanış ortasında kesmeyiz. */
+  portalMidgame() {
+    if (typeof PORTAL === "undefined" || !PORTAL.isActive()) return false;
+    const res = PORTAL.requestMidgame();
+    return !!(res && res.ok);
+  }
+
+  /* Reklam varsa önce onu bitirip sonra devam eder: reklam sürerken oyun
+   * simülasyonu/olay sayaçları başlamasın (portal gereksinimleri). Reklam
+   * kuyruğa alınamazsa (cooldown/kapalı) akış beklemeden sürer. */
+  _afterMidgame(fn) {
+    const fromResult = this.state === "GAMEOVER";
+    if (!fromResult || typeof PORTAL === "undefined" || !PORTAL.isActive()) { fn(); return false; }
+    let done = false;
+    const go = () => { if (done) return; done = true; fn(); };
+    const res = PORTAL.requestMidgame(() => go());
+    if (!res || res.ok !== true) { go(); return false; }
+    // SDK geri çağrı vermezse oyun kilitlenmesin (yalnız tarayıcıda).
+    if (typeof window !== "undefined" && window.setTimeout) window.setTimeout(go, 20000);
+    return true;
+  }
+
   replay() {
     // Çevrimiçi maç: yeni maç odaya dönüşle kurulur (aynı odada yeniden eşleşme
     // akışı F4'e bırakıldı); "Tekrar Oyna" bu modda gizlidir.
     if (this.mode === "online") { this.quitToMenu(); return; }
     // Öğretici maçı: koç adımları sıfırlansın diye aynı kurulumla yeniden başlar
     if (this.mode === "tutorial") { this.beginTutorial(); return; }
-    if (this.selectedChars.length && this.selectedChars.every(Boolean) && this.selectedMap) {
-      this.cancelCharge();
-      this.startGame();
-    } else {
-      this.reset();
-    }
+    this._afterMidgame(() => {
+      if (this.selectedChars.length && this.selectedChars.every(Boolean) && this.selectedMap) {
+        this.cancelCharge();
+        this.startGame();
+      } else {
+        this.reset();
+      }
+    });
   }
 
   renderCountSelect(ctx) {
@@ -2979,6 +3093,10 @@ class Game {
   // Oyundan çık: bekleyen bot kararını ve girdileri temizleyip mod menüsüne dön.
   quitToMenu() {
     this.clearTurnInput();
+    // Portal (F5): menüye dönüş oynanış molasıdır; maç sonu kartından
+    // gelindiyse maç arası reklam fırsatı değerlendirilir.
+    this.portalGameplay(false);
+    if (this.state === "GAMEOVER") this.portalMidgame();
     // Çevrimiçi maçtan çıkış: karşı tarafa iptal bildirilir, taşıma kapanır.
     if (this.online) {
       try { this.online.session.abort("LEFT"); } catch (e) { /* yoksay */ }
@@ -3361,6 +3479,12 @@ class Game {
         winner ? "" : t("overlay.match.drawSub", "İkisi de elendi."),
         reward
       );
+      // Portal (F5): maç bitti → oynanış durur; insan kazandıysa kutlama.
+      this.lastMatchReward = reward;
+      this.portalGameplay(false);
+      if (typeof PORTAL !== "undefined" && PORTAL.isActive() && winner && winner === this.players[humanIdx]) {
+        PORTAL.happytime();
+      }
       // Çevrimiçi maçta ödül/atölye yoktur: kart sadeleşir, yeni maç odaya dönüşle.
       if (this.mode === "online") this._applyOverlayMode(true);
       this.updateHud();
@@ -5473,6 +5597,29 @@ function statRow(label, n) {
          `<span class="wd-dots">${dots}</span></div>`;
 }
 
+// Maç sonu ödül satırı. Reklamla 2× yapılınca yeniden çizilir (showOverlay ve
+// doubleMatchScrap aynı yolu kullanır: metin tek yerde).
+function renderOverlayReward(reward) {
+  const detail = document.getElementById("overlay-reward");
+  if (!detail) return;
+  if (reward && reward.ok) {
+    const lines = [t("overlay.reward", "+{scrap} Hurda  •  +{xp} Servis XP", { scrap: reward.scrap, xp: reward.xp })];
+    if (reward.doubled) lines.push(t("overlay.ad.doubled", "Reklam ödülü: Hurda 2× 🎬"));
+    if (reward.levelAfter > reward.levelBefore) {
+      lines.push(t("overlay.levelUp", "{robot}Servis Seviyesi {before} → {after}", {
+        robot: reward.robotLabel ? reward.robotLabel + " " : "",
+        before: reward.levelBefore, after: reward.levelAfter,
+      }));
+    }
+    if (reward.message) lines.push(reward.message);
+    detail.textContent = lines.join("\n");
+    detail.classList.remove("hidden");
+    return;
+  }
+  detail.textContent = "";
+  detail.classList.add("hidden");
+}
+
 // Maç sonu overlay'i: ödül hesaplamaz, yalnız hazır sonuç modelini gösterir.
 // Her gösterimde düğmeler varsayılana döner.
 function showOverlay(title, sub, reward) {
@@ -5484,23 +5631,16 @@ function showOverlay(title, sub, reward) {
     if (defMenu) defMenu.textContent = t("hud.mainMenu", "Ana Menü");
   document.getElementById("overlay-title").textContent = title;
   document.getElementById("overlay-sub").textContent = sub || "";
-  const detail = document.getElementById("overlay-reward");
-  if (detail) {
-    if (reward && reward.ok) {
-      const lines = [t("overlay.reward", "+{scrap} Hurda  •  +{xp} Servis XP", { scrap: reward.scrap, xp: reward.xp })];
-      if (reward.levelAfter > reward.levelBefore) {
-        lines.push(t("overlay.levelUp", "{robot}Servis Seviyesi {before} → {after}", {
-          robot: reward.robotLabel ? reward.robotLabel + " " : "",
-          before: reward.levelBefore, after: reward.levelAfter,
-        }));
-      }
-      if (reward.message) lines.push(reward.message);
-      detail.textContent = lines.join("\n");
-      detail.classList.remove("hidden");
-    } else {
-      detail.textContent = "";
-      detail.classList.add("hidden");
-    }
+  renderOverlayReward(reward);
+  /* Ödüllü reklam düğmesi YALNIZ ödül varsa ve portal reklamı kullanılabiliyorsa
+   * görünür; `file://`/SDK'sız açılışta hiç çizilmez (oyun aynı kalır). */
+  const adBtn = document.getElementById("reward-ad-btn");
+  if (adBtn) {
+    const can = !!(reward && reward.ok && !reward.doubled) &&
+      typeof PORTAL !== "undefined" && PORTAL.canReward();
+    adBtn.textContent = t("overlay.ad.double", "Reklam izle · Hurdayı 2× yap");
+    adBtn.disabled = false;
+    adBtn.classList.toggle("hidden", !can);
   }
   document.getElementById("overlay").classList.remove("hidden");
 }

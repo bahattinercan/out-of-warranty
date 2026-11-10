@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <title>Portal sondası (F5) — oyuna dâhil değil</title>
+  <!-- Sonda: SAHTE CrazyGames SDK'sı ile portal köprüsünü ve maç sonu
+       "Hurdayı 2×" düğmesini GERÇEK CSS + gerçek portal.js ile çalıştırır.
+       Amaç: SDK çağrı sırasını ve ödül akışını headless doğrulamak; gerçek
+       portal davranışı yalnız yayında görülür. -->
+  <link rel="stylesheet" href="css/style.css" />
+  <style>
+    body { margin: 0; background: #060a10; }
+    #stage { position: relative; width: 960px; height: 540px; margin: 0 auto; }
+  </style>
+</head>
+<body>
+  <div id="stage">
+    <div id="overlay" class="hidden">
+      <div class="overlay-card">
+        <h1 id="overlay-title">Tahsis Tamamlandı</h1>
+        <p id="overlay-sub"></p>
+        <div id="overlay-reward" class="hidden" role="status"></div>
+        <div class="overlay-actions">
+          <button id="reward-ad-btn" class="hidden" data-i18n="overlay.ad.double">Reklam izle · Hurdayı 2× yap</button>
+          <button id="workshop-btn" data-i18n="hud.goWorkshop">Atölyeye Git</button>
+          <button id="restart-btn" data-i18n="hud.playAgain">Tekrar Oyna</button>
+          <button id="menu-btn" class="secondary" data-i18n="hud.mainMenu">Ana Menü</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SAHTE SDK: portal.js yüklenmeden ÖNCE tanımlanır. -->
+  <script>
+    (function () {
+      const calls = [];
+      window.__SDK_CALLS = calls;
+      const sdk = {
+        environment: "local",
+        game: {
+          settings: { muteAudio: false, disableChat: false },
+          loadingStart() { calls.push("loadingStart"); },
+          loadingStop() { calls.push("loadingStop"); },
+          gameplayStart() { calls.push("gameplayStart"); },
+          gameplayStop() { calls.push("gameplayStop"); },
+          happytime() { calls.push("happytime"); },
+          updateRoom(p) { calls.push("updateRoom:" + JSON.stringify(p)); },
+          leftRoom() { calls.push("leftRoom"); },
+          inviteLink(p) { calls.push("inviteLink"); return "https://crazygames.com/game/x?oda=" + p.oda; },
+          inviteParams: null,
+          getInviteParam() { return null; },
+          addSettingsChangeListener() {},
+          addJoinRoomListener() {},
+        },
+        ad: {
+          requestAd(type, cb) {
+            calls.push("requestAd:" + type);
+            cb.adStarted();
+            // Reklam animasyonunu taklit et: 600 ms sonra tamamlanır.
+            setTimeout(() => cb.adFinished(), 600);
+          },
+        },
+        init() { calls.push("init"); return Promise.resolve(); },
+      };
+      window.CrazyGames = { SDK: sdk };
+      window.__PORTAL_PROVIDER__ = "crazygames";   // sonda URL'i temiz kalsın
+    })();
+  </script>
+
+  <script src="js/i18n.js"></script>
+  <script src="js/portal.js"></script>
+  <script src="js/characters.js"></script>
+  <script src="js/progression.js"></script>
+  <script src="js/profile.js"></script>
+  <script src="js/parts.js"></script>
+  <script src="js/market.js"></script>
+  <script src="js/maps.js"></script>
+  <script src="js/skills.js"></script>
+  <script src="js/skill-fx.js"></script>
+  <script src="js/robots.js"></script>
+  <script src="js/weapons.js"></script>
+  <script src="js/game.js"></script>
+  <script>
+    (async function () {
+      const result = await PORTAL.init();
+      const log = [];
+      log.push("init=" + (result.ok ? "ok" : "fail") + " provider=" + PORTAL.providerName());
+
+      PORTAL.loadingStart();
+      PORTAL.loadingStop();
+      PORTAL.gameplayStart();
+
+      // Maç sonu ödül kartı + 2× düğmesi (gerçek showOverlay).
+      const reward = { ok: true, scrap: 40, xp: 12, levelBefore: 2, levelAfter: 2, robotLabel: "FIX-8", message: "" };
+      window.__lastReward = reward;
+      showOverlay("Test maçı", "", reward);
+      const btn = document.getElementById("reward-ad-btn");
+      log.push("buttonVisible=" + !btn.classList.contains("hidden"));
+
+      btn.addEventListener("click", () => {
+        // Oyun tarafı akışı: reklam → ödülü 2× yap. `doubleMatchScrap` Game
+        // örneği ister; sonda için aynı profili yazan küçük bir vekil kullanılır.
+        PORTAL.requestRewarded((res) => {
+          if (!res.ok) { log.push("ad=" + res.reason); return; }
+          const p = normalizeProfile(loadProfile().profile);
+          p.scrap += reward.scrap;
+          saveProfile(p);
+          reward.scrap *= 2;
+          reward.doubled = true;
+          renderOverlayReward(reward);
+          btn.classList.add("hidden");
+          log.push("ad=ok rewardScrap=" + reward.scrap + " persisted=" + p.scrap);
+          PORTAL.gameplayStop();
+          log.push("calls=" + window.__SDK_CALLS.join(","));
+          console.log("PROBE OK " + log.join(" · "));
+        });
+      });
+
+      // Düğmeye bas (kullanıcı tıklamasını taklit et). `?noClick=1` ile yalnız
+      // "reklam düğmesi görünür" karesi alınır (görsel doğrulama için).
+      if (!/[?&]noClick=1/.test(location.search)) setTimeout(() => btn.click(), 200);
+    })();
+  </script>
+</body>
+</html>

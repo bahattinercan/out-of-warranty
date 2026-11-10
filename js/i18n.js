@@ -344,6 +344,10 @@ const I18N = {
     "overlay.match.drawTitle": "The round ended in a draw!",
     "overlay.match.drawSub": "Both robots were destroyed.",
     "overlay.reward": "+{scrap} Scrap  •  +{xp} Service XP",
+    "overlay.ad.double": "Watch an ad · Double the scrap",
+    "overlay.ad.loading": "Loading ad…",
+    "overlay.ad.failed": "Ad could not open — try again",
+    "overlay.ad.doubled": "Ad reward: 2× scrap 🎬",
     "overlay.levelUp": "{robot}Service Level {before} → {after}",
     "storage.warning": "Progress could not be saved this session.",
     // ── Veri katalogları: silahlar (F2c-1) ──────────────────────────────

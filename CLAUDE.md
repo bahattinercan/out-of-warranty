@@ -35,6 +35,8 @@ node tests/net-integration.js # çevrimiçi ağ yığını (protokol+oturum+duru
 node tests/net-game.js     # çevrimiçi OYUN uçtan uca (lobi → maç → sonuç)
 node tests/net-multi.js    # 6 koltuk (F4): hedefli WELCOME, ROOM_FULL, kapasite, sıra 1→6→1
 node tests/net-reconnect.js # kopma → bot devralma → aynı koltuğa dönüş (F4)
+node tests/portal.js       # portal köprüsü: sağlayıcı seçimi + CG/Poki SDK sözleşmesi (F5)
+node tests/reward-ad.js    # ödüllü reklam: maç sonu Hurdayı 2× (F5)
 ```
 
 Ortak test ortamı: `tests/harness.js` (oyunu `vm` içinde yükler + sahte DOM).
@@ -74,7 +76,8 @@ Oyun `file://` üzerinden çift tıklayınca çalışmak zorunda. Bu yüzden:
 | ------------------ | ------ | ----------------------------------------------------------------------------------------------------------------------------------------------- |
 | `index.html`       | —      | Sahne, HUD, overlay, `<script>` yükleme sırası                                                                                                  |
 | `css/style.css`    | —      | Tüm stil                                                                                                                                        |
-| `js/main.js`       | 30     | Giriş noktası; `Game` örneğini kurar, butonları/fullscreen'i bağlar                                                                             |
+| `js/portal.js`     | ~400   | Portal köprüsü (F5): `?portal=crazygames|poki` seçimi + tembel SDK yükleme, ölçüm olayları, ödüllü + maç arası reklam, oda/davet bildirimi, `muteAudio`; portallar dışında sessiz no-op |
+| `js/main.js`       | 30     | Giriş noktası; `Game` örneğini kurar, butonları/fullscreen'i bağlar, `PORTAL.init()` ve reklam düğmesini bağlar |
 | `js/game.js`       | ~3800  | **En büyük dosya.** Durum makinesi (karakter seç → harita seç → çevrimiçi lobi → savaş → bitiş), sıra/rüzgar, girdi, render döngüsü, hasar uygulama yardımcıları. Çevrimiçi: `updateOnlineHost`/`updateGuest`, `onlineCommand`, `beginOnlineMatch` |
 | `js/characters.js` | ~53    | `CHARACTERS` (34 karakter): can/zırh/hasar + veri-güdümlü `skill`                                                                               |
 | `js/progression.js` | ~330  | Saf ekonomi: seviye eşikleri, ödül formülü, `resolveRobotBuild`, yetenek adaptörleri                                                            |
@@ -204,6 +207,8 @@ Yeni içerik çoğunlukla **kod değil veri** eklemekle yapılır:
 - **Yerelleştirme (F2):** Türkçe metin KODUN İÇİNDE kaynak metindir; diğer diller `js/i18n.js` sözlüğünde override'dır (`t("key", "Türkçe metin", {vars})`). Yeni metin eklerken önce koda yaz (Türkçe fallback), sonra sözlüğe ekle ve `node tests/i18n.js` çalıştır — test kapsam/orphan/TR-fallback bekçisidir. Dil seçici DOM'dadır (`#locale-select`, seçenekler `LANG_ORDER`/`LANG_LABELS`'ten üretilir — yeni dil için HTML'e dokunulmaz) ve `localechange` olayı yayınlar; oyun HUD'u bu olayla kendini yeniler (`js/main.js`). Canvas metinleri (durum şeridi, rüzgar) `game.js > updateHud` içinde, DOM metinleri `data-i18n`/`data-i18n-title`/`data-i18n-aria` öznitelikleriyle çevrilir; `_*.html` sondaları `index.html`'den elle türediği için yeni öznitelikler oraya da eklenmelidir. `i18n.js` `index.html`'de metin kullanan herkesten önce yüklenir; yeni bir js dosyası eklerken test bundle'larına (`tests/run.js` FILES, `tests/audio.js` source) da eklemeyi unutma.
 - **Ses entegrasyonu bağlı:** `index.html`, `audio.js` dosyasını yükler; oyun olayları `SFX` çağrılarını kullanır. Sessize alma, çalan ve planlanan kaynakları iptal eder. Ses kurulum hataları yalnız sesi devre dışı bırakır; reddedilen asenkron `resume()` isteği sonraki etkileşimde yeniden denenebilir. Ses değişikliklerinde `node tests/audio.js` çalıştır; bu test Web Audio sınırını taklit eder, fiziksel ses çıkışını doğrulamaz.
 - Patlamalar araziyi gerçekten oyar: zemin dokusu ve serpilen objeler offscreen arazi katmanına basıldığı için kraterle birlikte aşınır.
+- **Portal (F5):** SDK çağrıları TEK yerde (`js/portal.js`); oyun portallar dışında hiçbir SDK yüklemez (`file://` aynı çalışır). `PORTAL` yokken tüm metotlar `{ok:false}` döner, `typeof PORTAL` koruması zorunlu değildir ama oyun kodunda kullanılıyor. Reklam ödülü "Hurdayı 2×" maç başına bir kez ve yalnız reklam tam izlenince yazılır (`Game.doubleMatchScrap` portal aktif değilse çalışmaz — konsoldan bedava Hurda üretilemez); XP çarpılmaz. Maç arası reklam yalnız sonuç kartından ayrılırken ve istemcide 3 dakika aralıkla istenir. Yeni bir portal metni eklerken `t()` fallback + `I18N.en` anahtarı ekle ve `node tests/i18n.js` çalıştır. Probe: `_portal_probe.html` (sahte SDK). Ayrıntı: `docs/portal-uyumu.md`.
+- **Yeni js dosyası eklerken üç liste:** `index.html` script sırası, `tests/run.js` FILES, `tests/harness.js` FILES (çevrimiçi testler) + `tests/audio.js` source; `portal.js` bunların hepsinde ve `game.js`'ten ÖNCE yüklenir.
 
 ## Çalışma tarzı
 

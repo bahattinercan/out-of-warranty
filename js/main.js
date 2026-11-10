@@ -14,6 +14,23 @@ window.addEventListener("DOMContentLoaded", () => {
   const canvas = document.getElementById("game");
   const game = new Game(canvas);
 
+  /* Portal (F5): SDK varsa tembel yüklenir ve başlatılır; yoksa oyun hiç
+   * etkilenmez. Portal kendi tam ekranını yönettiği için tarayıcı tam ekran
+   * düğmesi gizlenir ve portalın `muteAudio` ayarı oyun sesine uygulanır. */
+  if (typeof PORTAL !== "undefined") {
+    PORTAL.init().then(() => {
+      if (PORTAL.hideFullscreen()) {
+        const fsBtn = document.getElementById("fullscreen-btn");
+        if (fsBtn) fsBtn.classList.add("hidden");
+      }
+      game.setMuted(PORTAL.muted());
+    });
+    PORTAL.onSettingsChange((s) => game.setMuted(!!s.muteAudio));
+  }
+
+  const rewardAdBtn = document.getElementById("reward-ad-btn");
+  if (rewardAdBtn) rewardAdBtn.addEventListener("click", () => game.watchRewardAd());
+
   document.getElementById("restart-btn").addEventListener("click", () => {
     game.replay();
   });

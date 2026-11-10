@@ -93,8 +93,9 @@ class OnlineLobby {
     this.elapsedMs = 0;
     this.peerSeats.clear();
     // Davet bağlantısı: ?oda=KOD ile açıldıysa kodu hazır getir ve katılma
-    // ekranına geç (arkadaş tek tıkla katılır).
-    const inv = this._codeFromUrl();
+    // ekranına geç (arkadaş tek tıkla katılır). Portal davet bağlantısı da aynı
+    // sonucu verir (CrazyGames SDK parametreleri).
+    const inv = this._codeFromUrl() || this._portalInviteCode();
     if (inv) { this.typed = inv; this.step = "code"; }
     this._bindPaste();
     return true;
@@ -120,6 +121,16 @@ class OnlineLobby {
       };
       return pick(q) || pick(h);
     } catch (e) { return null; }
+  }
+
+  /* Platform davet bağlantısıyla gelen oyuncu: portal parametrelerinde oda
+   * kodu varsa hazır doldurulur (gerçek kullanıcı akışında en sık yol). */
+  _portalInviteCode() {
+    if (typeof PORTAL === "undefined" || !PORTAL.isActive()) return null;
+    const raw = PORTAL.inviteParam("oda") || (PORTAL.inviteParams() && PORTAL.inviteParams().oda) || null;
+    if (!raw) return null;
+    const code = String(raw).toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, ONLINE_CODE_LENGTH);
+    return code.length === ONLINE_CODE_LENGTH ? code : null;
   }
 
   _inviteUrl() {
@@ -218,6 +229,7 @@ class OnlineLobby {
 
   // Eski taşımayı kapatır (lobi açık kalır).
   _teardownTransport() {
+    if (typeof PORTAL !== "undefined" && PORTAL.isActive()) PORTAL.leftRoom();
     if (this.transport) { try { this.transport.close(); } catch (e) { /* yoksay */ } }
     this.transport = null;
     this.session = null;
@@ -234,6 +246,21 @@ class OnlineLobby {
     this.ready = false;
     this.step = "room";
     this._openTransport({ role: "host", roomCode: this.code });
+    this._syncPortalRoom(true);
+    return true;
+  }
+
+  /* Portal (F5): oda bilgisini platforma bildirir — davet düğmesi ve "arkadaşına
+   * katıl" akışı bu bilgiye dayanır (docs.crazygames.com/requirements/multiplayer).
+   * Oda dolu ya da maç başladıysa `isJoinable:false` gider. Portal yoksa geçer. */
+  _syncPortalRoom(wantJoinable) {
+    if (typeof PORTAL === "undefined" || !PORTAL.isActive()) return false;
+    if (this.role !== "host" || !this.code) return false;
+    const full = !!(this.session && this.session.seats.length &&
+      this.session.seats.every((s) => s.claimed));
+    const inLobby = !this.session || this.session.phase === NET_PHASE.LOBBY;
+    const can = wantJoinable !== false && !full && inLobby;
+    PORTAL.updateRoom({ roomId: this.code, isJoinable: can, inviteParams: { oda: this.code } });
     return true;
   }
 
@@ -344,6 +371,7 @@ class OnlineLobby {
       return false;
     }
     this.seatCount = res.seats;
+    this._syncPortalRoom(true);
     return true;
   }
 
@@ -402,7 +430,10 @@ class OnlineLobby {
       return;
     }
     const res = this.session.disconnectPeer(peerId);
-    if (res && res.ok && res.phase === "lobby") this._notice("online.notice.left");
+    if (res && res.ok && res.phase === "lobby") {
+      this._notice("online.notice.left");
+      this._syncPortalRoom(true);   // boşalan koltuğa yeni oyuncu katılabilir
+    }
   }
 
   // Taşıma hata kodları → kullanıcıya gösterilecek anahtar.
@@ -475,6 +506,7 @@ class OnlineLobby {
           if (typeof this.game.onlineResumeSeat === "function") this.game.onlineResumeSeat(res.seat);
         } else {
           this._notice("online.notice.joined");
+          this._syncPortalRoom(true);   // dolduysa isJoinable kapanır
         }
       }
       if (res && res.ok === false && res.reason) this._noteReason(res.reason);
@@ -521,6 +553,8 @@ class OnlineLobby {
       turnId: 1, mapId: map ? map.id : null, roster,
     });
     if (!res.ok) { this._fail(res.reason); return false; }
+    // Maç başladı: yeni oyuncu artık katılamaz.
+    this._syncPortalRoom(false);
     this.game.beginOnlineMatch({ role: "host", session: this.session, transport: this.transport, lobby: this });
     return true;
   }
@@ -534,8 +568,13 @@ class OnlineLobby {
   }
 
   // Davet bağlantısını panoya kopyala (en iyi çaba; file:// kısıtında uyarı).
+  /* Portaldaysa platformun DAVET bağlantısı kullanılır (CrazyGames arkadaş
+   * daveti ve "arkadaşına katıl" akışı bunu bekler); yoksa kendi ?oda= linki. */
   copyInvite() {
-    const url = this._inviteUrl();
+    const portalLink = (typeof PORTAL !== "undefined" && PORTAL.isActive())
+      ? PORTAL.inviteLink({ oda: this.code, roomName: this.code })
+      : null;
+    const url = portalLink || this._inviteUrl();
     if (!url) { this._notice("online.invite.failed"); return false; }
     try {
       if (typeof navigator !== "undefined" && navigator.clipboard && navigator.clipboard.writeText) {

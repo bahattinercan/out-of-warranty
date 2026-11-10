@@ -391,9 +391,32 @@ node tests/net-integration.js # çevrimiçi ağ yığını (protokol+oturum+duru
 node tests/net-game.js     # çevrimiçi OYUN uçtan uca (lobi → maç → sonuç + yerleşim + yapıştırma + tıklama)
 node tests/net-multi.js    # 6 koltuk: hedefli WELCOME, ROOM_FULL, oda kapasitesi, sıra 1→6→1
 node tests/net-reconnect.js # kopma → bot devralma → aynı koltuğa dönüş (F4)
+node tests/portal.js       # portal köprüsü: sağlayıcı seçimi, CG/Poki SDK sözleşmesi (F5)
+node tests/reward-ad.js    # ödüllü reklam: maç sonu Hurdayı 2× (F5)
 ```
 
 Ana test takımı robot veri sözleşmesini, 34 arena üretimini, dokuz fabrika bölgesini, bütün prop kayıtlarını, modüler çizimi, yetenekleri, bot karar sistemini (puanlama, güvenlik filtresi, hareket yolu, isabet kalitesi ve zorluk merdiveni) ve geliştirme sisteminin oyun entegrasyonunu doğrular. Harita testleri 34 benzersiz profili, 2–6 oyuncu doğuşlarını ve katmanlı köprü/raf/tünel maskelerini denetler. Geliştirme testleri seviye eşiklerini, ödül formülünü, yetenek adaptörlerini, profil doğrulamasını ve satın alma önkoşullarını tarayıcısız denetler. Pazar testleri cephane fiyatlarını, ortak depo doğrulamasını (bilinmeyen/sınırsız silah ve üst sınır), satın alma önkoşullarını, maça yükleme ve harcanan mermiyi düşme döngüsünü, robot depolarının ortak depoya taşındığı v3→v4 göçünü ayrıca pazar ekranı/satın alma akışının oyun entegrasyonunu denetler. **Parça testleri** katalog bütünlüğünü (24 parça, yuva başına 6, etki eksenleri), benzersiz satın almayı, **yuva başına iki alt yuvayı** (indeksli takma, taşıma, kırpma, göç v5→v6), aynı parçanın birden çok robotta takılı olabilmesini, parçaların build'e etkilerini (düz toplamlar + çarpımsal güç/savrulma/hız/sıçrama, kırpma sınırları), pazar yuva sekmelerini, Atölye parça panelini (8 hücre + sayfalı liste) ve aksesuar çizimini denetler. Ses testleri Web Audio kaynak temizliğini, sessize alma davranışını, seviye kaydını ve hasar bildirimlerini denetler. Mermi görsel testleri 27 spec'in tasarım ailesi kuralını (paylaşım yalnız `SHARED_SHAPES` beyaz listesinde), shape'lerin birbirinden farklı çizim üretmesini, tüm spec'lerin hatasız çizilmesini ve önizleme çizicisini denetler. Yetenek efekti testleri her modülün kayıtlı ve benzersiz bir `fx.shape` taşıdığını, her türün varsayılan efektini, türetilmiş build'in görsel kimliği koruduğunu, 34 shape'in ömrü boyunca hatasız/farklı/deterministik çizildiğini, gradient-`shadowBlur` kullanılmadığını ve aura/ikon çizicilerini denetler.
+
+## Portal uyumu (yayın)
+
+Oyun portallara **SDK köprüsüyle** hazırlanmıştır (`js/portal.js`) ama portallar
+dışında hiçbir SDK yüklenmez: `file://` çift tıklama ve düz http açılışında oyun
+aynı kalır. Portal seçimi `?portal=crazygames` / `?portal=poki` ile (ya da portal
+sayfasının `window.__PORTAL_PROVIDER__` değişkeniyle) yapılır.
+
+- **Ölçüm:** `loadingStart/Stop`, `gameplayStart/Stop`, `happytime` portala bildirilir.
+- **Ödüllü reklam:** maç sonu kartında "Reklam izle · Hurdayı 2× yap" (maç başına 1;
+  ödül yalnız reklam tam izlenince yazılır, XP çarpılmaz).
+- **Maç arası reklam:** yalnız maç sonu kartından ayrılırken, en fazla 3 dakikada bir.
+  Banner/interstitial yok.
+- **Çok oyunculu:** host oda bilgisini bildirir (`updateRoom`), davet bağlantısı
+  portaldan alınır; gelen oyuncunun oda kodu hazır doldurulur.
+- **Uyum:** portalda tarayıcı tam ekran düğmesi gizlenir; portalın `muteAudio`
+  ayarı oyun sesini kapatır.
+
+Ayrıntı ve bilinçli sınırlar (ödüllü canlandırma henüz yok): `docs/portal-uyumu.md`.
+Yerel prova: `_portal_probe.html` (sahte SDK, gerçek CSS/overlay).
+
 
 ## Mimari
 
@@ -423,4 +446,5 @@ Ana test takımı robot veri sözleşmesini, 34 arena üretimini, dokuz fabrika 
 | `js/net/state.js` | Durum senkronu: anlık görüntü, arazi maskesi (RLE), oyma kayıtları, hash |
 | `js/net/transport.js` | Taşıma: döngü (test) + PeerJS/WebRTC sarmalayıcı, oda kodu üretimi |
 | `js/net/adapter.js` | Oyun ↔ ağ köprüsü: `rules` adaptörü, tur/snapshot/arazi yayını |
+| `js/portal.js` | Portal köprüsü: CrazyGames/Poki SDK seçimi ve tembel yükleme, ölçüm olayları, ödüllü/maç arası reklam, oda+davet bildirimi, `muteAudio` |
 | `js/main.js` | Başlangıç ve DOM bağlantıları |

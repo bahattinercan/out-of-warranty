@@ -18,7 +18,7 @@ const fs = require("fs");
 const path = require("path");
 
 const JS_DIR = path.join(__dirname, "..", "js");
-const FILES = ["i18n.js", "audio.js", "characters.js", "progression.js", "profile.js", "parts.js",
+const FILES = ["i18n.js", "portal.js", "audio.js", "characters.js", "progression.js", "profile.js", "parts.js",
   "market.js", "maps.js", "skills.js", "skill-fx.js", "robots.js", "terrain.js", "weapons.js",
   "entity.js", "projectile.js", "ai.js", "game.js", "net/protocol.js", "net/session.js",
   "net/state.js", "net/transport.js"];
