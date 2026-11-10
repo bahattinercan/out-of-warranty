@@ -535,6 +535,8 @@ class Game {
     const o = this.online;
     if (!o || o.aborted) return;
     o.aborted = true;
+    // Tanılama (F6): kapalı testte kopma nedenleri rapora düşer.
+    if (typeof DIAG !== "undefined") DIAG.record("online", String(reason || "ABORTED"));
     try { o.session.abort(reason); } catch (e) { /* yoksay */ }
     // İptal nedeni metni (anahtarlar açık: i18n kapsamı kodda görünür).
     let why;
@@ -762,6 +764,14 @@ class Game {
     );
     // Başlık altı tehlike şeridi: endüstriyel imza detayı (Faz 2 pilot)
     _csHazardStrip(ctx, W / 2 - 130, H / 2 - 86, 260, 5);
+    // Sürüm damgası (F6): kapalı testte geri bildirim "hangi sürüm" sorusuyla
+    // başlamasın diye menünün sağ alt köşesinde küçük yazıyla durur.
+    if (typeof GAME_VERSION !== "undefined") {
+      ctx.textAlign = "right"; ctx.textBaseline = "bottom";
+      ctx.fillStyle = "#7f93a6"; ctx.font = uiTextFont(10);
+      ctx.fillText("v" + GAME_VERSION + " · " + (typeof GAME_CHANNEL === "undefined" ? "" : GAME_CHANNEL), W - 12, H - 10);
+      ctx.textAlign = "center"; ctx.textBaseline = "top";
+    }
     const scrap = this.profile ? this.profile.scrap : START_SCRAP;
     // Ortak depo: robot başına ayrı depo yok; pazar kartının alt yazısı için
     // tek depo sayacı yeterlidir.
@@ -3744,7 +3754,7 @@ class Game {
     if (!cr.width || !cr.height) return;
     const sx = this.W / cr.width, sy = this.H / cr.height;
     let top = 0, right = 0;
-    for (const id of ["audio-control", "locale-control"]) {
+    for (const id of ["audio-control", "locale-control", "report-control"]) {
       const el = document.getElementById(id);
       if (!el || !el.getBoundingClientRect) continue;
       const r = el.getBoundingClientRect();
@@ -5034,6 +5044,7 @@ class Game {
   loop(ts) {
     requestAnimationFrame(this.loop.bind(this));
     this.renderTimeMs = ts;
+    if (typeof DIAG !== "undefined") DIAG.frame(ts);   // tanılama: FPS örneği (F6)
     SFX.musicSync(this.state, this.mode); // arka plan müziği tema senkronu
 
     // FPS'i 60'a sabitle: yeterli süre geçmediyse bu kareyi atla.

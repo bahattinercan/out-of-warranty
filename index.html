@@ -46,6 +46,15 @@
         <select id="locale-select" aria-label="Dil"></select>
       </div>
 
+      <!-- Hata raporu (F6): kapalı testte oyuncu tek düğmeyle tanılama metnini
+           panoya kopyalar. Varsayılan gizli; hata yakalanınca ya da ?rapor=1
+           ile görünür olur (js/diagnostics.js). -->
+      <div id="report-control" class="hidden">
+        <button id="report-btn" type="button" title="Hata raporunu kopyala" data-i18n-title="hud.report.title">
+          🐞 <span data-i18n="hud.report">Rapor</span>
+        </button>
+      </div>
+
       <canvas id="game" width="960" height="540"></canvas>
 
       <div id="power-bar" class="hidden">
@@ -109,7 +118,9 @@
 
   <!-- Klasik scriptler: file:// üzerinden çift tıklayınca çalışır -->
   <script src="js/i18n.js"></script>
+  <script src="js/version.js"></script>
   <script src="js/portal.js"></script>
+  <script src="js/diagnostics.js"></script>
   <script src="js/audio.js"></script>
   <script src="js/characters.js"></script>
   <script src="js/progression.js"></script>

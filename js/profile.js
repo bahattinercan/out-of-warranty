@@ -31,6 +31,8 @@ function _storage() {
 function notifyStorageFailure() {
   if (_storageWarningShown) return;
   _storageWarningShown = true;
+  // Tanılama (F6): kapalı test raporunda "depolama yok" bilgisi görünsün.
+  if (typeof DIAG !== "undefined") DIAG.record("storage", "storage_unavailable");
   if (typeof document === "undefined" || !document || typeof document.getElementById !== "function") return;
   const el = document.getElementById("storage-warning");
   if (!el) return;

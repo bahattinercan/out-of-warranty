@@ -375,6 +375,35 @@ html, body {
   letter-spacing: .3px;
 }
 #locale-control > span { font-size: 13px; line-height: 1; }
+#report-control {
+  position: absolute;
+  top: 90px;
+  right: 10px;
+  z-index: 7;
+  display: flex;
+  align-items: center;
+  height: 28px;
+}
+#report-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 28px;
+  padding: 0 10px;
+  border: 1px solid #ff9f5a66;
+  border-radius: 10px;
+  background: #1a1210ed;
+  color: #ffd9c2;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+#report-btn:hover { border-color: #ff9f5a; color: #fff; }
+#report-btn:focus-visible { outline: 2px solid #ffb27a; outline-offset: 1px; }
+#report-btn.copied { border-color: #7bdc8e; color: #c8f7d4; }
+
+
 #locale-select {
   max-width: 118px;
   padding: 2px 4px;

@@ -1,6 +1,6 @@
 # Web Lansman Planı — Dökümhane-9
 
-Tarih: 16 Ekim 2026 · Durum: **Yol A seçildi**; F1–F5 tamamlandı (okunabilirlik, yerelleştirme, çevrimiçi yığın, 6 koltuk, portal köprüsü). Sıradaki iş **F3c-3**: iki farklı ağdan gerçek deneme (`docs/cevrimici-deneme.md`) ve **F6**: kapalı test (itch.io). Ayrıntı: `docs/portal-uyumu.md`.
+Tarih: 16 Ekim 2026 · Durum: **Yol A seçildi**; F1–F5 tamamlandı, F6 hazırlığı yapıldı (paket üreteci, sürüm damgası, tanılama/rapor, yayın metni ve rapor şablonu). Sıradaki iş **F3c-3** (iki farklı ağdan gerçek deneme) ve **F6 yayını** (itch.io kapalı test, 20–50 kişi). Ayrıntı: `docs/portal-uyumu.md`, `docs/itch-yayin-metni.md`.
 
 İlişkili belgeler:
 
@@ -415,7 +415,7 @@ Referans gerçeklik: Steam medyanı $249/ömür; web'de ilk oyun $0–400/ay. Bu
 | **F3c-3** (kullanıcı) | İki farklı ağdan gerçek deneme (kılavuz: `docs/cevrimici-deneme.md`) | — | §4 çıkış ölçütü: 5 tur, kurulum <20 sn, kopma <%5 |
 | **F4** (yapıldı) | 6 oyuncu, oda/davet akışı, bot devralma | lobi + yeniden bağlanma | `tests/net-multi.js` 55/55 (6 koltuk, hedefli WELCOME, ROOM_FULL, kapasite, sıra 1→6→1) + `tests/net-reconnect.js` 30/30 (grace → bot, kendi turunu oynama, iki bağımsız kopma, sayfa yenilenmesiyle dönüş) + `tests/net-integration.js` 51/51 |
 | **F5** (yapıldı) | Portal uyumu: SDK köprüsü, ödüllü 2× reklam, maç arası reklam, event ölçümü, oda/davet bildirimi | `js/portal.js`, `index.html`, `js/game.js`, `js/online-lobby.js` | `node tests/portal.js` 46/46 + `node tests/reward-ad.js` 19/19 + `_portal_probe.html` (sahte SDK, gerçek CSS/overlay; headless `PROBE OK`) — gerçek portal oturumu yayın adımı |
-| **F6** | Kapalı test (20–50 kişi, itch.io) → demo yayını | yayın + geri bildirim notu | Kapalı test raporu |
+| **F6** (hazırlık yapıldı) | Kapalı test (20–50 kişi, itch.io) → demo yayını | `tools/build.js` paket üreteci + `js/version.js` sürüm damgası + `js/diagnostics.js` rapor düğmesi + `docs/itch-yayin-metni.md` + `docs/kapali-test-raporu.md` | `node tests/release.js` 46/46 (paket kapsamı, script sırası, ES-module yasağı, **sözdizimi**, ZIP bütünlüğü, boyut kapıları) + `node tests/diagnostics.js` 23/23 (hata yakalama, rapor metni, panoya kopyalama) + ZIP'ten çıkarılan klasörde headless açılış (konsol temiz) · **yayın + testçi turu kullanıcı işi** |
 | **F7** | K1 ölçümü ve karar | `docs/olcum-YYYY-AA.md` | §9 tablosu doldurulmuş |
 | **F8** (koşullu) | İçerik genişletme / K3 Steam hazırlığı | — | K1 ≥5 eşik |
 
@@ -445,7 +445,7 @@ Referans gerçeklik: Steam medyanı $249/ömür; web'de ilk oyun $0–400/ay. Bu
 | 3 | Sinyalleşme / TURN sağlayıcısı | **§4-C:** PeerJS Cloud + ücretsiz TURN ile başla; taşıma arayüzü korunarak kotayı/kesintiyi görünce Cloudflare Worker + Durable Object'e geç |
 | 4 | K1–K3 eşikleri | **§9 tablosu aynen** (özellikle K1: aylık ≥20.000 oynanış *veya* haftalık +%15) |
 | 5 | Dil sırası | **§5-A:** tr+en → zh-Hans+ru → es-ES+pt-BR |
-| 6 | Sıradaki iş | **F1b–F5 tamamlandı** (F2a–F2c-5 yerelleştirme; protokol → durum → taşıma → lobi → 6 koltuk → portal köprüsü) → sırada **F3c-3** (iki farklı ağdan gerçek deneme, `docs/cevrimici-deneme.md`) ve **F6** (itch.io kapalı test) |
+| 6 | Sıradaki iş | **F1b–F5 tamamlandı**, **F6 hazırlığı tamam** (paket + sürüm + tanılama + metinler) → sırada **F3c-3** (iki farklı ağdan gerçek deneme) ve **F6 yayını** (itch.io kapalı test, 20–50 kişi) → sonra **F7** ölçüm |
 | 7 | Commit | Faz başına commit'lendi (okunabilirlik, i18n, `js/net/*`, lobi, çevrimiçi düzeltmeleri); **push yapılmadı** |
 
 **Açık soru kalmadı:** isim ve kimlik kararı §3'te kayıtlı. Sıradaki iş **F3c-3 (kullanıcı denemesi)**: aynı makinede iki sekme duman testi, ardından iki farklı ağdan 5 turluk maç — ölçütler ve kontrol listesi `docs/cevrimici-deneme.md` içinde. Kod tarafında F5 (portal köprüsü, ödüllü 2× reklam, maç arası reklam, oda/davet bildirimi) tamamlandı; sırada F6 (itch.io kapalı test) var.

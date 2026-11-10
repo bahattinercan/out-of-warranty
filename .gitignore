@@ -11,3 +11,6 @@ _*.tmp.html
 # Node (if tooling is added later)
 node_modules/
 /screenshots
+
+# Build çıktısı (kapalı test / demo paketi)
+dist/

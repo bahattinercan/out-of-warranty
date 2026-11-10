@@ -28,6 +28,30 @@ window.addEventListener("DOMContentLoaded", () => {
     PORTAL.onSettingsChange((s) => game.setMuted(!!s.muteAudio));
   }
 
+  /* Tanılama (F6): pencere hatalarını toplar; kapalı testte "Rapor" düğmesi
+   * tek dokünüşla panoya kopyalar. Ağa hiçbir şey gönderilmez. */
+  if (typeof DIAG !== "undefined") {
+    DIAG.install({ game });
+    const reportBtn = document.getElementById("report-btn");
+    if (reportBtn) {
+      reportBtn.addEventListener("click", () => {
+        const ok = DIAG.copyReport();
+        reportBtn.classList.toggle("copied", ok);
+        const label = reportBtn.querySelector("span");
+        const original = label ? label.textContent : "";
+        if (label) {
+          label.textContent = ok
+            ? t("hud.report.copied", "Kopyalandı")
+            : t("hud.report.failed", "Kopyalanamadı");
+          setTimeout(() => {
+            label.textContent = original;
+            reportBtn.classList.remove("copied");
+          }, 2000);
+        }
+      });
+    }
+  }
+
   const rewardAdBtn = document.getElementById("reward-ad-btn");
   if (rewardAdBtn) rewardAdBtn.addEventListener("click", () => game.watchRewardAd());
 

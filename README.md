@@ -393,6 +393,8 @@ node tests/net-multi.js    # 6 koltuk: hedefli WELCOME, ROOM_FULL, oda kapasites
 node tests/net-reconnect.js # kopma → bot devralma → aynı koltuğa dönüş (F4)
 node tests/portal.js       # portal köprüsü: sağlayıcı seçimi, CG/Poki SDK sözleşmesi (F5)
 node tests/reward-ad.js    # ödüllü reklam: maç sonu Hurdayı 2× (F5)
+node tests/release.js      # yayın paketi: kapsam, script sırası, sözdizimi, ZIP, boyut (F6)
+node tests/diagnostics.js  # tanılama: hata yakalama, rapor metni, panoya kopyalama (F6)
 ```
 
 Ana test takımı robot veri sözleşmesini, 34 arena üretimini, dokuz fabrika bölgesini, bütün prop kayıtlarını, modüler çizimi, yetenekleri, bot karar sistemini (puanlama, güvenlik filtresi, hareket yolu, isabet kalitesi ve zorluk merdiveni) ve geliştirme sisteminin oyun entegrasyonunu doğrular. Harita testleri 34 benzersiz profili, 2–6 oyuncu doğuşlarını ve katmanlı köprü/raf/tünel maskelerini denetler. Geliştirme testleri seviye eşiklerini, ödül formülünü, yetenek adaptörlerini, profil doğrulamasını ve satın alma önkoşullarını tarayıcısız denetler. Pazar testleri cephane fiyatlarını, ortak depo doğrulamasını (bilinmeyen/sınırsız silah ve üst sınır), satın alma önkoşullarını, maça yükleme ve harcanan mermiyi düşme döngüsünü, robot depolarının ortak depoya taşındığı v3→v4 göçünü ayrıca pazar ekranı/satın alma akışının oyun entegrasyonunu denetler. **Parça testleri** katalog bütünlüğünü (24 parça, yuva başına 6, etki eksenleri), benzersiz satın almayı, **yuva başına iki alt yuvayı** (indeksli takma, taşıma, kırpma, göç v5→v6), aynı parçanın birden çok robotta takılı olabilmesini, parçaların build'e etkilerini (düz toplamlar + çarpımsal güç/savrulma/hız/sıçrama, kırpma sınırları), pazar yuva sekmelerini, Atölye parça panelini (8 hücre + sayfalı liste) ve aksesuar çizimini denetler. Ses testleri Web Audio kaynak temizliğini, sessize alma davranışını, seviye kaydını ve hasar bildirimlerini denetler. Mermi görsel testleri 27 spec'in tasarım ailesi kuralını (paylaşım yalnız `SHARED_SHAPES` beyaz listesinde), shape'lerin birbirinden farklı çizim üretmesini, tüm spec'lerin hatasız çizilmesini ve önizleme çizicisini denetler. Yetenek efekti testleri her modülün kayıtlı ve benzersiz bir `fx.shape` taşıdığını, her türün varsayılan efektini, türetilmiş build'in görsel kimliği koruduğunu, 34 shape'in ömrü boyunca hatasız/farklı/deterministik çizildiğini, gradient-`shadowBlur` kullanılmadığını ve aura/ikon çizicilerini denetler.
@@ -416,6 +418,29 @@ sayfasının `window.__PORTAL_PROVIDER__` değişkeniyle) yapılır.
 
 Ayrıntı ve bilinçli sınırlar (ödüllü canlandırma henüz yok): `docs/portal-uyumu.md`.
 Yerel prova: `_portal_probe.html` (sahte SDK, gerçek CSS/overlay).
+
+
+## Kapalı test / yayın paketi
+
+```powershell
+node tools/build.js --dry   # dosya listesi + toplam boyut
+node tools/build.js         # dist/out-of-warranty-<sürüm>.zip + manifest-<sürüm>.json
+```
+
+Paket kökünde `index.html` vardır (itch.io'da "This file will be played in the
+browser"), yalnız oyun dosyalarını taşır: sondalar (`_*.html`), `tests/`, `docs/`,
+`tools/`, `screenshots/` otomatik dışarıdadır ve `node tests/release.js` bunu
+kilitler (ayrıca script sırası, ES-module yasağı, sözdizimi, ZIP bütünlüğü ve
+boyut kapıları: Poki < 8 MB, itch.io < 50 MB).
+
+- **Sürüm tek kaynak:** `js/version.js > GAME_VERSION` — menünün sağ altında
+  `v0.6.0 · kapali-test` olarak görünür. Sürüm artırırken
+  `js/version.js` + `docs/itch-yayin-metni.md` + `CLAUDE.md` birlikte güncellenir.
+- **Geri bildirim:** kapalı testte bir hata olursa sağ üstte **🐞 Rapor** düğmesi
+  kendiliğinden çıkar (`?rapor=1` ile her zaman); sürüm, FPS, oyun/ağ/portal
+  durumu ve son hataları panoya kopyalar. Veri ağa gitmez.
+- **Metin/şablon:** sayfa metni ve testçi yönergesi `docs/itch-yayin-metni.md`,
+  doldurulacak rapor `docs/kapali-test-raporu.md`.
 
 
 ## Mimari
@@ -446,5 +471,8 @@ Yerel prova: `_portal_probe.html` (sahte SDK, gerçek CSS/overlay).
 | `js/net/state.js` | Durum senkronu: anlık görüntü, arazi maskesi (RLE), oyma kayıtları, hash |
 | `js/net/transport.js` | Taşıma: döngü (test) + PeerJS/WebRTC sarmalayıcı, oda kodu üretimi |
 | `js/net/adapter.js` | Oyun ↔ ağ köprüsü: `rules` adaptörü, tur/snapshot/arazi yayını |
+| `js/version.js` | Sürüm damgası (`GAME_VERSION`, `GAME_CHANNEL`) — menü, paket üreteci ve tanılama raporu buradan okur |
+| `js/diagnostics.js` | Tanılama/geri bildirim: pencere hataları, FPS, oyun/ağ/portal durumu; hata olunca ya da `?rapor=1` ile görünen 🐞 düğmesi panoya metin kopyalar (ağa gitmez) |
 | `js/portal.js` | Portal köprüsü: CrazyGames/Poki SDK seçimi ve tembel yükleme, ölçüm olayları, ödüllü/maç arası reklam, oda+davet bildirimi, `muteAudio` |
+| `tools/build.js` | Yayın paketi üreteci: `index.html`+`css`+`js`+`fonts` → `dist/*.zip` (STORE, bağımlılıksız) + manifest |
 | `js/main.js` | Başlangıç ve DOM bağlantıları |

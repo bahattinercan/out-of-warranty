@@ -37,6 +37,13 @@ node tests/net-multi.js    # 6 koltuk (F4): hedefli WELCOME, ROOM_FULL, kapasite
 node tests/net-reconnect.js # kopma → bot devralma → aynı koltuğa dönüş (F4)
 node tests/portal.js       # portal köprüsü: sağlayıcı seçimi + CG/Poki SDK sözleşmesi (F5)
 node tests/reward-ad.js    # ödüllü reklam: maç sonu Hurdayı 2× (F5)
+node tests/release.js      # yayın paketi: kapsam, script sırası, ZIP, boyut kapıları (F6)
+```
+
+```bash
+# Kapalı test / demo paketi (bağımlılıksız, kökünde index.html):
+node tools/build.js --dry   # dosya listesi + boyut
+node tools/build.js         # dist/out-of-warranty-<sürüm>.zip + manifest
 ```
 
 Ortak test ortamı: `tests/harness.js` (oyunu `vm` içinde yükler + sahte DOM).
@@ -76,6 +83,9 @@ Oyun `file://` üzerinden çift tıklayınca çalışmak zorunda. Bu yüzden:
 | ------------------ | ------ | ----------------------------------------------------------------------------------------------------------------------------------------------- |
 | `index.html`       | —      | Sahne, HUD, overlay, `<script>` yükleme sırası                                                                                                  |
 | `css/style.css`    | —      | Tüm stil                                                                                                                                        |
+| `js/version.js`    | 15     | Sürüm damgası (`GAME_VERSION`, `GAME_CHANNEL`) — paket üreteci ve menü buradan okur; **tek kaynak** |
+| `js/diagnostics.js`| ~290   | Tanılama (F6): pencere hataları + FPS + oyun/ağ/portal durumu; `?rapor=1` ya da hata olunca görünen 🐞 düğmesi panoya metin kopyalar (ağa gitmez) |
+| `tools/build.js`   | ~250   | Yayın paketi üreteci (F6): `index.html`+`css`+`js`+`fonts` → `dist/*.zip` (STORE, bağımlılıksız) + manifest |
 | `js/portal.js`     | ~400   | Portal köprüsü (F5): `?portal=crazygames|poki` seçimi + tembel SDK yükleme, ölçüm olayları, ödüllü + maç arası reklam, oda/davet bildirimi, `muteAudio`; portallar dışında sessiz no-op |
 | `js/main.js`       | 30     | Giriş noktası; `Game` örneğini kurar, butonları/fullscreen'i bağlar, `PORTAL.init()` ve reklam düğmesini bağlar |
 | `js/game.js`       | ~3800  | **En büyük dosya.** Durum makinesi (karakter seç → harita seç → çevrimiçi lobi → savaş → bitiş), sıra/rüzgar, girdi, render döngüsü, hasar uygulama yardımcıları. Çevrimiçi: `updateOnlineHost`/`updateGuest`, `onlineCommand`, `beginOnlineMatch` |
@@ -209,6 +219,16 @@ Yeni içerik çoğunlukla **kod değil veri** eklemekle yapılır:
 - Patlamalar araziyi gerçekten oyar: zemin dokusu ve serpilen objeler offscreen arazi katmanına basıldığı için kraterle birlikte aşınır.
 - **Portal (F5):** SDK çağrıları TEK yerde (`js/portal.js`); oyun portallar dışında hiçbir SDK yüklemez (`file://` aynı çalışır). `PORTAL` yokken tüm metotlar `{ok:false}` döner, `typeof PORTAL` koruması zorunlu değildir ama oyun kodunda kullanılıyor. Reklam ödülü "Hurdayı 2×" maç başına bir kez ve yalnız reklam tam izlenince yazılır (`Game.doubleMatchScrap` portal aktif değilse çalışmaz — konsoldan bedava Hurda üretilemez); XP çarpılmaz. Maç arası reklam yalnız sonuç kartından ayrılırken ve istemcide 3 dakika aralıkla istenir. Yeni bir portal metni eklerken `t()` fallback + `I18N.en` anahtarı ekle ve `node tests/i18n.js` çalıştır. Probe: `_portal_probe.html` (sahte SDK). Ayrıntı: `docs/portal-uyumu.md`.
 - **Yeni js dosyası eklerken üç liste:** `index.html` script sırası, `tests/run.js` FILES, `tests/harness.js` FILES (çevrimiçi testler) + `tests/audio.js` source; `portal.js` bunların hepsinde ve `game.js`'ten ÖNCE yüklenir.
+
+## Sürüm ve yayın (F6)
+
+Sürüm **tek kaynak**: `js/version.js > GAME_VERSION` (şu an **0.6.0**,
+kanal `kapali-test`). Sürüm artırırken üç yeri birlikte güncelle:
+`js/version.js`, `docs/itch-yayin-metni.md`, bu dosyadaki satır —
+`node tests/release.js` üçünün aynı olduğunu denetler. Paket:
+`node tools/build.js` (sondalar/tests/docs/tools otomatik dışarıda).
+Kapalı test metni ve kontrol listesi: `docs/itch-yayin-metni.md`;
+rapor şablonu: `docs/kapali-test-raporu.md`.
 
 ## Çalışma tarzı
 
