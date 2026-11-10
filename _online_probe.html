@@ -87,19 +87,42 @@
     l2.typed = "ABC";
     paint("c2", (ctx) => l2.render(ctx));
 
-    // ── 3-4) Oda: GERÇEK el sıkışma (host + misafir, döngü taşıması)
-    const [ta, tb] = LoopbackTransport.pair({ name: "host" }, { name: "guest" });
+    // ── 3-4) Oda: GERÇEK el sıkışma, ALTI koltuk (F4)
+    // Host + 5 misafir döngü HUB'ıyla bağlanır; koltuk/hazır durumu gerçek
+    // el sıkışmadan gelir. 4 hazır, 1 hazır değil → "MAÇI BAŞLAT" kapalı çizilir.
+    const hub = new LoopbackHub({});
     const gH = fakeGame(720, 260);          // fare "BAĞLANTIYI KOPYALA" üstünde
-    const gG = fakeGame(720, 260);          // fare "HAZIRIM" üstünde
     const host = new OnlineLobby(gH);
-    const guest = new OnlineLobby(gG);
     host.open();
-    guest.open();
-    host.adoptTransport(ta, { role: "host", code: "ABC-DE".replace("-", "") });
-    guest.adoptTransport(tb, { role: "guest", code: "ABCDE" });
-    guest.toggleReady();                    // hazır → hostta "MAÇI BAŞLAT" açılır
+    host.seatCount = 6;                     // 2–6 koltuk seçimi (lobideki düğmeler)
+    host.adoptTransport(hub.host, { role: "host", code: "ABCDE" });
+    const sixGuests = [];
+    for (let i = 0; i < 5; i++) {
+      const gl = new OnlineLobby(fakeGame(-100, -100));
+      gl.open();
+      gl.robotId = CHARACTERS[i + 1].id;
+      gl._storedSeatToken = () => null;     // her misafir ayrı tarayıcı
+      gl._storeSeatToken = () => {};
+      gl.adoptTransport(hub.addGuest("peer-" + (i + 1)), { role: "guest", code: "ABCDE" });
+      if (i < 4) gl.toggleReady();
+      sixGuests.push(gl);
+    }
     paint("c3", (ctx) => host.render(ctx));
-    paint("c4", (ctx) => guest.render(ctx));
+    paint("c4", (ctx) => sixGuests[0].render(ctx));
+    // Yerleşim kapısı: koltuk paneli AYRIL düğmesini örtmemeli.
+    (function () {
+      const L = host._layout();
+      const rows = host._seatRows();
+      const topMin = L.wide ? L.top + 12 : Math.max(L.top + 8, 92);
+      const reserve = L.wide ? 130 : 230;
+      const avail = Math.max(150, L.H - topMin - reserve);
+      const rowH = Math.max(30, Math.min(54, Math.floor((avail - 38) / Math.max(2, rows.length))));
+      const seatsH = 38 + rows.length * rowH;
+      const panelBottom = (L.wide ? Math.max(L.top + 12, Math.round((L.H - seatsH) / 2) - 12) : topMin) + seatsH;
+      const overlap = panelBottom > L.H - 52;
+      console.log("PROBE LAYOUT seats=" + rows.length + " rowH=" + rowH + " seatsH=" + seatsH +
+        " panelBottom=" + panelBottom + " leaveTop=" + (L.H - 48) + " overlap=" + overlap);
+    })();
 
     // ── 5) Başlangıç paketi beklenirken (ONLINE_LOADING) perdesi
     const g5 = fakeGame(-100, -100);

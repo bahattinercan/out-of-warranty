@@ -268,6 +268,9 @@ class OnlineLobby {
       });
       this.transport.onStatus((status, detail) => this._onStatus(status, detail));
       this.transport.onMessage((from, msg) => this._onMessage(from, msg));
+      // Koltuk bazında kopma: altı oyunculu odada bir misafirin düşmesi
+      // diğerlerini etkilemez (maçta bot devralır, lobide koltuk boşalır).
+      this.transport.onPeerClose((peerId) => this._onPeerClose(peerId));
       const res = this.transport.open();
       if (!res.ok) this._fail(res.reason);
       else this._openSession();
@@ -289,6 +292,7 @@ class OnlineLobby {
     this.transport = transport;
     transport.onStatus((status, detail) => this._onStatus(status, detail));
     transport.onMessage((from, msg) => this._onMessage(from, msg));
+    transport.onPeerClose((peerId) => this._onPeerClose(peerId));
     this.statusText = transport.status;
     this._openSession();
     // Döngü taşıması zaten AÇIK başlar: OPEN olayı gelmeyeceği için el sıkışma
@@ -383,7 +387,22 @@ class OnlineLobby {
       const reason = (detail && detail.reason) || "CONNECT";
       this._fail(this._errorKeyFor(reason));
     }
-    if (status === NET_TRANSPORT_STATUS.CLOSED && this.step === "room") this._fail("CLOSED");
+    if (status === NET_TRANSPORT_STATUS.CLOSED && this.step === "room" && this.role !== "host") this._fail("CLOSED");
+  }
+
+  /* Bir bağlantı koptu. HOST: o koltuğu işler — lobide koltuk boşalır, maçta
+   * oyuncu grace boyunca robotuyla kalır ve süre dolunca bot devralır. Misafir:
+   * tek bağlantısıdır; lobide hata, maçta iptal bildirimi gösterir. */
+  _onPeerClose(peerId) {
+    if (!this.session) return;
+    this.peerSeats.delete(peerId);
+    if (this.role !== "host") {
+      if (this.game.state === "ONLINE_LOBBY") this._fail("CLOSED");
+      else if (typeof this.game.onlineAbort === "function") this.game.onlineAbort("LEFT");
+      return;
+    }
+    const res = this.session.disconnectPeer(peerId);
+    if (res && res.ok && res.phase === "lobby") this._notice("online.notice.left");
   }
 
   // Taşıma hata kodları → kullanıcıya gösterilecek anahtar.
@@ -422,7 +441,9 @@ class OnlineLobby {
     if (key === "online.invite.copied") return t("online.invite.copied", "Bağlantı kopyalandı");
     if (key === "online.notice.codePasted") return t("online.notice.codePasted", "Oda kodu yapıştırıldı");
     if (key === "online.notice.roomNotReady") return t("online.notice.roomNotReady", "Oda henüz hazır değil — bir saniye sonra tekrar dene");
-    if (key === "online.notice.startNeedsReady") return t("online.notice.startNeedsReady", "Karşı taraf hazır olunca başlar");
+    if (key === "online.notice.startNeedsReady") return t("online.notice.startNeedsReady", "Tüm oyuncular hazır olunca başlar");
+    if (key === "online.notice.left") return t("online.notice.left", "Bir oyuncu odadan ayrıldı");
+    if (key === "online.notice.resumed") return t("online.notice.resumed", "Oyuncu maça geri döndü");
     if (key === "online.invite.failed") return t("online.invite.failed", "Kopyalanamadı — kodu elle paylaş");
     if (key === "online.notice.joined") return t("online.notice.joined", "Rakip odaya katıldı");
     if (key === "online.notice.seatsOccupied") return t("online.notice.seatsOccupied", "Bağlı oyuncu varken koltuk azaltılamaz");
@@ -447,7 +468,14 @@ class OnlineLobby {
       const res = this.session.handleHostMessage(known, msg, { peerId: from });
       if (msg && msg.t === NET_MSG.HELLO && res && res.ok) {
         this.peerSeats.set(from, res.seat);
-        this._notice("online.notice.joined");
+        // Maç sırasında dönen oyuncu: dünyası (START + maske + tam durum)
+        // yeniden gönderilir; oyun katmanı yoksa (henüz maç yok) sadece koltuk.
+        if (res.resumed) {
+          this._notice("online.notice.resumed");
+          if (typeof this.game.onlineResumeSeat === "function") this.game.onlineResumeSeat(res.seat);
+        } else {
+          this._notice("online.notice.joined");
+        }
       }
       if (res && res.ok === false && res.reason) this._noteReason(res.reason);
       return;
@@ -754,7 +782,14 @@ class OnlineLobby {
 
   _renderRoom(ctx, L) {
     const rows = this._seatRows();
-    const seatsH = 38 + rows.length * 54;
+    /* 2–6 koltuk (F4): sabit 54 px satır altı koltuğa sığmaz ve panel alttaki
+     * AYRIL düğmesini/ipucu şeridini örtüyordu. Satır yüksekliği kalan
+     * yükseklikten türetilir (alt sınır 30 px: robot + iki satır metin). */
+    const topMin = L.wide ? L.top + 12 : Math.max(L.top + 8, 92);
+    const reserve = L.wide ? 130 : 230;
+    const avail = Math.max(150, L.H - topMin - reserve);
+    const rowH = Math.max(30, Math.min(54, Math.floor((avail - 38) / Math.max(2, rows.length))));
+    const seatsH = 38 + rows.length * rowH;
     if (L.wide) {
       // İki sütunlu blok ORTALANIR: çok geniş dünyada (ultra geniş ekran) sol
       // kenara yapışıp sağda büyük boşluk bırakmasın.
@@ -762,16 +797,15 @@ class OnlineLobby {
       const rw = Math.min(320, L.contentW - colW - 24);
       const blockW = colW + 24 + rw;
       const x0 = Math.round(L.cx - blockW / 2);
-      // Dikey ortalama: bilgi sütunu (kod + düğmeler + seçici) koltuk panelinden
-      // uzun olduğu için ona göre ortalanır.
-      const top = Math.max(L.top + 16, Math.round((L.H - 250) / 2));
-      this._renderSeats(ctx, { x: x0, y: top, w: colW, h: seatsH }, rows);
+      // Dikey ortalama: koltuk panelinin GERÇEK yüksekliğine göre.
+      const top = Math.max(L.top + 12, Math.round((L.H - seatsH) / 2) - 12);
+      this._renderSeats(ctx, { x: x0, y: top, w: colW, h: seatsH, rowH }, rows);
       this._renderRoomInfo(ctx, L, x0 + colW + 24 + rw / 2, top, rw, false);
     } else {
       // Dar dünya: tek sütun — koltuklar üstte, kod/düğmeler altta (kompakt).
-      const top = Math.max(L.top + 8, 96);
-      this._renderSeats(ctx, { x: L.margin, y: top, w: L.contentW, h: seatsH }, rows);
-      this._renderRoomInfo(ctx, L, L.cx, top + seatsH + 10, L.contentW, true);
+      const top = Math.max(L.top + 8, 92);
+      this._renderSeats(ctx, { x: L.margin, y: top, w: L.contentW, h: seatsH, rowH }, rows);
+      this._renderRoomInfo(ctx, L, L.cx, top + seatsH + 8, L.contentW, true);
     }
     // Sol alt: durum metni bu düğmenin SAĞINDAKİ şeritte çizilir, böylece
     // dar yerleşimde üst üste binmezler (sonda yakaladı).
@@ -802,7 +836,9 @@ class OnlineLobby {
           accent: disabled ? "#2a3848" : on ? "#ffe45e" : "#3b526b", selected: on, disabled,
         });
         ctx.textAlign = "center"; ctx.textBaseline = "middle";
-        ctx.fillStyle = disabled ? "#5e7488" : on ? "#101820" : "#cfe0ee";
+        // Seçili düğme AÇIK sarı zemin değil yalnız vurgu çerçevesi çizer;
+        // koyu metin okunmuyordu (seçili "6" boş kutu gibi görünüyordu).
+        ctx.fillStyle = disabled ? "#5e7488" : on ? "#ffe45e" : "#cfe0ee";
         ctx.font = uiTextFont(11, 700);
         ctx.fillText(String(n), x + bw / 2, rect.y + 17);
         this._rects.push({ x, y: rect.y + 8, w: bw, h: 18, action: "seat", seat: n, disabled });
@@ -814,42 +850,44 @@ class OnlineLobby {
     }
     for (let i = 0; i < rows.length; i++) {
       const row = rows[i];
-      const ry = rect.y + 32 + i * 54;
-      _csPanel(ctx, rect.x + 12, ry, rect.w - 24, 50, {
+      const rowH = rect.rowH || 54;
+      const ry = rect.y + 32 + i * rowH;
+      const cy = ry + (rowH - 4) / 2;
+      _csPanel(ctx, rect.x + 12, ry, rect.w - 24, rowH - 4, {
         accent: row.you ? "#ffe45e" : row.claimed ? "#4fc3f7" : "#2a3848",
         fillTop: row.you ? "#233046" : "#161f2a",
       });
       const ch = row.robotId ? CHARACTERS.find((c) => c.id === row.robotId) : null;
       if (ch) {
         drawRobot(ctx, {
-          cx: rect.x + 42, cy: ry + 27, r: 11, facing: 1, charDef: ch,
+          cx: rect.x + 42, cy, r: Math.max(7, Math.min(11, (rowH - 12) / 2)), facing: 1, charDef: ch,
           timeMs: this.game.renderTimeMs || 0,
           motion: { vx: 0, vy: 0, onGround: true },
         });
       }
       ctx.textAlign = "left"; ctx.textBaseline = "middle";
       ctx.fillStyle = ch ? "#eef5ff" : "#7f93a6";
-      ctx.font = uiTitleFont(13);
-      ctx.fillText(ch ? ch.label : t("online.seat.empty", "Bekleniyor…"), rect.x + 70, ry + 18);
-      ctx.fillStyle = "#8fa6bd"; ctx.font = uiTextFont(11);
+      ctx.font = uiTitleFont(rowH < 40 ? 11 : 13);
+      ctx.fillText(ch ? ch.label : t("online.seat.empty", "Bekleniyor…"), rect.x + 70, ry + rowH * 0.33);
+      ctx.fillStyle = "#8fa6bd"; ctx.font = uiTextFont(rowH < 40 ? 9 : 11);
       // Kalabalık odada "MİSAFİR" tekrarı yerine koltuk numarası okunur.
       const roleLabel = row.host
         ? t("online.seat.host", "ODA SAHİBİ")
         : rows.length > 2
           ? t("online.seat.number", "KOLTUK {n}", { n: row.playerIdx + 1 })
           : t("online.seat.guest", "MİSAFİR");
-      ctx.fillText(roleLabel, rect.x + 70, ry + 35);
+      ctx.fillText(roleLabel, rect.x + 70, ry + rowH * 0.7);
       const badge = !row.claimed ? t("online.seat.waiting", "BAĞLANMADI")
         : row.bot ? t("online.seat.bot", "BOT")
         : row.ready ? t("online.seat.ready", "HAZIR")
         : t("online.seat.notReady", "HAZIR DEĞİL");
       ctx.textAlign = "right"; ctx.textBaseline = "middle";
       ctx.fillStyle = !row.claimed ? "#7f93a6" : row.bot ? "#c89bff" : row.ready ? "#7bdc8e" : "#ffd24a";
-      ctx.font = uiTextFont(11, 700);
-      ctx.fillText(badge, rect.x + rect.w - 22, ry + 25);
+      ctx.font = uiTextFont(rowH < 40 ? 9 : 11, 700);
+      ctx.fillText(badge, rect.x + rect.w - 22, row.you ? cy - 4 : cy);
       if (row.you) {
-        ctx.fillStyle = "#ffe45e"; ctx.font = uiTextFont(10, 700);
-        ctx.fillText(t("online.seat.you", "SEN"), rect.x + rect.w - 22, ry + 39);
+        ctx.fillStyle = "#ffe45e"; ctx.font = uiTextFont(9, 700);
+        ctx.fillText(t("online.seat.you", "SEN"), rect.x + rect.w - 22, ry + rowH - 12);
       }
     }
   }

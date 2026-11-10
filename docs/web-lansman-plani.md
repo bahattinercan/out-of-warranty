@@ -1,6 +1,6 @@
 # Web Lansman Planı — Dökümhane-9
 
-Tarih: 12 Ekim 2026 · Durum: **Yol A seçildi**; F1–F3c-2 tamamlandı (okunabilirlik, yerelleştirme, çevrimiçi yığın). Sıradaki iş **F3c-3**: iki farklı ağdan gerçek deneme (`docs/cevrimici-deneme.md`).
+Tarih: 12 Ekim 2026 · Durum: **Yol A seçildi**; F1–F4 tamamlandı (okunabilirlik, yerelleştirme, çevrimiçi yığın, 6 koltuk). Sıradaki iş **F3c-3**: iki farklı ağdan gerçek deneme (`docs/cevrimici-deneme.md`), sonra F5 (portal uyumu).
 
 İlişkili belgeler:
 
@@ -239,6 +239,42 @@ efekt round-trip).
 
 **Doğrulama (F3 çıkış ölçütü):** iki farklı ağdan (biri mobil hotspot) 2 oyuncu, aynı harita, 5 tur; kurulum <20 sn; kopma <%5; tur sırası her iki tarafta aynı; yeniden bağlanma aynı koltuğa döner.
 
+**F4 (2–6 koltuk):** oyun çekirdeği zaten altı oyunculuydu (`MAX_PLAYERS`,
+`getMapSpawnPads` 6'lı setler, `PLAYER_TINTS`, sıra döngüsü); eksik olan ağ
+katmanıydı. Dört dilimde tamamlandı:
+
+1. **Taşıma (`js/net/transport.js`):** host artık N bağlantı tutar (`conns`
+   haritası); `send()` YAYIN, yeni `sendTo(peerId, …)` TEK hedef, `onPeerClose`
+   koptanı bildirir. Hedefli gönderim olmadan `WELCOME` (koltuk kimliği)
+   herkese gidiyor ve yayın yapan `ACK` bütün misafirlere hostun komut
+   sonuçlarını gösteriyordu. Host peer'i son misafir ayrıldığında da AÇIK kalır
+   (boşalan koltuğa yeni oyuncu girebilir). Testler için `LoopbackHub`
+   (host + N misafir) eklendi.
+2. **Oturum (`js/net/session.js`):** INPUT sequence'ı artık KOLTUK BAŞINA
+   (`inputSeqs`) — ortak sayaç altı misafirin paketlerini birbirine "eski"
+   diye düşürüyordu. Koltuk↔bağlantı eşlemesi (`bindPeer`/`seatForPeer`),
+   `disconnectPeer(peerId)`, hedefli `sendTerrainSnapshot(mask, seat)` /
+   `broadcastState(state, seat)`, `resendStart(seat)`.
+3. **Lobi (`js/online-lobby.js`):** kapasite `NET_MIN_SEATS..NET_MAX_SEATS`
+   (2–6), koltuk panelindeki sayı düğmeleriyle değişir; bağlı koltuk
+   düşürülemez (`SEATS_OCCUPIED`). Kadro KOLTUK SIRASINA göre kurulur
+   (`players[i]` = koltuk i), `startOnlineMatch` 2–6 robot kabul eder. Dolu oda
+   artık sessiz kalmaz: `NET_MSG.REJECT` (`ROOM_FULL`) → **protokol v3**.
+4. **Kopma / yeniden bağlanma:** maçta peer kapanışı koltuk bazında işlenir;
+   grace (12 sn) sonunda `graceExpired` → `rules.setBot` robotu devralır
+   (lobi listesinde **BOT** rozeti) ve tek `BotController` sıradaki bot
+   koltuğunu sürer (turlar sıralı olduğu için yeterli). `HELLO` + `seatToken`
+   ile dönen oyuncu AYNI koltuğa oturur: START + arazi maskesi + TAM durum yalnız
+   o bağlantıya gönderilir, bot kapanır.
+
+Bekçiler: `tests/net-multi.js` (55 assert: 6 koltuk, hedefli WELCOME, ROOM_FULL,
+kapasite sınırı, sıra 1→6→1, eşzamanlı INPUT, her turda altı taraf senkron) ve
+`tests/net-reconnect.js` (30 assert: lobide koltuk boşalması, grace → bot, botun
+kendi turunu oynaması, iki bağımsız kopma, sayfa yenilenmesiyle dönüş). Ortak
+ortam `tests/harness.js`. **Bilinen sınır:** altı oyunculu odada host bir
+makinede tek sekmedir; 6 farklı insan pilotu gerçek ağda henüz denenmedi
+(F3c-3).
+
 ---
 
 ## 5. Yerelleştirme
@@ -364,7 +400,7 @@ Referans gerçeklik: Steam medyanı $249/ömür; web'de ilk oyun $0–400/ay. Bu
 | **F3c-1** (yapıldı) | Taşıma katmanı (PeerJS + döngü) ve uçtan uca entegrasyon testi | `js/net/transport.js`, `tests/net-integration.js` | `node tests/net-integration.js` 43/43 (el sıkışma, 5 tur senkron, oyma, kopma, gecikme/kayıp, sahte Peer ile PeerJS akışı) |
 | **F3c-2** (yapıldı) | Lobi ekranı (oda kodu, davet, hazır) + oyun akışı bağlantısı | `js/online-lobby.js`, `js/net/adapter.js`, `index.html`, i18n | `node tests/net-game.js` 123/123 (lobi → maç → 5 tur → sonuç + yerleşim + yapıştırma + tıklama + robot/silah seçimi + dünya boyutu + akıcı hareket/animasyon + parçacık/efekt) + headless sondalar `_online_probe.html`, `_online_small.html`, `_robot_picker_probe.html` |
 | **F3c-3** (kullanıcı) | İki farklı ağdan gerçek deneme (kılavuz: `docs/cevrimici-deneme.md`) | — | §4 çıkış ölçütü: 5 tur, kurulum <20 sn, kopma <%5 |
-| **F4** | 6 oyuncu, oda/davet akışı, bot devralma | lobi + yeniden bağlanma | 6 oyuncu simülasyonu + kopma senaryoları, `tests/multiplayer/` |
+| **F4** (yapıldı) | 6 oyuncu, oda/davet akışı, bot devralma | lobi + yeniden bağlanma | `tests/net-multi.js` 55/55 (6 koltuk, hedefli WELCOME, ROOM_FULL, kapasite, sıra 1→6→1) + `tests/net-reconnect.js` 30/30 (grace → bot, kendi turunu oynama, iki bağımsız kopma, sayfa yenilenmesiyle dönüş) + `tests/net-integration.js` 51/51 |
 | **F5** | Portal uyumu: SDK, reklam yerleri, event ölçümü | `js/portal.js` | iframe testi, 16:9 ölçekleme, reklam ödülü doğru veriliyor |
 | **F6** | Kapalı test (20–50 kişi, itch.io) → demo yayını | yayın + geri bildirim notu | Kapalı test raporu |
 | **F7** | K1 ölçümü ve karar | `docs/olcum-YYYY-AA.md` | §9 tablosu doldurulmuş |
@@ -396,7 +432,7 @@ Referans gerçeklik: Steam medyanı $249/ömür; web'de ilk oyun $0–400/ay. Bu
 | 3 | Sinyalleşme / TURN sağlayıcısı | **§4-C:** PeerJS Cloud + ücretsiz TURN ile başla; taşıma arayüzü korunarak kotayı/kesintiyi görünce Cloudflare Worker + Durable Object'e geç |
 | 4 | K1–K3 eşikleri | **§9 tablosu aynen** (özellikle K1: aylık ≥20.000 oynanış *veya* haftalık +%15) |
 | 5 | Dil sırası | **§5-A:** tr+en → zh-Hans+ru → es-ES+pt-BR |
-| 6 | Sıradaki iş | **F1b–F3c-2 tamamlandı** (F2a–F2c-5 yerelleştirme; protokol → durum → taşıma → lobi) → sırada **F3c-3**: iki farklı ağdan gerçek deneme (`docs/cevrimici-deneme.md`), sonra F4 (6 oyuncu) |
+| 6 | Sıradaki iş | **F1b–F4 tamamlandı** (F2a–F2c-5 yerelleştirme; protokol → durum → taşıma → lobi → 6 koltuk) → sırada **F3c-3**: iki farklı ağdan gerçek deneme (`docs/cevrimici-deneme.md`, artık 2–6 koltuk dahil), sonra F5 (portal uyumu) |
 | 7 | Commit | Faz başına commit'lendi (okunabilirlik, i18n, `js/net/*`, lobi, çevrimiçi düzeltmeleri); **push yapılmadı** |
 
-**Açık soru kalmadı:** isim ve kimlik kararı §3'te kayıtlı. Sıradaki iş **F3c-3 (kullanıcı denemesi)**: aynı makinede iki sekme duman testi, ardından iki farklı ağdan 5 turluk maç — ölçütler ve kontrol listesi `docs/cevrimici-deneme.md` içinde. Kod tarafında F4 (6 oyuncu) sırada bekliyor.
+**Açık soru kalmadı:** isim ve kimlik kararı §3'te kayıtlı. Sıradaki iş **F3c-3 (kullanıcı denemesi)**: aynı makinede iki sekme duman testi, ardından iki farklı ağdan 5 turluk maç — ölçütler ve kontrol listesi `docs/cevrimici-deneme.md` içinde. Kod tarafında F4 (6 koltuk, kopma/bot, yeniden bağlanma) tamamlandı; sırada F5 (portal uyumu) var.

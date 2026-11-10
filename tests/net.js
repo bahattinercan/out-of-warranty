@@ -165,6 +165,9 @@ check("başka chargeId ile iptal reddedilir", res.reason === "CHARGE_MISMATCH");
 check("kurallar yalnız bir kez uygulandı (charge + release)", applyAfterRelease === 2, String(applyAfterRelease));
 
 // Yinelenen komut: kurallara ikinci kez gitmez, önceki sonuç ACK'lenir.
+// Not: host kendi komutunu ağdan onaylamaz (koltuk 0'ın bağlantısı yoktur);
+// ACK yolunu sınamak için koltuk 0'a bir bağlantı kimliği bağlanır.
+h.s.bindPeer(0, "host-self");
 const applyBefore = h.r.calls.apply.length;
 res = h.s.handleHostMessage(0, env(N.NET_MSG.CMD, { seq: 5, id: "k3", cmd: { kind: N.NET_CMD.RELEASE, chargeId: "c1", weaponId: "bazooka", angle: 0.5, power: 0.8 } }));
 check("yinelenen komut duplicate döner", res.duplicate === true && res.result.consumesShot === true);

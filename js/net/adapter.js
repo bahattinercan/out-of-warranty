@@ -197,6 +197,7 @@ function netAttachOnline(game, session, opts) {
     lobby: o.lobby || null,
     stateTimerMs: 0,
     inputTimerMs: 0,
+    botTimerMs: 0,        // host: kopan koltukların grace denetimi (F4)
     seq: 0,              // host: yerel komut sıra numarası
     commandSeq: 0,       // komut kimliği sayacı
     chargeSeq: 0,

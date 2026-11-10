@@ -508,6 +508,35 @@ class Game {
     return this.turn === seat;
   }
 
+  /* Misafir koparsa maç sürer: robot grace boyunca oyunda kalır ve süre dolunca
+   * BOT devralır (F4). Kontrol her yarım saniyede bir koltuklara bakılarak yapılır
+   * — ayrı bir zamanlayıcı yok, simülasyon saati zaten hostta yürüyor. */
+  onlineCheckBots(o, dt) {
+    o.botTimerMs = (o.botTimerMs || 0) + dt * 1000;
+    if (o.botTimerMs < 500) return;
+    o.botTimerMs = 0;
+    for (const s of o.session.seats) {
+      if (s.playerIdx === 0 || s.connected || s.bot) continue;
+      o.session.graceExpired(s.playerIdx);
+    }
+  }
+
+  /* Maç sırasında geri dönen oyuncuya dünyayı yeniden gönderir (F4): START
+   * (kadro + harita + tur sayacı) → arazi maskesi → TAM durum (build dahil).
+   * Misafirin sayfası yenilenmiş olabileceği için üçü birlikte gider. */
+  onlineResumeSeat(seat) {
+    const o = this.online;
+    if (!o || o.role !== "host" || !o.session || o.session.phase !== NET_PHASE.PLAYING) return false;
+    o.session.resendStart(seat, {
+      turnId: this.turnId,
+      mapId: this.selectedMap ? this.selectedMap.id : null,
+      roster: this.selectedChars.map((c) => c.id),
+    });
+    o.session.sendTerrainSnapshot(netCaptureTerrain(this), seat);
+    o.session.broadcastState(netCaptureState(this, { tick: this.turnId, includeBuild: true }), seat);
+    return true;
+  }
+
   /* Host sürücüsü: simülasyon oturumun SABİT ADIMLI saatinden yürür (ağ
    * gecikmesi borç olarak taşınır, sessizce atlanmaz). Tur kapandığında oturuma
    * bildirilir (TURN paketi), arazi oymaları ve periyodik durum yayınlanır. */
@@ -526,6 +555,7 @@ class Game {
       o.session.endTurn(this.turnId);
     }
     netFlushTerrain(this, o.session);
+    this.onlineCheckBots(o, dt);
     o.stateTimerMs += dt * 1000;
     if (o.stateTimerMs >= NET_STATE_INTERVAL_MS) {
       o.stateTimerMs = 0;

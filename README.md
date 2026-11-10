@@ -337,16 +337,21 @@ Oyunun kaynak dili Türkçedir: Türkçe metinler **kodun içinde** durur, diğe
 
 ## Çevrimiçi oynanış (beta)
 
-Ana menüdeki **ÇEVRİMİÇİ** kartı iki oyuncunun internet üzerinden 1v1 oynamasını
-sağlar. Sunucu yoktur: iki tarayıcı **WebRTC** ile doğrudan bağlanır, yalnız
-sinyalleşme için PeerJS bulut sunucusu kullanılır (oyun trafiği P2P akar).
+Ana menüdeki **ÇEVRİMİÇİ** kartı 2–6 oyuncunun internet üzerinden aynı odada
+oynamasını sağlar (host + en fazla 5 misafir). Sunucu yoktur: tarayıcılar
+**WebRTC** ile doğrudan bağlanır, yalnız sinyalleşme için PeerJS bulut sunucusu
+kullanılır (oyun trafiği P2P akar).
 
 1. Oda sahibi **ODA KUR**'a basar; ekranda 5 karakterlik bir oda kodu çıkar
-   (`ABC-DE`) ve **BAĞLANTIYI KOPYALA** davet bağlantısını panoya yazar.
-2. Diğer oyuncu **KODA KATIL**'a basıp kodu yazar (ya da davet bağlantısını
-   açar: `...?oda=ABCDE`) ve **HAZIRIM** der.
-3. Oda sahibi **MAÇI BAŞLAT**'a basar. İki taraf aynı araziyi, aynı rüzgârı ve
-   aynı robot istatistiklerini görür.
+   (`ABC-DE`) ve **BAĞLANTIYI KOPYALA** davet bağlantısını panoya yazar. Koltuk
+   panelindeki **2–6** düğmeleriyle oda kapasitesi seçilir (bağlı koltuk varken
+   sayı düşürülemez).
+2. Diğer oyuncular **KODA KATIL**'a basıp kodu yazar (ya da davet bağlantısını
+   açar: `...?oda=ABCDE`) ve **HAZIRIM** der. Oda dolarsa yeni gelen
+   "Oda dolu" bildirimi alır.
+3. Oda sahibi **MAÇI BAŞLAT**'a basar (tüm koltuklar hazır olmalı). Herkes aynı
+   araziyi, aynı rüzgârı ve aynı robot istatistiklerini görür; sıra koltuk
+   sırasıyla döner.
 
 - **Yetki:** oda sahibi (host) tek yetkili simülasyondur. Misafirin atışı, açı ve
   güç **atomik** olarak tek komutta hosta gider; host doğrular ve uygular. Hostun
@@ -355,7 +360,9 @@ sinyalleşme için PeerJS bulut sunucusu kullanılır (oyun trafiği P2P akar).
   yayınlar; misafir arada yalnız görsel yumuşatma yapar (kendi başına hasar/arazi
   kararı vermez).
 - **Kopma:** kopan oyuncunun robotu 12 saniye maçta kalır; süre dolarsa bot
-  devralır. Aynı sekmeden dönüş aynı koltuğa oturur.
+  devralır ve koltuk listede **BOT** olarak görünür. Sayfası yenilenen oyuncu
+  aynı koltuk kimliğiyle döner: dünya (kadro + arazi + tam durum) yeniden
+  gönderilir, bot kapanır.
 - **Çevrimdışı:** PeerJS CDN'i yüklenemezse oyun çökmez; lobi "çevrimiçi
   kitaplığı yüklenemedi" der ve diğer modlar çalışmaya devam eder.
 - **Geliştirmeler kapalı:** çevrimiçi maçta iki taraf taban robot istatistikleriyle
@@ -382,6 +389,8 @@ node tests/net.js          # çevrimiçi protokol + oturum (F3a)
 node tests/net-state.js    # çevrimiçi durum + arazi senkronu (F3b)
 node tests/net-integration.js # çevrimiçi ağ yığını (protokol+oturum+durum+taşıma)
 node tests/net-game.js     # çevrimiçi OYUN uçtan uca (lobi → maç → sonuç + yerleşim + yapıştırma + tıklama)
+node tests/net-multi.js    # 6 koltuk: hedefli WELCOME, ROOM_FULL, oda kapasitesi, sıra 1→6→1
+node tests/net-reconnect.js # kopma → bot devralma → aynı koltuğa dönüş (F4)
 ```
 
 Ana test takımı robot veri sözleşmesini, 34 arena üretimini, dokuz fabrika bölgesini, bütün prop kayıtlarını, modüler çizimi, yetenekleri, bot karar sistemini (puanlama, güvenlik filtresi, hareket yolu, isabet kalitesi ve zorluk merdiveni) ve geliştirme sisteminin oyun entegrasyonunu doğrular. Harita testleri 34 benzersiz profili, 2–6 oyuncu doğuşlarını ve katmanlı köprü/raf/tünel maskelerini denetler. Geliştirme testleri seviye eşiklerini, ödül formülünü, yetenek adaptörlerini, profil doğrulamasını ve satın alma önkoşullarını tarayıcısız denetler. Pazar testleri cephane fiyatlarını, ortak depo doğrulamasını (bilinmeyen/sınırsız silah ve üst sınır), satın alma önkoşullarını, maça yükleme ve harcanan mermiyi düşme döngüsünü, robot depolarının ortak depoya taşındığı v3→v4 göçünü ayrıca pazar ekranı/satın alma akışının oyun entegrasyonunu denetler. **Parça testleri** katalog bütünlüğünü (24 parça, yuva başına 6, etki eksenleri), benzersiz satın almayı, **yuva başına iki alt yuvayı** (indeksli takma, taşıma, kırpma, göç v5→v6), aynı parçanın birden çok robotta takılı olabilmesini, parçaların build'e etkilerini (düz toplamlar + çarpımsal güç/savrulma/hız/sıçrama, kırpma sınırları), pazar yuva sekmelerini, Atölye parça panelini (8 hücre + sayfalı liste) ve aksesuar çizimini denetler. Ses testleri Web Audio kaynak temizliğini, sessize alma davranışını, seviye kaydını ve hasar bildirimlerini denetler. Mermi görsel testleri 27 spec'in tasarım ailesi kuralını (paylaşım yalnız `SHARED_SHAPES` beyaz listesinde), shape'lerin birbirinden farklı çizim üretmesini, tüm spec'lerin hatasız çizilmesini ve önizleme çizicisini denetler. Yetenek efekti testleri her modülün kayıtlı ve benzersiz bir `fx.shape` taşıdığını, her türün varsayılan efektini, türetilmiş build'in görsel kimliği koruduğunu, 34 shape'in ömrü boyunca hatasız/farklı/deterministik çizildiğini, gradient-`shadowBlur` kullanılmadığını ve aura/ikon çizicilerini denetler.

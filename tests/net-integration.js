@@ -416,7 +416,8 @@ check("kalan koltuk yayını almaya devam eder", (() => {
   return heard2.length === n + 1;
 })());
 g2.close();
-check("son misafir de kopunca host kapanır", hub.host.isOpen() === false);
+check("son misafir kopsa da host AÇIK kalır (yeni oyuncu bekler)",
+  hub.host.isOpen() === true && hub.host.peers().length === 0);
 
 // ── 8) Oda kodu ──────────────────────────────────────────────────────────
 const codes = new Set();

@@ -33,7 +33,12 @@ node tests/net.js       # çevrimiçi protokol + oturum (F3a)
 node tests/net-state.js # çevrimiçi durum + arazi senkronu (F3b)
 node tests/net-integration.js # çevrimiçi ağ yığını (protokol+oturum+durum+taşıma)
 node tests/net-game.js     # çevrimiçi OYUN uçtan uca (lobi → maç → sonuç)
+node tests/net-multi.js    # 6 koltuk (F4): hedefli WELCOME, ROOM_FULL, kapasite, sıra 1→6→1
+node tests/net-reconnect.js # kopma → bot devralma → aynı koltuğa dönüş (F4)
 ```
+
+Ortak test ortamı: `tests/harness.js` (oyunu `vm` içinde yükler + sahte DOM).
+Yeni bir çevrimiçi test dosyası yazarsan DOM/bundle kodunu kopyalama, buradan al.
 
 ## ⚠️ En kritik kural: klasik scriptler, ES module YOK
 
@@ -87,9 +92,9 @@ Oyun `file://` üzerinden çift tıklayınca çalışmak zorunda. Bu yüzden:
 | `js/net/protocol.js` | ~200 | Çevrimiçi protokol (F3a): zarf/komut doğrulama, sıra, komut tekilleştirme, girdi tazeliği — DOM/WebRTC bilmez                                                 |
 | `js/net/session.js`  | ~340 | Çevrimiçi oturum (F3a): host yetkili tur/komut akışı, saat ve borç, kopma/bot devralma, iptal; oyun kuralları `rules` adaptöründen gelir                       |
 | `js/net/state.js`    | ~330 | Çevrimiçi durum senkronu (F3b): snapshot capture/apply, arazi maskesi RLE, oyma kayıtlarının oynatılması, hash — savunmacı apply                 |
-| `js/net/transport.js` | ~235 | Çevrimiçi taşıma (F3c): döngü taşıması (gecikme/kayıp simülasyonu) + PeerJS sarmalayıcı (ICE/STUN) + oda kodu üretimi                                          |
+| `js/net/transport.js` | ~300 | Çevrimiçi taşıma (F3c/F4): döngü taşıması (gecikme/kayıp simülasyonu, `LoopbackHub` ile N misafir) + PeerJS sarmalayıcı (ICE/STUN, host N bağlantı, `sendTo`/`onPeerClose`) + oda kodu üretimi                                          |
 | `js/net/adapter.js` | ~230 | Oyun ↔ ağ köprüsü (F3c): `rules` adaptörü (komut→oyun çağrısı), host tur/snapshot/arazi yayını, misafir uygulama                                  |
-| `js/online-lobby.js` | ~660 | Çevrimiçi lobi ekranı (F3c): oda kodu/davet/hazır akışı, PeerJS tembel yükleme, robot seçici, hata ve durum metinleri |
+| `js/online-lobby.js` | ~800 | Çevrimiçi lobi ekranı (F3c/F4): oda kodu/davet/hazır akışı, 2–6 koltuk kapasitesi, kopma/bot rozeti, PeerJS tembel yükleme, robot seçici, hata ve durum metinleri |
 
 ## Veri-güdümlü tasarım (uzantı noktaları)
 
@@ -100,13 +105,26 @@ Yeni içerik çoğunlukla **kod değil veri** eklemekle yapılır:
 - **Yeni parça:** `parts.js > PARTS` dizisine bir spec ekle: `{ id, label, slot, desc, price, effects, icon }`. `slot` dört yuvadan biri olmalı (`helmet/body/tool/feet`); `effects` yalnız tanımlı eksenleri kullanır (`maxHpFlat`, `maxHpPct`, `armorFlat`, `staminaFlat`, `weaponDamagePct`, `powerPct`, `knockbackRedPct`, `cooldownFlat`, `moveSpeedMult`, `jumpPowerMult`); her yuvaya `PARTS_PER_SLOT` (2) parça takılır — loadout[yuva] bir dizidir. Yeni bir eksen eklenirse `progression.js > PART_EFFECT_KEYS` + `_partEffectTotals` + `resolveRobotBuild` formülü ve `partEffectText` de güncellenir. `icon.shape` `parts.js > PART_ICON_SHAPES` içinde olmalı (yoksa cıvata yedeğine düşer). README parça tablosunu güncelle.
 - **Yeni karakter:** `characters.js > CHARACTERS` dizisine ekle; `skill.kind` mevcut türlerden biri olmalı (`heal`, `shield`, `damageReduce`, `nextShot`, `jump`, `dash`, `dig`, `glide`, `melee`, `radial`, `quake`, `spit`). Yeni bir `kind` eklersen `skills.js > useSkill` içine dallanma ekle.
 - **Yeni harita teması:** `maps.js` içindeki biyom/tema tablolarından üretilir; her karaktere bir harita bağlanır.
-- **Çevrimiçi (F3c) özeti:** lobi `js/online-lobby.js`, ağ çekirdeği `js/net/*.js`
+- **Çevrimiçi (F3c/F4) özeti:** lobi `js/online-lobby.js`, ağ çekirdeği `js/net/*.js`
   (protokol → taşıma → durum → oturum → adaptör), oyun bağlantısı `js/game.js`
-  içindeki `beginOnlineMatch`/`updateOnlineHost`/`updateGuest`. Host yetkilidir;
+  içindeki `beginOnlineMatch`/`updateOnlineHost`/`updateGuest`/`onlineResumeSeat`. Host yetkilidir;
   misafir komut gönderir ve hostun paketlerini uygular. Arazi oyması hostta
   yuvarlanmış parametrelerle kazınır (`terrain.recordChanges`) ki iki maske
   birebir olsun. Komut kimlikleri koltuk ad alanındadır (`s0-1`, `s1-1`) —
   çakışırsa host karşı tarafın komutunu "yinelenen" sanıp uygulamaz.
+  **Oda 2–6 koltukludur** (`NET_MIN_SEATS`/`NET_MAX_SEATS`): host kapasiteyi
+  lobide seçer, bağlı koltuk düşürülemez; kadro KOLTUK SIRASINA göre kurulur
+  (`players[i]` = koltuk i). `transport.send()` YAYIN, `sendTo(peerId, …)` tek
+  hedef: `WELCOME`/`ACK`/geri dönüş paketleri yalnız sahibine gider. INPUT
+  sequence'ı koltuk başına tutulur (`session.inputSeqs`) — ortak sayaç altı
+  misafiri birbirini "eski" diye düşürür. Dolu oda `NET_MSG.REJECT`
+  (`ROOM_FULL`) gönderir (protokol v3).
+  **Kopma:** peer kapanışı koltuk bazında işlenir; grace (12 sn) sonunda
+  `rules.setBot` robotu devralır (tek `BotController` sıradaki bot koltuğunu
+  sürer) ve liste **BOT** rozetine düşer. `HELLO` + `seatToken` ile dönen
+  oyuncu AYNI koltuğa oturur: `resendStart` + arazi maskesi + TAM durum yalnız
+  o bağlantıya gider, bot kapanır. Bekçiler: `tests/net-multi.js`,
+  `tests/net-reconnect.js`.
   **Host kendi girdisini tazeler** (`session.touchLocalInput(0)`): host INPUT
   paketi göndermediği için tazelik denetimi ona uygulanırsa yürüme ve güç
   doldurma HER KAREDE silinir ve host atış yapamaz (yaşandı).

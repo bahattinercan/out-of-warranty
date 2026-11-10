@@ -34,6 +34,25 @@ start index.html
 5. **Konsol (F12 → Console):** beklenen tek uyarı AudioContext autoplay
    uyarısıdır. Başka kırmızı hata varsa kodu bana ilet.
 
+### Aşama 1b — Altı koltuk (F4 duman testi)
+
+`ODA KUR` ekranındaki koltuk panelinde **2 3 4 5 6** düğmeleri vardır. 6'yı
+seçip aynı makinede 5 sekme daha açın (her sekme ayrı misafir sayılır; farklı
+sekme = farklı `sessionStorage`, yani ayrı koltuk):
+
+1. Beş sekmede de `KODA KATIL` → aynı kod → `HAZIRIM`.
+2. Koltuk listesinde beşi de **HAZIR** olmalı; biri eksikse `MAÇI BAŞLAT` kapalıdır.
+3. Maç başlayınca sıra 1→2→3→4→5→6 döner; her turda tüm sekmelerde aynı rüzgâr,
+   aynı arazi ve aynı sıra görünür.
+4. Bir sekmede `F5` (sayfa yenile) → davet bağlantısından aynı kodla katıl:
+   oyuncu **aynı koltuğa** döner, bot kapanır, dünya yeniden kurulur.
+5. Bir sekmeyi kapat → 12 saniye sonra o koltuk listede **BOT** olur ve sırası
+   gelince kendi atışını yapar.
+6. Altıncı koltuk doluyken yedinci sekme katılırsa **"Oda dolu"** görür.
+
+> Gerçek ağ ölçütü hâlen 2 oyuncuyla ölçülür (aşağıdaki aşama); 6 koltuklu maç
+> aynı anda 6 farklı ağdan henüz denenmedi.
+
 ## Aşama 2 — İki farklı cihaz / iki farklı ağ (asıl ölçüt)
 
 En öğretici kombinasyon: **bir cihaz ev Wi-Fi'sinde, diğeri telefon hotspot'unda**

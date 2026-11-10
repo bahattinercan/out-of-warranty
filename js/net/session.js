@@ -108,6 +108,8 @@ class NetSession {
    * Gönderen kimliği taşımadan gelir; paketten okunmaz. */
   handleHello(fromPlayer, msg, opts) {
     if (this.role !== "host") return { ok: false, reason: "NOT_HOST" };
+    // Maç sürerken gelen HELLO = kopan oyuncunun geri dönüşü (F4).
+    if (this.phase === NET_PHASE.PLAYING) return this._resumeHello(fromPlayer, msg, opts);
     if (this.phase !== NET_PHASE.LOBBY) return { ok: false, reason: "WRONG_PHASE" };
     const hello = msg || {};
     if (hello.protocolVersion !== NET_PROTOCOL_VERSION) return { ok: false, reason: "PROTOCOL_MISMATCH" };
@@ -135,6 +137,31 @@ class NetSession {
     }, true);
     this.broadcastLobby();
     return { ok: true, seat: seat.playerIdx, seatToken: seat.seatToken };
+  }
+
+  // Koltuk durumu değişti özeti (maç sırasında yeniden bağlanan oyuncu).
+  _resumeHello(fromPlayer, msg, opts) {
+    const hello = msg || {};
+    if (hello.protocolVersion !== NET_PROTOCOL_VERSION) return { ok: false, reason: "PROTOCOL_MISMATCH" };
+    const peerId = opts && opts.peerId;
+    if (!peerId) return { ok: false, reason: "NO_PEER" };
+    // Yalnız AYNI koltuk kimliği kendi koltuğuna döner; kimliksiz bağlantı
+    // maç ortasında koltuk ALAMAZ (kadro sabittir).
+    const seat = this.seats.filter((s) => s.seatToken && s.seatToken === hello.seatToken)[0] || null;
+    if (!seat) return { ok: false, reason: "NO_SEAT" };
+    this.bindPeer(seat.playerIdx, peerId);
+    seat.connected = true;
+    seat.disconnectedAt = null;
+    if (seat.bot) {
+      seat.bot = false;
+      if (typeof this.rules.setBot === "function") this.rules.setBot(seat.playerIdx, false);
+    }
+    this._sendSeat(seat.playerIdx, NET_MSG.WELCOME, {
+      v: NET_PROTOCOL_VERSION, t: NET_MSG.WELCOME,
+      matchId: this.matchId, authoritySessionId: this.authoritySessionId,
+      seat: seat.playerIdx, seatToken: seat.seatToken,
+    }, true);
+    return { ok: true, seat: seat.playerIdx, resumed: true };
   }
 
   // Hazır bildirimi. Host, tüm misafir koltukları hazır olana kadar başlatamaz.
@@ -396,6 +423,12 @@ class NetSession {
   }
 
   _ack(playerIdx, id, result) {
+    // Host kendi komutunu ağdan onaylamaz: ACK yayına düşerse bütün misafirler
+    // hostun komut sonuçlarını boşuna alır (F4: koltuk 0'ın bağlantısı yoktur).
+    if (playerIdx === 0 && !this.peerForSeat(0)) {
+      if (typeof this.rules.onAck === "function") this.rules.onAck(id, result);
+      return;
+    }
     this._sendSeat(playerIdx, NET_MSG.ACK, {
       v: NET_PROTOCOL_VERSION, t: NET_MSG.ACK, matchId: this.matchId,
       authoritySessionId: this.authoritySessionId, turnId: this.turnId,
@@ -498,30 +531,49 @@ class NetSession {
 
   /* Maç başında host arazi maskesini gönderir: arazi Math.random ile üretildiği
    * için misafirin kendi arazisi hostunkinden farklıdır (F3b). */
-  sendTerrainSnapshot(mask) {
+  sendTerrainSnapshot(mask, toSeat) {
     if (this.role !== "host" || !this.matchId) return { ok: false, reason: "NOT_HOST" };
     if (mask && Number.isInteger(mask.version)) this.terrainVersion = mask.version;
-    this.transport.send(NET_MSG.TERRAIN, {
+    const payload = {
       v: NET_PROTOCOL_VERSION, t: NET_MSG.TERRAIN, matchId: this.matchId,
       authoritySessionId: this.authoritySessionId, turnId: this.turnId,
       terrainVersion: this.terrainVersion, mask, changes: [],
-    }, true);
+    };
+    // `toSeat` verilirse yalnız o koltuğa (maç sırasında geri dönen oyuncu).
+    if (toSeat != null) this._sendSeat(toSeat, NET_MSG.TERRAIN, payload, true);
+    else this.transport.send(NET_MSG.TERRAIN, payload, true);
     return { ok: true, terrainVersion: this.terrainVersion };
+  }
+
+  /* Hatırlatma paketi (maç sırasında geri dönen oyuncuya dünyayı yeniden kur):
+   * START'ın aynısı, ama aşama/maç kimliği DEĞİŞMEZ ve yalnız o bağlantıya gider. */
+  resendStart(seat, opts) {
+    if (this.role !== "host") return { ok: false, reason: "NOT_HOST" };
+    const o = opts || {};
+    this._sendSeat(seat, NET_MSG.START, {
+      v: NET_PROTOCOL_VERSION, t: NET_MSG.START, matchId: this.matchId,
+      authoritySessionId: this.authoritySessionId, turnId: o.turnId == null ? this.turnId : o.turnId,
+      mapId: o.mapId, roster: o.roster, hostIdx: 0,
+    }, true);
+    return { ok: true };
   }
 
   /* Periyodik durum yayını: fizik adımını DEĞİŞTİRMEZ (değişmez 3); yalnız
    * hostun o anki durumunu gönderir. */
-  broadcastState(state) {
+  broadcastState(state, toSeat) {
     // LOADING'de de gönderilir: maç başlangıç durumu (includeBuild) onay
     // beklerken yollanır; PLAYING'de periyodik paketler.
     if (this.role !== "host" || this.ended) return false;
     if (this.phase !== NET_PHASE.PLAYING && this.phase !== NET_PHASE.LOADING) return false;
     this.stateSeq.accept(this.stateSeq.last + 1);
-    this.transport.send(NET_MSG.STATE, {
+    const payload = {
       v: NET_PROTOCOL_VERSION, t: NET_MSG.STATE, matchId: this.matchId,
       authoritySessionId: this.authoritySessionId, turnId: this.turnId,
       seq: this.stateSeq.last, state,
-    }, false);
+    };
+    // `toSeat`: yalnız geri dönen oyuncuya tam durum (diğerleri periyodik akışta).
+    if (toSeat != null) this._sendSeat(toSeat, NET_MSG.STATE, payload, false);
+    else this.transport.send(NET_MSG.STATE, payload, false);
     return true;
   }
 

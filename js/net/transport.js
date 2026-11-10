@@ -144,14 +144,14 @@ class LoopbackTransport extends NetTransport {
     for (const t of this.others || []) t._dropLink(this.name);
   }
   /* Karşı uç bu bağlantıyı kaybetti. Host havuzunda (`others`) yalnız İLGİLİ
-   * bağlantı düşer ve oturum açık kalır; havuzyoksa (ikili eşleşme) eskisi gibi
-   * karşı uç da kapanır. */
+   * bağlantı düşer; taşıma AÇIK kalır çünkü gerçek PeerJS'te host peer'i
+   * yaşamaya devam eder ve boşalan koltuğa yeni oyuncu bağlanabilir (F4).
+   * Havuzsuz ikili eşleşmede ise karşı uç da kapanır. */
   _dropLink(name) {
     this._emitPeerClose(name);
-    if (this.others && this.others.length) {
+    if (this.others) {
       const i = this.others.findIndex((t) => t.name === name);
       if (i >= 0) this.others.splice(i, 1);
-      if (!this.others.length) this._setStatus(NET_TRANSPORT_STATUS.CLOSED, { reason: "PEER_CLOSED" });
       return;
     }
     this._setStatus(NET_TRANSPORT_STATUS.CLOSED, { reason: "PEER_CLOSED" });
