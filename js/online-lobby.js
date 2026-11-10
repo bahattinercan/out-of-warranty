@@ -54,6 +54,7 @@ class OnlineLobby {
     this.typed = "";              // misafirin yazdığı kod
     this.robotId = null;          // bu oyuncunun robotu
     this.robotIndex = 0;
+    this.seatCount = NET_MIN_SEATS; // host odasının kapasitesi (2–6, F4)
     this.ready = false;
     this.error = null;            // { key, vars } — çevrilmiş metin çizimde
     this.notice = null;           // { key, vars, age }
@@ -88,6 +89,7 @@ class OnlineLobby {
     this.notice = null;
     this.typed = "";
     this.ready = false;
+    this.seatCount = NET_MIN_SEATS;
     this.elapsedMs = 0;
     this.peerSeats.clear();
     // Davet bağlantısı: ?oda=KOD ile açıldıysa kodu hazır getir ve katılma
@@ -301,15 +303,44 @@ class OnlineLobby {
     if (this.role === "host") {
       this.session = new NetSession({ role: "host", transport: this.transport, rules: {}, now });
       const map = this._mapFor(this.robotId);
-      this.session.openLobby([{ playerIdx: 0, robotId: this.robotId }, { playerIdx: 1 }], {
+      // Oda seçilen kapasiteyle açılır: host koltuğu + (n−1) boş koltuk.
+      const seats = [{ playerIdx: 0, robotId: this.robotId }];
+      for (let i = 1; i < this.seatCount; i++) seats.push({ playerIdx: i });
+      this.session.openLobby(seats, {
         matchId: this.code,
         authoritySessionId: "auth-" + this.code,
         mapId: map ? map.id : null,
-        roster: [this.robotId, null],
+        roster: this._rosterFromSeats(seats),
       });
     } else {
       this.session = new NetSession({ role: "guest", transport: this.transport, rules: {}, now });
     }
+  }
+
+  /* Kadro KOLTUK SIRASINA göre kurulur (oyun `players[i]` = koltuk i).
+   * Robotu henüz seçilmemiş koltuk için sıradaki karakter yedek olarak yazılır:
+   * START ancak tüm koltuklar doluyken çağrıldığı için bu değer normalde
+   * kullanılmaz, yalnız protokol hatasında maçın kilitlenmesini önler. */
+  _rosterFromSeats(seats) {
+    const list = seats || (this.session ? this.session.seats : []);
+    return list.map((s, i) => {
+      if (s.robotId) return s.robotId;
+      const fallback = CHARACTERS[i % CHARACTERS.length];
+      return fallback ? fallback.id : null;
+    });
+  }
+
+  /* Koltuk sayısını değiştir (host, lobide). Bağlı koltukların altına inilemez:
+   * oturum bunu SEATS_OCCUPIED ile reddeder. */
+  setSeatCount(n) {
+    if (this.role !== "host" || !this.session) return false;
+    const res = this.session.setSeatCount(n);
+    if (!res || !res.ok) {
+      if (res && res.reason === "SEATS_OCCUPIED") this._notice("online.notice.seatsOccupied");
+      return false;
+    }
+    this.seatCount = res.seats;
+    return true;
   }
 
   // Karakterin kendi haritası (harita seçimindeki "kendi haritası" mantığı).
@@ -394,6 +425,7 @@ class OnlineLobby {
     if (key === "online.notice.startNeedsReady") return t("online.notice.startNeedsReady", "Karşı taraf hazır olunca başlar");
     if (key === "online.invite.failed") return t("online.invite.failed", "Kopyalanamadı — kodu elle paylaş");
     if (key === "online.notice.joined") return t("online.notice.joined", "Rakip odaya katıldı");
+    if (key === "online.notice.seatsOccupied") return t("online.notice.seatsOccupied", "Bağlı oyuncu varken koltuk azaltılamaz");
     return "";
   }
 
@@ -422,6 +454,11 @@ class OnlineLobby {
     }
     const res = this.session.handleGuestMessage(msg);
     if (res && res.ok === false && res.reason) this._noteReason(res.reason);
+    // Koltuk verilmedi (dolu oda): neden kodu gösterilir, oyuncu boş ekranda beklemez.
+    if (msg && msg.t === NET_MSG.REJECT) {
+      this._noteReason(msg.reason);
+      if (!this.error) this._fail(String(msg.reason || "CONNECT"));
+    }
     if (msg && msg.t === NET_MSG.WELCOME && this.session.mySeat != null) {
       this._storeSeatToken(msg.seatToken);
     }
@@ -447,12 +484,10 @@ class OnlineLobby {
     this.notice = { key, vars, text: this._noticeText(key), age: 0 };
   }
 
-  // Oda sahibi maçı başlatır (karşı taraf hazır olduğunda).
+  // Oda sahibi maçı başlatır (tüm misafir koltukları hazır olduğunda).
   startMatch() {
     if (!this.session || this.role !== "host" || !this.session.canStart()) return false;
-    const guestSeat = this.session.seats.filter((s) => s.playerIdx !== 0)[0];
-    const guestRobot = guestSeat && guestSeat.robotId ? guestSeat.robotId : (CHARACTERS[1] && CHARACTERS[1].id);
-    const roster = [this.robotId, guestRobot];
+    const roster = this._rosterFromSeats(this.session.seats);
     const map = this._mapFor(this.robotId);
     const res = this.session.startMatch(this.code, "auth-" + this.code, {
       turnId: 1, mapId: map ? map.id : null, roster,
@@ -532,6 +567,7 @@ class OnlineLobby {
       if (r.disabled) {
         if (r.action === "start") this._notice("online.notice.startNeedsReady");
         else if (r.action === "copy") this._notice("online.notice.roomNotReady");
+        else if (r.action === "seat") this._notice("online.notice.seatsOccupied");
         return true;
       }
       // Eylem ÖNCE, ses SONRA: ses kurulumu bir kez hata verse bile düğme
@@ -549,6 +585,7 @@ class OnlineLobby {
       else if (r.action === "ready") this.toggleReady();
       else if (r.action === "robotPrev") this._cycleRobot(-1);
       else if (r.action === "robotNext") this._cycleRobot(1);
+      else if (r.action === "seat" && Number.isInteger(r.seat)) this.setSeatCount(r.seat);
       // Tıklama alanları TÜKETİLİR: ekran değiştiyse bir sonraki kare çizilene
       // kadar eski ekranın düğmeleriyle ikinci bir eylem tetiklenmesin
       // (bayat kare → yanlış eylem).
@@ -573,7 +610,7 @@ class OnlineLobby {
       // Oda sahibi: kadro + arena haritası kendi robotuna bağlıdır; kendi
       // koltuğundaki robot da güncellenir (misafir oda listesinde görür).
       if (this.session.seats[0]) this.session.seats[0].robotId = this.robotId;
-      this.session.lobbyRoster = [this.robotId, null];
+      this.session.lobbyRoster = this._rosterFromSeats(this.session.seats);
       const map = this._mapFor(this.robotId);
       this.session.lobbyMapId = map ? map.id : null;
       this.session.revision++;
@@ -650,7 +687,7 @@ class OnlineLobby {
     ctx.fillStyle = "#ffe45e"; ctx.font = uiTitleFont(size);
     ctx.fillText(t("online.title", "ÇEVRİMİÇİ"), L.cx, 32);
     ctx.fillStyle = "#cfe0ee"; ctx.font = uiTextFont(12);
-    const sub = _fitTextLines(ctx, t("online.subtitle", "Aynı oda kodundaki iki operatör — internet üzerinden"),
+    const sub = _fitTextLines(ctx, t("online.subtitle", "Aynı oda kodundaki operatörler — internet üzerinden (2–6)"),
       L.contentW, 12, (p) => uiTextFont(p), 1, 9);
     ctx.fillText(sub.lines[0], L.cx, 32 + size + 8);
     if (typeof _csHazardStrip === "function") {
@@ -749,6 +786,32 @@ class OnlineLobby {
     ctx.textAlign = "left"; ctx.textBaseline = "top";
     ctx.fillStyle = "#9fb6c9"; ctx.font = uiTextFont(11, 700);
     ctx.fillText(t("online.seats.title", "KOLTUKLAR"), rect.x + 16, rect.y + 12);
+    /* Kapasite (F4): host 2–6 arasında seçer; misafir yalnız toplamı görür.
+     * Bağlı koltuk sayısının altındaki değerler DEVRE DIŞI — koltukları
+     * düşürmek oturumda reddedilir, düğme bunu önceden gösterir. */
+    const seatTotal = this.session && this.session.seats ? this.session.seats.length : NET_MIN_SEATS;
+    if (this.role === "host") {
+      const claimed = this.session ? this.session.seats.filter((s) => s.claimed).length : 1;
+      const bw = 22, gap = 4;
+      const right = rect.x + rect.w - 12;
+      for (let n = NET_MIN_SEATS; n <= NET_MAX_SEATS; n++) {
+        const x = right - (NET_MAX_SEATS - n + 1) * (bw + gap) + gap;
+        const on = n === seatTotal;
+        const disabled = n < claimed;
+        _csPanel(ctx, x, rect.y + 8, bw, 18, {
+          accent: disabled ? "#2a3848" : on ? "#ffe45e" : "#3b526b", selected: on, disabled,
+        });
+        ctx.textAlign = "center"; ctx.textBaseline = "middle";
+        ctx.fillStyle = disabled ? "#5e7488" : on ? "#101820" : "#cfe0ee";
+        ctx.font = uiTextFont(11, 700);
+        ctx.fillText(String(n), x + bw / 2, rect.y + 17);
+        this._rects.push({ x, y: rect.y + 8, w: bw, h: 18, action: "seat", seat: n, disabled });
+      }
+    } else {
+      ctx.textAlign = "right"; ctx.textBaseline = "top";
+      ctx.fillStyle = "#5e7488"; ctx.font = uiTextFont(10, 700);
+      ctx.fillText(t("online.seats.capacity", "KOLTUK {n}", { n: seatTotal }), rect.x + rect.w - 14, rect.y + 13);
+    }
     for (let i = 0; i < rows.length; i++) {
       const row = rows[i];
       const ry = rect.y + 32 + i * 54;
@@ -769,12 +832,19 @@ class OnlineLobby {
       ctx.font = uiTitleFont(13);
       ctx.fillText(ch ? ch.label : t("online.seat.empty", "Bekleniyor…"), rect.x + 70, ry + 18);
       ctx.fillStyle = "#8fa6bd"; ctx.font = uiTextFont(11);
-      ctx.fillText(row.host ? t("online.seat.host", "ODA SAHİBİ") : t("online.seat.guest", "MİSAFİR"), rect.x + 70, ry + 35);
+      // Kalabalık odada "MİSAFİR" tekrarı yerine koltuk numarası okunur.
+      const roleLabel = row.host
+        ? t("online.seat.host", "ODA SAHİBİ")
+        : rows.length > 2
+          ? t("online.seat.number", "KOLTUK {n}", { n: row.playerIdx + 1 })
+          : t("online.seat.guest", "MİSAFİR");
+      ctx.fillText(roleLabel, rect.x + 70, ry + 35);
       const badge = !row.claimed ? t("online.seat.waiting", "BAĞLANMADI")
+        : row.bot ? t("online.seat.bot", "BOT")
         : row.ready ? t("online.seat.ready", "HAZIR")
         : t("online.seat.notReady", "HAZIR DEĞİL");
       ctx.textAlign = "right"; ctx.textBaseline = "middle";
-      ctx.fillStyle = !row.claimed ? "#7f93a6" : row.ready ? "#7bdc8e" : "#ffd24a";
+      ctx.fillStyle = !row.claimed ? "#7f93a6" : row.bot ? "#c89bff" : row.ready ? "#7bdc8e" : "#ffd24a";
       ctx.font = uiTextFont(11, 700);
       ctx.fillText(badge, rect.x + rect.w - 22, ry + 25);
       if (row.you) {
@@ -812,7 +882,7 @@ class OnlineLobby {
       });
       const can = !!(this.session && this.session.canStart());
       this._button(ctx, { x, y: by + bh + 6, w: bw, h: bh + 4, action: "start", disabled: !can }, {
-        title: can ? t("online.start", "MAÇI BAŞLAT") : t("online.startWait", "Karşı taraf bekleniyor…"),
+        title: can ? t("online.start", "MAÇI BAŞLAT") : t("online.startWait", "Tüm oyuncular hazır olunca başlar"),
         accent: can ? "#ffe45e" : "#3b526b", small: true, disabled: !can,
       });
       this._renderRobotPicker(ctx, cx, by + bh * 2 + 26, undefined, compact);
@@ -902,7 +972,7 @@ class OnlineLobby {
     if (host) {
       const snap = this.session ? this.session.lobbySnapshot() : { seats: [] };
       return snap.seats.map((s) => ({
-        playerIdx: s.playerIdx, claimed: s.claimed, ready: s.ready,
+        playerIdx: s.playerIdx, claimed: s.claimed, ready: s.ready, bot: s.bot,
         robotId: s.playerIdx === 0 ? this.robotId : s.robotId,
         you: s.playerIdx === 0, host: s.playerIdx === 0,
       }));
@@ -914,7 +984,7 @@ class OnlineLobby {
       { playerIdx: 1, claimed: true, ready: this.ready, robotId: this.robotId },
     ];
     return seats.map((s) => ({
-      playerIdx: s.playerIdx, claimed: s.claimed, ready: s.ready,
+      playerIdx: s.playerIdx, claimed: s.claimed, ready: s.ready, bot: s.bot,
       robotId: s.playerIdx === (mySeat == null ? 1 : mySeat) ? this.robotId : s.robotId,
       you: s.playerIdx === (mySeat == null ? 1 : mySeat), host: s.playerIdx === 0,
     }));

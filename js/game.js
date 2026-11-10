@@ -367,12 +367,18 @@ class Game {
     return true;
   }
 
-  // Host kadrosu: [kendi robotum, misafirin robotu] (misafir robotu HELLO ile gelir).
+  // Host kadrosu: KOLTUK SIRASINA göre (players[i] = koltuk i, F4). Misafir
+  // robotu HELLO ile gelir; seçilmemiş koltuk için sıradaki karakter yedek.
   onlineRoster(session) {
-    const host = (this.lobby && this.lobby.robotId) || (CHARACTERS[0] && CHARACTERS[0].id);
-    const guestSeat = session.seats.filter((s) => s.playerIdx !== 0)[0];
-    const guest = (guestSeat && guestSeat.robotId) || (CHARACTERS[1] && CHARACTERS[1].id);
-    return [host, guest];
+    const seats = (session && session.seats) || [];
+    const out = [];
+    for (const s of seats) {
+      if (s.robotId) { out.push(s.robotId); continue; }
+      const fallback = CHARACTERS[s.playerIdx % CHARACTERS.length];
+      out.push(fallback ? fallback.id : null);
+    }
+    if (!out.length) out.push((this.lobby && this.lobby.robotId) || (CHARACTERS[0] && CHARACTERS[0].id));
+    return out;
   }
 
   /* Çevrimiçi maç kurulumu: kadro ve harita hostun START paketinden gelir
@@ -383,9 +389,12 @@ class Game {
   startOnlineMatch(setup) {
     const st = setup || {};
     const ids = Array.isArray(st.roster) ? st.roster : [];
+    // Koltuk sırası KORUNUR: tanınmayan/eksik robot kimliği sıradaki karaktere
+    // düşer, dizi kısaltılmaz — aksi hâlde players[i] ile koltuk i kayar ve
+    // komutlar yanlış robota gider (F4: 2–6 koltuk).
     const chars = [];
-    for (const id of ids) {
-      const def = CHARACTERS.find((c) => c.id === id);
+    for (let i = 0; i < ids.length; i++) {
+      const def = CHARACTERS.find((c) => c.id === ids[i]) || CHARACTERS[i % CHARACTERS.length];
       if (def) chars.push(def);
     }
     if (chars.length < 2) {
@@ -394,7 +403,9 @@ class Game {
       for (let i = 0; i < 2; i++) if (CHARACTERS[i] && chars.indexOf(CHARACTERS[i]) < 0) chars.push(CHARACTERS[i]);
     }
     this.mode = "online";
-    this.selectedChars = chars.slice(0, 2);
+    // Koltuk sayısı kadroyu belirler (2–6). Üst sınır oyunun kendi MAX_PLAYERS'ı.
+    const max = typeof MAX_PLAYERS === "number" ? MAX_PLAYERS : 6;
+    this.selectedChars = chars.slice(0, max);
     this.selectedMap = getMapById(st.mapId) || MAPS[0];
     this.playerControls = this.selectedChars.map(() => "human");
     this.startGame();
@@ -645,7 +656,7 @@ class Game {
     const items = [
       { action: "computer", icon: "robot", accent: "#ff7b7b", title: t("menu.mode.computer.title", "Otomatik Birimlere Karşı"), sub: t("menu.mode.computer.sub", "1 operatör ve 1–3 fabrika robotu") },
       { action: "local", icon: "ikili", accent: "#7baeff", title: t("menu.mode.local.title", "Yerel Operatörler"), sub: t("menu.mode.local.sub", "Aynı cihazda 2–6 oyuncu") },
-      { action: "online", icon: "ağ", accent: "#63e6be", title: t("menu.mode.online.title", "Çevrimiçi"), sub: t("menu.mode.online.sub", "Oda koduyla 1v1 — internet üzerinden") },
+      { action: "online", icon: "ağ", accent: "#63e6be", title: t("menu.mode.online.title", "Çevrimiçi"), sub: t("menu.mode.online.sub", "Oda koduyla 2–6 oyuncu — internet üzerinden") },
       { action: "workshop", icon: "dişli", accent: "#d8a72f", title: t("menu.mode.workshop.title", "ATÖLYE"), sub: t("menu.mode.workshop.sub", "Robotlarını kalibre et • {scrap} Hurda", { scrap }) },
       { action: "market", icon: "mermi", accent: "#3fae8c", title: t("menu.mode.market.title", "CEPHANE PAZARI"), sub: depotTotal > 0 ? t("menu.mode.market.sub", "Depoda {n} mermi • {scrap} Hurda", { n: depotTotal, scrap }) : t("menu.mode.market.subEmpty", "Ortak mühimmat deposu • {scrap} Hurda", { scrap }) },
       { action: "tutorial", icon: "soru", accent: "#4fc3f7", title: t("menu.mode.tutorial.title", "NASIL OYNANIR"), sub: t("menu.mode.tutorial.sub", "Kontroller ve tur kuralları") },

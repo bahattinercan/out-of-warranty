@@ -70,6 +70,7 @@ class NetSession {
     this.lobbyState = null;              // misafir: son LOBBY paketi (arayüz okur)
     this.lastResult = null;              // misafir: son RESULT paketi (sonuç kartı)
     this.lastAbort = null;               // misafir: son ABORT nedeni
+    this.lastReject = null;              // misafir: koltuk verilmedi (REJECT nedeni)
   }
 
   // ── Yaşam döngüsü ─────────────────────────────────────────────────────────
@@ -149,8 +150,7 @@ class NetSession {
   }
 
   // Oda durumu: misafir arayüzü koltukları/hazır durumunu buradan çizer.
-  lobbySnapshot() {
-    return {
+  lobbySnapshot() {    return {
       revision: this.revision,
       matchId: this.matchId,
       hostIdx: 0,
@@ -178,6 +178,32 @@ class NetSession {
     const guests = this.seats.filter((s) => s.playerIdx !== 0);
     if (!guests.length) return false;
     return guests.every((s) => s.claimed && s.ready);
+  }
+
+  /* Koltuk sayısı (F4): host odası 2–6 koltukla açılır ve lobide değiştirilebilir.
+   * Yalnız BOŞ koltuk eklenir/çıkarılır — bağlanmış oyuncunun koltuğu düşürülmez
+   * (düşürülseydi o robot maçtan sessizce silinir, oyuncu da boşta kalırdı). */
+  setSeatCount(n) {
+    if (this.role !== "host") return { ok: false, reason: "NOT_HOST" };
+    if (this.phase !== NET_PHASE.LOBBY) return { ok: false, reason: "WRONG_PHASE" };
+    const want = Math.max(NET_MIN_SEATS, Math.min(NET_MAX_SEATS, n | 0));
+    const claimed = this.seats.filter((s) => s.claimed).length;
+    if (want < claimed) return { ok: false, reason: "SEATS_OCCUPIED", claimed };
+    while (this.seats.length < want) {
+      const i = this.seats.length;
+      this.seats.push({
+        playerIdx: i, connected: false, disconnectedAt: null,
+        seatToken: "seat-" + i, bot: false, claimed: false, ready: false, robotId: null,
+      });
+    }
+    while (this.seats.length > want) {
+      const last = this.seats[this.seats.length - 1];
+      if (last.claimed) break;
+      this.seats.pop();
+    }
+    this.revision++;
+    this.broadcastLobby();
+    return { ok: true, seats: this.seats.length };
   }
 
   // Host maçı başlatır. Yükleme onayları `loaded()` ile toplanır; hepsi
@@ -244,7 +270,16 @@ class NetSession {
     if (this.ended) return { ok: false, reason: "MATCH_ENDED" };
     // Lobi mesajları (HELLO/READY) maç başlamadan LOBBY aşamasında gelir; yükleme
     // onayı LOADING aşamasında. Diğer mesajlar PLAYING ister.
-    if (msg.t === NET_MSG.HELLO) return this.handleHello(fromPlayer, msg, opts);
+    if (msg.t === NET_MSG.HELLO) {
+      const res = this.handleHello(fromPlayer, msg, opts);
+      // Ret sessiz KALMAZ: dolu odada kalan oyuncu nedenini öğrenir (REJECT).
+      if (res && res.ok === false && opts && opts.peerId) {
+        this.transport.sendTo(opts.peerId, NET_MSG.REJECT, {
+          v: NET_PROTOCOL_VERSION, t: NET_MSG.REJECT, reason: res.reason,
+        }, true);
+      }
+      return res;
+    }
     if (msg.t === NET_MSG.READY) return this.handleReady(fromPlayer, msg);
     if (msg.t === NET_MSG.LOADED) return this.loaded(fromPlayer) ? { ok: true } : { ok: false, reason: "NOT_LOADING" };
     if (this.phase !== NET_PHASE.PLAYING) return { ok: false, reason: "WRONG_PHASE" };
@@ -625,7 +660,13 @@ class NetSession {
       this.mySeat = msg.seat;
       this.phase = NET_PHASE.LOBBY;
       this.ended = false;
+      this.lastReject = null;
       return { ok: true };
+    }
+    // Koltuk verilmedi: neden kodla gelir (arayüz t() ile çevirir).
+    if (msg.t === NET_MSG.REJECT) {
+      this.lastReject = msg.reason || "REJECTED";
+      return { ok: true, reject: this.lastReject };
     }
     // Maç başlangıcı: misafir aşamayı LOADING yapar; başlangıç durumu uygulanıp
     // LOADED gönderilene kadar simülasyon ilerlemez (host onayları bekler).

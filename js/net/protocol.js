@@ -17,13 +17,16 @@
 // 1: F3a iskeleti · 2: `NET_CMD.WEAPON` eklendi (misafir silah seçimini hosta
 // bildirir; eski istemci bu komutu UNKNOWN_COMMAND diye sessizce reddederdi —
 // sürüm uyuşmazlığı daha erken ve daha anlaşılır bir hata verir).
-const NET_PROTOCOL_VERSION = 2;
+// 3: `NET_MSG.REJECT` eklendi (F4) — dolu odada kalan oyuncu artık sessizce
+// beklemiyor, nedenini öğreniyor.
+const NET_PROTOCOL_VERSION = 3;
 
 // Mesaj türleri. Güvenilir (tek seferlik eylem/onay) ve güvenilmez (güncel
 // hareket/nişan, periyodik durum) ayrımı `NET_RELIABLE` kümesiyle yapılır.
 const NET_MSG = {
   HELLO: "hello",     // misafir → host: sürüm + içerik özeti
   WELCOME: "welcome", // host → misafir: koltuk + maç kimliği + ayarlar
+  REJECT: "reject",   // host → misafir: koltuk VERİLMEDİ (neden kodu: ROOM_FULL …)
   LOBBY: "lobby",     // host → misafir: oda durumu (seçim/hazır)
   READY: "ready",     // misafir → host: hazır (lobbyRevision taşır)
   START: "start",     // host → misafir: maç başlangıcı (seed, harita, kadro)
@@ -39,7 +42,7 @@ const NET_MSG = {
   PING: "ping",       // iki yön: heartbeat
   PONG: "pong",
 };
-const NET_RELIABLE = [NET_MSG.HELLO, NET_MSG.WELCOME, NET_MSG.LOBBY, NET_MSG.READY,
+const NET_RELIABLE = [NET_MSG.HELLO, NET_MSG.WELCOME, NET_MSG.REJECT, NET_MSG.LOBBY, NET_MSG.READY,
   NET_MSG.START, NET_MSG.LOADED, NET_MSG.CMD, NET_MSG.ACK, NET_MSG.TERRAIN,
   NET_MSG.TURN, NET_MSG.RESULT, NET_MSG.ABORT];
 
@@ -57,6 +60,10 @@ const NET_CMD = {
 // Kopma toleransı: bu süre boyunca robot maçta kalır (ölü sayılmaz, hasar almaya
 // devam eder) ve bot devralmaz. Süre sonunda bot devralır (F4'te oda akışı).
 const NET_GRACE_MS = 12000;
+// Oda kapasitesi (F4): host + en fazla 5 misafir. Oyunun yerel kadrosu da
+// (Game > MAX_PLAYERS) 6'dır; ikisi aynı olmazsa START'ta kadro kırpılır.
+const NET_MAX_SEATS = 6;
+const NET_MIN_SEATS = 2;
 // Girdi tazeliği: 500 ms yenilenmeyen hareket sıfırlanır, açık güç doldurma iptal
 // edilir (docs/multiplayer-plan.md §6).
 const NET_INPUT_STALE_MS = 500;
