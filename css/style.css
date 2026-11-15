@@ -71,26 +71,24 @@
   unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
 }
 
-/* Font ailesi değişkenleri: başlık/buton = Russo One, gövde = Chakra Petch.
-   Canvas tarafı aynı aileleri js/game.js > uiTitleFont/uiTextFont'tan alır.
-   Ağırlık kuralı (üç kademe): başlık ≥14px → Russo One 400; etiket/buton/
-   vurgu → Chakra Petch 700; gövde/açıklama/diyalog → Chakra Petch 600
-   (SemiBold). 400 kesimi artık yalnız fallback olarak durur: bu fontun ince
-   400'ü aynı ekranda 700 ile "başka aile" gibi okunuyordu (kullanıcı
-   bildirimi, 2026-09-25). Ara değer yazmaya gerek yok — 600 de yüklüdür. */
+/* Arayüz hiyerarşisi Chakra Petch ailesinde ağırlık ve boyutla kurulur.
+   Canvas tarafı aynı aileleri uiTitleFont/uiTextFont yardımcılarından alır. */
 :root {
-  --font-title: "Russo One", "Segoe UI", sans-serif;
+  --font-title: "Chakra Petch", "Segoe UI", sans-serif;
   --font-text: "Chakra Petch", "Segoe UI", sans-serif;
   --p0: #ff5a5a;
   --p1: #4aa3ff;
-  --bg: #101517;
-  --panel: #1d2528;
-  --ink: #eaf3f0;
-  /* Endüstriyel panel dili (ui-theme-plan §3.1) — canvas _csPanel ile aynı aile */
-  --panel-line: #3b526b;
-  --panel-hi: #1a2430;
-  --panel-lo: #0f1720;
-  --strip: repeating-linear-gradient(-45deg, #ffe45e 0 5px, #11161c 5px 10px);
+  --bg: #081116;
+  --panel: #142329;
+  --ink: #edf4f0;
+  --panel-line: #31515a;
+  --panel-hi: #182a30;
+  --panel-lo: #0e1a20;
+  --strip: linear-gradient(90deg, #f4bd62, #ef9c55 48%, #71d3bd);
+  --accent-primary: #f4bd62;
+  --accent-secondary: #71d3bd;
+  --text-muted: #a9bec2;
+  --surface-raised: #1b2d33;
 }
 
 /* Kesik köşeli (chamfer) kesit: canvas _csPanel'in DOM karşılığı.
@@ -120,6 +118,7 @@ html, body {
 #app {
   width: 100%;
   height: 100vh;
+  height: 100dvh;
   margin: 0;
   padding: 8px;
   display: flex;
@@ -312,7 +311,7 @@ html, body {
 }
 
 .center { display: flex; flex-direction: row; flex-wrap: wrap; align-items: center; justify-content: center; gap: 2px 12px; }
-#turn-banner { font-size: 16px; font-weight: 400; font-family: var(--font-title); letter-spacing: .5px; white-space: nowrap; text-shadow: 0 1px 2px #000c; }
+#turn-banner { font-size: 16px; font-weight: 700; font-family: var(--font-title); letter-spacing: .5px; white-space: nowrap; text-shadow: 0 1px 2px #000c; }
 #wind-indicator {
   font-size: 13px;
   opacity: .95;
@@ -598,12 +597,12 @@ canvas#game {
     radial-gradient(circle 2.5px at calc(100% - 10px) calc(100% - 10px), #9fb6c9 0 40%, #2c3a4c 75%, transparent 80%);
 }
 .overlay-card > * { position: relative; }
-.overlay-card h1 { margin: 0 0 6px; font-family: var(--font-title); font-weight: 400; letter-spacing: 1px; }
+.overlay-card h1 { margin: 0 0 6px; font-family: var(--font-title); font-weight: 700; letter-spacing: .3px; }
 .overlay-card button {
   margin-top: 14px;
   padding: 10px 22px;
   font-size: 15px;
-  font-weight: 400; /* Russo One tek kalınlık; sahte bold üretilmesin */
+  font-weight: 700;
   font-family: var(--font-title);
   letter-spacing: .5px;
   border: none;
@@ -788,4 +787,191 @@ canvas#game {
   height: 100vh;
   background: var(--bg);
   padding: 8px;
+}
+
+/* ── Operasyon konsolu: ortak arayüz yenilemesi ───────────────────────── */
+.industrial,
+.industrial-sm { clip-path: none; border-radius: 12px; }
+
+#stage {
+  border: 1px solid #d7eee51c;
+  border-radius: 18px;
+  background: #0b171c;
+  box-shadow: 0 18px 54px #0008, inset 0 1px 0 #ffffff0b;
+}
+
+#battle-bar {
+  height: 112px;
+  padding: 9px 12px 10px;
+  gap: 12px;
+  background: linear-gradient(180deg, #17282eeF, #0b171df5);
+  border-top: 1px solid #b9d9ce28;
+  border-radius: 16px 16px 0 0;
+  box-shadow: 0 -10px 28px #0006;
+  backdrop-filter: blur(12px) saturate(115%);
+}
+
+.player-info,
+#weapon-toggle,
+.act-slot,
+#weapon-bar,
+.weapon-chip,
+#weapon-desc {
+  clip-path: none;
+  border-radius: 11px;
+}
+
+.player-info {
+  background: #ffffff08;
+  border-color: #d7eee51a;
+}
+.player-info.active {
+  background: #71d3bd18;
+  border-color: #71d3bd;
+  box-shadow: inset 0 0 0 1px #71d3bd2d;
+}
+.player-info .p-order { color: var(--accent-primary); }
+.player-info .p-hp { color: #e1ece8; }
+
+#weapon-toggle {
+  border-color: #f4bd6280;
+  background: linear-gradient(160deg, #55452b, #282b26);
+  color: #ffda91;
+}
+#weapon-toggle:hover:not(:disabled) {
+  background: linear-gradient(160deg, #705b35, #34372f);
+  box-shadow: 0 0 0 2px #f4bd6233;
+}
+#weapon-toggle.on { border-color: var(--accent-primary); box-shadow: 0 0 0 2px #f4bd6233; }
+.act-slot { background: #ffffff09; border-color: #d7eee52a; }
+.act-slot:hover:not(:disabled) { background: #71d3bd16; border-color: #71d3bd88; }
+.act-slot.active { border-color: var(--accent-primary); background: #f4bd6218; box-shadow: inset 0 0 0 1px #f4bd6233; }
+
+#overlay { background: #061116d9; backdrop-filter: blur(8px); }
+.overlay-card {
+  max-width: min(680px, calc(100% - 28px));
+  border: 1px solid #8ab5a84a;
+  border-radius: 20px;
+  clip-path: none;
+  padding: 30px 36px;
+  background: linear-gradient(150deg, #1c3035, #101c21 72%);
+  box-shadow: 0 22px 70px #0009, inset 0 1px 0 #ffffff0a;
+  filter: none;
+}
+.overlay-card::before {
+  inset: 0 18px auto;
+  height: 3px;
+  border-radius: 0 0 3px 3px;
+  background: var(--strip);
+}
+.overlay-card::after { display: none; }
+.overlay-card h1 { color: var(--accent-primary); letter-spacing: .3px; }
+.overlay-card button {
+  min-height: 44px;
+  padding: 10px 18px;
+  border: 1px solid #f4bd6280;
+  border-radius: 10px;
+  clip-path: none;
+  background: linear-gradient(145deg, #f4bd62, #df9650);
+  color: #182126;
+  transition: transform .14s ease, filter .14s ease, box-shadow .14s ease;
+}
+.overlay-card button:hover:not(:disabled) {
+  background: linear-gradient(145deg, #ffd98e, #ecaa63);
+  filter: none;
+  box-shadow: 0 5px 18px #f4bd6228;
+}
+.overlay-card button.secondary {
+  border-color: #b9d9ce35;
+  background: #ffffff0a;
+  color: var(--ink);
+}
+.overlay-card button.secondary:hover:not(:disabled) { background: #71d3bd18; }
+.overlay-actions { flex-wrap: wrap; }
+#overlay-reward { color: #ffda91; }
+
+#weapon-bar,
+#weapon-desc {
+  border: 1px solid #9dbbb42e;
+  background: linear-gradient(150deg, #1a2b30f5, #0b171df5);
+  box-shadow: 0 14px 36px #0007;
+  backdrop-filter: blur(12px);
+}
+.weapon-chip { border-color: #ffffff20; background: #ffffff08; }
+.weapon-chip:hover:not(:disabled) { background: #71d3bd14; border-color: #71d3bd77; }
+.weapon-chip.selected { border-color: var(--accent-primary); background: #f4bd6219; box-shadow: 0 0 0 1px #f4bd6244; }
+.weapon-chip.selected::after { background: var(--strip); }
+.weapon-chip .ammo-badge { color: #ffda91; background: #071116b8; }
+.wd-special { color: #8ee0cf; }
+.wd-ammo { color: #ffda91; }
+
+#audio-control,
+#locale-control,
+#report-control,
+#fullscreen-btn,
+#quit-btn {
+  border-radius: 10px;
+}
+#fullscreen-btn:focus-visible,
+#quit-btn:focus-visible,
+#weapon-toggle:focus-visible,
+.act-slot:focus-visible,
+.weapon-chip:focus-visible,
+.overlay-card button:focus-visible,
+#report-btn:focus-visible {
+  outline: 3px solid var(--accent-secondary);
+  outline-offset: 3px;
+}
+
+@media (pointer: coarse) {
+  #fullscreen-btn,
+  #quit-btn,
+  #mute-btn,
+  #report-btn,
+  #locale-select,
+  #volume-slider {
+    min-block-size: 44px;
+    min-inline-size: 44px;
+  }
+}
+
+@media (max-width: 760px) {
+  #battle-bar {
+    height: 116px;
+    flex-direction: column;
+    gap: 6px;
+    padding: 6px 8px;
+  }
+  #players { flex: 0 0 43px; width: 100%; }
+  .player-info { width: 126px; padding: 4px 6px; }
+  .player-info .p-avatar { width: 32px; height: 32px; }
+  #battle-actions { flex: 1 1 auto; min-height: 54px; justify-content: center; }
+  #weapon-toggle { width: 72px; }
+  .act-slot { flex: 1 1 52px; width: auto; max-width: 76px; }
+  .act-slot .slot-icon { width: 34px; height: 34px; }
+  #weapon-panel { bottom: 126px; }
+}
+
+@media (max-width: 480px) {
+  #app { padding: 4px; }
+  #battle-bar { height: 122px; }
+  #players { flex-basis: 42px; }
+  #battle-actions { gap: 5px; }
+  #weapon-toggle { width: 58px; font-size: 10px; }
+  .act-slot { min-width: 0; padding-inline: 1px; }
+  .act-slot .slot-name { max-width: 100%; overflow: hidden; text-overflow: ellipsis; font-size: 9px; }
+  .act-slot .slot-icon { width: 30px; height: 30px; }
+  #weapon-panel { inset-inline: 6px; bottom: 130px; max-width: none; flex-direction: column; }
+  #weapon-bar { max-width: 100%; }
+  #weapon-desc { display: none; }
+  .overlay-card { padding: 24px 18px; }
+  .overlay-actions { gap: 6px; }
+  .overlay-card button { flex: 1 1 42%; margin-top: 8px; padding-inline: 10px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .overlay-card button,
+  .player-info,
+  .act-slot,
+  .weapon-chip { transition-duration: 0.01ms; }
 }

@@ -114,39 +114,106 @@ function _rbFillGloss(ctx, x, y, w, h, rad, alpha) {
 
 // ── Eller ve kollar ────────────────────────────────────────────────────────
 
-// El: avuç + üç parmak + başparmak. `ang` yerel yön (radyan), `grip` true ise
-// parmaklar kapanır (namlu/tutamak kavrayışı).
+// El: Wild Ones stili yüzen el (floating hands). Avuç + yuvarlak boğumlu parmaklar + başparmak.
+// `ang` yerel yön (radyan), `grip` true ise parmaklar silahı / tutamağı kavrar.
 function _rbHand(ctx, x, y, ang, s, color, grip) {
-  const outline = _rbShade(color, -0.5);
+  const outline = _rbShade(color, -0.62);
+  const dark = _rbShade(color, -0.28);
+  const light = _rbShade(color, 0.24);
+  const strokeW = Math.max(1.2, s * 0.14);
+
   ctx.save();
   ctx.translate(x, y);
   ctx.rotate(ang);
-  // avuç (bilek → parmak kökü)
-  _rbRoundRect(ctx, -s * 0.34, -s * 0.36, s * 0.70, s * 0.72, s * 0.26);
+
+  // 1) Bilek halkası / manşet (kolsuz yüzen elde arka kenar temiz ve yuvarlak)
+  _rbRoundRect(ctx, -s * 0.38, -s * 0.32, s * 0.18, s * 0.64, s * 0.08);
+  ctx.fillStyle = dark; ctx.fill();
+  ctx.strokeStyle = outline; ctx.lineWidth = strokeW; ctx.stroke();
+
+  // 2) Avuç tabanı
+  _rbRoundRect(ctx, -s * 0.28, -s * 0.34, s * 0.52, s * 0.68, s * 0.22);
   ctx.fillStyle = color; ctx.fill();
-  ctx.strokeStyle = outline; ctx.lineWidth = Math.max(1, s * 0.16); ctx.stroke();
-  // parmaklar: tutuşta kıvrılır, gevşekken uzar
-  for (let i = -1; i <= 1; i++) {
-    const py = i * s * (grip ? 0.19 : 0.25);
-    if (grip) _rbLimb(ctx, s * 0.26, py, s * 0.30, py * 1.95, s * 0.16, color);
-    else _rbLimb(ctx, s * 0.26, py, s * 0.62, py * 1.10, s * 0.16, color);
+  ctx.strokeStyle = outline; ctx.lineWidth = strokeW; ctx.stroke();
+
+  if (grip) {
+    // Silahı kavrayan parmaklar: Wild Ones'taki gibi namlu/tutamak üzerine kıvrılan dolgun parmak boğumları
+    const fingerCount = 3;
+    const fingerH = s * 0.22;
+    for (let i = 0; i < fingerCount; i++) {
+      const fy = -s * 0.22 + i * s * 0.22;
+      _rbRoundRect(ctx, s * 0.04, fy - fingerH * 0.46, s * 0.34, fingerH * 0.92, fingerH * 0.42);
+      ctx.fillStyle = i === 0 ? light : (i === 1 ? color : dark);
+      ctx.fill();
+      ctx.strokeStyle = outline; ctx.lineWidth = strokeW; ctx.stroke();
+    }
+    // Parmak arası boğum çizgileri
+    ctx.strokeStyle = outline; ctx.lineWidth = Math.max(1, strokeW * 0.75);
+    ctx.beginPath();
+    ctx.moveTo(s * 0.02, -s * 0.11); ctx.lineTo(s * 0.28, -s * 0.11);
+    ctx.moveTo(s * 0.02, s * 0.11); ctx.lineTo(s * 0.28, s * 0.11);
+    ctx.stroke();
+
+    // Başparmak (üste kıvrılan tutuş)
+    _rbRoundRect(ctx, -s * 0.10, -s * 0.48, s * 0.30, s * 0.22, s * 0.10);
+    ctx.fillStyle = light; ctx.fill();
+    ctx.strokeStyle = outline; ctx.lineWidth = strokeW; ctx.stroke();
+  } else {
+    // Boşta / yürürken rahat duran parmaklar
+    const fingerAngles = [-0.22, 0, 0.22];
+    for (let i = 0; i < 3; i++) {
+      const fa = fingerAngles[i];
+      const fy = (i - 1) * s * 0.22;
+      ctx.save();
+      ctx.translate(s * 0.14, fy);
+      ctx.rotate(fa);
+      _rbRoundRect(ctx, 0, -s * 0.09, s * 0.36, s * 0.18, s * 0.09);
+      ctx.fillStyle = i === 0 ? light : (i === 1 ? color : dark);
+      ctx.fill();
+      ctx.strokeStyle = outline; ctx.lineWidth = strokeW; ctx.stroke();
+      ctx.restore();
+    }
+    // Başparmak
+    ctx.save();
+    ctx.translate(-s * 0.06, -s * 0.28);
+    ctx.rotate(-0.4);
+    _rbRoundRect(ctx, 0, -s * 0.08, s * 0.26, s * 0.16, s * 0.08);
+    ctx.fillStyle = light; ctx.fill();
+    ctx.strokeStyle = outline; ctx.lineWidth = strokeW; ctx.stroke();
+    ctx.restore();
   }
-  // başparmak
-  _rbLimb(ctx, s * 0.06, -s * 0.30, s * 0.28, grip ? -s * 0.46 : -s * 0.54, s * 0.16, _rbShade(color, 0.12));
+
+  // Çizgi film parlama ışıltısı (Wild Ones tarzı el parlaması)
+  ctx.fillStyle = "rgba(255, 255, 255, 0.28)";
+  ctx.beginPath();
+  ctx.ellipse(-s * 0.06, -s * 0.10, s * 0.14, s * 0.07, -0.3, 0, Math.PI * 2);
+  ctx.fill();
+
   ctx.restore();
 }
 
-// İki eklemli kol: omuzdan ele (omuz bilyesi + dirsek). `bend` omuz-el eksenine
-// dik sapma; işareti pozu belirler.
-function _rbArm(ctx, sx, sy, hx, hy, bend, w, color) {
+// İki sabit uzunluklu uzvun dirseği. `bend` işareti dirseğin tarafını seçer.
+function robotArmPose(sx, sy, hx, hy, upperLength, lowerLength, bend) {
   const dx = hx - sx, dy = hy - sy;
-  const len = Math.max(0.001, Math.sqrt(dx * dx + dy * dy));
-  const ex = (sx + hx) / 2 - (dy / len) * bend;
-  const ey = (sy + hy) / 2 + (dx / len) * bend;
-  _rbJoint(ctx, sx, sy, w * 0.82, _rbShade(color, -0.08));
-  _rbLimb(ctx, sx, sy, ex, ey, w, color);
-  _rbLimb(ctx, ex, ey, hx, hy, w * 0.9, color);
-  _rbJoint(ctx, ex, ey, w * 0.52, _rbShade(color, -0.14));
+  const distance = Math.hypot(dx, dy);
+  if (distance < 0.000001 || distance > upperLength + lowerLength || distance < Math.abs(upperLength - lowerLength)) {
+    throw new RangeError("Robot eli kolun erişim alanı dışında");
+  }
+  const along = (upperLength * upperLength - lowerLength * lowerLength + distance * distance) / (2 * distance);
+  const across = Math.sqrt(Math.max(0, upperLength * upperLength - along * along)) * (bend < 0 ? -1 : 1);
+  return {
+    shoulder: { x: sx, y: sy }, hand: { x: hx, y: hy },
+    elbow: { x: sx + dx / distance * along - dy / distance * across,
+      y: sy + dy / distance * along + dx / distance * across },
+    upperLength, lowerLength,
+  };
+}
+
+function _rbArm(ctx, sx, sy, hx, hy, bend, w, color, pose) {
+  // Wild Ones stili: Karakterlerin kolları değil, elleri vardır (floating hands).
+  // Kol boruları, dirsek mafsalları ve omuz bağlantısı çizilmez; eller bağımsız yüzer.
+  const arm = pose || robotArmPose(sx, sy, hx, hy, w * 3.8, w * 4.0, bend);
+  const ex = arm.elbow.x, ey = arm.elbow.y;
   return { ex, ey };
 }
 
@@ -286,6 +353,27 @@ function _rbLegs(ctx, locomotion, r, color, accent, gait, seed) {
     return;
   }
 
+  if (locomotion === "tracks") {
+    const rolling = gait && gait.air ? r * 0.68 : r * 0.82;
+    const width = r * (gait && gait.air ? 1.08 : 1.42);
+    const height = r * 0.40;
+    _rbRoundRect(ctx, -width / 2, rolling - height / 2, width, height, height / 2);
+    ctx.fillStyle = "#20262b"; ctx.fill();
+    ctx.strokeStyle = "#090c0e"; ctx.lineWidth = Math.max(1.4, r * 0.09); ctx.stroke();
+    const count = Math.max(4, Math.floor(width / (r * 0.28)));
+    for (let i = 0; i < count; i++) {
+      const x = -width / 2 + (i + 0.5) * width / count;
+      _rbRoundRect(ctx, x - r * 0.09, rolling - height * 0.32, r * 0.18, height * 0.64, r * 0.04);
+      ctx.fillStyle = i % 2 ? "#596168" : "#788087"; ctx.fill();
+      ctx.strokeStyle = "#151a1e"; ctx.lineWidth = Math.max(0.7, r * 0.025); ctx.stroke();
+    }
+    for (let side = -1; side <= 1; side++) {
+      _rbDot(ctx, side * width * 0.29, rolling, height * 0.30, "#30383e", "#080a0c");
+      _rbDot(ctx, side * width * 0.29, rolling, height * 0.12, accent, "#080a0c");
+    }
+    return;
+  }
+
   for (const side of [-1, 1]) {
     const legColor = side > 0 ? color : _rbShade(color, -0.24);
     const lp = (g.phase || 0) + (side > 0 ? 0 : Math.PI);
@@ -369,7 +457,34 @@ function _rbTorso(ctx, def, r, color, accent, seed) {
   // Gövde içine üstten ışık / alttan gölge (gradyan yerine katman).
   const gloss = (a) => _rbFillGloss(ctx, -r * 0.62, -r * 0.78, r * 1.24, r * 0.52, r * 0.20, a);
 
-  if (body === "round") {
+  if (def.id === "timsah") {
+    _rbRoundRect(ctx, -r * 0.78, -r * 0.52, r * 1.56, r * 0.68, r * 0.12);
+    ctx.fill(); ctx.stroke(); gloss(0.16);
+    _rbRoundRect(ctx, -r * 0.52, -r * 0.70, r * 0.62, r * 0.24, r * 0.06);
+    ctx.fillStyle = dark; ctx.fill(); ctx.stroke();
+    _rbLine(ctx, -r * 0.66, -r * 0.12, r * 0.65, -r * 0.12, accent, r * 0.055);
+    for (const x of [-0.58, -0.34, 0.34, 0.58]) _rbDot(ctx, r * x, -r * 0.4, r * 0.035, accent, outline);
+  } else if (def.id === "suaygiri") {
+    _rbRoundRect(ctx, -r * 0.64, -r * 0.67, r * 1.28, r * 0.74, r * 0.24);
+    ctx.fill(); ctx.stroke(); gloss(0.2);
+    _rbRoundRect(ctx, -r * 0.82, -r * 0.54, r * 0.24, r * 0.40, r * 0.08);
+    ctx.fillStyle = dark; ctx.fill(); ctx.stroke();
+    _rbRoundRect(ctx, r * 0.58, -r * 0.54, r * 0.24, r * 0.40, r * 0.08);
+    ctx.fillStyle = dark; ctx.fill(); ctx.stroke();
+    _rbLine(ctx, -r * 0.48, -r * 0.02, r * 0.48, -r * 0.02, accent, r * 0.065);
+    _rbDot(ctx, 0, -r * 0.40, r * 0.09, accent, outline);
+  } else if (def.id === "ayi") {
+    _rbRoundRect(ctx, -r * 0.72, -r * 0.64, r * 1.44, r * 0.78, r * 0.13);
+    ctx.fill(); ctx.stroke(); gloss(0.13);
+    for (const side of [-1, 1]) {
+      _rbRoundRect(ctx, side * r * 0.48 - r * 0.19, -r * 0.72, r * 0.38, r * 0.32, r * 0.08);
+      ctx.fillStyle = dark; ctx.fill(); ctx.stroke();
+    }
+    _rbRoundRect(ctx, -r * 0.30, -r * 0.45, r * 0.54, r * 0.38, r * 0.08);
+    ctx.fillStyle = "#232a30"; ctx.fill(); ctx.stroke();
+    _rbDot(ctx, -r * 0.03, -r * 0.27, r * 0.12, accent, outline);
+    _rbLine(ctx, -r * 0.52, -r * 0.03, r * 0.52, -r * 0.03, "#f2a84b", r * 0.045);
+  } else if (body === "round") {
     ctx.beginPath(); ctx.ellipse(0, -r * 0.20, r * 0.44, r * 0.34, 0, 0, Math.PI * 2);
     ctx.fill(); ctx.stroke(); gloss(0.22);
     _rbLine(ctx, -r * 0.42, -r * 0.06, r * 0.42, -r * 0.06, _rbShade(color, -0.34), Math.max(1.4, r * 0.08));
@@ -546,6 +661,63 @@ function _rbShoulders(ctx, chassis, r, color, accent) {
       _rbDot(ctx, sx, sy, r * 0.065, accent, outline);
     }
   }
+}
+
+function _rbDesignInsignia(ctx, id, r, color, accent, outline) {
+  const [shell, shoulder, crest] = ROBOT_DESIGNS[id] || ["service", "service", "visor"];
+  const cx = r * 0.31, cy = -r * 0.23;
+  const plates = {
+    toolbox: ["#e8a020", 0], magnet: ["#654ca5", 1], bunker: ["#51351f", 2],
+    capsule: ["#bfdde8", 3], twin: ["#db481c", 4], press: ["#aab2bb", 5],
+    blade: ["#cf7622", 6], crawler: ["#42622e", 7], loader: ["#82518b", 8],
+    caliper: ["#68777e", 9], rivet: ["#664024", 10], welder: ["#d1b13c", 11],
+    filter: ["#252831", 12], coil: ["#ad7429", 13], siren: ["#414752", 14],
+    resonator: ["#81704e", 15], spinner: ["#555d70", 16], coolant: ["#365d70", 17],
+    cryo: ["#bdd9e6", 18], bulldozer: ["#4a9654", 19], courier: ["#858b94", 20],
+    bearing: ["#9b713c", 21], climber: ["#70451f", 22], springbox: ["#b97722", 23],
+    drone: ["#392847", 24], shell: ["#98713c", 25], reactor: ["#6f7c22", 26],
+    stealth: ["#328b61", 27], furnace: ["#a83c1b", 28], stabilizer: ["#d3e5eb", 29],
+    "perçin": ["#775530", 30], fastener: ["#d77c1e", 31], fan: ["#28799b", 32], acid: ["#869124", 33],
+  };
+  const [, mark] = plates[shell] || [color, 0];
+  ctx.save();
+  ctx.fillStyle = _rbShade(color, -0.32);
+  _rbRoundRect(ctx, -r * 0.16, -r * 0.12, r * 0.38, r * 0.29, r * 0.055);
+  ctx.fill(); ctx.strokeStyle = outline; ctx.lineWidth = Math.max(1, r * 0.035); ctx.stroke();
+  ctx.fillStyle = accent;
+  if (mark % 3 === 0) ctx.fillRect(-r * 0.11, -r * 0.065, r * 0.27, r * 0.045);
+  else if (mark % 3 === 1) {
+    ctx.beginPath(); ctx.arc(cx - r * 0.32, cy + r * 0.01, r * 0.055, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(cx - r * 0.12, cy + r * 0.01, r * 0.055, 0, Math.PI * 2); ctx.fill();
+  } else {
+    ctx.beginPath(); ctx.moveTo(-r * 0.1, -r * 0.055); ctx.lineTo(r * 0.1, -r * 0.055); ctx.lineTo(0, r * 0.08); ctx.closePath(); ctx.fill();
+  }
+  // Model koduna bağlı üç farklı omuz/kask rozeti.
+  if (shoulder === "blade" || shoulder === "wing" || shoulder === "clamp") {
+    for (const side of [-1, 1]) {
+      ctx.beginPath(); ctx.moveTo(side * r * 0.42, -r * 0.43); ctx.lineTo(side * r * 0.68, -r * 0.61);
+      ctx.lineTo(side * r * 0.57, -r * 0.34); ctx.closePath(); ctx.fill(); ctx.stroke();
+    }
+  } else if (shoulder === "coil" || shoulder === "gyro" || shoulder === "rotor") {
+    _rbDot(ctx, -r * 0.50, -r * 0.47, r * 0.16, _rbShade(color, -0.28), outline);
+    _rbDot(ctx, -r * 0.50, -r * 0.47, r * 0.075, accent, outline);
+  } else if (shoulder === "press" || shoulder === "armor" || shoulder === "ram") {
+    for (const side of [-1, 1]) {
+      _rbRoundRect(ctx, side * r * 0.40 - r * 0.16, -r * 0.59, r * 0.31, r * 0.23, r * 0.04);
+      ctx.fillStyle = _rbShade(color, -0.20); ctx.fill(); ctx.stroke(); ctx.fillStyle = accent;
+      ctx.fillRect(side * r * 0.40 - r * 0.11, -r * 0.53, r * 0.21, r * 0.035);
+    }
+  }
+  if (crest === "beak" || crest === "horn" || crest === "ears" || crest === "long") {
+    const tipX = crest === "beak" ? r * 0.65 : r * 0.42;
+    const tipY = crest === "long" ? -r * 1.48 : -r * 1.18;
+    ctx.beginPath(); ctx.moveTo(r * 0.18, -r * 1.1); ctx.lineTo(tipX, tipY); ctx.lineTo(r * 0.38, -r * 0.96);
+    ctx.closePath(); ctx.fill(); ctx.stroke();
+    if (crest === "ears") {
+      ctx.beginPath(); ctx.moveTo(-r * 0.2, -r * 1.08); ctx.lineTo(-r * 0.58, -r * 1.36); ctx.lineTo(-r * 0.48, -r * 0.94); ctx.closePath(); ctx.fill(); ctx.stroke();
+    }
+  }
+  ctx.restore();
 }
 
 // ── Baş, yüz ve baş üstü donanımı ──────────────────────────────────────────
@@ -727,6 +899,110 @@ function _rbHead(ctx, def, r, color, accent) {
   return hy;
 }
 
+function _rbModelPart(ctx, id, x, y, w, h) {
+  if (typeof assetImage !== "function") return false;
+  const image = assetImage("robot-models/" + id);
+  if (!image) return false;
+  ctx.drawImage(image, x, y, w, h);
+  return true;
+}
+
+const RB_IDLE_STYLE = {
+  legs: { rate: 1.35, tilt: 0.018, bob: 0.012 },
+  tracks: { rate: 2.8, tilt: 0.008, bob: 0.004 },
+  wheel: { rate: 1.7, tilt: 0.024, bob: 0.010 },
+  wheels: { rate: 1.9, tilt: 0.021, bob: 0.010 },
+  ball: { rate: 1.2, tilt: 0.034, bob: 0.008 },
+  spring: { rate: 2.7, tilt: 0.026, bob: 0.032 },
+  rotors: { rate: 2.2, tilt: 0.012, bob: 0.025 },
+};
+const RB_LEAN_SKILLS = new Set(["dash", "melee", "quake", "dig"]);
+
+function _rbSkillSignature(ctx, kind, r, accent, progress, seed) {
+  if (!kind || !Number.isFinite(progress)) return;
+  const phase = Math.max(0, Math.min(1, progress));
+  const wave = Math.sin(phase * Math.PI);
+  if (wave <= 0) return;
+  ctx.save();
+  ctx.globalAlpha = wave * 0.8;
+  ctx.strokeStyle = accent;
+  ctx.fillStyle = accent;
+  ctx.lineWidth = Math.max(1.2, r * 0.065);
+  ctx.lineCap = "round";
+  if (kind === "shield" || kind === "damageReduce") {
+    ctx.beginPath(); ctx.arc(0, -r * 0.35, r * (0.70 + wave * 0.08), -Math.PI * 0.82, Math.PI * 0.82); ctx.stroke();
+    ctx.beginPath(); ctx.arc(0, -r * 0.35, r * 0.60, -Math.PI * 0.68, -Math.PI * 0.25); ctx.stroke();
+  } else if (kind === "heal") {
+    const x = -r * (0.62 + phase * 0.08), y = -r * 0.78;
+    ctx.fillRect(x - r * 0.045, y - r * 0.18, r * 0.09, r * 0.36);
+    ctx.fillRect(x - r * 0.18, y - r * 0.045, r * 0.36, r * 0.09);
+    ctx.beginPath(); ctx.arc(x, y, r * 0.25, 0, Math.PI * 2); ctx.stroke();
+  } else if (kind === "melee" || kind === "dash") {
+    ctx.beginPath(); ctx.arc(r * 0.20, -r * 0.30, r * (0.80 + phase * 0.16), -0.95, 0.82); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(r * 0.30, -r * 0.74); ctx.lineTo(r * (0.85 + phase * 0.1), -r * 0.9); ctx.stroke();
+  } else if (kind === "radial" || kind === "quake") {
+    ctx.beginPath(); ctx.ellipse(0, r * 0.42, r * (0.45 + phase * 0.65), r * (0.12 + phase * 0.08), 0, 0, Math.PI * 2); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(-r * 0.44, r * 0.55); ctx.lineTo(-r * 0.30, r * 0.68); ctx.lineTo(-r * 0.18, r * 0.53);
+    ctx.moveTo(r * 0.20, r * 0.55); ctx.lineTo(r * 0.33, r * 0.67); ctx.lineTo(r * 0.48, r * 0.52); ctx.stroke();
+  } else if (kind === "jump" || kind === "glide") {
+    for (let i = 0; i < 3; i++) {
+      const x = -r * (0.34 + i * 0.18), y = r * (0.56 - phase * 0.2 - (i % 2) * 0.08);
+      ctx.beginPath(); ctx.moveTo(x, y + r * 0.14); ctx.lineTo(x + r * 0.08, y - r * 0.08); ctx.lineTo(x + r * 0.16, y + r * 0.14); ctx.stroke();
+    }
+  } else {
+    const x = -r * 0.50, y = -r * (0.50 + wave * 0.05);
+    ctx.beginPath(); ctx.arc(x, y, r * (0.18 + wave * 0.08), 0, Math.PI * 2); ctx.stroke();
+    for (let i = 0; i < 3; i++) {
+      const a = (i / 3) * Math.PI * 2 + seed * Math.PI * 2;
+      _rbDot(ctx, x + Math.cos(a) * r * 0.32, y + Math.sin(a) * r * 0.32, r * 0.045, accent, null);
+    }
+  }
+  ctx.restore();
+}
+
+function _rbDamageOverlay(ctx, r, health, hitFlash, shieldFlash, color) {
+  if (health < 0.62) {
+    const severity = Math.max(0, Math.min(1, (0.62 - health) / 0.62));
+    ctx.save();
+    ctx.globalAlpha = 0.25 + severity * 0.55;
+    ctx.strokeStyle = severity > 0.72 ? "#ff514d" : "#222b31";
+    ctx.lineWidth = Math.max(1.1, r * 0.055);
+    ctx.lineCap = "round";
+    ctx.beginPath();
+    ctx.moveTo(-r * 0.34, -r * 0.58); ctx.lineTo(-r * 0.16, -r * 0.42); ctx.lineTo(-r * 0.24, -r * 0.22);
+    ctx.moveTo(r * 0.20, -r * 0.31); ctx.lineTo(r * 0.05, -r * 0.16); ctx.lineTo(r * 0.30, -r * 0.02);
+    ctx.stroke();
+    if (health < 0.30) {
+      _rbDot(ctx, -r * 0.40, -r * 0.25, r * 0.055, "#ff514d", "#301b1b");
+      _rbDot(ctx, r * 0.34, -r * 0.50, r * 0.045, "#ff514d", "#301b1b");
+    }
+    ctx.restore();
+  }
+  const flash = Math.max(0, Math.min(1, hitFlash || 0));
+  if (flash > 0) {
+    ctx.save();
+    ctx.globalAlpha = flash * 0.78;
+    ctx.strokeStyle = "#fff4d2";
+    ctx.lineWidth = Math.max(1.4, r * 0.08);
+    ctx.beginPath(); ctx.arc(0, -r * 0.32, r * 0.72, Math.PI * 1.10, Math.PI * 1.86); ctx.stroke();
+    ctx.fillStyle = color;
+    _rbDot(ctx, r * 0.42, -r * 0.64, r * 0.055, "#fff4d2", null);
+    ctx.restore();
+  }
+  const shield = Math.max(0, Math.min(1, shieldFlash || 0));
+  if (shield > 0) {
+    ctx.save();
+    ctx.globalAlpha = shield * 0.68;
+    ctx.strokeStyle = "#78e7ff";
+    ctx.lineWidth = Math.max(1.5, r * 0.075);
+    ctx.beginPath(); ctx.arc(0, -r * 0.22, r * 0.91, Math.PI * 1.08, Math.PI * 1.94); ctx.stroke();
+    ctx.strokeStyle = color;
+    ctx.lineWidth = Math.max(1, r * 0.035);
+    ctx.beginPath(); ctx.arc(0, -r * 0.22, r * 1.02, Math.PI * 1.18, Math.PI * 1.86); ctx.stroke();
+    ctx.restore();
+  }
+}
+
 // Siren aparatı: kask tepesinde dönen lamba.
 function _rbHeadGear(ctx, tag, r, accent, hy) {
   if (tag !== "siren") return;
@@ -809,6 +1085,22 @@ const _RB_PROP_LOCO = {
   rotors: [0.06, -0.06, 0.04, -0.06],
 };
 const _RB_PROP_ZERO = [0, 0, 0, 0];
+// Kadrodaki her modelin ayrı üretim kimliği: gövde kabuğu, omuz donanımı ve
+// baş biçimi eşlemesi aynı iskelet üzerinde özgün siluet ayrıntıları üretir.
+const ROBOT_DESIGNS = {
+  kopek:["toolbox","antenna","cap"], kedi:["magnet","halo","dome"], ayi:["bunker","ram","block"],
+  tavsan:["capsule","spring","long"], tilki:["twin","barrel","wedge"], panda:["press","press","block"],
+  kaplan:["blade","blade","crest"], timsah:["crawler","crane","low"], suaygiri:["loader","clamp","dome"],
+  koala:["caliper","knuckle","round"], kunduz:["rivet","hammer","wedge"], ordek:["welder","torch","beak"],
+  kokarca:["filter","vents","mask"], aslan:["coil","coil","crown"], kurtadam:["siren","speaker","ears"],
+  sirtlan:["resonator","horn","speaker"], rakun:["spinner","roller","round"], ornitorenk:["coolant","nozzle","beak"],
+  yeti:["cryo","frost","dome"], dino:["bulldozer","ram","crest"], gergedan:["courier","gyro","wedge"],
+  kirpi:["bearing","roller","round"], maymun:["climber","hook","ears"], kanguru:["springbox","coil","long"],
+  yarasa:["drone","wing","dome"], armadillo:["shell","armor","block"], hamster:["reactor","shield","visor"],
+  bukalemun:["stealth","sensor","mask"], ejderha:["furnace","exhaust","horn"], penguen:["coolant","stabilizer","dome"],
+  oklukirpi:["perçin","rivet","crest"], sincap:["fastener","claw","ears"], kus:["fan","rotor","beak"],
+  zurafa:["acid","sprayer","long"],
+};
 // Sınırlar: dış takım (bot/tank) ile iç takım (uçan/ince) arasındaki fark
 // korunur ama uçlarda kask HP çubuğuna değmesin / parçalar gövdeden kopmasın.
 const _RB_PROP_LIMIT = [
@@ -852,6 +1144,29 @@ function _rbProportions(def) {
 
 const RB_VISUAL_SCALE = 1.10;
 
+// Yerel koordinatlar r birimindedir. Çizim, eller ve mermi aynı pozu okur.
+function robotWeaponPose(def, aim, facing, weapon, recoil = 0) {
+  const proportions = _rbProportions(def);
+  const angle = Math.atan2(Math.sin(aim), Math.cos(aim) * (facing < 0 ? -1 : 1));
+  const ax = Math.cos(angle), ay = Math.sin(angle);
+  const grip = typeof weaponRig === "function" ? weaponRig(weapon) : { frontX: 0.66, frontY: 0.15, backX: 0.16, backY: 0.12 };
+  const kick = Math.max(0, Math.min(1, recoil)) * 0.16;
+  const gun = { x: RB_GUN_PIVOT_X * proportions.torsoX - ax * kick,
+    y: RB_GUN_PIVOT_Y - ay * kick };
+  const point = (x, y) => ({ x: gun.x + ax * x - ay * y, y: gun.y + ay * x + ax * y });
+  const frontHand = point(grip.frontX, grip.frontY);
+  const backHand = point(grip.backX, grip.backY);
+  const frontArm = robotArmPose(0.36 * proportions.torsoX, -0.38, frontHand.x, frontHand.y, 0.73, 0.76,
+    grip.frontBend == null ? 1 : grip.frontBend);
+  const backArm = robotArmPose(-0.34 * proportions.torsoX, -0.38, backHand.x, backHand.y, 0.73, 0.76,
+    grip.backBend == null ? -1 : grip.backBend);
+  frontArm.wristAngle = angle + (grip.frontWrist || 0);
+  backArm.wristAngle = angle + (grip.backWrist || 0);
+  const muzzle = point(RB_GUN_MUZZLE, 0);
+  muzzle.y += proportions.upperDy;
+  return { angle, gun, frontArm, backArm, muzzle };
+}
+
 // Verilen gövde merkezi, yarıçap, bakış yönü ve nişan açısı için namlu ağzının
 // dünya konumu. Bakış yönü yalnız pivotun aynalanmasını etkiler; namlu HER
 // ZAMAN nişan yönüne bakar (çizimde de `ctx.scale(facing,1)` bunu yapar).
@@ -859,14 +1174,12 @@ const RB_VISUAL_SCALE = 1.10;
 // `charDef` verilirse oran grameri de uygulanır (`_rbProportions`): geniş gövde
 // namlu pivotunu yana, uzun bacak ise omzu yukarı taşır. Çizim aynı iki değeri
 // kullandığı için hiza kaymaz; `tests/run.js` "Nişan hizası" grubu bunu tutar.
-function robotMuzzlePoint(cx, cy, r, facing, aim, charDef) {
+function robotMuzzlePoint(cx, cy, r, facing, aim, charDef, weapon, recoil = 0) {
   r *= RB_VISUAL_SCALE;
-  const p = _rbProportions(charDef);
-  const px = cx + (facing < 0 ? -1 : 1) * r * RB_GUN_PIVOT_X * p.torsoX;
-  const py = cy + r * (RB_GUN_PIVOT_Y + p.upperDy);
+  const pose = robotWeaponPose(charDef, aim, facing, weapon, recoil);
   return {
-    x: px + Math.cos(aim) * r * RB_GUN_MUZZLE,
-    y: py + Math.sin(aim) * r * RB_GUN_MUZZLE,
+    x: cx + (facing < 0 ? -1 : 1) * r * pose.muzzle.x,
+    y: cy + r * pose.muzzle.y,
   };
 }
 
@@ -879,8 +1192,9 @@ function robotTopOffset(charDef) {
   return p.upperDy - 0.48 - 0.84 * p.head - 0.45;
 }
 
-function _rbLauncher(ctx, ang, r, accent, px, py) {
+function _rbLauncher(ctx, ang, r, accent, px, py, weapon) {
   const len = r * 1.42, th = r * 0.28;
+  const rig = typeof weaponRig === "function" ? weaponRig(weapon) : { kind: "launcher" };
   const outline = "#0a0d0f";
   ctx.save();
   ctx.translate(px === undefined ? r * RB_GUN_PIVOT_X : px, py === undefined ? r * RB_GUN_PIVOT_Y : py);
@@ -908,6 +1222,25 @@ function _rbLauncher(ctx, ang, r, accent, px, py) {
   _rbRoundRect(ctx, r * 0.04, th * 0.30, r * 0.15, r * 0.32, r * 0.06);
   ctx.fillStyle = "#20262b"; ctx.fill();
   ctx.strokeStyle = outline; ctx.stroke();
+  if (rig.kind === "rifle") {
+    // Dürbün ve ince namlu, aynı kavrama ekseninde kalır.
+    _rbRoundRect(ctx, r * 0.10, -r * 0.34, r * 0.52, r * 0.14, r * 0.04);
+    ctx.fillStyle = "#26313a"; ctx.fill(); ctx.stroke();
+    _rbDot(ctx, r * 0.60, -r * 0.27, r * 0.07, accent, outline);
+  } else if (rig.kind === "shotgun") {
+    ctx.fillStyle = "#876349";
+    _rbRoundRect(ctx, r * 0.48, r * 0.04, r * 0.42, r * 0.15, r * 0.04);
+    ctx.fill(); ctx.stroke();
+    _rbLine(ctx, r * 0.50, -r * 0.06, r * 1.26, -r * 0.06, "#9aa4ad", r * 0.04);
+  } else if (rig.kind === "lobber") {
+    _rbRoundRect(ctx, -r * 0.10, -r * 0.23, r * 0.65, r * 0.47, r * 0.12);
+    ctx.fillStyle = "#48513b"; ctx.fill(); ctx.stroke();
+    for (let i = 0; i < 3; i++) _rbDot(ctx, r * (0.06 + i * 0.15), 0, r * 0.06, accent, outline);
+  } else if (rig.kind === "utility") {
+    _rbRoundRect(ctx, r * 0.20, -r * 0.24, r * 0.52, r * 0.40, r * 0.07);
+    ctx.fillStyle = "#354958"; ctx.fill(); ctx.stroke();
+    _rbDot(ctx, r * 0.47, -r * 0.04, r * 0.11, accent, outline);
+  }
   ctx.restore();
 }
 
@@ -1164,37 +1497,6 @@ function drawRobot(ctx, options) {
   const def = o.charDef;
   if (!def || def.visualKind !== "robot") return false;
 
-  // Roster illüstrasyonları hazır olduğunda karakteri doğrudan üretilmiş
-  // şeffaf sprite ile çiz. Hareket verisi yalnız hafif gövde salınımı verir;
-  // fizik yarıçapı, çarpışma ve namlu koordinatları değişmez.
-  const sprite = typeof assetImage === "function" ? assetImage("robots/" + def.id) : null;
-  if (sprite) {
-    const r = Math.max(4, (o.r || def.r || 14) * RB_VISUAL_SCALE);
-    const facing = o.facing < 0 ? -1 : 1;
-    const motion = o.motion || {};
-    const walk = Math.max(Math.min(1, Math.abs(motion.walkAmp != null ? motion.walkAmp : motion.walk || 0)), Math.min(1, Math.abs(motion.vx || 0) / 2.2));
-    const phase = Number.isFinite(motion.walkPhase) ? motion.walkPhase : (o.timeMs || 0) / 1000 * 4;
-    const bob = motion.onGround === false ? 0 : -Math.abs(Math.cos(phase)) * r * 0.035 * walk + Math.sin((o.timeMs || 0) / 900) * r * 0.01;
-    const sway = Math.sin(phase) * r * 0.018 * walk;
-    ctx.save();
-    ctx.translate((o.cx || 0) + sway, (o.cy || 0) + bob);
-    ctx.scale(facing, 1);
-    ctx.drawImage(sprite, -r * 1.16, -r * 1.52, r * 2.32, r * 3.04);
-    const weapon = Number.isFinite(o.aim) && typeof assetImage === "function" ? assetImage("weapons/launcher") : null;
-    if (weapon) {
-      const localAim = Math.atan2(Math.sin(o.aim), Math.cos(o.aim) * facing);
-      ctx.save();
-      ctx.translate(r * 0.28, -r * 0.42);
-      ctx.rotate(localAim);
-      ctx.drawImage(weapon, -r * 0.40, -r * 0.31, r * 1.35, r * 0.76);
-      ctx.restore();
-    }
-    ctx.restore();
-    return true;
-  }
-
-  // Görsel ölçek: fizik yarıçapı olduğu gibi kalır, yalnız çizim büyür
-  // (RB_VISUAL_SCALE; aynı sabit `robotMuzzlePoint` içinde de uygulanır).
   const r = Math.max(4, (o.r || def.r || 14) * RB_VISUAL_SCALE);
   const facing = o.facing < 0 ? -1 : 1;
   const accent = def.accent || "#63e6be";
@@ -1233,15 +1535,23 @@ function drawRobot(ctx, options) {
     : motion.rollPhase != null ? motion.rollPhase
     : (walking ? dir * (timeMs / 1000) * (2.2 + vx * 2.0) : 0);
   const gait = { walking, air, phase, roll, amp, vy: motion.vy || 0, timeMs };
+  const idleStyle = RB_IDLE_STYLE[def.locomotion] || RB_IDLE_STYLE.legs;
+  const idlePhase = (timeMs / 1000) * idleStyle.rate + _rbSeed(def.id, "idle") * Math.PI * 2;
   // Kollar bacaklara ters salınır (denge); genlik adım sinyaliyle söner.
   const armSwing = walking ? -Math.sin(phase) * 0.6 * amp : 0;
   // Yürüyüş salınımı: gövde her adımda hafifçe kalkar (bacaklar yan yana
   // geçerken) ve iki adımda bir yana kayar. Ayaklar yere basılıyken faz
   // mesafeye kilitli olduğu için salınım adımlarla senkron kalır.
-  const bobY = walking
+  const skillWave = Number.isFinite(o.skillProgress)
+    ? Math.sin(Math.max(0, Math.min(1, o.skillProgress)) * Math.PI) : 0;
+  const skillLean = !Number.isFinite(o.aim) && skillWave > 0 && RB_LEAN_SKILLS.has(o.skillPose)
+    ? skillWave * (o.skillPose === "dash" || o.skillPose === "melee" ? 0.045 : -0.025) : 0;
+  const bobY = Number.isFinite(o.aim) ? 0 : walking
     ? (-Math.abs(Math.cos(phase)) * 0.045 + Math.abs(Math.sin(phase)) * 0.018) * r * amp
-    : (!air ? Math.sin(timeMs / 900) * 0.012 * r : 0); // boşta hafif nefes
-  const swayX = walking ? Math.sin(phase) * r * 0.022 * amp : 0;
+    : (!air ? Math.sin(idlePhase) * idleStyle.bob * r : 0); // alt takıma göre boşta nefes
+  const swayX = walking && !Number.isFinite(o.aim) ? Math.sin(phase) * r * 0.022 * amp : skillLean * r;
+  const headTilt = !walking && !air ? Math.sin(idlePhase) * idleStyle.tilt
+    + (skillWave ? (o.skillPose === "heal" || o.skillPose === "shield" ? -0.08 : 0.05) * skillWave : 0) : 0;
   // Ayak/bacak detayları gövde vidalarından bağımsız serpilsin diye ayrı tohum.
   const seedFoot = _rbSeed(def.id, "foot");
 
@@ -1264,12 +1574,13 @@ function drawRobot(ctx, options) {
   const neckY = -r * 0.48;
   // Namlu omuz hizasında taşınır: gövdeyi ortadan kesmesin. Pivot geometrisi
   // `robotMuzzlePoint` ile ortaktır (nişan çizgisi/mermi de aynı noktadan çıkar).
-  const gunX = r * RB_GUN_PIVOT_X * torsoX, gunY = r * RB_GUN_PIVOT_Y;
+  const pose = holding ? robotWeaponPose(def, aim, facing, o.weapon, o.recoil || 0) : null;
+  const gunX = pose ? r * pose.gun.x : r * RB_GUN_PIVOT_X * torsoX;
+  const gunY = pose ? r * pose.gun.y : r * RB_GUN_PIVOT_Y;
   let handF, handB;
   if (holding) {
-    const ax = Math.cos(localAim), ay = Math.sin(localAim);
-    handF = { x: gunX + ax * r * 0.66 - ay * r * 0.15, y: gunY + ay * r * 0.66 + ax * r * 0.15 };
-    handB = { x: gunX + ax * r * 0.16 - ay * r * 0.12, y: gunY + ay * r * 0.16 + ax * r * 0.12 };
+    handF = { x: pose.frontArm.hand.x * r, y: pose.frontArm.hand.y * r };
+    handB = { x: pose.backArm.hand.x * r, y: pose.backArm.hand.y * r };
   } else if (air) {
     handF = { x: r * 0.62, y: -r * 0.08 };
     handB = { x: -r * 0.54, y: -r * 0.04 };
@@ -1277,8 +1588,8 @@ function drawRobot(ctx, options) {
     handF = { x: r * 0.58 + armSwing * r * 0.18, y: r * 0.16 - Math.abs(armSwing) * r * 0.10 };
     handB = { x: -r * 0.52 - armSwing * r * 0.18, y: r * 0.20 };
   }
-  const handAngleF = holding ? localAim : Math.PI * 0.42;
-  const handAngleB = holding ? localAim : Math.PI * 0.50;
+  const handAngleF = holding ? pose.frontArm.wristAngle : Math.PI * 0.42;
+  const handAngleB = holding ? pose.backArm.wristAngle : Math.PI * 0.50;
   const handSize = r * 0.52;
 
   ctx.save();
@@ -1304,8 +1615,8 @@ function drawRobot(ctx, options) {
   if (_RB_CANNONS.has(def.attachment)) _rbCannon(ctx, def.attachment, r, accent, color);
   // 4) Arka kol (derinlik için koyu; namluyu alttan destekler)
   // Omuz noktaları gövde genişliğiyle ölçeklenir; eller namluya bağlı kalır.
-  _rbArm(ctx, shBX * torsoX, shBY, handB.x, handB.y, -r * 0.16, r * 0.19, _rbShade(color, -0.16));
-  _rbHand(ctx, handB.x, handB.y, handAngleB, handSize, _rbShade(color, -0.16), holding);
+  const scaledArm = arm => ({ elbow: { x: arm.elbow.x * r, y: arm.elbow.y * r } });
+  _rbArm(ctx, shBX * torsoX, shBY, handB.x, handB.y, -r * 0.16, r * 0.19, _rbShade(color, -0.16), pose && scaledArm(pose.backArm));
   ctx.restore();
   // 5) Bacaklar: YER TEMASINA göre ölçeklenir (ayak yere basılı kalır, kalça
   //    yukarı/aşağı kayar). Üst gövde aynı kaymayı `upperDy` ile alır.
@@ -1322,33 +1633,52 @@ function drawRobot(ctx, options) {
   // kalınlığı değişmez (namlu bu yüzden ayrı çizilir).
   ctx.save();
   ctx.scale(torsoX, 1);
-  _rbTorso(ctx, def, r, color, accent, seed);
+  const customBody = _rbModelPart(ctx, def.id + "-body", -r * 0.88, -r * 0.80, r * 1.76, r * 1.31);
+  if (!customBody) _rbTorso(ctx, def, r, color, accent, seed);
   if (o.playerTint) {
     // Operatör rengi silueti değiştirmez: yalnız ince bir göğüs şeridi.
     ctx.fillStyle = o.playerTint;
     ctx.fillRect(-r * 0.32, -r * 0.20, r * 0.64, r * 0.11);
   }
-  _rbShoulders(ctx, def.chassis, r, color, accent);
+  if (!customBody) {
+    _rbShoulders(ctx, def.chassis, r, color, accent);
+    _rbDesignInsignia(ctx, def.id, r, color, accent, _rbShade(color, -0.55));
+  }
   ctx.restore();
-  // Kask: boyun pivotuna göre ölçeklenir (küçük kafa ↔ büyük kafa).
-  ctx.save();
-  ctx.translate(0, neckY);
-  ctx.scale(props.head, props.head);
-  ctx.translate(0, -neckY);
-  const hy = _rbHead(ctx, def, r, color, accent);
-  _rbHeadGear(ctx, def.attachment, r, accent, hy);
-  ctx.restore();
-  // 6) Namlu: ellerin arasına oturur, ön el üstte kalır
-  if (holding) _rbLauncher(ctx, localAim, r, accent, gunX, gunY);
+  // 6) Namlu + ön kol + el — KASKIN ARKASINDA.
+  //    Nişan yukarı döndüğünde namlu omuz pivotundan yukarı uzanıyor ve
+  //    kasktan sonra çizildiği için yüzün üstüne biniyordu (yaşandı
+  //    2026-11-15: "silahlar karakterlerin kafasına geliyor" — 60° yukarı
+  //    nişanda kask alanının ~%25'i, 90°'de ~%45'i namluyla örtülüyordu;
+  //    ölçüm: `_gun_head_probe.html`). Kask en son çizilince yüz her zaman
+  //    okunur, namlu kask siluetinin çevresinden görünür.
+  //    Sıra STATİKTİR (nişan açısına göre değişmez): açıya bağlı katman
+  //    takası, namlu kask sınırını geçerken görünür sıçrama üretiyordu.
+  //    Gövde ve omuzlar bu bloktan ÖNCE çizildiği için namlu hâlâ gövdenin
+  //    önünde, yalnız kaskın arkasında kalır.
+  if (holding) _rbLauncher(ctx, localAim, r, accent, gunX, gunY, o.weapon);
+  _rbHand(ctx, handB.x, handB.y, handAngleB, handSize, _rbShade(color, -0.16), holding);
   // 7) Ön kol + el (namluyu kavrar) ve elde taşınan alet
-  _rbArm(ctx, shFX * torsoX, shFY, handF.x, handF.y, r * 0.20, r * 0.21, color);
+  _rbArm(ctx, shFX * torsoX, shFY, handF.x, handF.y, r * 0.20, r * 0.21, color, pose && scaledArm(pose.frontArm));
   _rbHand(ctx, handF.x, handF.y, handAngleF, handSize, color, holding);
-  if (_RB_WRIST_TOOLS.has(def.attachment)) {
+  if (_RB_WRIST_TOOLS.has(def.attachment) && !holding) {
     _rbWristTool(ctx, def.attachment, handF.x, handF.y, handAngleF, r, accent, color);
   }
   if (o.upgradeVisuals && o.upgradeVisuals.attachmentGlow) {
     _rbAttachmentGlow(ctx, def.attachment, r, accent, { handFx: handF.x, handFy: handF.y });
   }
+  // Kask: boyun pivotuna göre ölçeklenir (küçük kafa ↔ büyük kafa).
+  ctx.save();
+  ctx.translate(0, neckY);
+  ctx.rotate(headTilt);
+  ctx.scale(props.head, props.head);
+  ctx.translate(0, -neckY);
+  const customHead = _rbModelPart(ctx, def.id + "-head", -r * 0.55, -r * 1.42, r * 1.1, r * 0.82);
+  if (!customHead) {
+    const hy = _rbHead(ctx, def, r, color, accent);
+    _rbHeadGear(ctx, def.attachment, r, accent, hy);
+  }
+  ctx.restore();
   ctx.restore(); // üst gövde kayması
   // 8) Takılı parça aksesuarları (v5): yuva→parça eşlemesi (id veya spec)
   // verilmezse hiçbir şey çizilmez — parçasız robot görünümü birebir korunur.
@@ -1357,6 +1687,8 @@ function drawRobot(ctx, options) {
   // parçaları kafa ölçeğini, kasa/sırt parçaları gövde genişliğini, ayak
   // parçaları yer temasını izler (yoksa parça gövdeden kopuyor).
   _rbPartAccessories(ctx, r, _rbPartSpecs(o.parts), timeMs, walking, props, upperDy);
+  _rbSkillSignature(ctx, o.skillPose, r, accent, o.skillProgress, seed);
+  _rbDamageOverlay(ctx, r, Number.isFinite(o.healthRatio) ? o.healthRatio : 1, o.hitFlash, o.shieldFlash, color);
   ctx.restore();
   return true;
 }

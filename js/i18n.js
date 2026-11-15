@@ -161,7 +161,20 @@ const I18N = {
     "mode.playerCount.hint": "Click a number — then each player picks a robot in turn",
     "mode.playerCount.hintFast": "Two players is the fastest way to test",
     "charSelect.localNote": "Standard calibration — upgrades off",
-    "mapSelect.title": "Choose a Factory Zone",
+    "mapSelect.title": "Choose an Arena",
+    "online.map.title": "ARENA",
+    "map.furnace.label": "Molten Foundry",
+    "map.furnace.hint": "Two high side ramps overlook a narrow, dangerous basin.",
+    "map.crane_yard.label": "Night Crane Yard",
+    "map.crane_yard.hint": "Climb stepped roofs and suspended platforms for a fast, exposed route.",
+    "map.reactor_garden.label": "Rootbound Reactor",
+    "map.reactor_garden.hint": "Two high firing ledges overlook a low valley between them.",
+    "map.moon_scrapyard.label": "Lunar Scrapfield",
+    "map.moon_scrapyard.hint": "Debris islands overlook a continuous safe lower route.",
+    "map.ice_rift.label": "Ice Rift",
+    "map.ice_rift.hint": "A deadly bottomless crevasse splits the shores; falling knocks you out.",
+    "map.flooded_lab.label": "Flooded Laboratory",
+    "map.flooded_lab.hint": "An elevated perimeter surrounds a walled arena with breakable inner barriers.",
     "skill.cooldown": "{n} turns until ready",
     "skill.consumesShot": "Uses up the turn's shot",
     "hud.turnIdle": "Turn: -",
@@ -673,7 +686,6 @@ const I18N = {
     "progression.jump": "Jump +{from}% → +{to}%",
     "progression.moveSpeed": "Move speed +{from}% → +{to}%",
     "mapSelect.back": "‹ Robots",
-    "mapSelect.yourRobot": "★ your robot",
     "arena.arena": "Close arena",
     "arena.vertical": "Platforms",
     "arena.open": "Open ground",
@@ -841,6 +853,7 @@ const DATA_CATALOGS = [
     prefix: "part",
     paths: [
       { key: "label", id: "id", at: ["label"] },
+      { key: "hint", id: "id", at: ["hint"] },
       { key: "desc", id: "id", at: ["desc"] },
     ],
   },
@@ -869,7 +882,7 @@ const DATA_CATALOGS = [
     // listede yok: kodlar her dilde aynı kalır.
     paths: [
       { key: "label", id: "id", at: ["label"] },
-      { key: "skillLabel", id: "id", at: ["skillLabel"] },
+      { key: "hint", id: "id", at: ["hint"] },
       // Bölge adı bölge kimliğiyle anahtarlanır: aynı bölgedeki 3-4 harita
       // aynı adı paylaşır, tek çeviri yeter (ayrı önek: harita kimliğiyle
       // karışmasın diye).

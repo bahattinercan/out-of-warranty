@@ -920,7 +920,7 @@ class Explosion {
     this.radius = radius;
     this.color = color || null; // {r,g,b} ya da null -> varsayılan turuncu
     this.t = 0;
-    this.life = 18;
+    this.life = 12;
     this.dead = false;
   }
   update() {
@@ -929,22 +929,20 @@ class Explosion {
   }
   draw(ctx) {
     const p = this.t / this.life;
-    const r = this.radius * (0.4 + p * 0.9);
-    let fill;
-    if (this.color) {
-      const c = this.color;
-      fill = `rgba(${c.r},${c.g},${c.b},${(1 - p) * 0.8})`;
-    } else {
-      fill = `rgba(255,${Math.floor(200 - p * 160)},60,${(1 - p) * 0.8})`;
+    const r = this.radius * (0.2 + p * 0.72);
+    const c = this.color || { r: 255, g: Math.floor(176 - p * 70), b: 58 };
+    ctx.lineCap = "round";
+    ctx.lineWidth = Math.max(1, this.radius * 0.055 * (1 - p));
+    ctx.strokeStyle = `rgba(${c.r},${c.g},${c.b},${(1 - p) * 0.85})`;
+    for (let i = 0; i < 6; i++) {
+      const start = i * Math.PI / 3 + p * 0.22;
+      ctx.beginPath();
+      ctx.arc(this.x, this.y, r, start, start + Math.PI / 9);
+      ctx.stroke();
     }
+    ctx.fillStyle = `rgba(${c.r},${c.g},${c.b},${(1 - p) * 0.22})`;
     ctx.beginPath();
-    ctx.arc(this.x, this.y, r, 0, Math.PI * 2);
-    ctx.fillStyle = fill;
+    ctx.arc(this.x, this.y, this.radius * (0.16 + (1 - p) * 0.12), 0, Math.PI * 2);
     ctx.fill();
-    ctx.beginPath();
-    ctx.arc(this.x, this.y, r, 0, Math.PI * 2);
-    ctx.lineWidth = 3 * (1 - p);
-    ctx.strokeStyle = `rgba(255,255,255,${(1 - p) * 0.7})`;
-    ctx.stroke();
   }
 }

@@ -494,8 +494,9 @@ Her harita için sırasıyla şu üç çizim hazırlanacak:
 
 Harita kartında ayrı mekân adı büyük, bölge adı ve arena kodu küçük gösterilecek.
 Harita kartı maçtaki gerçek geometrinin küçültülmüş çizimini
-kullanacak. Köprü altta boş görünüyorsa maçta da boş olacak. Dekor için rastgelelik
-kalabilir; ana geometri ve doğuşlar her yeniden girişte aynı kalacak.
+kullanacak. Köprü altta boş görünüyorsa maçta da boş olacak. Dekor konumları ve
+türleri harita kimliğinden deterministik üretilecek; ana geometri ve doğuşlar gibi
+her yeniden girişte aynı kalacak.
 
 ## 4. Teknik uygulama işleri
 

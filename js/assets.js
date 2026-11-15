@@ -45,24 +45,28 @@ function assetPreload() {
 // Bölge arka planı: uzak katman (opak, tam kare) + orta katman (alfa).
 // Uzak katman hazır değilse hiçbir şey çizilmez → `false` döner ve çağıran
 // prosedürel arazi/silüet yolunu kullanır.
-function drawBackdropAsset(ctx, zone, W, H) {
+function drawBackdropAsset(ctx, zone, W, H, drawMid = true) {
   if (!zone) return false;
   const far = assetImage("bg/" + zone + "-far");
   if (!far) return false;
   ctx.drawImage(far, 0, 0, W, H);
-  const mid = assetImage("bg/" + zone + "-mid");
-  if (mid) ctx.drawImage(mid, 0, 0, W, H);
+  if (drawMid) {
+    const mid = assetImage("bg/" + zone + "-mid");
+    if (mid) ctx.drawImage(mid, 0, 0, W, H);
+  }
   return true;
 }
 
 // Harita önizlemesi (menü kartı) aynı katmanları küçük dikdörtgene çizer.
 // Ayrı fonksiyon: önizleme koordinatları maç koordinatları değil (x/y/w/h).
-function drawPreviewAsset(ctx, zone, x, y, w, h) {
+function drawPreviewAsset(ctx, zone, x, y, w, h, drawMid = true) {
   if (!zone) return false;
   const far = assetImage("bg/" + zone + "-far");
   if (!far) return false;
   ctx.drawImage(far, x, y, w, h);
-  const mid = assetImage("bg/" + zone + "-mid");
-  if (mid) ctx.drawImage(mid, x, y, w, h);
+  if (drawMid) {
+    const mid = assetImage("bg/" + zone + "-mid");
+    if (mid) ctx.drawImage(mid, x, y, w, h);
+  }
   return true;
 }

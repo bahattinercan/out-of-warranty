@@ -1,5 +1,7 @@
 # Genişletilmiş uygulama durumu — 15 Kasım 2026
 
+Robotların silah tutuşu için oyun modeli eklemli Canvas çizimine geçirildi. Tam gövde robot resimleri ve portreler kaynak referansı olarak korunur; maç, menü, atölye ve HUD aynı eklemli modeli kullanır. Silah, iki el ve mermi çıkışı ortak poz hesabına bağlıdır. Güncel model sözleşmesi: [robot-rig-plan.md](robot-rig-plan.md). Aşağıdaki raster üretim kayıtları önceki sanat paketinin tarihçesidir.
+
 Kullanıcının son onayı, aşağıdaki ilk planın raster kapsamı dışına bıraktığı robot, mermi ve yetenek çizimlerini de kapsama aldı. Bu nedenle eski kapsam dışı kararları geçerli değildir. Oyun fiziği, hitbox'lar ve efekt zamanlamaları korunurken görünen çizimler üretilmiş WebP varlıklarına taşınıyor.
 
 | Paket | Durum |

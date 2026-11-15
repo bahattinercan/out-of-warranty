@@ -29,7 +29,7 @@ const CS_COLS = 6;
 const CS_ROWS = 2;
 
 // Harita seçim ekranı grid düzeni: 5 sütun × 2 satır = sayfa başına 10 kart
-const MS_COLS = 5;
+const MS_COLS = 3;
 const MS_ROWS = 2;
 
 // Atölye grid düzeni: 4 sütun × 3 satır = sayfa başına 12 robot.
@@ -747,23 +747,17 @@ class Game {
 
   renderModeSelect(ctx) {
     const W = this.W, H = this.H;
-    // Bulutlar arka planda kalır, üstüne çelik gradyan + parıltı + vinyet
-    // biner (_msBackdrop): düz siyah perde yerine dökümhane salonu derinliği.
+    // Fabrika dokusu arka planda kalır; sakin konsol yüzeyi içerikleri öne alır.
     drawClouds(ctx, W, "rgba(190,215,240,0.14)");
     _msBackdrop(ctx, W, H);
     ctx.textAlign = "center"; ctx.textBaseline = "top";
-    // Başlık: koyu gölge kopyası + sarı üst kopya — hafif derinlik
-    ctx.fillStyle = "#000000aa"; ctx.font = uiTitleFont(34);
-    ctx.fillText(t("brand.title", GAME_TITLE), W / 2 + 2, H / 2 - 164);
-    ctx.fillStyle = "#ffe45e"; ctx.font = uiTitleFont(34);
-    ctx.fillText(t("brand.title", GAME_TITLE), W / 2, H / 2 - 166);
-    ctx.fillStyle = "#cfe0ee"; ctx.font = uiTextFont(15);
+    ctx.fillStyle = "#ffe45e"; ctx.font = uiTitleFont(Math.min(36, W * 0.042));
+    ctx.fillText(t("brand.title", GAME_TITLE), W / 2, H * 0.075);
+    ctx.fillStyle = "#cfe0ee"; ctx.font = uiTextFont(14);
     ctx.fillText(
       t("menu.tagline", "Arena tahsis protokolünü başlat"),
-      W / 2, H / 2 - 112
+      W / 2, H * 0.16
     );
-    // Başlık altı tehlike şeridi: endüstriyel imza detayı (Faz 2 pilot)
-    _csHazardStrip(ctx, W / 2 - 130, H / 2 - 86, 260, 5);
     // Sürüm damgası (F6): kapalı testte geri bildirim "hangi sürüm" sorusuyla
     // başlamasın diye menünün sağ alt köşesinde küçük yazıyla durur.
     if (typeof GAME_VERSION !== "undefined") {
@@ -787,49 +781,55 @@ class Game {
       { action: "market", icon: "mermi", accent: "#3fae8c", title: t("menu.mode.market.title", "CEPHANE PAZARI"), sub: depotTotal > 0 ? t("menu.mode.market.sub", "Depoda {n} mermi • {scrap} Hurda", { n: depotTotal, scrap }) : t("menu.mode.market.subEmpty", "Ortak mühimmat deposu • {scrap} Hurda", { scrap }) },
       { action: "tutorial", icon: "soru", accent: "#4fc3f7", title: t("menu.mode.tutorial.title", "NASIL OYNANIR"), sub: t("menu.mode.tutorial.sub", "Kontroller ve tur kuralları") },
     ];
-    // Kart sayısı ve pencere genişliği ne olursa olsun taşmasın diye genişlik
-    // kart sayısına göre uyarlanır (kilit belgesi D-08); sığmayan pencerede
-    // kartlar birlikte daralır.
-    const gap = 14, bh = 132;
-    const bw = Math.min(200, Math.floor((W - (items.length + 1) * gap) / items.length));
-    const totalW = items.length * bw + (items.length - 1) * gap;
-    const startX = (W - totalW) / 2, y = H / 2 - 38;
+    // Maç modları büyük seçim kartları, servis araçları kompakt alt kartlardır.
+    const gap = 16;
+    const primaryW = Math.min(276, (W - 48 - gap * 2) / 3);
+    const primaryH = Math.min(184, H * 0.35);
+    const utilityH = Math.min(96, H * 0.19);
+    const primaryY = H * 0.30;
+    const utilityY = H - utilityH - 44;
+    const primaryStartX = (W - (primaryW * 3 + gap * 2)) / 2;
+    const utilityW = (W - 48 - gap * 2) / 3;
+    const utilityStartX = (W - (utilityW * 3 + gap * 2)) / 2;
     this._modeRects = [];
     for (let i = 0; i < items.length; i++) {
-      const x = startX + i * (bw + gap), it = items[i];
-      const hovered = this.input.mouseX >= x && this.input.mouseX <= x + bw && this.input.mouseY >= y && this.input.mouseY <= y + bh;
-      this._modeRects.push({ x, y, w: bw, h: bh, action: it.action });
-      // Hover'da kart 3px yukarı kayar (dokunma alanı _modeRects'te değişmez)
+      const it = items[i], primary = i < 3;
+      const x = primary ? primaryStartX + i * (primaryW + gap) : utilityStartX + (i - 3) * (utilityW + gap);
+      const y = primary ? primaryY : utilityY;
+      const w = primary ? primaryW : utilityW;
+      const h = primary ? primaryH : utilityH;
+      const hovered = this.input.mouseX >= x && this.input.mouseX <= x + w && this.input.mouseY >= y && this.input.mouseY <= y + h;
+      this._modeRects.push({ x, y, w, h, action: it.action });
       const hy = y + (hovered ? -3 : 0);
-      // Tehdit şeridi (eski "servis bölmesi" imzası) kaldırıldı: kartlar
-      // yalnız kendi iz rengi ve ikon plakasıyla ayrışır — başlık tipografisi
-      // ve dikey ritim tüm bölmelerde aynı olsun diye tek punto kullanılır.
-      _csPanel(ctx, x, hy, bw, bh, {
-        // Kenarlık kartın kendi renginde: boşta soluk, hover'da tam doygun
-        accent: hovered ? it.accent : _hexA(it.accent, 0.5),
-        hover: hovered, glow: true,
-        // Kart gövdesine iz renginin çok soluk tonu: kartlar birbirinden ayrılır
-        fillTop: hovered ? _hexA(it.accent, 0.17) : _hexA(it.accent, 0.055),
+      _csPanel(ctx, x, hy, w, h, {
+        accent: hovered ? it.accent : _hexA(it.accent, 0.58),
+        hover: hovered, glow: true, rivets: false,
+        fillTop: hovered ? _hexA(it.accent, 0.19) : _hexA(it.accent, 0.08),
       });
-      // İkon plakası: kartın üstünde kesik köşeli mini bölme + vektör glif
-      _msIcon(ctx, it.icon, x + bw / 2, hy + 31, it.accent, hovered);
-      // Başlık/alt yazı kart genişliğine sığdırılır (satır bölme + punto küçültme);
-      // 2 satırlık başlıkta alt yazı birkaç piksel aşağı kayar.
-      ctx.textBaseline = "middle";
-      const titleFit = _fitTextLines(ctx, it.title, bw - 14, 17, uiTitleFont, 2, 11);
-      const subFit = _fitTextLines(ctx, it.sub, bw - 12, 11, (p) => uiTextFont(p), 2, 9);
-      ctx.fillStyle = "#eef5ff";
-      const tGap = titleFit.px + 1;
-      const titleY = titleFit.lines.length === 1 ? hy + 72 : hy + 65;
-      for (let j = 0; j < titleFit.lines.length; j++) ctx.fillText(titleFit.lines[j], x + bw / 2, titleY + j * tGap);
-      ctx.fillStyle = "#9fb6c9";
-      const subY = titleFit.lines.length === 1 ? hy + 104 : hy + 108;
-      for (let j = 0; j < subFit.lines.length; j++) ctx.fillText(subFit.lines[j], x + bw / 2, subY + j * 12);
+      if (primary) {
+        _msIcon(ctx, it.icon, x + w / 2, hy + 42, it.accent, hovered);
+        ctx.textAlign = "center"; ctx.textBaseline = "middle";
+        const title = _fitTextLines(ctx, it.title, w - 24, 19, uiTitleFont, 2, 13);
+        const sub = _fitTextLines(ctx, it.sub, w - 26, 12, (p) => uiTextFont(p), 2, 10);
+        ctx.fillStyle = "#eef5ff";
+        const titleY = hy + 91;
+        title.lines.forEach((line, row) => ctx.fillText(line, x + w / 2, titleY + row * (title.px + 2)));
+        ctx.fillStyle = "#a9c0c8";
+        sub.lines.forEach((line, row) => ctx.fillText(line, x + w / 2, hy + h - 28 + row * 13));
+      } else {
+        _msIcon(ctx, it.icon, x + 34, hy + h / 2, it.accent, hovered);
+        ctx.textAlign = "left"; ctx.textBaseline = "middle";
+        const title = _fitTextLines(ctx, it.title, w - 82, 15, uiTitleFont, 1, 11);
+        const sub = _fitTextLines(ctx, it.sub, w - 82, 10, (p) => uiTextFont(p), 2, 9);
+        ctx.fillStyle = "#eef5ff";
+        ctx.fillText(title.lines[0], x + 62, hy + h / 2 - 12);
+        ctx.fillStyle = "#a9c0c8";
+        sub.lines.forEach((line, row) => ctx.fillText(line, x + 62, hy + h / 2 + 11 + row * 12));
+      }
     }
-    // Alt bilgi: sessiz yardımcı ipucu — sayfanın altını boş bırakmamak için
     ctx.textAlign = "center"; ctx.textBaseline = "middle";
-    ctx.fillStyle = "#5e7488"; ctx.font = uiTextFont(11);
-    ctx.fillText(t("menu.hint", "Fare ile bir bölme seç"), W / 2, H - 26);
+    ctx.fillStyle = "#78909a"; ctx.font = uiTextFont(10);
+    ctx.fillText(t("menu.hint", "Fare ile bir bölme seç"), W / 2, H - 18);
   }
 
   // ── Zorluk seçimi (DIFFICULTY_SELECT) ────────────────────────────────────
@@ -837,7 +837,7 @@ class Game {
   renderDifficultySelect(ctx) {
     const W = this.W, H = this.H;
     drawClouds(ctx, W);
-    ctx.fillStyle = "#000000bb"; ctx.fillRect(0, 0, W, H);
+    _msBackdrop(ctx, W, H);
     ctx.fillStyle = "#ffe45e"; ctx.font = uiTitleFont(28);
     ctx.textAlign = "center"; ctx.textBaseline = "top";
     ctx.fillText(t("mode.difficulty.title", "Zorluk seç"), W / 2, H / 2 - 100);
@@ -903,7 +903,7 @@ class Game {
   renderBotCountSelect(ctx) {
     const W = this.W, H = this.H;
     drawClouds(ctx, W);
-    ctx.fillStyle = "#000000bb"; ctx.fillRect(0, 0, W, H);
+    _msBackdrop(ctx, W, H);
     ctx.fillStyle = "#ffe45e"; ctx.font = uiTitleFont(28);
     ctx.textAlign = "center"; ctx.textBaseline = "top";
     ctx.fillText(t("mode.botCount.title", "Rakip sayısı seç"), W / 2, H / 2 - 100);
@@ -1213,8 +1213,7 @@ class Game {
   renderWorkshop(ctx) {
     const W = this.W, H = this.H;
     drawClouds(ctx, W);
-    ctx.fillStyle = "#000000cc";
-    ctx.fillRect(0, 0, W, H);
+    _msBackdrop(ctx, W, H);
 
     ctx.fillStyle = "#ffe45e";
     ctx.font = uiTitleFont(26);
@@ -1805,7 +1804,7 @@ class Game {
   renderTutorial(ctx) {
     const W = this.W, H = this.H;
     drawClouds(ctx, W);
-    ctx.fillStyle = "#000000bb"; ctx.fillRect(0, 0, W, H);
+    _msBackdrop(ctx, W, H);
     ctx.textAlign = "left"; ctx.textBaseline = "top";
     ctx.fillStyle = "#ffe45e"; ctx.font = uiTitleFont(26);
     ctx.textAlign = "center";
@@ -2131,8 +2130,7 @@ class Game {
   renderMarket(ctx) {
     const W = this.W, H = this.H;
     drawClouds(ctx, W);
-    ctx.fillStyle = "#000000cc";
-    ctx.fillRect(0, 0, W, H);
+    _msBackdrop(ctx, W, H);
 
     const scrap = this.profile ? this.profile.scrap : START_SCRAP;
     ctx.textAlign = "center";
@@ -2614,8 +2612,7 @@ class Game {
   renderCountSelect(ctx) {
     const W = this.W, H = this.H;
     drawClouds(ctx, W);
-    ctx.fillStyle = "#000000bb";
-    ctx.fillRect(0, 0, W, H);
+    _msBackdrop(ctx, W, H);
 
     ctx.fillStyle = "#ffe45e";
     ctx.font = uiTitleFont(30);
@@ -3195,6 +3192,7 @@ class Game {
     this._noteHumanShot(a);
     if (this.mode === "tutorial") this._tutComplete(3); // rehber adımı: ateş
     const spec = a.weaponSpec;
+    const muzzle = a.muzzle;
     a.consumeAmmo(); // mühimmatı düş (bitince Bazuka'ya döner); spec yukarıda alındı
 
     // nextShot yetenek modifikatörünü bu salvo için yakala (explode da okur).
@@ -3208,7 +3206,7 @@ class Game {
       return;
     }
 
-    const m = a.muzzle;
+    const m = muzzle;
     const speed = spec.baseSpeed + power * spec.speedMul;
     let pellets = spec.pellets || 1;
     if (mod && mod.pellets > 1) pellets *= mod.pellets;
@@ -3229,6 +3227,8 @@ class Game {
     }
 
     SFX.shoot(spec);
+    a.shotWeapon = spec;
+    a.weaponRecoil = weaponRig(spec).recoil;
     a.lastShot = { aim: a.aim, power };
     this.lastShot = {
       by: a.name,
@@ -4213,15 +4213,14 @@ class Game {
     const W = this.W, H = this.H;
 
     drawClouds(ctx, W);
-    ctx.fillStyle = "#000000bb";
-    ctx.fillRect(0, 0, W, H);
+    _msBackdrop(ctx, W, H);
 
     // Başlık
     ctx.fillStyle = "#ffe45e";
     ctx.font = uiTitleFont(24);
     ctx.textAlign = "center";
     ctx.textBaseline = "top";
-    ctx.fillText(t("mapSelect.title", "Fabrika Bölgesi Seç"), W / 2, 22);
+    ctx.fillText(t("mapSelect.title", "Harita Seç"), W / 2, 20);
 
     // Seçilen karakterler özeti (2–6 oyuncu)
     ctx.font = uiTextFont(13);
@@ -4232,7 +4231,9 @@ class Game {
     );
 
     // ── Sayfalama: haritalar MS_COLS × MS_ROWS grid'e bölünür ──
-    const CARD_W = 168, CARD_H = 156, GAP = 12, GAP_Y = 12;
+    const CARD_W = Math.min(264, Math.floor((W - 64 - (MS_COLS - 1) * 14) / MS_COLS));
+    const CARD_H = Math.min(178, Math.floor((H - 154) / MS_ROWS));
+    const GAP = 14, GAP_Y = 12;
     const COLS = MS_COLS, PER_PAGE = MS_COLS * MS_ROWS;
     const totalPages = Math.ceil(MAPS.length / PER_PAGE);
     this.mapPage = Math.max(0, Math.min(this.mapPage, totalPages - 1));
@@ -4243,7 +4244,7 @@ class Game {
     const rowsUsed = Math.ceil(pageMaps.length / COLS);
     const totalW = colsUsed * CARD_W + (colsUsed - 1) * GAP;
     const startX = (W - totalW) / 2;
-    const startY = 72;
+    const startY = 82;
 
     this._mapRects = [];
 
@@ -4257,58 +4258,36 @@ class Game {
       const mx = this.input.mouseX, my = this.input.mouseY;
       const hovered = mx >= cx && mx <= cx + CARD_W && my >= cy && my <= cy + CARD_H;
       // Seçilen karakterlerden birine ait harita mı?
-      const isOwn = this.selectedChars.some((c) => c && m.forChar === c.id);
+      const isSelected = this.selectedMap === m;
 
       ctx.save();
 
-      // Kart arka planı: endüstriyel panel; robotuna ait haritada haritanın
-      // kendi vurgu rengi kenarlıkta yaşamaya devam eder (K-RENK).
+      // Seçili arena kendi vurgusunu taşır; robot seçimi harita temasını etkilemez.
       const cyv = cy + (hovered ? -2 : 0);
       _csPanel(ctx, cx, cyv, CARD_W, CARD_H, {
-        accent: hovered ? "#ffe45e" : isOwn ? m.accent : "#2a3848",
+        accent: hovered ? "#ffe45e" : isSelected ? m.accent : "#2a3848",
         hover: hovered, glow: hovered,
-        selected: isOwn,
+        selected: isSelected,
       });
 
       // Önizleme (arazi şekli = skill arketipi) + monitör iç çerçevesi:
       // panel içinde küçük bir saha monitörü gibi okunur.
-      drawMapPreview(ctx, cx + 8, cyv + 8, CARD_W - 16, 80, m);
+      drawMapPreview(ctx, cx + 8, cyv + 8, CARD_W - 16, CARD_H - 58, m);
       ctx.strokeStyle = "#00000099"; ctx.lineWidth = 1;
-      ctx.strokeRect(cx + 7.5, cyv + 7.5, CARD_W - 15, 81);
+      ctx.strokeRect(cx + 7.5, cyv + 7.5, CARD_W - 15, CARD_H - 57);
 
       // İsim — Russo One geniş: punto küçülerek tek satırda tutulur
       ctx.textAlign = "center";
       ctx.textBaseline = "top";
-      const nameFit = _fitTextLines(ctx, m.label, CARD_W - 16, 14, uiTitleFont, 1, 10);
+      const nameFit = _fitTextLines(ctx, m.label, CARD_W - 16, 15, uiTitleFont, 1, 11);
       ctx.fillStyle = "#eef5ff";
-      ctx.font = nameFit.lines.length === 1 ? uiTitleFont(nameFit.px) : uiTitleFont(14);
-      ctx.fillText(m.label, cx + CARD_W / 2, cyv + 92, nameFit.lines.length === 1 ? undefined : CARD_W - 16);
+      ctx.font = uiTitleFont(nameFit.px);
+      ctx.fillText(m.label, cx + CARD_W / 2, cyv + CARD_H - 45, CARD_W - 16);
 
       // Skill vurgusu
-      const skillFit = _fitTextLines(ctx, `${m.forLabel} · Q: ${m.skillLabel || "-"}`, CARD_W - 14, 10, (p) => uiTextFont(p, 700), 1, 8);
-      ctx.fillStyle = "#ffee88";
-      ctx.font = skillFit.lines.length === 1 ? uiTextFont(skillFit.px, 700) : uiTextFont(10, 700);
-      ctx.fillText(`${m.forLabel} · Q: ${m.skillLabel || "-"}`, cx + CARD_W / 2, cyv + 110, skillFit.lines.length === 1 ? undefined : CARD_W - 14);
-
-      // Arketip + tema
-      ctx.fillStyle = m.accent;
-      ctx.font = uiTextFont(10);
-      ctx.fillText(`${m.arenaCode || ""} · ${archLabel(m.archetype)}`, cx + CARD_W / 2, cyv + 126);
-
-      // Seçilen karakterin haritası: accent renkli mini rozet pill'i
-      if (isOwn) {
-        ctx.font = uiTextFont(9, 700);
-        const tag = t("mapSelect.yourRobot", "★ senin robotun");
-        const tagW = ctx.measureText(tag).width + 12;
-        ctx.fillStyle = m.accent + "22";
-        _csRoundRect(ctx, cx + (CARD_W - tagW) / 2, cyv + 135, tagW, 15, 5);
-        ctx.fill();
-        ctx.strokeStyle = m.accent + "88"; ctx.lineWidth = 1;
-        _csRoundRect(ctx, cx + (CARD_W - tagW) / 2, cyv + 135, tagW, 15, 5);
-        ctx.stroke();
-        ctx.fillStyle = m.accent;
-        ctx.fillText(tag, cx + CARD_W / 2, cyv + 140);
-      }
+      const hint = _fitTextLines(ctx, m.hint || m.zoneLabel, CARD_W - 18, 10, (p) => uiTextFont(p), 2, 8);
+      ctx.fillStyle = "#9fb6c9"; ctx.font = uiTextFont(hint.px);
+      hint.lines.forEach((line, row) => ctx.fillText(line, cx + CARD_W / 2, cyv + CARD_H - 25 + row * 11));
 
       ctx.restore();
     }
@@ -4348,15 +4327,12 @@ class Game {
   // Harita seçim sayfasını sınırlar içinde değiştir
   changeMapPage(dir) {
     if (this.state !== "MAP_SELECT") return;
-    const totalPages = Math.ceil(MAPS.length / (MS_COLS * MS_ROWS));
-    this.mapPage = Math.max(0, Math.min(this.mapPage + dir, totalPages - 1));
+    this.mapPage = 0;
   }
 
   // Açılışta oyunculardan birinin kendi karakter haritasının olduğu sayfaya git.
   gotoOwnMapPage() {
-    const PER = MS_COLS * MS_ROWS;
-    const idx = MAPS.findIndex((m) => this.selectedChars.some((c) => c && c.id === m.forChar));
-    this.mapPage = idx >= 0 ? Math.floor(idx / PER) : 0;
+    this.mapPage = 0;
   }
 
   // Sol-üst köşeye t("common.back", "‹ Geri") butonu çiz ve hit-test için _backRect'i sakla.
@@ -4435,7 +4411,7 @@ class Game {
     // bağımsız). Güncel nişan çizgisiyle AYNI geometri kullanılır ki iki çizgi
     // de silahın ağzından çıksın.
     const origin = typeof robotMuzzlePoint === "function"
-      ? robotMuzzlePoint(a.x, a.y - a.r, a.r, a.facing, ang, a.charDef)
+      ? robotMuzzlePoint(a.x, a.y - a.r, a.r, a.facing, ang, a.charDef, a.heldWeaponSpec, a.weaponRecoil)
       : { x: a.x + Math.cos(ang) * (a.r + 12), y: (a.y - a.r) + Math.sin(ang) * (a.r + 12) };
     const ox = origin.x, oy = origin.y;
     // Güce göre uzunluk: güncel nişan oku ile aynı ölçek
@@ -4774,14 +4750,6 @@ class Game {
     if (canvas.width !== px) { canvas.width = px; canvas.height = px; }
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
-    const hasParts = parts && Object.values(parts).some((value) => Array.isArray(value) ? value.some(Boolean) : !!value);
-    const portrait = !hasParts && typeof assetImage === "function" ? assetImage("portraits/" + charDef.id) : null;
-    if (portrait) {
-      ctx.setTransform(1, 0, 0, 1, 0, 0);
-      ctx.clearRect(0, 0, px, px);
-      ctx.drawImage(portrait, 0, 0, px, px);
-      return;
-    }
     const partSig = parts ? Object.keys(parts).sort()
       .map((k) => k + "=" + (Array.isArray(parts[k]) ? parts[k].join("+") : parts[k])).join(",") : "";
     const key = charDef.id + "|" + size + "|" + dpr + "|" + partSig;
@@ -5225,14 +5193,10 @@ function setSlotText(el, sel, text) {
 }
 
 // ── UI yazı yardımcıları (ui-theme-plan.md §2.3) ────────────────────────
-// Tüm canvas yazıları fontu bu iki yardımcıdan alır; aile değişecekse tek yer
-// güncellenir. Başlık/buton = Russo One (tek kalınlıklı olduğundan "bold"
-// eklenmez — sahte kalın üretilmesin), gövde/açıklama = Chakra Petch; kalın
-// gövde için weight verilir (700). CSS tarafındaki aileler: --font-title/--font-text.
-// Not: 13px ve altı küçük etiketler/ikincil butonlar okunabilirlik için
-// Chakra Petch 700'de kalır (plan notu); Russo One 14px ve üstünde kullanılır.
+// Canvas yazılarını ortak font yardımcıları yönetir. Başlıklar da Chakra Petch
+// 700 kullanır; farklı aile yerine ağırlık ve boyutla hiyerarşi kurulur.
 function uiTitleFont(px) {
-  return `${px}px "Russo One", "Segoe UI", sans-serif`;
+  return `700 ${px}px "Chakra Petch", "Segoe UI", sans-serif`;
 }
 function uiTextFont(px, weight) {
   // Gövde varsayılanı SemiBold (600): Chakra Petch'in ince/geniş 400 kesimi
@@ -5286,11 +5250,9 @@ function _csRoundRect(ctx, x, y, w, h, r) {
   ctx.closePath();
 }
 
-// ── Endüstriyel panel yardımcıları (ui-theme-plan.md §3.2) ─────────────────
-// "Dökümhane" görsel dili: kesik köşeli (chamfer) çelik panel, fırçalanmış
-// metal gradyanı, köşe perçinleri ve isteğe bağlı sarı-siyah tehlike şeridi.
-// Menü kartları/butonları _csPanel ile çizilir; _csRoundRect küçük öğeler
-// (mühimmat baloncuğu, çip vb.) için ayrıca durur.
+// ── Operasyon konsolu panel yardımcıları ─────────────────────────────────
+// Büyük yüzeyler _csPanel ile; küçük etiketler ve rozetler _csRoundRect ile
+// çizilir. Kartların hitbox'ı render fonksiyonlarında ayrı tutulur.
 
 // Kesik köşeli panel yolu: köşeler c piksel kadar 45° kesilir.
 function _panelPath(ctx, x, y, w, h, c) {
@@ -5306,36 +5268,10 @@ function _panelPath(ctx, x, y, w, h, c) {
   ctx.closePath();
 }
 
-// 45° sarı-siyah tehlike şeridi: desen bir kez üretilip önbelleklenir
-// (plan §7-3; her kare yeniden üretilmez). İlk çağrıda document'a dokunur —
-// yalnız render sırasında çağrıldığı için test sandbox'ında tetiklenmez.
-// Test sandbox'ında document/createPattern bulunmayabilir: desen üretilemezse
-// _hazardPattern=false olur ve şerit düz sarı dolguyla çizilir (çizim bozulmaz).
-let _hazardPattern = null;
+// Eski tehlike şeritlerinin yerini ortak konsol vurgusu alır.
 function _csHazardStrip(ctx, x, y, w, h) {
-  if (_hazardPattern === null) {
-    try {
-      if (typeof document !== "undefined" && typeof ctx.createPattern === "function") {
-        const tile = document.createElement("canvas");
-        tile.width = 16; tile.height = 16;
-        const g = tile.getContext("2d");
-        g.fillStyle = "#11161c"; g.fillRect(0, 0, 16, 16);
-        g.strokeStyle = "#ffe45e"; g.lineWidth = 6;
-        g.beginPath();
-        for (let i = -16; i <= 32; i += 16) { g.moveTo(i, 20); g.lineTo(i + 20, -4); }
-        g.stroke();
-        _hazardPattern = ctx.createPattern(tile, "repeat");
-      } else {
-        _hazardPattern = false;
-      }
-    } catch (e) {
-      _hazardPattern = false;
-    }
-  }
-  ctx.save();
-  ctx.fillStyle = _hazardPattern || "#ffe45e";
+  ctx.fillStyle = "#f4bd62";
   ctx.fillRect(x, y, w, h);
-  ctx.restore();
 }
 
 // Hover parıltısı: mevcut yolu renkli gölgeyle ikinci kez konturlar.
@@ -5384,44 +5320,33 @@ function _csLockGlyph(ctx, cx, cy, s, color) {
 //   hover     — açık dolgu + (glow ile) parıltı
 //   glow      — hover parıltısı açık/kapalı
 //   selected  — kalın kenarlık (seçili durum)
-//   rivets    — köşe perçinleri (küçük butonlarda false)
-//   hazardTop — üst kenarda tehlike şeridi (ekran/bölme aile imzası: sağ
-//               panelin üst kenarı; devre dışı düğmelere uygulanmaz)
+//   rivets    — eski çağrılarla uyum için kabul edilir (çizilmez)
+//   hazardTop — üst kenarda ince vurgu (eski çağrılarla uyumluluk)
 //   fillTop/fillBottom — özel dolgu (seçili durumun yeşili vb.)
 function _csPanel(ctx, x, y, w, h, opts) {
   const o = opts || {};
-  const c = Math.min(8, Math.floor(Math.min(w, h) / 4));
-  _panelPath(ctx, x, y, w, h, c);
-  // Fırçalanmış metal: üstte açık, altta koyu dikey gradyan (§3.1)
+  const radius = Math.min(14, Math.floor(Math.min(w, h) / 5));
+  _csRoundRect(ctx, x, y, w, h, radius);
+  // Yumuşak, katmanlı konsol yüzeyi; içerik karttan daha belirgin kalır.
   const grad = ctx.createLinearGradient(0, y, 0, y + h);
-  grad.addColorStop(0, o.fillTop || (o.hover ? "#20304a" : "#1a2430"));
-  grad.addColorStop(1, o.fillBottom || (o.hover ? "#121a26" : "#0f1720"));
+  grad.addColorStop(0, o.fillTop || (o.hover ? "#20343a" : "#18272c"));
+  grad.addColorStop(1, o.fillBottom || (o.hover ? "#14252a" : "#101c21"));
   ctx.fillStyle = grad;
   ctx.fill();
   // Üst tehlike şeridi: panel yoluna kırparak kesik köşelerden taşmaz
   if (o.hazardTop) {
     ctx.save();
-    _panelPath(ctx, x, y, w, h, c);
+    _csRoundRect(ctx, x, y, w, h, radius);
     ctx.clip();
     _csHazardStrip(ctx, x, y, w, 5);
     ctx.restore();
   }
   // Kenarlık (+ hover parıltısı)
-  _panelPath(ctx, x, y, w, h, c);
-  ctx.lineWidth = o.hover || o.selected ? 2.5 : 1.5;
-  ctx.strokeStyle = o.accent || "#3b526b";
+  _csRoundRect(ctx, x, y, w, h, radius);
+  ctx.lineWidth = o.hover || o.selected ? 2 : 1;
+  ctx.strokeStyle = o.accent || "#36525a";
   ctx.stroke();
   if (o.hover && o.glow) _csGlow(ctx, o.accent || "#ffe45e");
-  // Perçinler: dört köşede gömülü vida başı — koyu gövde + sol üst parlak nokta
-  if (o.rivets !== false && w > 56 && h > 30) {
-    const in2 = 7, r = 2.5;
-    for (const [rx, ry] of [[x + in2, y + in2], [x + w - in2, y + in2], [x + in2, y + h - in2], [x + w - in2, y + h - in2]]) {
-      ctx.fillStyle = "#2c3a4c";
-      ctx.beginPath(); ctx.arc(rx, ry, r, 0, 6.28); ctx.fill();
-      ctx.fillStyle = "#8fa6bd";
-      ctx.beginPath(); ctx.arc(rx - 0.6, ry - 0.6, r * 0.45, 0, 6.28); ctx.fill();
-    }
-  }
 }
 
 // ── Ana menü (MODE_SELECT) görünüm yardımcıları ──────────────────────────
@@ -5436,43 +5361,20 @@ function _hexA(hex, a) {
   return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${a})`;
 }
 
-// Ana menü arka planı: çelik gradyan + başlık arkası sıcak parıltı + seyrek
-// teknik nokta ızgarası + köşe vinyeti + endüstriyel köşe dirsekleri.
-// Düz siyah perdeyi değiştirir; bulutlar (drawClouds) altında kalır.
+// Ana menü arka planı: koyu fabrika zemini ve iki yumuşak renk alanı.
 function _msBackdrop(ctx, W, H) {
   const grad = ctx.createLinearGradient(0, 0, 0, H);
-  grad.addColorStop(0, "#101c2ae8");
-  grad.addColorStop(0.55, "#0a111af0");
-  grad.addColorStop(1, "#060a10f7");
+  grad.addColorStop(0, "#0b1a20e8");
+  grad.addColorStop(0.58, "#09151af0");
+  grad.addColorStop(1, "#071116f7");
   ctx.fillStyle = grad;
   ctx.fillRect(0, 0, W, H);
-  // Başlık arkası sıcak parıltı: dökümhane kor ışıması (çok soluk tutulur)
-  const glow = ctx.createRadialGradient(W / 2, H / 2 - 150, 16, W / 2, H / 2 - 150, 330);
-  glow.addColorStop(0, "rgba(255,228,94,0.10)");
-  glow.addColorStop(1, "rgba(255,228,94,0)");
+  const glow = ctx.createRadialGradient(W * 0.5, H * 0.22, 8, W * 0.5, H * 0.22, H * 0.8);
+  glow.addColorStop(0, "rgba(113,211,189,0.10)");
+  glow.addColorStop(0.48, "rgba(244,189,98,0.035)");
+  glow.addColorStop(1, "rgba(113,211,189,0)");
   ctx.fillStyle = glow;
   ctx.fillRect(0, 0, W, H);
-  // Teknik nokta ızgarası: mühendislik planı dokusu (soluk, kare başına 1 nokta)
-  ctx.fillStyle = "rgba(140,180,220,0.05)";
-  for (let gx = 24; gx < W; gx += 48) {
-    for (let gy = 24; gy < H; gy += 48) ctx.fillRect(gx, gy, 2, 2);
-  }
-  // Köşe vinyeti: kenarlar kararmış salon hissi — merkezi öne çıkarır
-  const vig = ctx.createRadialGradient(W / 2, H / 2, H * 0.42, W / 2, H / 2, H * 0.98);
-  vig.addColorStop(0, "rgba(0,0,0,0)");
-  vig.addColorStop(1, "rgba(0,0,0,0.52)");
-  ctx.fillStyle = vig;
-  ctx.fillRect(0, 0, W, H);
-  // Endüstriyel köşe dirsekleri: sahne çerçevesi imzası. Sağ üst köşeyi
-  // atlarız — ses denetimi widget'ı (DOM, z-index 7) o köşeyi kapatır.
-  ctx.strokeStyle = "rgba(255,228,94,0.22)";
-  ctx.lineWidth = 2;
-  const m = 14, L = 22;
-  ctx.beginPath();
-  ctx.moveTo(m, m + L); ctx.lineTo(m, m); ctx.lineTo(m + L, m);
-  ctx.moveTo(W - m, H - m - L); ctx.lineTo(W - m, H - m); ctx.lineTo(W - m - L, H - m);
-  ctx.moveTo(m + L, H - m); ctx.lineTo(m, H - m); ctx.lineTo(m, H - m - L);
-  ctx.stroke();
 }
 
 // Kart üstü ikon plakası: kesik köşeli mini bölme + vektör glif. Her mod kendi

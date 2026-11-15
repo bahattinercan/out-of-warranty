@@ -9,7 +9,7 @@ const JS_DIR = path.join(__dirname, "..", "js");
 const bundle = ["characters.js", "maps.js", "terrain.js"]
   .map((f) => fs.readFileSync(path.join(JS_DIR, f), "utf8"))
   .join("\n;\n") +
-  "\n;globalThis.__MAP_TEST = { MAPS, MAP_LAYOUT_SPECS, mapLayoutProfile, getMapSpawnPads, Terrain };";
+  "\n;globalThis.__MAP_TEST = { MAPS, CHARACTERS, MAP_LAYOUT_SPECS, mapLayoutProfile, getMapSpawnPads, getMapPropPlacements: typeof getMapPropPlacements === \"function\" ? getMapPropPlacements : null, Terrain };";
 const sandbox = { Math, Float32Array, Uint8Array, Array, Object, Set, Map, console };
 sandbox.globalThis = sandbox;
 vm.createContext(sandbox);
@@ -23,10 +23,34 @@ function check(name, condition, detail) {
   else { fail++; failures.push(`${name}${detail ? ` — ${detail}` : ""}`); }
 }
 
-check("34 haritanın tamamında özel yerleşim var",
-  M.MAPS.length === 34 && M.MAPS.every((m) => m.layout));
-check("harita adları birbirinden farklı",
-  new Set(M.MAPS.map((m) => m.label)).size === 34);
+check("altı bağımsız haritanın tamamında özel yerleşim var",
+  M.MAPS.length === 6 && M.MAPS.every((m) => m.layout && !m.forChar));
+check("harita kimlikleri robotlardan bağımsız ve benzersiz",
+  new Set(M.MAPS.map((m) => m.id)).size === 6 && M.MAPS.every((m) => !M.CHARACTERS.some((c) => c.id === m.id)));
+check("harita adları ve taktik notları birbirinden farklı",
+  new Set(M.MAPS.map((m) => m.label)).size === 6 && M.MAPS.every((m) => m.hint));
+check("altı haritanın her biri farklı bir resimli arka plan kullanır",
+  new Set(M.MAPS.map((m) => m.zoneId)).size === 6 && M.MAPS.every((m) => m.scene));
+
+check("dekor yerleşimi saf test edilebilir bir üretici sunar",
+  typeof M.getMapPropPlacements === "function");
+if (M.getMapPropPlacements) {
+  const sample = M.MAPS[0];
+  const profile = M.mapLayoutProfile(sample.layout, 960, 540);
+  const first = M.getMapPropPlacements(profile, 960, sample);
+  const second = M.getMapPropPlacements(profile, 960, sample);
+  check("aynı harita her üretimde aynı dekorları verir",
+    JSON.stringify(first) === JSON.stringify(second));
+  check("harita kimliği dekor yerleşimini belirler",
+    JSON.stringify(first) !== JSON.stringify(M.getMapPropPlacements(profile, 960,
+      Object.assign({}, sample, { id: `${sample.id}-variant` }))));
+  check("dekorlar tüm doğuş adaylarının çevresini boş bırakır",
+    M.MAPS.every((map) => {
+      const heights = M.mapLayoutProfile(map.layout, 960, 540);
+      const props = M.getMapPropPlacements(heights, 960, map);
+      return props.every((prop) => map.layout.s.every((sx) => Math.abs(prop.x - sx * 960) >= 36));
+    }));
+}
 
 const signatures = new Set();
 for (const map of M.MAPS) {
@@ -47,14 +71,16 @@ for (const map of M.MAPS) {
   }
 }
 
-check("34 ana yüzey silüeti de birbirinden farklıdır", signatures.size === 34,
+check("altı ana yüzey silüeti birbirinden farklıdır", signatures.size === 6,
   `benzersiz=${signatures.size}`);
-check("Mıknatıs Köprüsü gerçek bir ek üst yol taşır",
-  M.MAP_LAYOUT_SPECS.kedi.solids && M.MAP_LAYOUT_SPECS.kedi.solids.length === 3);
-check("Üç Katlı Raf iki ek üst yol taşır",
-  M.MAP_LAYOUT_SPECS.maymun.solids && M.MAP_LAYOUT_SPECS.maymun.solids.length === 2);
-check("Gömülü Servis Tüneli iki gerçek boşluk taşır",
-  M.MAP_LAYOUT_SPECS.armadillo.cuts && M.MAP_LAYOUT_SPECS.armadillo.cuts.length === 2);
+check("Ay Moloz Sahası üç ek platform taşır",
+  M.MAPS.find((m) => m.id === "moon_scrapyard").layout.solids.length === 3);
+check("Buz Kırığı fiziksel olarak dipsiz bir uçurum taşır",
+  M.MAPS.find((m) => m.id === "ice_rift").layout.cliffs.length === 1);
+check("Taşkın Laboratuvarı çevre ve iç duvarlar taşır",
+  M.MAPS.find((m) => m.id === "flooded_lab").layout.solids.filter((r) => r.h > .1).length === 4);
+check("uçurum haritasında hiçbir doğuş yarıkta değildir",
+  M.getMapSpawnPads(M.MAPS.find((m) => m.id === "ice_rift"), 6).every((p) => p.x < .42 || p.x > .58));
 
 function maskFor(map, initiallySolid) {
   const terrain = Object.create(M.Terrain.prototype);
@@ -93,12 +119,15 @@ for (const map of M.MAPS) {
   }
 }
 
-const bridge = maskFor(M.MAPS.find((m) => m.id === "kedi"), false);
-check("Mıknatıs Köprüsü maskede doludur ve alt yolu boştur",
-  bridge.isSolid(480, 296) && !bridge.isSolid(480, 380));
-const tunnel = maskFor(M.MAPS.find((m) => m.id === "armadillo"), true);
-check("Servis Tüneli maskede boş oda ve katı ayırıcı üretir",
-  !tunnel.isSolid(360, 370) && tunnel.isSolid(480, 370) && !tunnel.isSolid(600, 370));
+const debris = maskFor(M.MAPS.find((m) => m.id === "moon_scrapyard"), false);
+check("Ay platformları çarpışma maskesinde katı, alt rota açıktır",
+  debris.isSolid(250, 292) && !debris.isSolid(250, 380));
+const lab = maskFor(M.MAPS.find((m) => m.id === "flooded_lab"), true);
+check("Laboratuvar duvarları gerçek çarpışma maskesindedir",
+  lab.isSolid(40, 250) && lab.isSolid(930, 250) && lab.isSolid(300, 330));
+const ice = maskFor(M.MAPS.find((m) => m.id === "ice_rift"), true);
+check("Buz Kırığı yarığı zemini dibine kadar gerçekten keser",
+  !ice.isSolid(480, 320) && !ice.isSolid(480, 520) && ice.isSolid(400, 400));
 
 if (fail) {
   console.error(`\n${fail} harita testi başarısız:`);

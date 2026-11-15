@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="tr">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Robot model galerisi ve savaş pozu kontrolü</title>
+<style>
+  :root { color-scheme: dark; font: 15px system-ui, sans-serif; background: #101821; color: #e7eef5; }
+  body { margin: 0; }
+  nav { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 18px; padding: 14px 18px; background: #17232e; border-bottom: 1px solid #344553; }
+  label { display: inline-flex; align-items: center; gap: 7px; }
+  select, input { font: inherit; }
+  select { max-width: 230px; }
+  input[type="range"] { width: 110px; }
+  canvas { display: block; width: 100%; height: auto; cursor: pointer; }
+  .hint { padding: 8px 18px; color: #a9bac8; font-size: 13px; }
+</style>
+<nav aria-label="Robot galerisi ayarları">
+  <label>Robot <select id="robot"></select></label>
+  <label>Silah <select id="weapon"></select></label>
+  <label>Hareket <select id="motion">
+    <option value="aim">Nişan</option><option value="idle">Boşta</option>
+    <option value="walk">Yürüme</option><option value="air">Havada</option>
+    <option value="recoil">Atış ve geri tepme</option>
+  </select></label>
+  <label>Can <input id="health" type="range" min="10" max="100" value="100"><output id="healthValue">100%</output></label>
+  <label><input type="checkbox" id="skill"> Yetenek pozu</label>
+  <label><input type="checkbox" id="hitFlash"> Hasar parlaması</label>
+  <label><input type="checkbox" id="shieldFlash"> Kalkan parlaması</label>
+  <label>Başlık <select id="helmet"></select></label>
+  <label>Gövde <select id="body"></select></label>
+  <label>Aparat <select id="tool"></select></label>
+  <label>Ayak <select id="feet"></select></label>
+</nav>
+<canvas id="probe" width="1440" height="700" aria-label="Robotun seçilebilir büyük modeli, iki yöne dönük savaş pozları ve tüm kadro küçük modelleri"></canvas>
+<p class="hint">Alt sıradaki küçük modele tıklayarak seçebilir, üstteki açılardan silah tutuşunu ve iki yönü karşılaştırabilirsin.</p>
+<script src="js/i18n.js"></script>
+<script src="js/characters.js"></script>
+<script src="js/progression.js"></script>
+<script src="js/profile.js"></script>
+<script src="js/parts.js"></script>
+<script src="js/assets-manifest.js"></script>
+<script src="js/assets.js"></script>
+<script src="js/robots.js"></script>
+<script src="js/weapons.js"></script>
+<script>
+  const canvas = document.getElementById("probe"), ctx = canvas.getContext("2d");
+  const robotPicker = document.getElementById("robot"), weaponPicker = document.getElementById("weapon");
+  CHARACTERS.forEach(robot => robotPicker.add(new Option(robot.label + " · " + robot.role, robot.id)));
+  WEAPONS.forEach(weapon => weaponPicker.add(new Option(weapon.name, weapon.id)));
+  for (const slot of PART_SLOTS) {
+    const picker = document.getElementById(slot);
+    picker.add(new Option("Yok", ""));
+    PARTS.filter(part => part.slot === slot).forEach(part => picker.add(new Option(part.label, part.id)));
+  }
+  robotPicker.value = "timsah";
+  weaponPicker.value = "bazooka";
+  let parts = {};
+  function refreshParts() {
+    parts = Object.fromEntries(PART_SLOTS.map(slot => [slot, [document.getElementById(slot).value || null]]));
+  }
+  PART_SLOTS.forEach(slot => document.getElementById(slot).addEventListener("change", refreshParts));
+  refreshParts();
+  assetPreload();
+
+  function render(timeMs) {
+    const selected = CHARACTERS.find(robot => robot.id === robotPicker.value) || CHARACTERS[0];
+    const weapon = WEAPONS.find(spec => spec.id === weaponPicker.value) || WEAPONS[0];
+    const state = document.getElementById("motion").value;
+    const healthRatio = Number(document.getElementById("health").value) / 100;
+    document.getElementById("healthValue").value = Math.round(healthRatio * 100) + "%";
+    const skillPose = document.getElementById("skill").checked ? selected.skill.kind : null;
+    const skillProgress = skillPose ? (timeMs % 900) / 900 : 0;
+    const hitFlash = document.getElementById("hitFlash").checked ? 0.55 + Math.sin(timeMs / 70) * 0.25 : 0;
+    const shieldFlash = document.getElementById("shieldFlash").checked ? 0.62 + Math.sin(timeMs / 110) * 0.22 : 0;
+    const angles = [-90, -60, -30, 0, 30, 60];
+    const aimFor = (degrees, facing) => state === "idle" ? undefined
+      : Math.atan2(Math.sin(degrees * Math.PI / 180), facing * Math.cos(degrees * Math.PI / 180));
+    const recoil = state === "recoil" ? Math.max(0, 1 - (timeMs % 1400) / 240) * weaponRig(weapon).recoil : 0;
+    const visualState = { healthRatio, hitFlash, shieldFlash, skillPose, skillProgress, parts };
+
+    ctx.fillStyle = "#101821"; ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.textAlign = "center"; ctx.font = "bold 18px system-ui"; ctx.fillStyle = "#eaf2f8";
+    ctx.fillText(selected.label + " · " + selected.role, 155, 82);
+    ctx.font = "13px system-ui"; ctx.fillStyle = "#a9bac8";
+    ctx.fillText(selected.personality, 155, 106, 285);
+    ctx.font = "13px system-ui"; ctx.fillStyle = "#b6c7d3";
+    ctx.fillText(weapon.name + " · " + state, 155, 132);
+    ctx.fillStyle = "#1b2937"; ctx.fillRect(14, 143, 282, 326);
+    ctx.fillStyle = "#354957"; ctx.fillRect(55, 376, 200, 3);
+    drawRobot(ctx, { cx: 155, cy: 350, r: 76, charDef: selected, facing: 1,
+      aim: aimFor(-30, 1), weapon, recoil, timeMs, motion: { onGround: state !== "air", vy: state === "air" ? -3 : 0 }, ...visualState });
+    for (let side = 0; side < 2; side++) {
+      const facing = side === 0 ? 1 : -1, rowY = side === 0 ? 160 : 338;
+      ctx.fillStyle = "#a9bac8"; ctx.font = "bold 14px system-ui";
+      ctx.textAlign = "left"; ctx.fillText(facing > 0 ? "SAĞA BAKIŞ" : "SOLA BAKIŞ", 320, rowY - 18);
+      angles.forEach((degrees, column) => {
+        const x = 405 + column * 171, y = rowY + 62;
+        ctx.fillStyle = "#1b2937"; ctx.fillRect(320 + column * 171, rowY - 8, 164, 151);
+        ctx.textAlign = "center"; ctx.font = "12px system-ui"; ctx.fillStyle = "#b8c9d6";
+        ctx.fillText((state === "idle" ? "Boşta" : degrees + "°") + " / " + (facing > 0 ? "→" : "←"), x, rowY + 12);
+        ctx.fillStyle = "#354957"; ctx.fillRect(x - 55, y + 34, 110, 2);
+        const aim = aimFor(degrees, facing);
+        drawRobot(ctx, { cx: x, cy: y + 25, r: 31, charDef: selected, facing, aim, weapon, recoil,
+          timeMs, motion: { walk: state === "walk" ? 1 : 0, walkAmp: state === "walk" ? 1 : 0,
+            walkPhase: timeMs / 120, rollPhase: timeMs / 180, onGround: state !== "air", vy: state === "air" ? -3 : 0 }, ...visualState });
+        if (Number.isFinite(aim)) {
+          const muzzle = robotMuzzlePoint(x, y + 25, 31, facing, aim, selected, weapon, recoil);
+          ctx.strokeStyle = "#ffe45e"; ctx.lineWidth = 1;
+          ctx.beginPath(); ctx.moveTo(muzzle.x - 3, muzzle.y); ctx.lineTo(muzzle.x + 3, muzzle.y);
+          ctx.moveTo(muzzle.x, muzzle.y - 3); ctx.lineTo(muzzle.x, muzzle.y + 3); ctx.stroke();
+        }
+      });
+    }
+
+    ctx.textAlign = "left"; ctx.font = "bold 14px system-ui"; ctx.fillStyle = "#c8d8e4";
+    ctx.fillText("TÜM KADRO · modele tıklayarak seç", 26, 515);
+    CHARACTERS.forEach((robot, index) => {
+      const column = index % 17, row = Math.floor(index / 17), x = 42 + column * 82, y = 565 + row * 88;
+      ctx.fillStyle = robot.id === selected.id ? "#2d4657" : "#182530";
+      ctx.fillRect(x - 37, y - 38, 76, 82);
+      drawRobot(ctx, { cx: x, cy: y, r: 18, charDef: robot, facing: 1, timeMs, motion: { onGround: true } });
+      ctx.font = "10px system-ui"; ctx.textAlign = "center"; ctx.fillStyle = robot.accent;
+      ctx.fillText(robot.label, x, y + 32);
+    });
+    requestAnimationFrame(render);
+  }
+  canvas.addEventListener("click", event => {
+    const bounds = canvas.getBoundingClientRect();
+    const x = (event.clientX - bounds.left) * canvas.width / bounds.width;
+    const y = (event.clientY - bounds.top) * canvas.height / bounds.height;
+    if (y < 527 || y > 695 || x < 5 || x > 1435) return;
+    const column = Math.floor((x - 5) / 82), row = Math.floor((y - 527) / 88);
+    const robot = CHARACTERS[row * 17 + column];
+    if (robot) robotPicker.value = robot.id;
+  });
+  document.getElementById("health").addEventListener("input", event => {
+    document.getElementById("healthValue").value = event.target.value + "%";
+  });
+  requestAnimationFrame(render);
+</script>
+</html>

@@ -88,28 +88,28 @@ const BIOMES = {
 // içerikleri GARANTİ DIŞI (Out of Warranty) fabrika bölgeleriyle değiştirilir.
 const FACTORY_ZONES = {
   meadow: {
-    zoneId: "scrapyard", zoneLabel: "Hurda Sahası", zoneCode: "HS",
+    zoneId: "scrapyard", backdropMid: false, zoneLabel: "Hurda Sahası", zoneCode: "HS",
     sky: ["#567681", "#91aeb2", "#cad5cf"], orb: "#f5d98a",
     dirt: "#4b3b35", grassDeep: "#596267", grassTop: "#a66b42", surface: "rooftop",
     props: [{ type:"gear", w:3 }, { type:"plate", w:2 }, { type:"cable", w:2 }, { type:"crate", w:1 }],
     propDensity: 88, backdrop:{ kind:"skyline" }, haze:"rgba(190,205,198,0.28)", cloud:"#d8ded8aa",
   },
   city: {
-    zoneId: "assembly", zoneLabel: "Montaj Hattı", zoneCode: "MH",
+    zoneId: "assembly", backdropMid: false, zoneLabel: "Montaj Hattı", zoneCode: "MH",
     sky: ["#171d2b", "#273349", "#46566b"], orb: "#dbe8f4",
     dirt: "#252b31", grassDeep: "#39434c", grassTop: "#e2ad3b", surface: "rooftop",
     props: [{ type:"robotArm", w:2 }, { type:"crate", w:2 }, { type:"antenna", w:1 }],
     propDensity: 110, backdrop:{ kind:"skyline" }, haze:"rgba(65,80,105,0.38)", cloud:"#60708777", stars:true,
   },
   forest: {
-    zoneId: "warehouse", zoneLabel: "Depo Rafları", zoneCode: "DR",
+    zoneId: "warehouse", backdropMid: false, zoneLabel: "Depo Rafları", zoneCode: "DR",
     sky: ["#43565b", "#6f8380", "#a9b3a5"], orb: "#f0dfad",
     dirt: "#353833", grassDeep: "#4a5148", grassTop: "#87906f", surface: "rooftop",
     props: [{ type:"crate", w:3 }, { type:"pallet", w:2 }, { type:"pipe", w:1 }],
     propDensity: 82, backdrop:{ kind:"mountains" }, haze:"rgba(170,180,160,0.28)", cloud:"#cbd1c0aa",
   },
   snow: {
-    zoneId: "cooling", zoneLabel: "Soğutma Tesisi", zoneCode: "ST",
+    zoneId: "cooling", backdropMid: false, zoneLabel: "Soğutma Tesisi", zoneCode: "ST",
     sky: ["#7996aa", "#b3c7d2", "#e1edf2"], orb: "#f8ffff",
     dirt: "#566672", grassDeep: "#a8c5d2", grassTop: "#eafaff", surface: "snow",
     props: [{ type:"frostTank", w:2 }, { type:"valve", w:2 }, { type:"pipe", w:1 }],
@@ -130,7 +130,7 @@ const FACTORY_ZONES = {
     propDensity: 108, backdrop:{ kind:"hills" }, haze:"rgba(225,205,155,0.28)", cloud:"#efe3c0aa",
   },
   swamp: {
-    zoneId: "waste", zoneLabel: "Atık Arıtma", zoneCode: "AA",
+    zoneId: "waste", backdropMid: false, zoneLabel: "Atık Arıtma", zoneCode: "AA",
     sky: ["#536450", "#78856c", "#a9ad8e"], orb: "#d9dda9",
     dirt: "#30362d", grassDeep: "#455b42", grassTop: "#79a14a", surface: "grass",
     props: [{ type:"barrel", w:3 }, { type:"pipe", w:2 }, { type:"valve", w:1 }],
@@ -144,7 +144,7 @@ const FACTORY_ZONES = {
     propDensity: 116, backdrop:{ kind:"mountains" }, haze:"rgba(225,195,155,0.30)", cloud:"#ead7bd99",
   },
   volcano: {
-    zoneId: "foundry", zoneLabel: "Döküm Ocağı", zoneCode: "DO",
+    zoneId: "foundry", backdropMid: false, zoneLabel: "Döküm Ocağı", zoneCode: "DO",
     sky: ["#2f2229", "#553033", "#754333"], orb: "#ff8a48",
     dirt: "#292426", grassDeep: "#49312d", grassTop: "#8b4932", surface: "ash",
     props: [{ type:"emberRock", w:2 }, { type:"ladle", w:2 }, { type:"pipe", w:1 }],
@@ -271,7 +271,16 @@ function buildCharacterMaps() {
   });
 }
 
-const MAPS = buildCharacterMaps();
+// Altı bağımsız arena. Geometri aynı profili hem gerçek zeminde hem kartta
+// kullanır; ek platformlar arazi maskesinin parçası olarak çizilir.
+const MAPS = [
+  { id:"furnace", label:"Erimiş Döküm Ocağı", hint:"İki yüksek yan rampa, ortadaki dar ve sıcak havzaya bakar.", zoneLabel:"Döküm Ocağı", zoneId:"foundry", sky:["#201923","#603229","#d16d35"], orb:"#ffb65c", dirt:"#382a2b", grassDeep:"#74402f", grassTop:"#f08a43", surface:"ash", props:[{type:"emberRock",w:3},{type:"ladle",w:2},{type:"pipe",w:1}], propDensity:118, backdrop:{kind:"mountains"}, haze:"rgba(166,74,48,0.38)", accent:"#ff9e56", scene:"furnace", layout:{ p:[[0,.55],[.16,.56],[.29,.61],[.39,.72],[.46,.78],[.54,.78],[.61,.71],[.71,.61],[.84,.56],[1,.55]], s:[.08,.16,.25,.75,.84,.92] } },
+  { id:"crane_yard", label:"Gece Vinç Sahası", hint:"Kademeli çatılar ve asılı platformlar; üst rota hızlı ama açıkta.", zoneLabel:"Vinç Sahası", zoneId:"warehouse", sky:["#101729","#202d4a","#667c97"], orb:"#e7e8cf", dirt:"#34363b", grassDeep:"#54555c", grassTop:"#d49b48", surface:"rooftop", props:[{type:"gear",w:2},{type:"crate",w:2},{type:"cable",w:1}], propDensity:125, backdrop:{kind:"skyline"}, haze:"rgba(75,86,116,0.36)", stars:true, accent:"#f0bd62", scene:"crane", layout:{ p:[[0,.70],[.17,.70],[.23,.59],[.36,.59],[.42,.70],[.58,.70],[.64,.57],[.78,.57],[.84,.66],[1,.66]], s:[.08,.16,.25,.75,.84,.92], solids:[{x:.29,y:.43,w:.13,h:.025},{x:.60,y:.39,w:.15,h:.025},{x:.43,y:.52,w:.12,h:.025}] } },
+  { id:"reactor_garden", label:"Kök Salmış Reaktör", hint:"İki üst siperin arasında alçak vadi; yüksek yol ateşe açık.", zoneLabel:"Atık Arıtma", zoneId:"waste", sky:["#193433","#476d59","#c1c281"], orb:"#e7ed9b", dirt:"#3b382c", grassDeep:"#536645", grassTop:"#92a856", surface:"grass", props:[{type:"pine",w:2},{type:"mushroom",w:2},{type:"reeds",w:1}], propDensity:105, backdrop:{kind:"hills"}, haze:"rgba(151,177,125,0.32)", accent:"#a8ca70", scene:"reactor", layout:{ p:[[0,.69],[.16,.69],[.24,.57],[.39,.57],[.45,.68],[.55,.68],[.61,.56],[.76,.56],[.84,.69],[1,.69]], s:[.08,.16,.25,.75,.84,.92], solids:[{x:.27,y:.47,w:.18,h:.038},{x:.55,y:.46,w:.18,h:.038}] } },
+  { id:"moon_scrapyard", label:"Ay Moloz Sahası", hint:"Parçalı platformlarda zıpla; alttaki geniş rota kesintisiz.", zoneLabel:"Hurda Sahası", zoneId:"scrapyard", sky:["#080f25","#1d3152","#6c8199"], orb:"#edf0df", dirt:"#343943", grassDeep:"#565c69", grassTop:"#a5a8a0", surface:"rooftop", props:[{type:"gear",w:3},{type:"plate",w:2},{type:"cable",w:1}], propDensity:130, backdrop:{kind:"mountains"}, haze:"rgba(118,139,173,0.35)", stars:true, accent:"#8fbbe2", scene:"moon", layout:{ p:[[0,.73],[.16,.73],[.22,.64],[.30,.64],[.35,.73],[.65,.73],[.70,.61],[.78,.61],[.84,.70],[1,.70]], s:[.08,.16,.25,.75,.84,.92], solids:[{x:.12,y:.53,w:.18,h:.035},{x:.38,y:.47,w:.15,h:.035},{x:.70,y:.49,w:.18,h:.035}] } },
+  { id:"ice_rift", label:"Buz Kırığı", hint:"Derin yarık iki kıyıyı ayırır; düşen robot maçtan çıkar.", zoneLabel:"Soğutma Tesisi", zoneId:"cooling", sky:["#365b75","#9dc8df","#f0fbff"], orb:"#ffffff", dirt:"#536875", grassDeep:"#8aaeba", grassTop:"#e8f8ff", surface:"snow", props:[{type:"snowPine",w:2},{type:"rock",w:2},{type:"pipe",w:1}], propDensity:115, backdrop:{kind:"mountains"}, haze:"rgba(210,242,255,0.32)", snow:true, accent:"#9ce5ef", scene:"ice", layout:{ p:[[0,.71],[.15,.70],[.26,.66],[.36,.62],[.42,.59],[.58,.59],[.64,.62],[.74,.66],[.85,.70],[1,.71]], s:[.07,.15,.25,.75,.85,.93], cuts:[{x:.43,y:.58,w:.14,h:.42}], cliffs:[{x:.43,y:.58,w:.14}] } },
+  { id:"flooded_lab", label:"Taşkın Laboratuvarı", hint:"Yüksek dış yürüyüş yolu ve yıkılabilir iç duvarlarla kapalı arena.", zoneLabel:"Montaj Hattı", zoneId:"assembly", sky:["#15343b","#397078","#a9d5c8"], orb:"#f1efce", dirt:"#344448", grassDeep:"#4c7772", grassTop:"#81b6a5", surface:"rooftop", props:[{type:"pipe",w:3},{type:"valve",w:2},{type:"crate",w:1}], propDensity:110, backdrop:{kind:"skyline"}, haze:"rgba(119,179,171,0.35)", accent:"#70d4c1", scene:"lab", layout:{ p:[[0,.70],[.16,.70],[.24,.62],[.40,.62],[.46,.70],[.54,.70],[.60,.62],[.76,.62],[.84,.70],[1,.70]], s:[.08,.16,.25,.75,.84,.92], solids:[{x:.04,y:.28,w:.025,h:.42},{x:.96,y:.28,w:.025,h:.42},{x:.29,y:.49,w:.035,h:.20},{x:.675,y:.49,w:.035,h:.20},{x:.42,y:.57,w:.16,h:.025}], cuts:[{x:.465,y:.70,w:.07,h:.30}] } },
+];
 
 function getMapById(id) {
   return MAPS.find((m) => m.id === id) || MAPS[0];
@@ -374,7 +383,7 @@ function drawBackdrop(ctx, W, H, theme) {
   // (file://'de görsel asenkron geldiği için bu yedek zorunlu).
   // `typeof` koruması: sondalar (`_*.html`) index.html'den elle türediği için
   // assets.js'i yüklemeyen eski bir kopya açılırsa savaş ekranı çökmesin.
-  if (theme.zoneId && typeof drawBackdropAsset === "function" && drawBackdropAsset(ctx, theme.zoneId, W, H)) {
+  if (theme.zoneId && typeof drawBackdropAsset === "function" && drawBackdropAsset(ctx, theme.zoneId, W, H, theme.backdropMid !== false)) {
     _drawHaze(ctx, W, H, theme);
     return;
   }
@@ -400,7 +409,61 @@ function drawBackdrop(ctx, W, H, theme) {
       for (const wnd of layer.windows) { ctx.fillStyle = wnd.c; ctx.fillRect(wnd.x, wnd.y, wnd.w, wnd.h); }
     }
   }
+  drawMapLandmark(ctx, W, H, theme);
   _drawHaze(ctx, W, H, theme);
+}
+
+function drawMapLandmark(ctx, W, H, theme) {
+  if (!theme.scene) return;
+  ctx.save();
+  ctx.globalAlpha = 0.82;
+  ctx.lineWidth = Math.max(2, W * 0.004);
+  ctx.strokeStyle = _shade(theme.grassDeep, -0.12);
+  ctx.fillStyle = _shade(theme.grassDeep, -0.04);
+  const cx = W * 0.5, top = H * 0.18;
+  if (theme.scene === "furnace") {
+    ctx.strokeStyle = "#b65c39"; ctx.lineWidth = W * 0.012;
+    ctx.beginPath(); ctx.moveTo(cx, top); ctx.lineTo(cx, H * 0.39); ctx.stroke();
+    ctx.fillStyle = "#493238"; ctx.beginPath(); ctx.moveTo(cx - W*.10,H*.34); ctx.lineTo(cx-W*.075,H*.46); ctx.lineTo(cx+W*.075,H*.46); ctx.lineTo(cx+W*.10,H*.34); ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = "#f08a43"; ctx.lineWidth = 3; ctx.stroke();
+    ctx.fillStyle = "#ff9e56"; ctx.fillRect(cx-W*.055,H*.40,W*.11,H*.012);
+  } else if (theme.scene === "crane") {
+    ctx.lineWidth = W*.012; ctx.beginPath(); ctx.moveTo(W*.22,H*.52); ctx.lineTo(W*.22,H*.22); ctx.lineTo(W*.60,H*.22); ctx.moveTo(W*.22,H*.31); ctx.lineTo(W*.49,H*.31); ctx.lineTo(W*.49,H*.51); ctx.moveTo(W*.78,H*.52); ctx.lineTo(W*.78,H*.16); ctx.lineTo(W*.94,H*.16); ctx.stroke();
+    ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(W*.60,H*.22); ctx.lineTo(W*.60,H*.38); ctx.stroke(); ctx.fillRect(W*.585,H*.37,W*.03,H*.05);
+  } else if (theme.scene === "reactor") {
+    ctx.fillStyle = "#344b42"; ctx.beginPath(); ctx.ellipse(cx,H*.39,W*.105,H*.16,0,0,Math.PI*2); ctx.fill();
+    ctx.strokeStyle = "#a8ca70"; ctx.lineWidth = 5; ctx.beginPath(); ctx.ellipse(cx,H*.39,W*.075,H*.12,0,0,Math.PI*2); ctx.stroke();
+    ctx.fillStyle = "#d6ed8b"; ctx.beginPath(); ctx.arc(cx,H*.39,W*.025,0,Math.PI*2); ctx.fill();
+    ctx.strokeStyle = "#738c50"; ctx.lineWidth = W*.009; ctx.beginPath(); ctx.moveTo(W*.24,H*.20); ctx.quadraticCurveTo(W*.33,H*.48,cx,H*.49); ctx.moveTo(W*.78,H*.18); ctx.quadraticCurveTo(W*.68,H*.43,cx,H*.49); ctx.stroke();
+  } else if (theme.scene === "moon") {
+    ctx.strokeStyle = "#9ca9b7"; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(W*.29,H*.40,W*.10,-2.5,1.4); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(W*.22,H*.47); ctx.lineTo(W*.35,H*.32); ctx.moveTo(W*.22,H*.32); ctx.lineTo(W*.35,H*.47); ctx.stroke();
+    ctx.fillStyle = "#707c8b"; ctx.fillRect(W*.64,H*.43,W*.12,H*.05); ctx.fillRect(W*.67,H*.39,W*.06,H*.04);
+    ctx.strokeStyle = "#bbc5ca"; ctx.beginPath(); ctx.moveTo(W*.65,H*.48); ctx.lineTo(W*.63,H*.52); ctx.moveTo(W*.75,H*.48); ctx.lineTo(W*.77,H*.52); ctx.stroke();
+  } else if (theme.scene === "ice") {
+    const ice = ctx.createLinearGradient(0,H*.2,0,H*.62);
+    ice.addColorStop(0,"#eefaff"); ice.addColorStop(.48,"#8fc5df"); ice.addColorStop(1,"#426b87");
+    ctx.fillStyle = ice;
+    ctx.beginPath(); ctx.moveTo(W*.12,H*.57); ctx.lineTo(W*.22,H*.38); ctx.lineTo(W*.29,H*.46); ctx.lineTo(W*.37,H*.26); ctx.lineTo(W*.44,H*.48); ctx.lineTo(W*.50,H*.33); ctx.lineTo(W*.57,H*.49); ctx.lineTo(W*.65,H*.29); ctx.lineTo(W*.72,H*.43); ctx.lineTo(W*.83,H*.34); ctx.lineTo(W*.92,H*.55); ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = "#e8fbff"; ctx.lineWidth = Math.max(2,W*.004); ctx.stroke();
+    ctx.strokeStyle = "rgba(44,104,143,.85)"; ctx.lineWidth = Math.max(3,W*.009);
+    ctx.beginPath(); ctx.moveTo(W*.47,H*.42); ctx.lineTo(W*.52,H*.49); ctx.lineTo(W*.48,H*.55); ctx.lineTo(W*.55,H*.62); ctx.stroke();
+    ctx.strokeStyle = "rgba(231,252,255,.9)"; ctx.lineWidth = Math.max(1,W*.002);
+    ctx.beginPath(); ctx.moveTo(W*.43,H*.47); ctx.lineTo(W*.48,H*.51); ctx.moveTo(W*.57,H*.45); ctx.lineTo(W*.53,H*.50); ctx.stroke();
+  } else if (theme.scene === "lab") {
+    ctx.save(); ctx.translate(cx,H*.39); ctx.rotate(-0.14);
+    ctx.fillStyle = "#5b7779"; ctx.fillRect(-W*.095,-H*.09,W*.19,H*.18);
+    ctx.strokeStyle = "#9ed8cf"; ctx.lineWidth = 4; ctx.strokeRect(-W*.095,-H*.09,W*.19,H*.18);
+    ctx.fillStyle = "#73c5bc88"; ctx.fillRect(-W*.065,-H*.06,W*.13,H*.12);
+    ctx.restore();
+    ctx.strokeStyle = "#91beb9"; ctx.lineWidth = 3; ctx.strokeRect(W*.16,H*.27,W*.10,H*.23); ctx.strokeRect(W*.76,H*.27,W*.08,H*.23);
+    ctx.strokeStyle = "rgba(205,246,236,.72)"; ctx.lineWidth = Math.max(2,W*.005);
+    ctx.beginPath(); ctx.moveTo(W*.07,H*.17); ctx.lineTo(W*.93,H*.17); ctx.lineTo(W*.93,H*.22); ctx.lineTo(W*.07,H*.22); ctx.closePath(); ctx.stroke();
+    for (let i=0;i<5;i++) { const xx=W*(.12+i*.19); ctx.strokeStyle=i%2?"#78bbb8":"#b2e3d5"; ctx.lineWidth=2; ctx.beginPath(); ctx.moveTo(xx,H*.18); ctx.lineTo(xx+W*.035,H*.29); ctx.stroke(); }
+    ctx.fillStyle="rgba(60,211,190,.16)"; ctx.fillRect(W*.31,H*.28,W*.38,H*.16);
+    ctx.strokeStyle="#92ddd0"; ctx.strokeRect(W*.31,H*.28,W*.38,H*.16);
+  }
+  ctx.restore();
 }
 
 function _drawHaze(ctx, W, H, theme) {
@@ -914,25 +977,48 @@ const PROP_DRAWERS = {
   },
 };
 
-function _pickWeighted(list) {
+function _pickWeighted(list, random = Math.random) {
   let tot = 0; for (const it of list) tot += it.w;
-  let r = Math.random() * tot;
+  let r = random() * tot;
   for (const it of list) { r -= it.w; if (r <= 0) return it.type; }
   return list[list.length - 1].type;
 }
 
-// Yüzeye objeler serp. Haritanın gerçek başlangıç adaylarının çevresini boş bırak.
-function paintProps(ctx, heights, w, h, theme) {
-  if (!theme.props || !theme.props.length) return;
+function _mapRandom(mapId) {
+  let state = 2166136261;
+  const key = String(mapId || "default-map");
+  for (let i = 0; i < key.length; i++) state = Math.imul(state ^ key.charCodeAt(i), 16777619);
+  if (!state) state = 0x6d2b79f5;
+  return () => {
+    state ^= state << 13;
+    state ^= state >>> 17;
+    state ^= state << 5;
+    return (state >>> 0) / 4294967296;
+  };
+}
+
+// Üretim çizimden ayrıdır: testler ve tüm maç istemcileri aynı yerleşimi hesaplar.
+function getMapPropPlacements(heights, w, theme) {
+  if (!theme || !theme.props || !theme.props.length) return [];
   const dens = theme.propDensity || 100;
   const spawnXs = theme.layout && theme.layout.s
     ? theme.layout.s.map((v) => v * w)
     : [0.18 * w, 0.82 * w];
-  for (let x = 44; x < w - 44; x += dens * (0.6 + Math.random() * 0.8)) {
+  const random = _mapRandom(theme.id);
+  const placements = [];
+  for (let x = 44; x < w - 44; x += dens * (0.6 + random() * 0.8)) {
     const px = Math.round(x);
     if (spawnXs.some((sx) => Math.abs(px - sx) < 36)) continue;
-    const drawer = PROP_DRAWERS[_pickWeighted(theme.props)];
-    if (drawer) drawer(ctx, px, heights[px], theme);
+    placements.push({ x: px, y: heights[px], type: _pickWeighted(theme.props, random) });
+  }
+  return placements;
+}
+
+// Haritanın kimliği dekorları sabitler; çizim Math.random durumunu değiştirmez.
+function paintProps(ctx, heights, w, h, theme) {
+  for (const prop of getMapPropPlacements(heights, w, theme)) {
+    const drawer = PROP_DRAWERS[prop.type];
+    if (drawer) drawer(ctx, prop.x, prop.y, theme);
   }
 }
 
@@ -1029,7 +1115,7 @@ function drawMapPreview(ctx, x, y, w, h, theme) {
   // Arazi profili ve obje ipuçları her iki yolda da kalır: kart oynanış
   // geometrisini göstermek zorunda, yalnız fon değişir.
   const rasterBg = theme.zoneId && typeof drawPreviewAsset === "function"
-    ? drawPreviewAsset(ctx, theme.zoneId, x, y, w, h)
+    ? drawPreviewAsset(ctx, theme.zoneId, x, y, w, h, theme.backdropMid !== false)
     : false;
 
   // güneş/ay
@@ -1042,6 +1128,10 @@ function drawMapPreview(ctx, x, y, w, h, theme) {
       const sx = x + 4 + ((i * 53) % (w - 8)), sy = y + 4 + ((i * 37) % Math.floor(h * 0.5));
       ctx.beginPath(); ctx.arc(sx, sy, theme.snow ? 1.4 : 1, 0, Math.PI * 2); ctx.fill();
     }
+  }
+
+  if (theme.scene && !rasterBg) {
+    ctx.save(); ctx.translate(x, y); drawMapLandmark(ctx, w, h, theme); ctx.restore();
   }
 
   // uzak tepe ipucu
@@ -1086,9 +1176,24 @@ function drawMapPreview(ctx, x, y, w, h, theme) {
     for (const rect of theme.layout.cuts || []) {
       const rx = x + rect.x * w, ry = y + rect.y * h;
       const rw = rect.w * w, rh = rect.h * h;
-      ctx.fillStyle = sk[sk.length - 1]; ctx.fillRect(rx, ry, rw, rh);
+      const pit = ctx.createLinearGradient(0, ry, 0, y + h);
+      pit.addColorStop(0, theme.scene === "ice" ? "#244b66" : sk[sk.length - 1]);
+      pit.addColorStop(1, theme.scene === "ice" ? "#07111f" : _shade(theme.dirt, -0.45));
+      ctx.fillStyle = pit; ctx.fillRect(rx, ry, rw, rh);
       ctx.strokeStyle = _shade(theme.dirt, -0.35); ctx.lineWidth = 1.5;
       ctx.strokeRect(rx, ry, rw, rh);
+    }
+    for (const cliff of theme.layout.cliffs || []) {
+      const left = x + cliff.x * w, right = x + (cliff.x + cliff.w) * w;
+      const top = y + cliff.y * h;
+      for (const edgeX of [left, right]) {
+        const inward = edgeX === left ? 1 : -1;
+        ctx.fillStyle = "rgba(46,92,118,.92)";
+        ctx.fillRect(edgeX, top, inward * 5, y + h - top);
+        ctx.strokeStyle = "#eafcff"; ctx.lineWidth = 1.5;
+        ctx.beginPath(); ctx.moveTo(edgeX, top); ctx.lineTo(edgeX + inward * 2, top + 7);
+        ctx.lineTo(edgeX, top + 14); ctx.lineTo(edgeX + inward * 3, top + 23); ctx.stroke();
+      }
     }
   }
 

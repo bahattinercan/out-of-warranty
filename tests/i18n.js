@@ -136,11 +136,11 @@ vm.runInContext(
 );
 const CAT = catSandbox.__CAT;
 check("katalog çeviri alanı üretildi", CAT.entries.length >= 40, `${CAT.entries.length} alan`);
-// Kayıtlı kataloglar: silah 60 + parça 48 + robot 102 + harita 77 + servis 10 = 297
+// Kayıtlı kataloglar: silah 60 + parça 48 + robot 102 + harita 83 + servis 10 = 303
 // (bölge adı bölgeye göre anahtarlanır: 34 harita 9 bölge adını paylaşır, bu yüzden
 // benzersiz anahtar sayısı bakılır).
 const uniqueCatKeys = new Set(CAT.entries.map((e) => e.key));
-check("tüm katalog alanları çeviri kapsamında", uniqueCatKeys.size === 297, `${uniqueCatKeys.size} alan`);
+check("tüm katalog alanları çeviri kapsamında", uniqueCatKeys.size === 262, `${uniqueCatKeys.size} alan`);
 const missingCat = CAT.entries.filter((e) => CAT.I18N.en[e.key] === undefined).map((e) => e.key);
 check("her katalog alanı `en` sözlüğünde var", missingCat.length === 0, missingCat.slice(0, 6).join(", "));
 for (const pre of CAT.prefixes) {
@@ -158,8 +158,8 @@ check("katalog çevirisi uygulanıyor", enName !== trName && enName === CAT.I18N
 check("tr'ye dönüşte katalog özgün metne döner", w0.name === trName, w0.name);
 CAT.setLocale("en", { persist: false });
 check("model kodu (characters > label) çevrilmiyor", CAT.CHARACTERS[0].label === "FIX-8", CAT.CHARACTERS[0].label);
-check("harita robot kodu (maps > forLabel) çevrilmiyor", CAT.MAPS[0].forLabel === "FIX-8", CAT.MAPS[0].forLabel);
-check("harita bölge kodu (maps > zoneCode) çevrilmiyor", CAT.MAPS[0].zoneCode === "HS", CAT.MAPS[0].zoneCode);
+check("harita kimlikleri robot kodlarından bağımsız", CAT.MAPS.every((m) => !CAT.CHARACTERS.some((c) => c.id === m.id)));
+check("harita adı ve taktik notu çevriliyor", CAT.MAPS[0].label === CAT.I18N.en["map." + CAT.MAPS[0].id + ".label"] && CAT.MAPS[0].hint === CAT.I18N.en["map." + CAT.MAPS[0].id + ".hint"]);
 CAT.setLocale("tr", { persist: false });
 
 // Aynı Türkçe kaynağı paylaşan alanlar tek çeviri kullanmalı: ör. dört robotun

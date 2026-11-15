@@ -98,6 +98,10 @@ class Entity {
     this.facing = 1;
     this.alive = true;
     this.lastShot = null;
+    this.visualHitTimer = 0;
+    this.visualShieldTimer = 0;
+    this.skillPoseTimer = 0;
+    this.skillPoseKind = null;
     // Skill durumu
     this.skillId         = charDef ? charDef.skill.id : null;
     this.skillKind       = charDef ? charDef.skill.kind : null;
@@ -110,6 +114,8 @@ class Entity {
     this.glideTurns      = 0;     // >0 iken yerçekimi azalır (uçuş)
     // Silah durumu
     this.weapon = 0;   // seçili silah indeksi (WEAPONS içinde)
+    this.weaponRecoil = 0;
+    this.shotWeapon = null;
     this.ammo = {};    // id -> kalan adet; Game.startGame() doldurur
     // Cephane Pazarı deposundan bu maça yüklenen ek mermi (id -> adet).
     // Maç sonunda harcanmayan kısım envantere geri yazılır (_settleAmmoDepot).
@@ -118,6 +124,8 @@ class Entity {
 
   // Seçili silahın spec'i
   get weaponSpec() { return WEAPONS[this.weapon]; }
+
+  get heldWeaponSpec() { return this.weaponRecoil > 0 && this.shotWeapon ? this.shotWeapon : this.weaponSpec; }
 
   // i'inci silahın kullanılabilir mühimmatı var mı? (∞ ya da > 0)
   hasAmmo(i) {
@@ -139,7 +147,7 @@ class Entity {
     const cx = this.x;
     const cy = this.y - this.r;
     if (typeof robotMuzzlePoint === "function") {
-      return robotMuzzlePoint(cx, cy, this.r, this.facing, this.aim, this.charDef);
+      return robotMuzzlePoint(cx, cy, this.r, this.facing, this.aim, this.charDef, this.heldWeaponSpec, this.weaponRecoil);
     }
     return {
       x: cx + Math.cos(this.aim) * (this.r + 12),
@@ -236,6 +244,12 @@ class Entity {
   }
 
   update(terrain) {
+    this.visualHitTimer = Math.max(0, this.visualHitTimer - 1);
+    this.visualShieldTimer = Math.max(0, this.visualShieldTimer - 1);
+    if (this.skillPoseTimer > 0) this.skillPoseTimer--;
+    if (this.skillPoseTimer === 0) this.skillPoseKind = null;
+    this.weaponRecoil = Math.max(0, this.weaponRecoil - 0.09);
+    if (this.weaponRecoil === 0) this.shotWeapon = null;
     // Gösterilen canı gerçek cana doğru yumuşakça çek (animasyonlu azalma)
     this.displayHp += (this.hp - this.displayHp) * 0.15;
     if (Math.abs(this.hp - this.displayHp) < 0.5) this.displayHp = this.hp;
@@ -304,6 +318,7 @@ class Entity {
       // Kalkan tüketildi: aparat dalı enerji iadesi varsa uygula (tam hasar
       // engelleme sayısı değişmez).
       this.blockShield = false;
+      this.visualShieldTimer = 16;
       if (this.shieldStaminaRefund > 0) {
         this.stamina = Math.min(this.maxStamina, this.stamina + this.shieldStaminaRefund);
       }
@@ -312,6 +327,7 @@ class Entity {
     let amt = amount * (1 - this.armor);
     if (this.damageReduce) amt *= this.damageReduce.factor; // Dev Form / kabuk
     const reduced = Math.round(amt);
+    if (reduced > 0) this.visualHitTimer = 12;
     this.hp = Math.max(0, this.hp - reduced);
     if (this.hp <= 0) this.alive = false;
     return reduced;
@@ -342,7 +358,13 @@ class Entity {
     // Robot gövdesi. Legacy veri yüklenirse eski dairesel çizim güvenli fallback'tir.
     const drewRobot = typeof drawRobot === "function" && drawRobot(ctx, {
       cx, cy, r: this.r, facing: this.facing, aim: this.aim, charDef: this.charDef,
+      weapon: this.heldWeaponSpec, recoil: this.weaponRecoil,
       playerTint: this.playerTint, timeMs,
+      healthRatio: this.maxHp > 0 ? this.hp / this.maxHp : 1,
+      hitFlash: Math.min(1, this.visualHitTimer / 8),
+      shieldFlash: Math.min(1, this.visualShieldTimer / 12),
+      skillPose: this.skillPoseKind,
+      skillProgress: this.skillPoseTimer > 0 ? 1 - this.skillPoseTimer / 24 : 0,
       motion: {
         vx: this.vx, vy: this.vy, onGround: this.onGround,
         walk: this.walkAnim, walkAmp: this.walkBlend,

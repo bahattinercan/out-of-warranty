@@ -118,6 +118,9 @@ function useSkill(entity, game) {
   // (saf test sandbox'ı) sessizce atlanır.
   if (typeof spawnSkillFx === "function") spawnSkillFx(entity, game, def);
 
+  entity.skillPoseKind = def.kind;
+  entity.skillPoseTimer = 24;
+
   entity.skillCooldown = def.cooldown;
   return true;
 }

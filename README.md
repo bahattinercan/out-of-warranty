@@ -2,6 +2,7 @@
 
 Terk edilmiş bir mega fabrikada küçük servis robotlarının yedek parça hakkı için savaştığı sıra tabanlı 2D topçu oyunu. HTML5 Canvas ve saf JavaScript ile çalışır; kurulum veya derleme gerektirmez.
 
+Uçtan uca arayüz yenilemesinin kapsamı ve uygulama adımları [Tasarım Yenileme Planı](./docs/tasarim-yenileme-plani.md) belgesindedir.
 Tema dönüşümünün tasarım ve teknik kararları için [Robot Tema Dönüşümü — Ana Plan](./docs/robot-theme/README.md) belgesine bakın.
 Kalıcı ilerleme için hazırlanan ekonomi, atölye ve yükseltme tasarımı [Robot Geliştirme Sistemi Planı](./docs/robot-theme/06_ROBOT_GELISTIRME_SISTEMI.md) belgesindedir.
 
@@ -17,25 +18,13 @@ start index.html
 
 ## Arayüz teması ve yazı tipleri
 
-Menüler "endüstriyel panel" dilinde çizilir (kesik köşeli çelik panel + perçin
-+ sarı-siyah tehlike şeritleri). Yazı tipleri `fonts/` klasöründeki woff2
-dosyalarından `css/style.css` başındaki `@font-face` ile yüklenir — internet
-bağımlılığı yoktur, `"Segoe UI"` yalnız fallback'tir:
-
-- **Russo One** – başlıklar, buton yazıları (canvas: `uiTitleFont(px)`)
-- **Chakra Petch** – gövde metni, etiketler, istatistikler (canvas: `uiTextFont(px, weight?)`)
-
-Ağırlık kademeleri: başlık ≥14px → Russo One 400 · etiket/buton/vurgu →
-Chakra Petch **700** · gövde metni/diyalog/açıklama → Chakra Petch **600**
-(SemiBold, `uiTextFont` varsayılanı; DOM tarafında `body { font-weight: 600 }`).
-400 kesimi yalnız fallback olarak durur — bu fontun ince 400'ü aynı ekranda
-700 etiketlerin yanında başka bir aile gibi okunuyordu, o yüzden gövde 600'e
-bağlandı.
-
-Yeni canvas UI kodu yazarken fontu bu iki yardımcıdan alın (`js/game.js`);
-kart/panel çizimi için `_csPanel`, sığmayan metin için `_fitTextLines`
-kullanılır. Ayrıntı: [`docs/ui-theme-plan.md`](docs/ui-theme-plan.md) ve
-[`docs/ui-theme-phases.md`](docs/ui-theme-phases.md).
+Arayüz, fabrika atmosferini koruyan sade bir operasyon konsolu dili kullanır:
+yumuşak katmanlı paneller, turkuaz ve sıcak sarı vurgu, belirgin içerik
+hiyerarşisi. Canvas ve DOM ortak Chakra Petch yazı ailesini kullanır. Fontlar
+`fonts/` klasöründen yüklenir; çevrimiçi font servisine bağımlılık yoktur.
+Canvas çiziminde `uiTitleFont`, `uiTextFont`, `_csPanel` ve `_fitTextLines`
+yardımcıları kullanılır. Tasarım kapsamı ve uygulama durumu:
+[`docs/tasarim-yenileme-plani.md`](docs/tasarim-yenileme-plani.md).
 
 ## Kontroller
 
@@ -254,11 +243,25 @@ Ek olarak:
 
 Ayrıntılı tasarım ve kilitli kararlar: [`docs/skill-fx-plan.md`](docs/skill-fx-plan.md).
 
-## Fabrika bölgeleri
+## Haritalar
 
-Her robot için bir arena olmak üzere 34 harita vardır. Dokuz bölge ortak birer
-malzeme paleti kullanır; ancak her arenanın adı, sabit savaş silüeti, siperleri,
-yaklaşma yolları ve 2–6 oyuncuya özel başlangıç seçimi ayrıdır:
+Tüm 34 robot altı ortak arenanın her birinde oynanabilir. Harita seçimi robot
+seçiminden bağımsızdır; çevrimiçi odada ev sahibi haritayı seçer ve misafir aynı
+seçimi görür.
+
+| Harita | Savaş düzeni |
+|---|---|
+| Erimiş Döküm Ocağı | Yüksek yan rampalar, dar ve derin merkez havzası |
+| Gece Vinç Sahası | Kademeli çatılar ve atlayarak çıkılan asılı platformlar |
+| Kök Salmış Reaktör | Yüksek siperler arasında kalan alçak vadi |
+| Ay Moloz Sahası | Zıplanan enkaz platformları ve kesintisiz alt rota |
+| Buz Kırığı | İki kıyıyı ayıran ölümcül, dipsiz yarık |
+| Taşkın Laboratuvarı | Çevre duvarlı arena ve yıkılabilir iç bariyerler |
+
+Eski bölge paletleri ve prop çizimleri geriye uyumluluk için kod tabanında tutulur;
+oyuncu harita seçimi bu altı sabit arenayı kullanır.
+
+Eski dokuz bölge paletinin kapsamı:
 
 | Kod | Bölge | Görsel öğeler |
 |---|---|---|
@@ -272,10 +275,10 @@ yaklaşma yolları ve 2–6 oyuncuya özel başlangıç seçimi ayrıdır:
 | KU | Kumlama Ünitesi | Basınç tankı ve kum torbaları |
 | DO | Döküm Ocağı | Cüruf, pota ve sıcak metal |
 
-Ana arazi her maçta aynı öğrenilebilir yerleşimden kurulur; yalnız küçük dekorların
-yeri değişebilir. Mıknatıs Köprüsü ve Üç Katlı Raf gerçek üst yollar, Gömülü
-Servis Tüneli gerçek maske boşlukları kullanır. Harita kartı gerçek maç profilini
-aynı veriden çizer. Tasarım ve denge hedefleri `docs/map-combat-layout-plan.md` içindedir.
+Ana arazi her maçta aynı öğrenilebilir yerleşimden kurulur. Ek platformlar ve
+boşluklar hem görsel çizime hem çarpışma maskesine aynı veriden uygulanır; kart
+önizlemeleri de maçtaki profili kullanır. Tasarım hedefleri
+`docs/map-redesign-plan.md` içindedir.
 
 ## Silahlar
 
@@ -318,7 +321,7 @@ Oyunun kaynak dili Türkçedir: Türkçe metinler **kodun içinde** durur, diğe
 - **Dil seçimi:** `setLocale("en")`; tercih `nwo_locale` anahtarında saklanır. İlk açılışta kayıtlı tercih → tarayıcı dili → Türkçe sırası izlenir.
 - **DOM metinleri:** HTML düğümlerine `data-i18n="anahtar"` (metin) veya `data-i18n-title="anahtar"` (title) eklenir; `setLocale` bunları kendiliğinden uygular.
 - **Arayüz kapsamı:** marka başlığı, ana menü, **savaş HUD'u** (sıra şeridi, rüzgar, alt panel yuvaları, düğmeler, ses/dil denetimleri), **dil seçici**, **Atölye** (dal/yuva adları, kademe/maliyet/durum satırları, parça takma metinleri), **Nasıl Oynanır + eğitim koçu**, **Cephane Pazarı** (sekmeler, kart durumları, sayfalama, bilgi/uyarı satırları), **bildirimler** (pazar + atölye takma + depolama uyarısı) ve **maç sonu kaplaması** (öğretici/maç sonucu, ödül ve seviye satırı, düğmeler) çevrildi.
-- **Veri katalogları:** **silahlar** (20), **parçalar** (24), **robotlar** (34; `role` + `skill.label`/`skill.desc`), **haritalar** (34 `label`/`skillLabel` + 9 bölge adı) ve **servis seviyesi ödülleri** (10) çevrildi.
+- **Veri katalogları:** **silahlar** (20), **parçalar** (24), **robotlar** (34; `role` + `skill.label`/`skill.desc`), **haritalar** (6 ad + taktik notu) ve **servis seviyesi ödülleri** (10) çevrildi.
 - **Etki özetleri:** Atölye kademe/parça satırları (`progression.js > upgradeEffectText` / `partEffectText`) anahtarlı — ortak satırlar tek anahtar paylaşır (`progression.hp`, `progression.armor`, `progression.cooldown` …).
 - **Durum:** Oyunda çevrilmemiş metin kalmadı; TR kaynak metin kodda, EN tam. Sıradaki diller: `zh-Hans`, `ru`, `es-ES`, `pt-BR` (kaynak+anahtar düzeni sayesinde yalnız sözlük eklenir).
 - **Veri çevirisi nasıl işler:** `i18n.js > DATA_CATALOGS` kayıtlı katalog alanlarını **dil değişiminde** çevirir (`setLocale` → `applyDataTranslations`), özgün Türkçe değerleri ilk uygulamada saklar ve Türkçeye dönüldüğünde kataloğu birebir eski hâline döndürür — çağrı yerleri (`spec.name`, `part.label` …) hiç değişmez. Kaydedilmeyen katalog alanı bilinçli olarak Türkçe kalır. **Model kodları (`characters > label`: FIX-8, `maps > forLabel`) çevrilmez** — marka kimliği.
@@ -367,7 +370,7 @@ kullanılır (oyun trafiği P2P akar).
   kitaplığı yüklenemedi" der ve diğer modlar çalışmaya devam eder.
 - **Geliştirmeler kapalı:** çevrimiçi maçta iki taraf taban robot istatistikleriyle
   oynar (depo/atölye yalnız tek oyunculu ilerlemeye aittir). Arena, oda sahibinin
-  robotuna ait haritadır.
+  ev sahibinin seçtiği ortak haritadır.
 - **TURN yedeği:** simetrik NAT/kurumsal ağ arkasında doğrudan bağlantı
   kurulamazsa ücretsiz bir TURN sunucusu gerekir; `js/online-lobby.js >
   ONLINE_TURN_SERVERS` boş bırakılmıştır (anahtar gerektirir).
@@ -397,7 +400,7 @@ node tests/release.js      # yayın paketi: kapsam, script sırası, sözdizimi,
 node tests/diagnostics.js  # tanılama: hata yakalama, rapor metni, panoya kopyalama (F6)
 ```
 
-Ana test takımı robot veri sözleşmesini, 34 arena üretimini, dokuz fabrika bölgesini, bütün prop kayıtlarını, modüler çizimi, yetenekleri, bot karar sistemini (puanlama, güvenlik filtresi, hareket yolu, isabet kalitesi ve zorluk merdiveni) ve geliştirme sisteminin oyun entegrasyonunu doğrular. Harita testleri 34 benzersiz profili, 2–6 oyuncu doğuşlarını ve katmanlı köprü/raf/tünel maskelerini denetler. Geliştirme testleri seviye eşiklerini, ödül formülünü, yetenek adaptörlerini, profil doğrulamasını ve satın alma önkoşullarını tarayıcısız denetler. Pazar testleri cephane fiyatlarını, ortak depo doğrulamasını (bilinmeyen/sınırsız silah ve üst sınır), satın alma önkoşullarını, maça yükleme ve harcanan mermiyi düşme döngüsünü, robot depolarının ortak depoya taşındığı v3→v4 göçünü ayrıca pazar ekranı/satın alma akışının oyun entegrasyonunu denetler. **Parça testleri** katalog bütünlüğünü (24 parça, yuva başına 6, etki eksenleri), benzersiz satın almayı, **yuva başına iki alt yuvayı** (indeksli takma, taşıma, kırpma, göç v5→v6), aynı parçanın birden çok robotta takılı olabilmesini, parçaların build'e etkilerini (düz toplamlar + çarpımsal güç/savrulma/hız/sıçrama, kırpma sınırları), pazar yuva sekmelerini, Atölye parça panelini (8 hücre + sayfalı liste) ve aksesuar çizimini denetler. Ses testleri Web Audio kaynak temizliğini, sessize alma davranışını, seviye kaydını ve hasar bildirimlerini denetler. Mermi görsel testleri 27 spec'in tasarım ailesi kuralını (paylaşım yalnız `SHARED_SHAPES` beyaz listesinde), shape'lerin birbirinden farklı çizim üretmesini, tüm spec'lerin hatasız çizilmesini ve önizleme çizicisini denetler. Yetenek efekti testleri her modülün kayıtlı ve benzersiz bir `fx.shape` taşıdığını, her türün varsayılan efektini, türetilmiş build'in görsel kimliği koruduğunu, 34 shape'in ömrü boyunca hatasız/farklı/deterministik çizildiğini, gradient-`shadowBlur` kullanılmadığını ve aura/ikon çizicilerini denetler.
+Ana test takımı robot veri sözleşmesini, altı ortak arena üretimini, dokuz eski fabrika bölgesini, bütün prop kayıtlarını, modüler çizimi, yetenekleri, bot karar sistemini (puanlama, güvenlik filtresi, hareket yolu, isabet kalitesi ve zorluk merdiveni) ve geliştirme sisteminin oyun entegrasyonunu doğrular. Harita testleri altı ayrı profili, 2–6 oyuncu doğuşlarını, ek platformları ve gerçek boşluk maskelerini denetler. Geliştirme testleri seviye eşiklerini, ödül formülünü, yetenek adaptörlerini, profil doğrulamasını ve satın alma önkoşullarını tarayıcısız denetler. Pazar testleri cephane fiyatlarını, ortak depo doğrulamasını (bilinmeyen/sınırsız silah ve üst sınır), satın alma önkoşullarını, maça yükleme ve harcanan mermiyi düşme döngüsünü, robot depolarının ortak depoya taşındığı v3→v4 göçünü ayrıca pazar ekranı/satın alma akışının oyun entegrasyonunu denetler. **Parça testleri** katalog bütünlüğünü (24 parça, yuva başına 6, etki eksenleri), benzersiz satın almayı, **yuva başına iki alt yuvayı** (indeksli takma, taşıma, kırpma, göç v5→v6), aynı parçanın birden çok robotta takılı olabilmesini, parçaların build'e etkilerini (düz toplamlar + çarpımsal güç/savrulma/hız/sıçrama, kırpma sınırları), pazar yuva sekmelerini, Atölye parça panelini (8 hücre + sayfalı liste) ve aksesuar çizimini denetler. Ses testleri Web Audio kaynak temizliğini, sessize alma davranışını, seviye kaydını ve hasar bildirimlerini denetler. Mermi görsel testleri 27 spec'in tasarım ailesi kuralını (paylaşım yalnız `SHARED_SHAPES` beyaz listesinde), shape'lerin birbirinden farklı çizim üretmesini, tüm spec'lerin hatasız çizilmesini ve önizleme çizicisini denetler. Yetenek efekti testleri her modülün kayıtlı ve benzersiz bir `fx.shape` taşıdığını, her türün varsayılan efektini, türetilmiş build'in görsel kimliği koruduğunu, 34 shape'in ömrü boyunca hatasız/farklı/deterministik çizildiğini, gradient-`shadowBlur` kullanılmadığını ve aura/ikon çizicilerini denetler.
 
 ## Portal uyumu (yayın)
 

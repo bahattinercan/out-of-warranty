@@ -186,6 +186,8 @@ function cmdPick(args) {
   const sat = argOf(args, "--sat") || String(dflt.sat);
   const value = argOf(args, "--value") || String(dflt.value || 1);
   const q = argOf(args, "--q") || String(dflt.q);
+  const simplify = argOf(args, "--simplify") || String(dflt.simplify || 0);
+  const haze = argOf(args, "--haze") || String(dflt.haze || 0);
   const tile = args.includes("--tile") || dflt.tile;
 
   // Palet: bg varlıklarında bölge paleti (maps.js'ten), diğerlerinde açık argüman.
@@ -201,7 +203,7 @@ function cmdPick(args) {
       .filter(Boolean).join(",");
     // Uzak katmanda silüetin altındaki boş zemin, bölge toprağının gökyüzüne
     // çekilmiş tonuyla boyanır (hava perspektifi: ön plan arazisinden açık).
-    if (kind === "far" && !floor) floor = mixHex(z.dirt, z.sky[z.sky.length - 1] || "#ffffff", 0.18);
+    if (kind === "far" && !floor && !args.includes("--no-floor")) floor = mixHex(z.dirt, z.sky[z.sky.length - 1] || "#ffffff", 0.18);
   }
 
   const outRel = `assets/${id}.webp`;
@@ -210,13 +212,14 @@ function cmdPick(args) {
     "--alpha", alpha, "--sat", sat, "--q", q,
   ];
   pyArgs.push("--value", value);
+  if (kind === "robots") pyArgs.push("--fit", "contain");
   pyArgs.push("--band", String(dflt.band || 0));
-  pyArgs.push("--simplify", String(dflt.simplify || 0));
+  pyArgs.push("--simplify", simplify);
   if (floor) pyArgs.push("--floor", floor);
   // Arazi üst çizgisi oyunda ~0.62 H; uzak silüet onun üstünde durmalı ki
   // tepelerin arkasından yükselen bir skyline olarak okunsun.
   if (floor) pyArgs.push("--base-at", argOf(args, "--base-at") || "0.62");
-  if (dflt.haze) pyArgs.push("--haze", String(dflt.haze));
+  if (Number(haze) > 0) pyArgs.push("--haze", haze);
   if (palette) pyArgs.push("--palette", palette);
   if (tile) pyArgs.push("--tile");
 

@@ -1,14 +1,11 @@
 /* Giriş noktası: oyunu başlat ve "Tekrar Oyna" butonunu bağla. */
 window.addEventListener("DOMContentLoaded", () => {
   // Font ön yükleme: ilk menü karesi fallback (Segoe UI) ile çizilmesin diye
-  // oyun fontlarını tarayıcıya önceden bildirir (ui-theme-plan.md §2.4).
+  // arayüzde kullanılan font kesimlerini tarayıcıya önceden bildirir.
   // Oyun her kareyi yeniden çizdiği için yüklenince ekran kendiliğinden güncellenir.
   if (document.fonts && document.fonts.load) {
-    document.fonts.load('16px "Russo One"');
-    // Gövde varsayılanı SemiBold (600) — 400 kesimi artık UI'da kullanılmıyor
-    // (bkz. uiTextFont); ön yükleme de yalnız kullanılan kesimleri ister.
+    document.fonts.load('700 16px "Chakra Petch"');
     document.fonts.load('600 16px "Chakra Petch"');
-    document.fonts.load('bold 16px "Chakra Petch"');
   }
 
   const canvas = document.getElementById("game");

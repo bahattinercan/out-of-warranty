@@ -1,5 +1,9 @@
 # Menü UI Teması ve Yazı Tipi Planı
 
+> Tarihsel kayıt: bu belgedeki Russo One/endüstriyel panel kararları, uçtan uca
+> yenileme kapsamında güncellendi. Güncel görsel yön ve uygulama durumu için
+> [`tasarim-yenileme-plani.md`](tasarim-yenileme-plani.md) belgesini izleyin.
+
 Tarih: 24 Eylül 2026
 Durum: **Faz 1 + Faz 2 uygulandı** (font sistemi + panel altyapısı/pilot; 644/644 test geçti).
 Kalan tüm arayüz yüzeylerine uygulamanın adım adım planı: [`ui-theme-phases.md`](ui-theme-phases.md) (Faz 3A-3C, 4, 5 — yüzey envanteri dahil).

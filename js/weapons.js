@@ -31,6 +31,25 @@
  *   accent -> ikincil renk (kanat/pim/LED/çekirdek); glow -> dış parlaklık rengi
  *   fuseFx -> fitilli mermilerde kıvılcım + son saniye uyarı halkası
  */
+// Tüm ölçüler robotun görsel yarıçapına göredir; namlu ekseni +x yönündedir.
+const WEAPON_RIGS = {
+  launcher: { kind: "launcher", frontX: 0.66, frontY: 0.15, backX: 0.16, backY: 0.12, frontBend: 1, backBend: -1, frontWrist: 0.02, backWrist: -0.08, recoil: 1 },
+  rifle: { kind: "rifle", frontX: 0.78, frontY: 0.10, backX: 0.14, backY: 0.21, frontBend: -1, backBend: 1, frontWrist: -0.08, backWrist: 0.16, recoil: 0.65 },
+  shotgun: { kind: "shotgun", frontX: 0.72, frontY: 0.16, backX: 0.14, backY: 0.21, frontBend: -1, backBend: -1, frontWrist: -0.04, backWrist: 0.12, recoil: 1 },
+  lobber: { kind: "lobber", frontX: 0.60, frontY: 0.19, backX: 0.14, backY: 0.20, frontBend: 1, backBend: 1, frontWrist: 0.12, backWrist: 0.18, recoil: 0.55 },
+  utility: { kind: "utility", frontX: 0.68, frontY: 0.14, backX: 0.14, backY: 0.19, frontBend: 1, backBend: -1, frontWrist: 0.06, backWrist: 0.12, recoil: 0.35 },
+};
+const WEAPON_RIG_BY_ID = {
+  bazooka: "launcher", grenade: "lobber", sniper: "rifle", shotgun: "shotgun",
+  cluster: "lobber", triple: "launcher", sticky: "lobber", rubber: "lobber",
+  rubbertrio: "lobber", grenadetrio: "lobber", megacluster: "lobber", nuke: "launcher",
+  barrage: "launcher", mirv: "launcher", airstrike: "utility", drill: "launcher",
+  mine: "lobber", napalm: "lobber", teleportball: "utility", hook: "utility",
+};
+function weaponRig(spec) {
+  return WEAPON_RIGS[WEAPON_RIG_BY_ID[spec && spec.id] || "launcher"];
+}
+
 const WEAPONS = [
   {
     id: "bazooka", name: "Bazuka", icon: "🚀",

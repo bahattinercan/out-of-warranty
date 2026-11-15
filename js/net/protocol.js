@@ -19,7 +19,7 @@
 // sürüm uyuşmazlığı daha erken ve daha anlaşılır bir hata verir).
 // 3: `NET_MSG.REJECT` eklendi (F4) — dolu odada kalan oyuncu artık sessizce
 // beklemiyor, nedenini öğreniyor.
-const NET_PROTOCOL_VERSION = 3;
+const NET_PROTOCOL_VERSION = 4;
 
 // Mesaj türleri. Güvenilir (tek seferlik eylem/onay) ve güvenilmez (güncel
 // hareket/nişan, periyodik durum) ayrımı `NET_RELIABLE` kümesiyle yapılır.

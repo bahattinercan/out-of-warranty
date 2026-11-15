@@ -195,7 +195,20 @@ class Terrain {
       ctx.fillStyle = grad;
       ctx.fillRect(r.x, r.y, r.w, r.h);
       ctx.fillStyle = this.theme.grassTop;
-      ctx.fillRect(r.x, r.y, r.w, 3);
+      ctx.fillRect(r.x, r.y, r.w, 4);
+      ctx.fillStyle = "rgba(10,18,24,.35)";
+      ctx.fillRect(r.x, r.y + r.h - 3, r.w, 3);
+      ctx.strokeStyle = "rgba(235,245,225,.34)";
+      ctx.lineWidth = 1;
+      ctx.strokeRect(r.x + .5, r.y + .5, Math.max(0, r.w - 1), Math.max(0, r.h - 1));
+      if (r.w > 18 && r.h > 10) {
+        ctx.strokeStyle = "rgba(18,26,30,.36)";
+        ctx.beginPath();
+        for (let x = r.x + 12; x < r.x + r.w - 4; x += 22) {
+          ctx.moveTo(x, r.y + 7); ctx.lineTo(x, r.y + r.h - 5);
+        }
+        ctx.stroke();
+      }
     }
 
     // Tünel boşlukları, ana yüzey çizildikten sonra gerçekten silinir. Böylece
@@ -211,6 +224,39 @@ class Terrain {
       ctx.strokeStyle = "rgba(15,12,12,0.65)";
       ctx.lineWidth = 4;
       ctx.strokeRect(r.x + 2, r.y + 2, Math.max(1, r.w - 4), Math.max(1, r.h - 4));
+      ctx.restore();
+    }
+
+    // Buz kırığı: kesitin iki duvarına katman ve çatlak çizgileri ekle. Maske
+    // boş kalır; böylece düşüş/ölüm fiziği görsel kenarla bire bir örtüşür.
+    for (const cliff of layout.cliffs || []) {
+      const left = cliff.x * this.w, right = (cliff.x + cliff.w) * this.w;
+      const top = cliff.y * this.h;
+      for (const edgeX of [left, right]) {
+        const inward = edgeX === left ? 1 : -1;
+        const shade = ctx.createLinearGradient(edgeX, 0, edgeX + inward * 18, 0);
+        shade.addColorStop(0, "#1a354a");
+        shade.addColorStop(.45, "#547f96");
+        shade.addColorStop(1, "rgba(160,221,239,.04)");
+        ctx.fillStyle = shade;
+        ctx.fillRect(edgeX, top, inward * 18, this.h - top);
+        ctx.strokeStyle = "rgba(235,252,255,.92)";
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(edgeX, top); ctx.lineTo(edgeX + inward * 4, top + 20);
+        ctx.lineTo(edgeX, top + 47); ctx.lineTo(edgeX + inward * 5, top + 77);
+        ctx.stroke();
+        ctx.strokeStyle = "rgba(88,199,230,.72)";
+        ctx.lineWidth = 1.5;
+        for (let y = top + 28; y < this.h - 12; y += 52) {
+          ctx.beginPath(); ctx.moveTo(edgeX + inward * 3, y);
+          ctx.lineTo(edgeX + inward * (8 + (y % 11)), y + 13); ctx.stroke();
+        }
+      }
+      ctx.save(); ctx.globalCompositeOperation = "lighter"; ctx.globalAlpha = .42;
+      const glow = ctx.createLinearGradient(left, top, right, top);
+      glow.addColorStop(0, "#e4fcff"); glow.addColorStop(.5, "#40abd6"); glow.addColorStop(1, "#e4fcff");
+      ctx.fillStyle = glow; ctx.fillRect(left, top - 2, right - left, 4);
       ctx.restore();
     }
   }
@@ -238,8 +284,8 @@ class Terrain {
   // İki spawn sütununu (0.18w, 0.82w) yerel ortalamaya düzleştir.
   flattenSpawns(heights) {
     const w = this.w;
-    this.flatten(heights, w * 0.18, 28, false);
-    this.flatten(heights, w * 0.82, 28, false);
+    const pads = this.theme.layout && this.theme.layout.s ? this.theme.layout.s : [.18, .82];
+    for (const x of pads) this.flatten(heights, w * x, 32, false);
   }
 
   // ── Skill arketipleri: karakterin yeteneğini öne çıkaran arazi şekli ──────
@@ -397,25 +443,7 @@ class Terrain {
     ctx.fill();
     ctx.restore();
 
-    // Yanık krater kenarı (yalnız kalan araziye işlenir → source-atop).
-    // Karanlık temalarda (ör. Gece Çatıları) arazi ile gökyüzü rengi neredeyse
-    // aynı olduğundan düz bir delik görünmez kalır; bu yüzden krater kenarına
-    // sıcak bir yanık halkası + kömürleşmiş dış kenar çizilir. Sıcak ton hem
-    // koyu hem açık temalarda kontrast yaratır → krater her zaman net okunur.
-    ctx.save();
-    ctx.globalCompositeOperation = "source-atop";
-    const inner = Math.max(1, radius - 10);
-    const grad = ctx.createRadialGradient(cx, cy, inner, cx, cy, radius + 2);
-    grad.addColorStop(0.00, "rgba(0,0,0,0)");
-    grad.addColorStop(0.74, "rgba(0,0,0,0)");
-    grad.addColorStop(0.86, "rgba(60,30,14,0.45)");   // yanık toprak
-    grad.addColorStop(0.94, "rgba(255,150,55,0.40)");  // sıcak kor halkası
-    grad.addColorStop(1.00, "rgba(15,8,4,0.85)");      // kömürleşmiş kenar
-    ctx.fillStyle = grad;
-    ctx.beginPath();
-    ctx.arc(cx, cy, radius + 2, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.restore();
+
   }
 
   draw(ctx) {

@@ -249,6 +249,7 @@ def main() -> int:
     ap.add_argument("--in", dest="src", required=True)
     ap.add_argument("--out", required=True)
     ap.add_argument("--size", default="960x540")
+    ap.add_argument("--fit", choices=["cover", "contain"], default="cover")
     ap.add_argument("--palette", default="")
     ap.add_argument("--alpha", choices=["none", "chroma", "source"], default="none")
     ap.add_argument("--chroma", default="auto", help="kroma rengi: 'auto' (kenardan tahmin) ya da #rrggbb")
@@ -281,7 +282,19 @@ def main() -> int:
         size = a.simplify if a.simplify % 2 == 1 else a.simplify + 1
         src = src.filter(ImageFilter.MedianFilter(size=size))
     # 2× master → 1× oyun boyu (en-boy oranı farklıysa ortadan kırp).
-    resized = ImageOps.fit(src, (tw, th), method=Image.LANCZOS, centering=(0.5, 0.5))
+    if a.fit == "contain":
+        if not source_alpha:
+            ap.error("--fit contain, --alpha source gerektirir")
+        # Tüm silueti koru; darbe/parlama için kenarda şeffaf pay bırak.
+        bounds = src.getbbox()
+        if bounds is None:
+            ap.error("kaynak görsel tamamen şeffaf")
+        margin = max(2, round(min(tw, th) * 0.02))
+        fitted = ImageOps.contain(src.crop(bounds), (tw - margin * 2, th - margin * 2), Image.LANCZOS)
+        resized = Image.new("RGBA", (tw, th), (0, 0, 0, 0))
+        resized.paste(fitted, ((tw - fitted.width) // 2, th - margin - fitted.height))
+    else:
+        resized = ImageOps.fit(src, (tw, th), method=Image.LANCZOS, centering=(0.5, 0.5))
 
     # Sıra önemli: kroma temizliği küçültmeden SONRA (kenar pikselleri artık
     # karışmıştır), keskinleştirme ise alfa kapısından sonra — keskinleştirme

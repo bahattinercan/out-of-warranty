@@ -1,5 +1,8 @@
 # UI Teması — Tüm Arayüzlere Uygulama Faz Planı
 
+> Tarihsel uygulama kaydı: bu temanın ardından gelen uçtan uca görsel yenileme
+> [`tasarim-yenileme-plani.md`](tasarim-yenileme-plani.md) kapsamında sürüyor.
+
 Kaynak tasarım ve kilitli kararlar: [`ui-theme-plan.md`](ui-theme-plan.md)
 Bu belge, tasarım dilinin **oyundaki her arayüz yüzeyine** uygulanmasını
 numaralı, dosya-düzeyi adımlara böler. Her adım bağımsız uygulanabilir; her

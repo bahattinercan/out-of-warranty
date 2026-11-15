@@ -251,6 +251,7 @@ for (const ch of chars) {
 
   check(`${ch.label}: useSkill true döndürdü`, ok === true);
   check(`${ch.label}: cooldown ayarlandı`, self.skillCooldown === ch.skill.cooldown, `cd=${self.skillCooldown}`);
+  check(`${ch.label}: görsel yetenek pozu başladı`, self.skillPoseKind === ch.skill.kind && self.skillPoseTimer === 24);
 
   // Türe özgü gözlemlenebilir etki
   switch (ch.skill.kind) {
@@ -301,6 +302,7 @@ group("useSkill — cooldown koruması");
   const second = M.useSkill(self, game); // cooldown'da
   check("cooldown'dayken useSkill false döner", second === false);
   check("cooldown'dayken etki yok (HP sabit)", self.hp === before);
+  check("cooldown'da görsel yetenek pozu yenilenmez", self.skillPoseTimer === 24);
 }
 
 // jump/dash yerde değilken kullanılamaz
@@ -373,10 +375,12 @@ group("Entity.damage mekaniği");
   e.hp = 100; e.maxHp = 100; e.armor = 0.5;
   const got = e.damage(40); // %50 zırh -> 20
   check("zırh hasarı azaltıyor", got === 20, `got=${got}`);
+  check("gerçek hasar kısa görsel darbe başlatıyor", e.visualHitTimer === 12);
 
   e.blockShield = true;
   const blocked = e.damage(40);
   check("blockShield tüm hasarı engeller", blocked === 0 && e.blockShield === false);
+  check("kalkan darbesi görsel geri bildirim bırakıyor", e.visualShieldTimer === 16);
 
   e.armor = 0;
   e.damageReduce = { factor: 0.5, turns: 2 };
@@ -485,6 +489,45 @@ group("Robot silüeti — oran grameri ve namlu sözleşmesi");
   check("charDef'siz çağrı nötr oran verir",
     neutral.head === 1 && neutral.torsoX === 1 && neutral.legs === 1 &&
     neutral.stance === 1 && neutral.upperDy === 0, JSON.stringify(neutral));
+}
+
+// ── Namlu ↔ kask çizim sırası ──────────────────────────────────────────────
+// Namlu kasktan SONRA çizildiğinde, yukarı nişanda (ör. 60–90°) bazı robotlarda
+// kask alanının ~%34'ü namluyla örtülüyor ve yüz okunmuyordu (2026-11-15:
+// "silahlar karakterlerin kafasına geliyor"). Ölçüm `_gun_head_probe.html`
+// içinde yapılır (piksel); burada ölçülebilir kök neden denetlenir: çizim SIRASI.
+// Namlu, kask çizilmeden ÖNCE çağrılırsa kask her zaman üstte kalır.
+group("Robot çizimi — namlu kaskın arkasında");
+{
+  const order = [];
+  const origLauncher = sandbox._rbLauncher;
+  const origHead = sandbox._rbHead;
+  sandbox._rbLauncher = function (...args) { order.push("namlu"); return origLauncher.apply(this, args); };
+  sandbox._rbHead = function (...args) { order.push("kask"); return origHead.apply(this, args); };
+  try {
+    for (const ch of chars) {
+      order.length = 0;
+      const ctx = mockCtx();
+      M.drawRobot(ctx, {
+        cx: 100, cy: 100, r: ch.r, facing: 1, charDef: ch,
+        aim: -Math.PI / 3, timeMs: 0, motion: { vx: 0, vy: 0, onGround: true },
+      });
+      const iGun = order.indexOf("namlu"), iHead = order.indexOf("kask");
+      check(`${ch.label}: nişan duruşunda namlu ve kask çizildi`, iGun >= 0 && iHead >= 0, order.join(" > "));
+      check(`${ch.label}: namlu kasktan ÖNCE çizilir (yüz kapanmaz)`, iGun >= 0 && iHead > iGun, order.join(" > "));
+    }
+    // Menü/portre duruşu (aim yok): namlu hiç çizilmemeli.
+    order.length = 0;
+    M.drawRobot(mockCtx(), {
+      cx: 100, cy: 100, r: 14, facing: 1, charDef: chars[0],
+      timeMs: 0, motion: { vx: 0, vy: 0, onGround: true },
+    });
+    check("nişan yokken namlu çizilmez", !order.includes("namlu"), order.join(" > "));
+    check("nişan yokken kask yine çizilir", order.includes("kask"), order.join(" > "));
+  } finally {
+    sandbox._rbLauncher = origLauncher;
+    sandbox._rbHead = origHead;
+  }
 }
 
 // Nişan hizası, son-atış çizgisi ve mermi çıkışı ÇİZİLEN namlunun ağzından
@@ -750,10 +793,10 @@ group("Yürüyüş geometrisi ve kayma (çizim komutlarından)");
   check("anlık kayma gövde hızını aşmaz (ayak+ gövde birlikte sürüklenmez)", worst < 2.2 + 1e-9,
     `en kötü ${worst.toFixed(3)} px/kare (gövde 2.20)`);
 }
-check("34 karakter için 34 harita üretildi", M.MAPS.length === chars.length, `maps=${M.MAPS.length}`);
+check("34 robot için altı bağımsız arena kullanılabilir", M.MAPS.length === 6 && chars.length === 34, `maps=${M.MAPS.length}`);
 check("dokuz fabrika bölgesi tanımlı", Object.keys(M.FACTORY_ZONES).length === 9, `zones=${Object.keys(M.FACTORY_ZONES).length}`);
-check("haritalar dokuz bölgeyi kullanıyor", new Set(M.MAPS.map((m) => m.zoneId)).size === 9);
-check("arena kodları benzersiz", new Set(M.MAPS.map((m) => m.arenaCode)).size === M.MAPS.length);
+check("altı haritanın mekân kimlikleri farklı", new Set(M.MAPS.map((m) => m.id)).size === 6 && M.MAPS.every((m) => m.scene));
+check("altı haritanın prop çizimleri kayıtlı", M.MAPS.every((m) => m.props.every((p) => typeof M.PROP_DRAWERS[p.type] === "function")));
 for (const [key, zone] of Object.entries(M.FACTORY_ZONES)) {
   check(`${key}: bölge kimliği/etiketi/kodu var`, !!zone.zoneId && !!zone.zoneLabel && !!zone.zoneCode);
   check(`${key}: tüm prop tipleri çizilebilir`, zone.props.every((p) => typeof M.PROP_DRAWERS[p.type] === "function"));

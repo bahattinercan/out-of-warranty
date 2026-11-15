@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <title>Namlu ↔ kask çakışma sondası</title>
+  <style>
+    html, body { margin: 0; background: #1b1f24; }
+    canvas { display: block; }
+  </style>
+</head>
+<body>
+  <canvas id="probe" width="1440" height="880"></canvas>
+  <script src="js/i18n.js"></script>
+  <script src="js/characters.js"></script>
+  <script src="js/progression.js"></script>
+  <script src="js/profile.js"></script>
+  <script src="js/parts.js"></script>
+  <script src="js/market.js"></script>
+  <script src="js/robots.js"></script>
+  <script>
+/* Namlu (bazuka) nişan duruşunda KASKIN üstüne mi biniyor?
+ *
+ * İki katman ayrı ayrı çizilip piksel kesişimi ölçülür:
+ *   kask katmanı  : drawRobot'un kask bloklarının aynısı (_rbHead + _rbHeadGear)
+ *   namlu katmanı : drawRobot'un namlu bloğunun aynısı (_rbLauncher)
+ * Ölçüt: kask alanının yüzde kaçı namluyla örtülüyor (`headPct`).
+ * Ayrıca namlu, eller görünür kalsın diye ön koldan önce mi sonra mı
+ * çiziliyor — o da `parts/gun-below-head` bayrağıyla raporlanır.
+ *
+ * Açmak için: dosyayı tarayıcıda aç (file:// çalışır) → tablo + JSON konsolda.
+ * Ekran görüntüsü: `bash ~/.pi/agent/bin/ai shot _gun_head_probe.html -o out.png --size 1440x880 --scale 2`
+ */
+const IDS = ["kedi", "suaygiri", "ayi", "koala", "kus", "penguen"];
+const ANGLES = [-90, -75, -60, -45, -30, -15, 0, 20]; // canvas y aşağı: negatif = yukarı nişan
+const R = 24, CELL_W = 170, CELL_H = 118, OFF = 260;
+
+const canvas = document.getElementById("probe");
+const ctx = canvas.getContext("2d");
+
+/* Kask katmanı: drawRobot'taki dönüşüm zincirinin birebir kopyası. */
+function headLayer(charDef, facing) {
+  const off = document.createElement("canvas");
+  off.width = OFF; off.height = OFF;
+  const octx = off.getContext("2d");
+  const props = _rbProportions(charDef);
+  octx.translate(OFF / 2, OFF - 40);
+  octx.scale(facing, 1);
+  octx.translate(0, props.upperDy * R);
+  const neckY = -R * 0.48;
+  octx.save();
+  octx.translate(0, neckY);
+  octx.scale(props.head, props.head);
+  octx.translate(0, -neckY);
+  const hy = _rbHead(octx, charDef, R, charDef.color, charDef.accent);
+  _rbHeadGear(octx, charDef.attachment, R, charDef.accent, hy);
+  octx.restore();
+  return octx.getImageData(0, 0, OFF, OFF).data;
+}
+
+/* Namlu katmanı: aynı pivot ve aynı yerel açı. */
+function gunLayer(charDef, aimDeg, facing) {
+  const off = document.createElement("canvas");
+  off.width = OFF; off.height = OFF;
+  const octx = off.getContext("2d");
+  const props = _rbProportions(charDef);
+  const aim = aimDeg * Math.PI / 180;
+  const localAim = Math.atan2(Math.sin(aim), Math.cos(aim) * facing);
+  octx.translate(OFF / 2, OFF - 40);
+  octx.scale(facing, 1);
+  octx.translate(0, props.upperDy * R);
+  _rbLauncher(octx, localAim, R, charDef.accent, R * RB_GUN_PIVOT_X * props.torsoX, R * RB_GUN_PIVOT_Y);
+  return octx.getImageData(0, 0, OFF, OFF).data;
+}
+
+/* Tam robot iki kez çizilir: namlulu (`full`) ve namlusuz (`noGun`). Kesit
+ * noktalarda iki görüntü AYNIysa namlu orada görünmüyor — yani kask önde.
+ * Farklıysa namlu kaskın üstüne basmış (yüz kapanmış) demektir. Bu ölçüt
+ * çizim SIRASINA duyarlıdır; katman maskelerinin kesişimine bakmak yetmez. */
+function fullRender(charDef, aimDeg, facing, withGun) {
+  const off = document.createElement("canvas");
+  off.width = OFF; off.height = OFF;
+  const octx = off.getContext("2d");
+  const origLauncher = window._rbLauncher;
+  if (!withGun) window._rbLauncher = function () { return undefined; };
+  drawRobot(octx, {
+    cx: OFF / 2, cy: OFF - 40, r: R, facing, charDef,
+    aim: aimDeg * Math.PI / 180, timeMs: 0,
+    motion: { vx: 0, vy: 0, onGround: true },
+  });
+  window._rbLauncher = origLauncher;
+  return octx.getImageData(0, 0, OFF, OFF).data;
+}
+
+function measure(charDef, aimDeg, facing) {
+  const h = headLayer(charDef, facing);
+  const g = gunLayer(charDef, aimDeg, facing);
+  const full = fullRender(charDef, aimDeg, facing, true);
+  const noGun = fullRender(charDef, aimDeg, facing, false);
+  let head = 0, gun = 0, both = 0, covered = 0;
+  for (let i = 0; i < h.length; i += 4) {
+    // Yalnız TAM OPAK kask pikselleri sayılır: kaskın yarı saydam kontur/parlaklık
+    // kenarı namlunun arkasından hafifçe sızar (doğru çizim), o gürültü ölçüme girmesin.
+    const hh = h[i + 3] >= 240, gg = g[i + 3] > 40;
+    if (hh) head++;
+    if (gg) gun++;
+    if (!hh || !gg) continue;
+    both++;
+    const diff = Math.abs(full[i] - noGun[i]) + Math.abs(full[i + 1] - noGun[i + 1]) + Math.abs(full[i + 2] - noGun[i + 2]);
+    if (diff > 24) covered++;
+  }
+  return {
+    label: charDef.label, id: charDef.id, aimDeg, facing,
+    headPx: head, gunPx: gun, bothPx: both, coveredPx: covered,
+    headPct: head ? +(covered / head * 100).toFixed(1) : 0,
+  };
+}
+
+ctx.fillStyle = "#1b1f24";
+ctx.fillRect(0, 0, canvas.width, canvas.height);
+const report = [];
+IDS.forEach((id, row) => {
+  const charDef = CHARACTERS.find((c) => c.id === id);
+  ctx.fillStyle = "#d8e2ec";
+  ctx.font = "12px monospace";
+  ctx.fillText(charDef.label, 4, 30 + row * CELL_H);
+  ANGLES.forEach((aimDeg, col) => {
+    const cx = 120 + col * CELL_W, cy = 96 + row * CELL_H;
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(cx - CELL_W / 2 + 3, cy - CELL_H + 20, CELL_W - 6, CELL_H - 24);
+    ctx.clip();
+    ctx.fillStyle = "#242a31";
+    ctx.fillRect(cx - CELL_W / 2 + 3, cy - CELL_H + 20, CELL_W - 6, CELL_H - 24);
+    drawRobot(ctx, {
+      cx, cy, r: R, facing: 1, charDef,
+      aim: aimDeg * Math.PI / 180, timeMs: 0,
+      motion: { vx: 0, vy: 0, onGround: true },
+    });
+    ctx.restore();
+    const m = measure(charDef, aimDeg, 1);
+    report.push(m);
+    ctx.fillStyle = m.headPct > 8 ? "#ff7b7b" : "#6fd08c";
+    ctx.font = "11px monospace";
+    ctx.fillText(`kask ${m.headPct}%`, cx - 44, cy + 4);
+  });
+});
+ANGLES.forEach((aimDeg, col) => {
+  ctx.fillStyle = "#8b96a3";
+  ctx.font = "12px monospace";
+  ctx.fillText(`${aimDeg}°`, 40 + col * CELL_W, 14);
+});
+// Özet: namlunun kask üstüne bastığı en kötü hücre + ortalama. Kapı: en kötü ≤ %2.
+const worst = report.reduce((a, b) => (b.headPct > a.headPct ? b : a), report[0]);
+const avg = +(report.reduce((s, r) => s + r.headPct, 0) / report.length).toFixed(2);
+const summary = `namlu kaskin ustune basma: EN KOTU ${worst.headPct}% (${worst.label} ${worst.aimDeg}°)  ORTALAMA ${avg}%  KAPI <=2%`;
+ctx.fillStyle = worst.headPct > 2 ? "#ff7b7b" : "#6fd08c";
+ctx.font = "16px monospace";
+ctx.fillText(summary, 12, canvas.height - 16);
+window.__SUMMARY = { worst, avg };
+window.__REPORT = report;
+console.log(JSON.stringify({ summary: window.__SUMMARY, report }));
+</script>
+</body>
+</html>

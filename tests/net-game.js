@@ -240,6 +240,9 @@ check("misafir WELCOME ile koltuğuna oturdu", p.guest.lobby.session.mySeat === 
 check("host oda durumunu yayınladı (koltuk 1 dolu)", p.host.lobby.session.seats[1].claimed === true);
 check("misafirin robotu hosta bildirildi", p.host.lobby.session.seats[1].robotId === G.CHARACTERS[1].id);
 check("misafir oda durumunu aldı (LOBBY paketi)", !!p.guest.lobby.session.lobbyState);
+ p.host.lobby._cycleMap(3);
+check("host harita seçimini robot seçiminden bağımsız değiştirebilir", p.host.lobby.session.lobbyMapId === G.MAPS[3].id);
+check("misafir hostun seçtiği haritayı lobide görür", p.guest.lobby.session.lobbyState.mapId === G.MAPS[3].id);
 check("hazır olmadan maç başlatılamaz", p.host.lobby.session.canStart() === false);
 check("host BAŞLAT'a basınca maç kurulmaz", p.host.lobby.startMatch() === false);
 p.guest.lobby.toggleReady();

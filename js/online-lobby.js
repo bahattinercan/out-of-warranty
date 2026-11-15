@@ -54,6 +54,7 @@ class OnlineLobby {
     this.typed = "";              // misafirin yazdığı kod
     this.robotId = null;          // bu oyuncunun robotu
     this.robotIndex = 0;
+    this.mapId = MAPS[0] ? MAPS[0].id : null;
     this.seatCount = NET_MIN_SEATS; // host odasının kapasitesi (2–6, F4)
     this.ready = false;
     this.error = null;            // { key, vars } — çevrilmiş metin çizimde
@@ -333,7 +334,7 @@ class OnlineLobby {
     const now = () => Date.now();
     if (this.role === "host") {
       this.session = new NetSession({ role: "host", transport: this.transport, rules: {}, now });
-      const map = this._mapFor(this.robotId);
+      const map = this._mapFor();
       // Oda seçilen kapasiteyle açılır: host koltuğu + (n−1) boş koltuk.
       const seats = [{ playerIdx: 0, robotId: this.robotId }];
       for (let i = 1; i < this.seatCount; i++) seats.push({ playerIdx: i });
@@ -375,9 +376,8 @@ class OnlineLobby {
     return true;
   }
 
-  // Karakterin kendi haritası (harita seçimindeki "kendi haritası" mantığı).
-  _mapFor(robotId) {
-    return MAPS.find((m) => m.forChar === robotId) || MAPS[0] || null;
+  _mapFor() {
+    return MAPS.find((m) => m.id === this.mapId) || MAPS[0] || null;
   }
 
   // Misafir bağlantı açılınca odaya katılır.
@@ -548,7 +548,7 @@ class OnlineLobby {
   startMatch() {
     if (!this.session || this.role !== "host" || !this.session.canStart()) return false;
     const roster = this._rosterFromSeats(this.session.seats);
-    const map = this._mapFor(this.robotId);
+    const map = this._mapFor();
     const res = this.session.startMatch(this.code, "auth-" + this.code, {
       turnId: 1, mapId: map ? map.id : null, roster,
     });
@@ -617,6 +617,10 @@ class OnlineLobby {
         return true;
       }
     }
+    if ((e.key === "ArrowUp" || e.key === "ArrowDown") && this.role === "host" && this.step === "room") {
+      this._cycleMap(e.key === "ArrowDown" ? 1 : -1);
+      return true;
+    }
     if (this.step === "room" && (e.key === "Enter" || e.code === "Space")) {
       if (this.role === "host") this.startMatch();
       else this.toggleReady();
@@ -652,6 +656,8 @@ class OnlineLobby {
       else if (r.action === "ready") this.toggleReady();
       else if (r.action === "robotPrev") this._cycleRobot(-1);
       else if (r.action === "robotNext") this._cycleRobot(1);
+      else if (r.action === "mapPrev") this._cycleMap(-1);
+      else if (r.action === "mapNext") this._cycleMap(1);
       else if (r.action === "seat" && Number.isInteger(r.seat)) this.setSeatCount(r.seat);
       // Tıklama alanları TÜKETİLİR: ekran değiştiyse bir sonraki kare çizilene
       // kadar eski ekranın düğmeleriyle ikinci bir eylem tetiklenmesin
@@ -674,18 +680,24 @@ class OnlineLobby {
     // ← → tuşları hiçbir şey yapmıyordu (kullanıcı bildirimi).
     if (!this.session) return;
     if (this.role === "host") {
-      // Oda sahibi: kadro + arena haritası kendi robotuna bağlıdır; kendi
-      // koltuğundaki robot da güncellenir (misafir oda listesinde görür).
+      // Oda sahibi robot seçimini kadroda yayımlar; arena seçimi bağımsızdır.
       if (this.session.seats[0]) this.session.seats[0].robotId = this.robotId;
       this.session.lobbyRoster = this._rosterFromSeats(this.session.seats);
-      const map = this._mapFor(this.robotId);
-      this.session.lobbyMapId = map ? map.id : null;
       this.session.revision++;
       this.session.broadcastLobby();
       return;
     }
     // Misafir: HELLO yeniden gönderilir; host koltuğundaki robotu günceller.
     this.session.sendHello({ robotId: this.robotId, seatToken: this._storedSeatToken() });
+  }
+
+  _cycleMap(dir) {
+    if (this.role !== "host" || !this.session || this.session.phase !== NET_PHASE.LOBBY) return;
+    const index = Math.max(0, MAPS.findIndex((map) => map.id === this.mapId));
+    this.mapId = MAPS[(index + dir + MAPS.length) % MAPS.length].id;
+    this.session.lobbyMapId = this.mapId;
+    this.session.revision++;
+    this.session.broadcastLobby();
   }
 
   // ── Kare güncellemesi ───────────────────────────────────────────────────
@@ -972,7 +984,16 @@ class OnlineLobby {
         title: can ? t("online.start", "MAÇI BAŞLAT") : t("online.startWait", "Tüm oyuncular hazır olunca başlar"),
         accent: can ? "#ffe45e" : "#3b526b", small: true, disabled: !can,
       });
-      this._renderRobotPicker(ctx, cx, by + bh * 2 + 26, undefined, compact);
+      const pickerY = by + bh * 2 + 26;
+      this._renderRobotPicker(ctx, cx, pickerY, undefined, compact);
+      const map = this._mapFor();
+      const mapY = pickerY + (compact ? 70 : 82);
+      ctx.textAlign = "center"; ctx.textBaseline = "middle";
+      ctx.fillStyle = "#9fb6c9"; ctx.font = uiTextFont(10, 700);
+      this._button(ctx, { x: cx - 112, y: mapY, w: 28, h: 28, action: "mapPrev" }, { title: "‹", small: true, accent: "#4fc3f7" });
+      this._button(ctx, { x: cx + 84, y: mapY, w: 28, h: 28, action: "mapNext" }, { title: "›", small: true, accent: "#4fc3f7" });
+      ctx.fillStyle = map ? map.accent : "#eef5ff"; ctx.font = uiTitleFont(11);
+      ctx.fillText(map ? map.label : "—", cx, mapY + 14);
       return;
     }
     this._button(ctx, { x, y: by, w: bw, h: bh + 4, action: "ready" }, {
@@ -984,6 +1005,12 @@ class OnlineLobby {
       w, 11, (p) => uiTextFont(p), 1, 9);
     ctx.fillText(wait.lines[0], cx, by + bh + 10);
     this._renderRobotPicker(ctx, cx, by + bh + (compact ? 24 : 28), undefined, compact);
+    const state = this.session && this.session.lobbyState;
+    const map = MAPS.find((entry) => entry.id === (state && state.mapId)) || MAPS[0];
+    ctx.textAlign = "center"; ctx.textBaseline = "top";
+    ctx.fillStyle = "#8fa6bd"; ctx.font = uiTextFont(10);
+    const mapTitle = t("online.map.title", "HARİTA");
+    ctx.fillText(mapTitle + ": " + (map ? map.label : "—"), cx, by + bh + (compact ? 68 : 76));
   }
 
   /* Robot seçici. `compact` tek satır: ◀ [robot] FIX-8 ▶ (dar yerleşimde dikey

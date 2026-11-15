@@ -30,6 +30,7 @@ const BUDGET = [
   { prefix: "ui/", maxKb: 410, perAsset: 120, label: "UI kiti (9)" },
   { prefix: "portraits/", maxKb: 1024, perAsset: 60, label: "portre (34)" },
   { prefix: "robots/", maxKb: 3072, perAsset: 100, label: "robot sprite (34)" },
+  { prefix: "robot-models/", maxKb: 512, perAsset: 24, label: "robot model parts (68 SVG)" },
   { prefix: "atlases/", maxKb: 2048, perAsset: 512, label: "görsel atlasları" },
   { prefix: "weapons/", maxKb: 256, perAsset: 120, label: "silah sprite'ları" },
 ];
@@ -61,7 +62,11 @@ for (const a of assets) {
     typeof a.kb === "number" && typeof a.alpha === "boolean" && a.phase), JSON.stringify(a && a.id));
   check(`${tag}: id tekil`, !ids.has(a.id));
   ids.add(a.id);
-  check(`${tag}: dosya adı id ile uyumlu`, a.file === `assets/${a.id}.webp`, a.file);
+  const modelPart = a.id.startsWith("robot-models/");
+  const expectedFile = modelPart
+    ? `assets/robot-models/${a.id.slice("robot-models/".length).replace(/-(body|head)$/, "/$1")}.svg`
+    : `assets/${a.id}.webp`;
+  check(`${tag}: dosya adı id ile uyumlu`, a.file === expectedFile, a.file);
   check(`${tag}: prompt kayıtlı`, typeof a.prompt === "string" && a.prompt.length > 40);
   check(`${tag}: üretim izi kayıtlı`, (Number.isInteger(a.seed) && a.seed > 0) ||
     (typeof a.generationSource === "string" && a.generationSource.length > 0));
@@ -82,7 +87,11 @@ for (const a of assets) {
   const buf = fs.readFileSync(abs);
   const kb = buf.length / 1024;
   totalKb += kb;
-  check(`${a.id}: WebP imzası`, buf.slice(0, 4).toString("ascii") === "RIFF" && buf.slice(8, 12).toString("ascii") === "WEBP");
+  if (a.id.startsWith("robot-models/")) {
+    check(`${a.id}: SVG kökü`, buf.toString("utf8").startsWith("<svg "));
+  } else {
+    check(`${a.id}: WebP imzası`, buf.slice(0, 4).toString("ascii") === "RIFF" && buf.slice(8, 12).toString("ascii") === "WEBP");
+  }
   check(`${a.id}: kayıtlı boyut doğru (${a.kb} KB)`, Math.abs(kb - a.kb) <= Math.max(3, a.kb * 0.06), `${kb.toFixed(1)} KB`);
   const per = (BUDGET.find((b) => a.id.startsWith(b.prefix)) || {}).perAsset;
   if (per) check(`${a.id}: varlık başına bütçe (≤ ${per} KB)`, kb <= per, `${kb.toFixed(1)} KB`);
