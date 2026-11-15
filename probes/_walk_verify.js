@@ -9,7 +9,7 @@ const vm = require("vm");
 const fs = require("fs");
 const path = require("path");
 
-const ROOT = __dirname;
+const ROOT = path.resolve(__dirname, "..");
 const runSrc = fs.readFileSync(path.join(ROOT, "tests", "run.js"), "utf8");
 const FILES = runSrc.match(/const FILES = \[([^\]]+)\]/)[1]
   .split(",").map((s) => s.trim().replace(/^"|"$/g, ""));

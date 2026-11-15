@@ -7,6 +7,8 @@ desktop.ini
 # Temp / probe outputs
 *.tmp
 _*.tmp.html
+probes/*.tmp
+probes/_*.tmp.html
 
 # Node (if tooling is added later)
 node_modules/

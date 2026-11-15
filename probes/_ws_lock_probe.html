@@ -1,15 +1,14 @@
 <!DOCTYPE html>
 <html lang="tr">
 <head>
+<base href="../">
   <meta charset="UTF-8" />
-  <title>Seçim ekranları (harita / oyuncu / zorluk) — görsel doğrulama</title>
-  <link rel="stylesheet" href="css/style.css" />
+  <title>Atölye eylem plakası beş durum — görsel doğrulama</title>
   <style>
-    /* Dört ekran tek karede: sondalar sahne dışında kaldığı için position:fixed
-       ile alt alta dizilir (bkz. verify-canvas-visuals-headless becerisi). */
     body { margin: 0; background: #05080c; }
     canvas { position: fixed; left: 0; width: 960px; height: 540px; }
-    #c1 { top: 0; } #c2 { top: 540px; } #c3 { top: 1080px; } #c4 { top: 1620px; }
+    #c1 { top: 0; } #c2 { top: 540px; } #c3 { top: 1080px; }
+    #c4 { top: 1620px; } #c5 { top: 2160px; }
   </style>
 </head>
 <body>
@@ -17,7 +16,7 @@
   <canvas id="c2" width="960" height="540"></canvas>
   <canvas id="c3" width="960" height="540"></canvas>
   <canvas id="c4" width="960" height="540"></canvas>
-  <!-- Oyunla aynı klasik script sırası -->
+  <canvas id="c5" width="960" height="540"></canvas>
   <script src="js/i18n.js"></script>
   <script src="js/portal.js"></script>
   <script src="js/audio.js"></script>
@@ -45,28 +44,33 @@
   <script src="js/online-lobby.js"></script>
   <script src="js/game.js"></script>
   <script>
-    // Dil varyantı: ?locale=en (veya #en) ile İngilizce metin sığdırması ölçülür.
-    const params = new URLSearchParams(location.search);
-    if (location.hash.indexOf("en") >= 0 || params.get("locale") === "en") setLocale("en", { persist: false });
-
-    // Sahte oyun nesnesi: seçim ekranları yalnız bu alanları okur (DOM'a dokunmaz).
-    function makeFake(page) {
+    // Beş eylem-plakası durumu: kilitli (Sv.1) / Hurda eksik / hazır /
+    // Sv.5 + Hurda eksik (dar alan) / tam kalibrasyon. Plaka her durumda
+    // panelin alt boşluğunu doldurur ve panel dibine yapışır — arada boşluk yok.
+    function makeWs(robot, scrap) {
       const g = Object.create(Game.prototype);
       g.W = 960; g.H = 540;
       g.input = { mouseX: -1, mouseY: -1 };
       g.renderTimeMs = 0;
-      g.mapPage = page || 0;
-      g.difficulty = "normal";
-      g.botCount = 2;
-      g.selectedChars = [CHARACTERS[0], CHARACTERS[1]];
-      g.profile = normalizeProfile({ version: 5, scrap: 260 });
+      g.selectedChars = [];
+      g.profile = normalizeProfile({ version: 6, scrap: scrap, parts: [], robots: { kopek: robot } });
+      g.workshopSelectedId = "kopek";
+      g.workshopPage = 0;
+      g.workshopBranch = "chassis";
+      g.workshopMode = "upgrades";
+      g.workshopFx = null;
+      g.workshopNotice = null;
+      g.updateHud = () => {};
       return g;
     }
-
-    makeFake(0).renderMapSelect(document.getElementById("c1").getContext("2d"));
-    makeFake(1).renderMapSelect(document.getElementById("c2").getContext("2d"));
-    makeFake().renderCountSelect(document.getElementById("c3").getContext("2d"));
-    makeFake().renderDifficultySelect(document.getElementById("c4").getContext("2d"));
+    const states = [
+      makeWs({ xp: 0, upgrades: { chassis: 0, module: 0, core: 0 } }, 200),        // kilitli
+      makeWs({ xp: 120, upgrades: { chassis: 0, module: 0, core: 0 } }, 30),       // Hurda eksik
+      makeWs({ xp: 120, upgrades: { chassis: 0, module: 0, core: 0 } }, 200),      // hazır
+      makeWs({ xp: 700, upgrades: { chassis: 1, module: 0, core: 0 } }, 52),        // Sv.5 + Hurda eksik (dar alan: panel dibine yapışık)
+      makeWs({ xp: 2700, upgrades: { chassis: 3, module: 0, core: 0 } }, 200),     // tam kalibrasyon
+    ];
+    states.forEach((g, i) => g.renderWorkshop(document.getElementById("c" + (i + 1)).getContext("2d")));
   </script>
 </body>
 </html>

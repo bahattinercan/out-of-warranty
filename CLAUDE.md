@@ -51,7 +51,7 @@ node tools/build.js         # dist/out-of-warranty-<sürüm>.zip + manifest
 node tools/art.js gen --zone scrapyard --layer far --prompt "sahne" --n 6
 node tools/art.js pick --id bg/scrapyard-far --src art/build/scrapyard/far/cand-03-seed140034.png
 node tools/art-gate.js      # şema + dosya + bütçe + indeks + tip kapıları
-bash ~/.pi/agent/bin/ai shot _art_probe.html -o art/build/probe-art.png   # katman denetimi
+bash ~/.pi/agent/bin/ai shot probes/_art_probe.html -o art/build/probe-art.png   # katman denetimi
 ```
 
 Ortak test ortamı: `tests/harness.js` (oyunu `vm` içinde yükler + sahte DOM).
@@ -98,6 +98,7 @@ Oyun `file://` üzerinden çift tıklayınca çalışmak zorunda. Bu yüzden:
 | `js/diagnostics.js`| ~290   | Tanılama (F6): pencere hataları + FPS + oyun/ağ/portal durumu; `?rapor=1` ya da hata olunca görünen 🐞 düğmesi panoya metin kopyalar (ağa gitmez) |
 | `tools/build.js`   | ~250   | Yayın paketi üreteci (F6): `index.html`+`css`+`js`+`fonts` → `dist/*.zip` (STORE, bağımlılıksız) + manifest |
 | `js/portal.js`     | ~400   | Portal köprüsü (F5): `?portal=crazygames|poki` seçimi + tembel SDK yükleme, ölçüm olayları, ödüllü + maç arası reklam, oda/davet bildirimi, `muteAudio`; portallar dışında sessiz no-op |
+| `probes/`          | 30     | Görsel test ve ölçüm sondaları (`probes/_*.html`, `_walk_verify.js`); kök dizini temiz tutmak için bu klasörde toplanmıştır, pakete sızmaz |
 | `js/main.js`       | 30     | Giriş noktası; `Game` örneğini kurar, butonları/fullscreen'i bağlar, `PORTAL.init()` ve reklam düğmesini bağlar |
 | `js/game.js`       | ~3800  | **En büyük dosya.** Durum makinesi (karakter seç → harita seç → çevrimiçi lobi → savaş → bitiş), sıra/rüzgar, girdi, render döngüsü, hasar uygulama yardımcıları. Çevrimiçi: `updateOnlineHost`/`updateGuest`, `onlineCommand`, `beginOnlineMatch` |
 | `js/characters.js` | ~53    | `CHARACTERS` (34 karakter): can/zırh/hasar + veri-güdümlü `skill`                                                                               |

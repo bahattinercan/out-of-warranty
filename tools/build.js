@@ -25,7 +25,7 @@ const ROOT = path.resolve(__dirname, "..");
 const PACKAGE_FILES = ["index.html"];
 const PACKAGE_DIRS = ["css", "js", "fonts", "assets"];
 // Paket dışı bırakılması ZORUNLU desenler (release testi de aynı listeyi kullanır).
-const EXCLUDED_PREFIXES = ["_", "tests/", "docs/", "tools/", "screenshots/", ".git/", "css/_",
+const EXCLUDED_PREFIXES = ["_", "tests/", "docs/", "tools/", "probes/", "screenshots/", ".git/", "css/_",
   // Sanat: kaynak doküman ve build-zamanı manifest pakete girmez. Çalışma anında
   // yollar `js/assets-manifest.js`ten geliyor; card.md ise üretim talimatı.
   "assets/styles/", "assets/manifest.json"];

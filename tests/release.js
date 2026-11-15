@@ -41,7 +41,7 @@ check("fontlar pakette", files.filter((f) => f.startsWith("fonts/")).length === 
 
 const leaked = files.filter((f) =>
   f.startsWith("_") || f.startsWith("tests/") || f.startsWith("docs/") ||
-  f.startsWith("tools/") || f.startsWith("screenshots/") || f.endsWith(".tmp") ||
+  f.startsWith("tools/") || f.startsWith("probes/") || f.startsWith("screenshots/") || f.endsWith(".tmp") ||
   /(^|\/)_[^/]*\.html$/.test(f) || /(^|\/)_[^/]*\.js$/.test(f));
 check("sonda/test/belge dosyası pakete sızmadı", leaked.length === 0, leaked.join(", "));
 
