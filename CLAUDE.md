@@ -46,6 +46,14 @@ node tools/build.js --dry   # dosya listesi + boyut
 node tools/build.js         # dist/out-of-warranty-<sürüm>.zip + manifest
 ```
 
+```bash
+# Sanat üretim hattı (ai3090 / Z-Image). Plan: docs/art-uretim-plani-ai3090.md
+node tools/art.js gen --zone scrapyard --layer far --prompt "sahne" --n 6
+node tools/art.js pick --id bg/scrapyard-far --src art/build/scrapyard/far/cand-03-seed140034.png
+node tools/art-gate.js      # şema + dosya + bütçe + indeks + tip kapıları
+bash ~/.pi/agent/bin/ai shot _art_probe.html -o art/build/probe-art.png   # katman denetimi
+```
+
 Ortak test ortamı: `tests/harness.js` (oyunu `vm` içinde yükler + sahte DOM).
 Yeni bir çevrimiçi test dosyası yazarsan DOM/bundle kodunu kopyalama, buradan al.
 
@@ -84,6 +92,9 @@ Oyun `file://` üzerinden çift tıklayınca çalışmak zorunda. Bu yüzden:
 | `index.html`       | —      | Sahne, HUD, overlay, `<script>` yükleme sırası                                                                                                  |
 | `css/style.css`    | —      | Tüm stil                                                                                                                                        |
 | `js/version.js`    | 15     | Sürüm damgası (`GAME_VERSION`, `GAME_CHANNEL`) — paket üreteci ve menü buradan okur; **tek kaynak** |
+| `js/assets-manifest.js` | ~20 | **Üretilmiş** çalışma anı varlık indeksi (`ASSET_INDEX`): `assets/manifest.json`'un kopyası — `file://`'de `fetch` yasak olduğu için. `node tools/art.js index` yazar, `tools/art-gate.js` + `tests/release.js` ayrışmayı denetler |
+| `js/assets.js`     | ~75    | Raster sanat yükleme kapısı: `assetImage` (hazır değilse `null`), `assetPreload`, `drawBackdropAsset`, `drawPreviewAsset`. **Kural:** hiçbir çizici resmi var saymaz; hazır değilken prosedürel yedek çizilir |
+| `tools/art.js` · `art-prep.py` · `art-gate.js` | — | Sanat hattı: üret → hazırla (palet/kroma/WebP) → kapılar. `assets/` yayın varlıkları, `art/build/` masterler (git dışı) |
 | `js/diagnostics.js`| ~290   | Tanılama (F6): pencere hataları + FPS + oyun/ağ/portal durumu; `?rapor=1` ya da hata olunca görünen 🐞 düğmesi panoya metin kopyalar (ağa gitmez) |
 | `tools/build.js`   | ~250   | Yayın paketi üreteci (F6): `index.html`+`css`+`js`+`fonts` → `dist/*.zip` (STORE, bağımlılıksız) + manifest |
 | `js/portal.js`     | ~400   | Portal köprüsü (F5): `?portal=crazygames|poki` seçimi + tembel SDK yükleme, ölçüm olayları, ödüllü + maç arası reklam, oda/davet bildirimi, `muteAudio`; portallar dışında sessiz no-op |
@@ -108,8 +119,12 @@ Oyun `file://` üzerinden çift tıklayınca çalışmak zorunda. Bu yüzden:
 | `js/net/transport.js` | ~300 | Çevrimiçi taşıma (F3c/F4): döngü taşıması (gecikme/kayıp simülasyonu, `LoopbackHub` ile N misafir) + PeerJS sarmalayıcı (ICE/STUN, host N bağlantı, `sendTo`/`onPeerClose`) + oda kodu üretimi                                          |
 | `js/net/adapter.js` | ~230 | Oyun ↔ ağ köprüsü (F3c): `rules` adaptörü (komut→oyun çağrısı), host tur/snapshot/arazi yayını, misafir uygulama                                  |
 | `js/online-lobby.js` | ~800 | Çevrimiçi lobi ekranı (F3c/F4): oda kodu/davet/hazır akışı, 2–6 koltuk kapasitesi, kopma/bot rozeti, PeerJS tembel yükleme, robot seçici, hata ve durum metinleri |
+| `js/robots.js` | ~1600 | Veri-güdümlü robot çizicisi: iskelet (kask/gövde/kol/bacak), **oran grameri** (`_rbProportions`), kask silüet aileleri, aparatlar, parça aksesuarları, namlu geometrisi (`robotMuzzlePoint`, `robotTopOffset`). Deterministik: `Math.random`/`Date.now` yok |
 
 ## Veri-güdümlü tasarım (uzantı noktaları)
+
+- **Robot silüeti (oran grameri):** karakterin görünümü `chassis`/`body`/`locomotion` verisinden türetilir (`robots.js > _rbProportions`): kask ölçeği, gövde genişliği, bacak uzunluğu, ayak açıklığı + `def.id` tohumlu ±0.05 sapma. **Yeni karakter eklerken oranları elle yazma** — aile alanlarını doğru doldur. Kask kabuğu da aileye göre 5 silüetten biridir (`_rbHeadShellPath`). Bekçi: `_robot_silhouette_probe.html` (IoU + değer kontrastı + HP çubuğu payı; tarayıcıda aç, metni kopyalar).
+- **Namlu geometrisi tek kaynak:** oran grameri namlu pivotunu kaydırdığı için `robotMuzzlePoint(cx, cy, r, facing, aim, charDef)` **charDef ister**; `Entity.muzzle`, `aiCreateCandidate`, `Game` son-atış çizgisi bu yüzden `charDef` geçirir. `tests/run.js` "Nişan hizası" grubu çizimle mantığı karşılaştırır — def'i geçirmeyi unutursan kırılır. Aynı şekilde HP çubuğu yüksekliği `robotTopOffset(charDef)` ile hesaplanır (sabit `cy-r-15` değil).
 
 Yeni içerik çoğunlukla **kod değil veri** eklemekle yapılır:
 
@@ -218,7 +233,8 @@ Yeni içerik çoğunlukla **kod değil veri** eklemekle yapılır:
 - **Ses entegrasyonu bağlı:** `index.html`, `audio.js` dosyasını yükler; oyun olayları `SFX` çağrılarını kullanır. Sessize alma, çalan ve planlanan kaynakları iptal eder. Ses kurulum hataları yalnız sesi devre dışı bırakır; reddedilen asenkron `resume()` isteği sonraki etkileşimde yeniden denenebilir. Ses değişikliklerinde `node tests/audio.js` çalıştır; bu test Web Audio sınırını taklit eder, fiziksel ses çıkışını doğrulamaz.
 - Patlamalar araziyi gerçekten oyar: zemin dokusu ve serpilen objeler offscreen arazi katmanına basıldığı için kraterle birlikte aşınır.
 - **Portal (F5):** SDK çağrıları TEK yerde (`js/portal.js`); oyun portallar dışında hiçbir SDK yüklemez (`file://` aynı çalışır). `PORTAL` yokken tüm metotlar `{ok:false}` döner, `typeof PORTAL` koruması zorunlu değildir ama oyun kodunda kullanılıyor. Reklam ödülü "Hurdayı 2×" maç başına bir kez ve yalnız reklam tam izlenince yazılır (`Game.doubleMatchScrap` portal aktif değilse çalışmaz — konsoldan bedava Hurda üretilemez); XP çarpılmaz. Maç arası reklam yalnız sonuç kartından ayrılırken ve istemcide 3 dakika aralıkla istenir. Yeni bir portal metni eklerken `t()` fallback + `I18N.en` anahtarı ekle ve `node tests/i18n.js` çalıştır. Probe: `_portal_probe.html` (sahte SDK). Ayrıntı: `docs/portal-uyumu.md`.
-- **Yeni js dosyası eklerken üç liste:** `index.html` script sırası, `tests/run.js` FILES, `tests/harness.js` FILES (çevrimiçi testler) + `tests/audio.js` source; `portal.js` bunların hepsinde ve `game.js`'ten ÖNCE yüklenir.
+- **Yeni js dosyası eklerken dört liste:** `index.html` script sırası, `tests/run.js` FILES, `tests/harness.js` FILES (çevrimiçi testler), `tests/audio.js` source; `portal.js` bunların hepsinde ve `game.js`'ten ÖNCE yüklenir. Ayrıca `_*.html` sondaları `index.html`'den elle türediği için yeni script etiketi **sondalara da** eklenir (`assets-manifest.js` + `assets.js` bu yüzden 21 sondada var).
+- **Sanat varlığı eklerken:** `node tools/art.js pick` → `assets/manifest.json` + `js/assets-manifest.js`; sonra `node tools/art-gate.js`, `node tests/release.js` (manifest ↔ disk ↔ paket ↔ indeks) ve `node tools/build.js --dry` (boyut).
 
 ## Sürüm ve yayın (F6)
 

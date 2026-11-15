@@ -369,6 +369,15 @@ function drawSkyDecor(ctx, W, H, theme) {
 
 let _backdropCache = {};
 function drawBackdrop(ctx, W, H, theme) {
+  // Raster katman (varsa): uzak + orta görsel hazırsa prosedürel silüetler hiç
+  // çizilmez. Hazır değilse aşağıdaki yol AYNEN çalışır → ilk karede boşluk yok
+  // (file://'de görsel asenkron geldiği için bu yedek zorunlu).
+  // `typeof` koruması: sondalar (`_*.html`) index.html'den elle türediği için
+  // assets.js'i yüklemeyen eski bir kopya açılırsa savaş ekranı çökmesin.
+  if (theme.zoneId && typeof drawBackdropAsset === "function" && drawBackdropAsset(ctx, theme.zoneId, W, H)) {
+    _drawHaze(ctx, W, H, theme);
+    return;
+  }
   if (!theme.backdrop) { _drawHaze(ctx, W, H, theme); return; }
   let cache = _backdropCache[theme.id];
   if (!cache) { cache = _buildBackdrop(theme, W, H); _backdropCache[theme.id] = cache; }
@@ -495,6 +504,17 @@ function _traceSolid(ctx, heights, w, h) {
 // Toprak gövdesi: dikey gradyan + kaya katmanları (strata) + serpme doku.
 function paintGround(ctx, heights, w, h, theme) {
   const dirt = theme.dirt;
+  const textureByZone = {
+    scrapyard: "tex/oxide-rust",
+    assembly: "tex/painted-steel",
+    warehouse: "tex/painted-steel",
+    cooling: "tex/cooling-frost",
+    paint: "tex/copper-plates",
+    loading: "tex/sandblasted-steel",
+    waste: "tex/oily-water",
+    sandblast: "tex/sandblasted-steel",
+    foundry: "tex/foundry-ash",
+  };
   ctx.save();
   _traceSolid(ctx, heights, w, h);
   ctx.clip();
@@ -504,6 +524,19 @@ function paintGround(ctx, heights, w, h, theme) {
   g.addColorStop(1, _shade(dirt, -0.34));
   ctx.fillStyle = g;
   ctx.fillRect(0, 0, w, h);
+
+  const textureImage = typeof assetImage === "function" && theme.zoneId
+    ? assetImage(textureByZone[theme.zoneId] || "tex/factory-concrete")
+    : null;
+  if (textureImage && typeof ctx.createPattern === "function") {
+    const pattern = ctx.createPattern(textureImage, "repeat");
+    if (pattern) {
+      ctx.globalAlpha = 0.16;
+      ctx.fillStyle = pattern;
+      ctx.fillRect(0, 0, w, h);
+      ctx.globalAlpha = 1;
+    }
+  }
 
   // strata: birkaç ince yatay sediment şeridi
   ctx.fillStyle = _shadeA(dirt, -0.22, 0.4);
@@ -992,11 +1025,18 @@ function drawMapPreview(ctx, x, y, w, h, theme) {
   else { g.addColorStop(0, sk[0]); g.addColorStop(1, sk[1]); }
   ctx.fillStyle = g; ctx.fillRect(x, y, w, h);
 
+  // Raster arka plan hazırsa gökyüzü/gece ipucu yerine gerçek katman çizilir.
+  // Arazi profili ve obje ipuçları her iki yolda da kalır: kart oynanış
+  // geometrisini göstermek zorunda, yalnız fon değişir.
+  const rasterBg = theme.zoneId && typeof drawPreviewAsset === "function"
+    ? drawPreviewAsset(ctx, theme.zoneId, x, y, w, h)
+    : false;
+
   // güneş/ay
-  if (theme.orb) { ctx.fillStyle = theme.orb; ctx.beginPath(); ctx.arc(x + w - 18, y + 16, 8, 0, Math.PI * 2); ctx.fill(); }
+  if (theme.orb && !rasterBg) { ctx.fillStyle = theme.orb; ctx.beginPath(); ctx.arc(x + w - 18, y + 16, 8, 0, Math.PI * 2); ctx.fill(); }
 
   // yıldız/kar ipucu
-  if (theme.stars || theme.snow) {
+  if ((theme.stars || theme.snow) && !rasterBg) {
     ctx.fillStyle = theme.stars ? "#ffffffcc" : "#ffffff";
     for (let i = 0; i < 16; i++) {
       const sx = x + 4 + ((i * 53) % (w - 8)), sy = y + 4 + ((i * 37) % Math.floor(h * 0.5));
@@ -1006,10 +1046,12 @@ function drawMapPreview(ctx, x, y, w, h, theme) {
 
   // uzak tepe ipucu
   const land = theme.surface === "snow" ? "#c2d2e2" : theme.grassDeep;
-  ctx.fillStyle = _mix(sk[sk.length - 1], land, 0.5);
-  ctx.beginPath(); ctx.moveTo(x, y + h);
-  for (let i = 0; i <= w; i += 8) ctx.lineTo(x + i, y + h * 0.52 - 6 * Math.sin(i / 38));
-  ctx.lineTo(x + w, y + h); ctx.closePath(); ctx.fill();
+  if (!rasterBg) {
+    ctx.fillStyle = _mix(sk[sk.length - 1], land, 0.5);
+    ctx.beginPath(); ctx.moveTo(x, y + h);
+    for (let i = 0; i <= w; i += 8) ctx.lineTo(x + i, y + h * 0.52 - 6 * Math.sin(i / 38));
+    ctx.lineTo(x + w, y + h); ctx.closePath(); ctx.fill();
+  }
 
   // Ana arazi silüeti. Haritaya özel kayıt varsa gerçek maçla aynı profil;
   // eski kayıtlar için arketip önizlemesi geriye uyumluluk amacıyla kalır.

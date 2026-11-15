@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <title>Garanti Dışı — Sanat varlık sondası</title>
+  <style>
+    body { margin: 0; background: #10131a; color: #cfd6e3; font: 13px/1.4 "Chakra Petch", monospace; }
+    h2 { font-size: 13px; margin: 8px; font-weight: 600; letter-spacing: .04em; }
+    .row { display: flex; flex-direction: column; gap: 8px; padding: 0 8px 8px; }
+    canvas { width: 100%; height: auto; border: 1px solid #2a3242; }
+  </style>
+</head>
+<body>
+  <h2 id="title">yükleniyor…</h2>
+  <div class="row"><canvas id="out" width="960" height="540"></canvas><canvas id="raw" width="960" height="540"></canvas></div>
+
+  <!-- Sonda, index.html'in script sırasının ART için gereken minimum alt kümesini yükler.
+       Amaç: bir bölgenin katmanlarını (uzak/orta) tek karede, arazisiz görmek; böylece
+       "hangi katman nerede, alfa doğru mu, palet tutuyor mu" sorusu gözle yanıtlanır. -->
+  <script src="js/i18n.js"></script>
+  <script src="js/characters.js"></script>
+  <script src="js/assets-manifest.js"></script>
+  <script src="js/assets.js"></script>
+  <script src="js/maps.js"></script>
+
+<script>
+/* Sondanın işi: (sol) oyunun gerçek çizim yolunu kullanarak gökyüzü + arka plan
+ * katmanlarını basmak, (sağ) katmanları ham hâlde üst üste koyup alfa/kenar
+ * hatalarını göstermek. Oyun kodu değişmez; sonda yalnız mevcut fonksiyonları çağırır. */
+window.addEventListener("DOMContentLoaded", () => {
+  const zone = new URLSearchParams(location.search).get("zone") || "scrapyard";
+  const theme = MAPS.find((m) => m.zoneId === zone) || MAPS[0];
+  document.getElementById("title").textContent =
+    `bölge: ${zone} (${theme.zoneLabel || "-"}) · katmanlar: ` +
+    Object.keys(ASSET_INDEX).filter((k) => k.indexOf("bg/" + zone) === 0).join(", ");
+
+  // Varlıklar asenkron: ilk kare hazır olmayabilir. Bu yüzden çizim, katmanların
+  // hepsi hazır olana kadar (en fazla 2 sn) her karede yeniden yapılır. Oyun da
+  // aynı prensiple çalıştığı için sonda "gerçek oyun davranışı"nı taklit eder.
+  const out = document.getElementById("out").getContext("2d");
+  const ctx = document.getElementById("raw").getContext("2d");
+  let done = 0;
+  const draw = () => {
+    drawSky(out, 960, 540, theme);
+    drawBackdrop(out, 960, 540, theme);
+
+    // Ham katman: damalı zemin üzerinde alfa denetimi.
+    for (let y = 0; y < 540; y += 20) {
+      for (let x = 0; x < 960; x += 20) {
+        ctx.fillStyle = ((x / 20 + y / 20) % 2) ? "#2b3242" : "#3a4356";
+        ctx.fillRect(x, y, 20, 20);
+      }
+    }
+    let readyCount = 0;
+    for (const layer of ["far", "mid"]) {
+      const img = assetImage(`bg/${zone}-${layer}`);
+      if (img) { ctx.drawImage(img, 0, 0, 960, 540); readyCount++; }
+      else { ctx.fillStyle = "#ff4"; ctx.fillText(`eksik/hazır değil: bg/${zone}-${layer}`, 12, 24 + (layer === "far" ? 0 : 18)); }
+    }
+    done++;
+    if (readyCount < 2 && done < 120) requestAnimationFrame(draw);
+    else {
+      console.log("ART " + ["far", "mid"].map((l) => {
+        const img = assetImage(`bg/${zone}-${l}`);
+        return `${l}=${img ? img.naturalWidth + "×" + img.naturalHeight : "YOK"}`;
+      }).join(" | "));
+      window.__ready = true;
+    }
+  };
+  draw();
+});
+</script>
+</body>
+</html>

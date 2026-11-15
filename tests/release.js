@@ -45,6 +45,21 @@ const leaked = files.filter((f) =>
   /(^|\/)_[^/]*\.html$/.test(f) || /(^|\/)_[^/]*\.js$/.test(f));
 check("sonda/test/belge dosyası pakete sızmadı", leaked.length === 0, leaked.join(", "));
 
+// ── 1b) Sanat varlıkları: manifest ↔ disk ↔ paket ↔ çalışma anı indeksi ──
+// Üçünün ayrışması sessiz bir hatadır: oyun 404 alır, konsola düşer ve prosedürel
+// çizime geri döner — yani "AI arka planlar yayında yok" ancak gözle fark edilir.
+const artManifest = fs.existsSync(path.join(ROOT, "assets", "manifest.json"))
+  ? JSON.parse(fs.readFileSync(path.join(ROOT, "assets", "manifest.json"), "utf8"))
+  : { assets: [] };
+const artAssets = Array.isArray(artManifest.assets) ? artManifest.assets : [];
+const artNotOnDisk = artAssets.filter((a) => !fs.existsSync(path.join(ROOT, a.file)));
+check("sanat varlıklarının hepsi diskte", artNotOnDisk.length === 0, artNotOnDisk.map((a) => a.file).join(", "));
+const artNotInPkg = artAssets.filter((a) => !has(a.file));
+check("sanat varlıklarının hepsi pakette", artNotInPkg.length === 0, artNotInPkg.map((a) => a.file).join(", "));
+const artIndexSrc = fs.readFileSync(path.join(ROOT, "js", "assets-manifest.js"), "utf8");
+const artDrift = artAssets.filter((a) => artIndexSrc.indexOf(`"${a.id}": "${a.file}"`) < 0);
+check("ASSET_INDEX manifest ile aynı", artDrift.length === 0, artDrift.map((a) => a.id).join(", "));
+
 // ── 2) index.html bağlantıları ve script sırası ───────────────────────────
 const html = fs.readFileSync(path.join(ROOT, "index.html"), "utf8");
 const refs = [];

@@ -7,6 +7,16 @@ Kapsam: Bu oyun için **yerel** (bulut aboneliği olmadan) AI görsel üretimi �
 Hedef donanım (kullanıcı beyanı): **RTX 3090 24 GB + Ryzen 7 5700X + 32 GB RAM**.
 (Not: Bu repoda geliştirme yapılan makine RTX 3050 Ti 4 GB — üretim orada yapılmaz, yalnız entegrasyon testi yapılır.)
 
+> **Revizyon (14 Kasım 2026) — uygulama planı ayrı belgede:**
+> Bu dosya **araştırma/karar** belgesi olarak kalır; uygulama adımları ve ölçümler
+> [`docs/art-uretim-plani-ai3090.md`](./art-uretim-plani-ai3090.md) içindedir ve çelişkide o geçerlidir.
+> Değişen üç şey: (1) üretim düğümü ai3090'da **SDXL yok**, ana at **Z-Image-Turbo** (Apache 2.0,
+> ölçülen 16–25 s/görsel: 1024² soğuk 24,2 s, 1280×720 sıcak 16,0 s); (2) `ai image` grafiği
+> `cfg=1` + `ConditioningZeroOut` olduğu için **negatif prompt etkisiz** — §4'teki negatif iskelet
+> yalnız yol gösterir, tutarlılık prompt iskeleti + seed + palet normalizasyonu + Qwen-Image-Edit
+> ile kurulur; (3) `controlnet/`, `upscale_models/` ve özel düğümler **boş** — §3.1'deki kurulum
+> listesi bir varsayımdır, o günkü kurulumu yansıtmaz.
+
 ---
 
 ## 0. TL;DR — Karar tablosu

@@ -1,0 +1,7 @@
+{
+  "name": "dokumhane-9",
+  "private": true,
+  "scripts": {
+    "verify": "node tools/art-gate.js && node tests/run.js && node tests/release.js && node tests/net-game.js && node tools/build.js --dry"
+  }
+}

@@ -819,6 +819,27 @@ const SKILL_FX_SHAPES = {
   acidSpray: { family: "spit", life: 30, draw: sfxAcidSpray },
 };
 
+const SKILL_FX_ATLAS_CELL = {
+  patchWeld: 0, magField: 1, cloakShift: 2, pressureCharge: 3, dualLoad: 3,
+  plateLock: 4, springJump: 5, hookSwing: 6, overCoil: 3, turboCharge: 7,
+  ballRoll: 7, drillSink: 8, rotorSpin: 9, pressSlam: 10, twinSlash: 11,
+  rotaryWhip: 11, clampBite: 11, malletBonk: 10, hammerSwing: 11,
+  punchPoke: 10, gasSpray: 12, empPulse: 13, sirenWave: 13,
+  resonanceWave: 13, centrifuge: 9, coolantFlood: 15, cryoBurst: 15,
+  groundRam: 14, slagCannon: 15, coolantCapsule: 15, rivetSalvo: 15,
+  boltBlast: 15, vortexFan: 9, acidSpray: 12,
+};
+
+function drawSkillFxAtlas(ctx, shape, x, y, size) {
+  if (typeof assetImage !== "function") return false;
+  const atlas = assetImage("atlases/skill-fx");
+  const cell = SKILL_FX_ATLAS_CELL[shape];
+  if (!atlas || cell == null) return false;
+  const cellSize = atlas.naturalWidth / 4;
+  ctx.drawImage(atlas, (cell % 4) * cellSize, Math.floor(cell / 4) * cellSize, cellSize, cellSize, x, y, size, size);
+  return true;
+}
+
 // ── Üretim / güncelleme / çizim ────────────────────────────────────────────
 // `useSkill` başarılı olduğunda çağrılır (hem insan hem bot yolu). Efekt saf
 // görseldir; fizik/AI kararını etkilemez. `game.skillFx` yoksa (saf test
@@ -871,7 +892,9 @@ function drawSkillFx(ctx, game) {
     ctx.save();
     ctx.translate(fx.x, fx.y - fx.r);
     ctx.scale(fx.facing, 1);
-    entry.draw(ctx, fx);
+    const extent = SKILL_FX_EXTENT[entry.family] || 4;
+    const size = fx.r * (extent + 1.4);
+    if (!drawSkillFxAtlas(ctx, fx.shape, -size * 0.48, -size * 0.48, size)) entry.draw(ctx, fx);
     ctx.restore();
   }
 }
@@ -896,7 +919,7 @@ function drawSkillFxIcon(ctx, def, size) {
   };
   ctx.save();
   ctx.translate(size / 2 + size * 0.06, size / 2);
-  entry.draw(ctx, fx);
+  if (!drawSkillFxAtlas(ctx, shape, -size * 0.38, -size * 0.38, size * 0.76)) entry.draw(ctx, fx);
   ctx.restore();
   return true;
 }

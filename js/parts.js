@@ -642,6 +642,17 @@ const PART_ICON_SHAPES = {
 function drawPartIcon(ctx, part, size) {
   const icon = part && part.icon ? part.icon : null;
   const shape = icon && PART_ICON_SHAPES[icon.shape] ? icon.shape : "bolt";
+  const atlasCell = {
+    lens: 0, visor: 1, gyro: 2, weldPatch: 3, plate: 4, radiator: 5,
+    loader: 6, coil: 7, bolt: 8, damping: 9, springPad: 10, turboPad: 11,
+    armorHelm: 12, chip: 13, jumpPad: 14,
+  }[shape];
+  const atlas = typeof assetImage === "function" ? assetImage("atlases/parts") : null;
+  if (atlas && atlasCell != null) {
+    const cellSize = atlas.naturalWidth / 4;
+    ctx.drawImage(atlas, (atlasCell % 4) * cellSize, Math.floor(atlasCell / 4) * cellSize, cellSize, cellSize, 0, 0, size, size);
+    return;
+  }
   const tint = icon ? icon.tint : "#9fb6c9";
   const accent = icon ? icon.accent : "#eef5ff";
   ctx.save();

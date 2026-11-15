@@ -12,6 +12,10 @@ window.addEventListener("DOMContentLoaded", () => {
   }
 
   const canvas = document.getElementById("game");
+
+  // Raster sanat varlıkları (varsa): yükleme arka planda başlar, hazır olana kadar
+  // çiziciler prosedürel yedeği kullanır (assets.js > assetImage).
+  if (typeof assetPreload === "function") assetPreload();
   const game = new Game(canvas);
 
   /* Portal (F5): SDK varsa tembel yüklenir ve başlatılır; yoksa oyun hiç

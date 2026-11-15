@@ -1,0 +1,28 @@
+{
+  "source": "image_gen.imagegen",
+  "prompt": "Widescreen 16:9 premium key art illustration for a Turkish industrial robot arena game: four original colorful maintenance combat robots facing off across a dramatic scrapyard factory arena, one amber robot with mint lights in foreground, one violet robot and one heavy rust-brown machine, distant teal cranes, gantries and smokestacks at dusk, cinematic composition with clear open dark sky area in the upper third for title placement, confident readable silhouettes, polished hand-painted digital 2D game illustration, crisp outlines, refined cel shading, rich teal steel and amber accents, no text, no logos, no watermark, full bleed.",
+  "master": "key-art-master.png",
+  "derivatives": [
+    {
+      "file": "key-art.webp",
+      "size": [
+        1920,
+        1080
+      ]
+    },
+    {
+      "file": "store-capsule.webp",
+      "size": [
+        460,
+        215
+      ]
+    },
+    {
+      "file": "itch-cover.webp",
+      "size": [
+        630,
+        500
+      ]
+    }
+  ]
+}

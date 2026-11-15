@@ -4435,7 +4435,7 @@ class Game {
     // bağımsız). Güncel nişan çizgisiyle AYNI geometri kullanılır ki iki çizgi
     // de silahın ağzından çıksın.
     const origin = typeof robotMuzzlePoint === "function"
-      ? robotMuzzlePoint(a.x, a.y - a.r, a.r, a.facing, ang)
+      ? robotMuzzlePoint(a.x, a.y - a.r, a.r, a.facing, ang, a.charDef)
       : { x: a.x + Math.cos(ang) * (a.r + 12), y: (a.y - a.r) + Math.sin(ang) * (a.r + 12) };
     const ox = origin.x, oy = origin.y;
     // Güce göre uzunluk: güncel nişan oku ile aynı ölçek
@@ -4774,6 +4774,14 @@ class Game {
     if (canvas.width !== px) { canvas.width = px; canvas.height = px; }
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
+    const hasParts = parts && Object.values(parts).some((value) => Array.isArray(value) ? value.some(Boolean) : !!value);
+    const portrait = !hasParts && typeof assetImage === "function" ? assetImage("portraits/" + charDef.id) : null;
+    if (portrait) {
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.clearRect(0, 0, px, px);
+      ctx.drawImage(portrait, 0, 0, px, px);
+      return;
+    }
     const partSig = parts ? Object.keys(parts).sort()
       .map((k) => k + "=" + (Array.isArray(parts[k]) ? parts[k].join("+") : parts[k])).join(",") : "";
     const key = charDef.id + "|" + size + "|" + dpr + "|" + partSig;
@@ -5480,6 +5488,15 @@ function _msIcon(ctx, kind, cx, cy, accent, lit) {
   ctx.lineWidth = 1.2;
   ctx.strokeStyle = _hexA(accent, lit ? 0.9 : 0.4);
   ctx.stroke();
+  const atlasCells = { robot: 9, "dişli": 8, mermi: 11, "ağ": 5, soru: 15 };
+  const atlas = typeof assetImage === "function" ? assetImage("atlases/ui") : null;
+  if (atlas && atlasCells[kind] != null) {
+    const cellSize = atlas.naturalWidth / 4;
+    const cell = atlasCells[kind];
+    ctx.drawImage(atlas, (cell % 4) * cellSize, Math.floor(cell / 4) * cellSize, cellSize, cellSize, cx - 13, cy - 13, 26, 26);
+    ctx.restore();
+    return;
+  }
   // Glif: hover'da yumuşak renk parıltısı eşlik eder
   if (lit) { ctx.shadowColor = accent; ctx.shadowBlur = 9; }
   ctx.strokeStyle = col;

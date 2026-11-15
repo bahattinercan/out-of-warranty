@@ -554,6 +554,24 @@ const PROJECTILE_SHAPES = {
   hook: projHookShape,
 };
 
+const PROJECTILE_ATLAS_CELL = {
+  rocket: 0, grenade: 1, needle: 2, pellet: 3, bolt: 3, rivet: 3,
+  blob: 4, nuke: 5, mirv: 6, bomb: 7, canister: 8, napalm: 8,
+  drill: 9, mine: 9, bomblet: 9, fireball: 10, capsule: 11,
+  rubber_ball: 11, vortex: 12, acid: 13, teleport_ball: 14, hook: 15,
+  ball: 11,
+};
+
+function drawProjectileAtlas(ctx, shapeId, x, y, r) {
+  if (typeof assetImage !== "function") return false;
+  const atlas = assetImage("atlases/projectiles");
+  const cell = PROJECTILE_ATLAS_CELL[shapeId];
+  if (!atlas || cell == null) return false;
+  const cellSize = atlas.naturalWidth / 4;
+  ctx.drawImage(atlas, (cell % 4) * cellSize, Math.floor(cell / 4) * cellSize, cellSize, cellSize, x - r * 3, y - r * 2.5, r * 6, r * 5);
+  return true;
+}
+
 /* Aynı tasarımı paylaşmasına izin verilen spec grupları: "aynı cephane, farklı
  * adet/ölçek" durumları. Başka hiçbir shape birden fazla spec'te kullanılamaz
  * (tests/run.js ihlali yakalar). */
@@ -741,7 +759,8 @@ class Projectile {
     const look = this.spec.look || null;
     this.drawTrail(ctx, look ? look.tail : "flame");
 
-    const shape = PROJECTILE_SHAPES[(look && look.shape) || "ball"] || PROJECTILE_SHAPES.ball;
+    const shapeId = (look && look.shape) || "ball";
+    const shape = PROJECTILE_SHAPES[shapeId] || PROJECTILE_SHAPES.ball;
     const size = (look && look.size) || 1;
     const orient = (look && look.orient) || "vel";
     let angle = 0;
@@ -752,7 +771,7 @@ class Projectile {
     ctx.translate(this.x, this.y);
     if (angle) ctx.rotate(angle);
     if (size !== 1) ctx.scale(size, size);
-    shape(ctx, this);
+    if (!drawProjectileAtlas(ctx, shapeId, 0, 0, this.r * size)) shape(ctx, this);
     ctx.restore();
 
     this.drawFuse(ctx, look);
@@ -867,7 +886,8 @@ class Projectile {
   static drawIcon(ctx, spec, size, opts) {
     const o = opts || {};
     const look = spec.look || null;
-    const shape = PROJECTILE_SHAPES[(look && look.shape) || "ball"] || PROJECTILE_SHAPES.ball;
+    const shapeId = (look && look.shape) || "ball";
+    const shape = PROJECTILE_SHAPES[shapeId] || PROJECTILE_SHAPES.ball;
     const r = spec.projRadius || 4;
     // Çiziciler yatayda ~±2.6r taşar (dikeyde daha az); gövde yarı-genişliği
     // kutunun %32'si, merkez %60'ta → döndürülmüş en uç nokta bile içeride kalır.
@@ -887,7 +907,7 @@ class Projectile {
     const orient = (look && look.orient) || "vel";
     const angle = orient === "vel" ? -0.45 : orient === "spin" ? 0.6 : 0;
     if (angle) ctx.rotate(angle);
-    shape(ctx, stub);
+    if (!drawProjectileAtlas(ctx, shapeId, 0, 0, r)) shape(ctx, stub);
     ctx.restore();
   }
 }

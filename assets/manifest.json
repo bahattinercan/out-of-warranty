@@ -1,0 +1,2158 @@
+{
+  "version": 1,
+  "assets": [
+    {
+      "id": "atlases/parts",
+      "file": "assets/atlases/parts.webp",
+      "w": 1024,
+      "h": 1024,
+      "alpha": true,
+      "kb": 218.5,
+      "seed": null,
+      "size": "1024x1024",
+      "steps": 1,
+      "prompt": "Generated 4x4 transparent atlas of 16 unique industrial robot equipment icons.",
+      "palette": [],
+      "zone": null,
+      "phase": "?",
+      "gate": "pending",
+      "stats": {
+        "coverage": 46.7
+      },
+      "generationSource": "codex-imagegen"
+    },
+    {
+      "id": "atlases/projectiles",
+      "file": "assets/atlases/projectiles.webp",
+      "w": 1024,
+      "h": 1024,
+      "alpha": true,
+      "kb": 136.5,
+      "seed": null,
+      "size": "1024x1024",
+      "steps": 1,
+      "prompt": "Generated 6x4 sprite atlas of industrial sci-fi projectiles, transparent background.",
+      "palette": [],
+      "zone": null,
+      "phase": "?",
+      "gate": "pending",
+      "stats": {
+        "coverage": 22.7
+      },
+      "generationSource": "codex-imagegen"
+    },
+    {
+      "id": "atlases/skill-fx",
+      "file": "assets/atlases/skill-fx.webp",
+      "w": 1024,
+      "h": 1024,
+      "alpha": true,
+      "kb": 419.2,
+      "seed": null,
+      "size": "1024x1024",
+      "steps": 1,
+      "prompt": "Generated 4x4 transparent atlas of industrial robot skill effect motifs.",
+      "palette": [],
+      "zone": null,
+      "phase": "?",
+      "gate": "pending",
+      "stats": {
+        "coverage": 40.6
+      },
+      "generationSource": "codex-imagegen"
+    },
+    {
+      "id": "atlases/ui",
+      "file": "assets/atlases/ui.webp",
+      "w": 1024,
+      "h": 1024,
+      "alpha": true,
+      "kb": 157.8,
+      "seed": null,
+      "size": "1024x1024",
+      "steps": 1,
+      "prompt": "Generated 4x4 transparent atlas of industrial arena UI art elements and icons.",
+      "palette": [],
+      "zone": null,
+      "phase": "?",
+      "gate": "pending",
+      "stats": {
+        "coverage": 49.5
+      },
+      "generationSource": "codex-imagegen"
+    },
+    {
+      "id": "bg/assembly-far",
+      "file": "assets/bg/assembly-far.webp",
+      "w": 960,
+      "h": 540,
+      "alpha": false,
+      "kb": 12.6,
+      "seed": 915245,
+      "size": "2172x724",
+      "steps": 1,
+      "prompt": "Flat poster-like 2D cel-shaded dark charcoal navy assembly factory skyline with conveyor bridges, crane and sawtooth sheds; tiny hazard yellow accents, no pale sky.",
+      "palette": [
+        "#171d2b",
+        "#273349",
+        "#46566b",
+        "#252b31",
+        "#e2ad3b"
+      ],
+      "zone": "assembly",
+      "phase": "B",
+      "gate": "pending",
+      "stats": {
+        "srcMeanDrift": 21.38,
+        "srcMaxDrift": 78
+      }
+    },
+    {
+      "id": "bg/assembly-mid",
+      "file": "assets/bg/assembly-mid.webp",
+      "w": 960,
+      "h": 540,
+      "alpha": true,
+      "kb": 18.6,
+      "seed": 915254,
+      "size": "2172x724",
+      "steps": 1,
+      "prompt": "Transparent foreground silhouette: conveyor rollers, small robotic arms, parts crate and cable bundles; navy steel with hazard yellow, flat cel-shaded.",
+      "palette": [
+        "#14181b",
+        "#252b31",
+        "#2e3741"
+      ],
+      "zone": "assembly",
+      "phase": "B",
+      "gate": "pending",
+      "stats": {
+        "srcMeanDrift": 28.24,
+        "srcMaxDrift": 183,
+        "coverage": 13.7
+      }
+    },
+    {
+      "id": "bg/cooling-far",
+      "file": "assets/bg/cooling-far.webp",
+      "w": 960,
+      "h": 540,
+      "alpha": false,
+      "kb": 12.4,
+      "seed": 915243,
+      "size": "2172x724",
+      "steps": 1,
+      "prompt": "Flat 2D cel-shaded distant cooling plant skyline with cooling towers, insulated pipes and refrigeration buildings, pale cyan and cold blue-gray, wide band, no characters or text.",
+      "palette": [
+        "#7996aa",
+        "#b3c7d2",
+        "#e1edf2",
+        "#566672",
+        "#eafaff"
+      ],
+      "zone": "cooling",
+      "phase": "B",
+      "gate": "pending",
+      "stats": {
+        "srcMeanDrift": 14.86,
+        "srcMaxDrift": 39
+      }
+    },
+    {
+      "id": "bg/cooling-mid",
+      "file": "assets/bg/cooling-mid.webp",
+      "w": 960,
+      "h": 540,
+      "alpha": true,
+      "kb": 24,
+      "seed": 915247,
+      "size": "2172x724",
+      "steps": 1,
+      "prompt": "Transparent foreground silhouette: insulated pipes, valve wheel, squat frost-covered tank and steam vent, cold blue-gray and muted cyan, flat cel-shaded outlined game art.",
+      "palette": [
+        "#2f383f",
+        "#566672",
+        "#7d8c96"
+      ],
+      "zone": "cooling",
+      "phase": "B",
+      "gate": "pending",
+      "stats": {
+        "srcMeanDrift": 57.8,
+        "srcMaxDrift": 104,
+        "coverage": 14.2
+      }
+    },
+    {
+      "id": "bg/foundry-far",
+      "file": "assets/bg/foundry-far.webp",
+      "w": 960,
+      "h": 540,
+      "alpha": false,
+      "kb": 14.3,
+      "seed": 915253,
+      "size": "2172x724",
+      "steps": 1,
+      "prompt": "Flat 2D cel-shaded foundry skyline with furnace mouth, slag hoppers and pipes, coal gray, ash charcoal and restrained warm orange.",
+      "palette": [
+        "#2f2229",
+        "#553033",
+        "#754333",
+        "#292426",
+        "#8b4932"
+      ],
+      "zone": "foundry",
+      "phase": "B",
+      "gate": "pending",
+      "stats": {
+        "srcMeanDrift": 43.13,
+        "srcMaxDrift": 121
+      }
+    },
+    {
+      "id": "bg/foundry-mid",
+      "file": "assets/bg/foundry-mid.webp",
+      "w": 960,
+      "h": 540,
+      "alpha": true,
+      "kb": 28.9,
+      "seed": 915259,
+      "size": "2172x724",
+      "steps": 1,
+      "prompt": "Transparent foreground silhouette: slag chunks, hot-metal trough and two pipe elbows with orange glow, charcoal gray and ash, flat cel-shaded.",
+      "palette": [
+        "#171415",
+        "#292426",
+        "#3e2d2a"
+      ],
+      "zone": "foundry",
+      "phase": "B",
+      "gate": "pending",
+      "stats": {
+        "srcMeanDrift": 28.17,
+        "srcMaxDrift": 184,
+        "coverage": 31.4
+      }
+    },
+    {
+      "id": "bg/loading-far",
+      "file": "assets/bg/loading-far.webp",
+      "w": 960,
+      "h": 540,
+      "alpha": false,
+      "kb": 22,
+      "seed": 915250,
+      "size": "2172x724",
+      "steps": 1,
+      "prompt": "Flat 2D cel-shaded distant loading yard with gantry cranes, hooks, containers and sheds, muted gold, dusty tan, warm gray.",
+      "palette": [
+        "#897850",
+        "#baa16c",
+        "#d8c497",
+        "#5f5541",
+        "#d0b85a"
+      ],
+      "zone": "loading",
+      "phase": "B",
+      "gate": "pending",
+      "stats": {
+        "srcMeanDrift": 21.44,
+        "srcMaxDrift": 56
+      }
+    },
+    {
+      "id": "bg/loading-mid",
+      "file": "assets/bg/loading-mid.webp",
+      "w": 960,
+      "h": 540,
+      "alpha": true,
+      "kb": 9.5,
+      "seed": 915256,
+      "size": "2172x724",
+      "steps": 1,
+      "prompt": "Transparent foreground silhouette: container corners, hanging chain and large cargo hook; muted ochre and brown-gray, flat cel-shaded.",
+      "palette": [
+        "#342f24",
+        "#5f5541",
+        "#817459"
+      ],
+      "zone": "loading",
+      "phase": "B",
+      "gate": "pending",
+      "stats": {
+        "srcMeanDrift": 51.12,
+        "srcMaxDrift": 109,
+        "coverage": 3.5
+      }
+    },
+    {
+      "id": "bg/paint-far",
+      "file": "assets/bg/paint-far.webp",
+      "w": 960,
+      "h": 540,
+      "alpha": false,
+      "kb": 17.7,
+      "seed": 915249,
+      "size": "2172x724",
+      "steps": 1,
+      "prompt": "Flat 2D cel-shaded distant paint workshop skyline with paint booths, pipes and ventilation stacks, muted mauve and gray with restrained orange.",
+      "palette": [
+        "#74525f",
+        "#a06f78",
+        "#d3a28d",
+        "#57464b",
+        "#e88b45"
+      ],
+      "zone": "paint",
+      "phase": "B",
+      "gate": "pending",
+      "stats": {
+        "srcMeanDrift": 21.35,
+        "srcMaxDrift": 49
+      }
+    },
+    {
+      "id": "bg/paint-mid",
+      "file": "assets/bg/paint-mid.webp",
+      "w": 960,
+      "h": 540,
+      "alpha": true,
+      "kb": 19.9,
+      "seed": 915255,
+      "size": "2172x724",
+      "steps": 1,
+      "prompt": "Transparent foreground silhouette: paint cans, filter panels, hose loop and paint droplet tray; muted mauve, warm gray, restrained orange, flat cel-shaded.",
+      "palette": [
+        "#302729",
+        "#57464b",
+        "#7a605d"
+      ],
+      "zone": "paint",
+      "phase": "B",
+      "gate": "pending",
+      "stats": {
+        "srcMeanDrift": 45.78,
+        "srcMaxDrift": 136,
+        "coverage": 13.6
+      }
+    },
+    {
+      "id": "bg/sandblast-far",
+      "file": "assets/bg/sandblast-far.webp",
+      "w": 960,
+      "h": 540,
+      "alpha": false,
+      "kb": 34.1,
+      "seed": 915252,
+      "size": "2172x724",
+      "steps": 1,
+      "prompt": "Flat 2D cel-shaded distant sandblasting unit with pressure vessels, dust silos, ducts and sheds, muted beige, dusty brown and gray.",
+      "palette": [
+        "#87664e",
+        "#b38a68",
+        "#d2ad83",
+        "#705a47",
+        "#d7b77f"
+      ],
+      "zone": "sandblast",
+      "phase": "B",
+      "gate": "pending",
+      "stats": {
+        "srcMeanDrift": 26.36,
+        "srcMaxDrift": 83
+      }
+    },
+    {
+      "id": "bg/sandblast-mid",
+      "file": "assets/bg/sandblast-mid.webp",
+      "w": 960,
+      "h": 540,
+      "alpha": true,
+      "kb": 30.5,
+      "seed": 915258,
+      "size": "2172x724",
+      "steps": 1,
+      "prompt": "Transparent foreground silhouette: pressure cylinders, dust hose coil, filter canister and sand pile, muted beige and gray, flat cel-shaded.",
+      "palette": [
+        "#3e3227",
+        "#705a47",
+        "#8b7158"
+      ],
+      "zone": "sandblast",
+      "phase": "B",
+      "gate": "pending",
+      "stats": {
+        "srcMeanDrift": 58.05,
+        "srcMaxDrift": 141,
+        "coverage": 14.1
+      }
+    },
+    {
+      "id": "bg/scrapyard-far",
+      "file": "assets/bg/scrapyard-far.webp",
+      "w": 960,
+      "h": 540,
+      "alpha": false,
+      "kb": 15.4,
+      "seed": 915241,
+      "size": "2048x1024",
+      "steps": 1,
+      "prompt": "Generated by built-in image_gen: flat 2D cel-shaded scrapyard skyline, three gantry cranes, chimneys, muted slate teal and oxidized brown, wide horizontal composition, no text.",
+      "palette": [
+        "#567681",
+        "#91aeb2",
+        "#cad5cf",
+        "#4b3b35",
+        "#a66b42"
+      ],
+      "zone": "scrapyard",
+      "phase": "B",
+      "gate": "pending",
+      "stats": {
+        "srcMeanDrift": 25.1,
+        "srcMaxDrift": 58
+      }
+    },
+    {
+      "id": "bg/scrapyard-mid",
+      "file": "assets/bg/scrapyard-mid.webp",
+      "w": 960,
+      "h": 540,
+      "alpha": true,
+      "kb": 26.5,
+      "seed": 915246,
+      "size": "2172x724",
+      "steps": 1,
+      "prompt": "Transparent foreground silhouette: low collapsed boiler tanks, bent pipes, broken robot arm, cohesive large shapes, dark oxidized brown and charcoal, flat cel-shaded outlined game art.",
+      "palette": [
+        "#29201d",
+        "#4b3b35",
+        "#6f6660"
+      ],
+      "zone": "scrapyard",
+      "phase": "B",
+      "gate": "pending",
+      "stats": {
+        "srcMeanDrift": 36.52,
+        "srcMaxDrift": 110,
+        "coverage": 18.5
+      }
+    },
+    {
+      "id": "bg/warehouse-far",
+      "file": "assets/bg/warehouse-far.webp",
+      "w": 960,
+      "h": 540,
+      "alpha": false,
+      "kb": 33.6,
+      "seed": 915244,
+      "size": "2172x724",
+      "steps": 1,
+      "prompt": "Flat 2D cel-shaded warehouse skyline with tall storage racks, boxy buildings and forklift silhouette, muted green-gray and olive, wide band, no characters or text.",
+      "palette": [
+        "#43565b",
+        "#6f8380",
+        "#a9b3a5",
+        "#353833",
+        "#87906f"
+      ],
+      "zone": "warehouse",
+      "phase": "B",
+      "gate": "pending",
+      "stats": {
+        "srcMeanDrift": 20.58,
+        "srcMaxDrift": 53
+      }
+    },
+    {
+      "id": "bg/warehouse-mid",
+      "file": "assets/bg/warehouse-mid.webp",
+      "w": 960,
+      "h": 540,
+      "alpha": true,
+      "kb": 21.5,
+      "seed": 915248,
+      "size": "2172x724",
+      "steps": 1,
+      "prompt": "Transparent foreground silhouette: pallet stacks, short rack bay and small forklift, muted green-gray and olive, flat cel-shaded outlined game art.",
+      "palette": [
+        "#1d1f1c",
+        "#353833",
+        "#555a53"
+      ],
+      "zone": "warehouse",
+      "phase": "B",
+      "gate": "pending",
+      "stats": {
+        "srcMeanDrift": 28.97,
+        "srcMaxDrift": 144,
+        "coverage": 19.2
+      }
+    },
+    {
+      "id": "bg/waste-far",
+      "file": "assets/bg/waste-far.webp",
+      "w": 960,
+      "h": 540,
+      "alpha": false,
+      "kb": 26.3,
+      "seed": 915251,
+      "size": "2172x724",
+      "steps": 1,
+      "prompt": "Flat 2D cel-shaded distant waste treatment plant with settling tanks, pipes, grates and filtration tower, desaturated green-gray, restrained lime.",
+      "palette": [
+        "#536450",
+        "#78856c",
+        "#a9ad8e",
+        "#30362d",
+        "#79a14a"
+      ],
+      "zone": "waste",
+      "phase": "B",
+      "gate": "pending",
+      "stats": {
+        "srcMeanDrift": 16.76,
+        "srcMaxDrift": 49
+      }
+    },
+    {
+      "id": "bg/waste-mid",
+      "file": "assets/bg/waste-mid.webp",
+      "w": 960,
+      "h": 540,
+      "alpha": true,
+      "kb": 21.7,
+      "seed": 915257,
+      "size": "2172x724",
+      "steps": 1,
+      "prompt": "Transparent foreground silhouette: drain grate, chemical drums, pipe leak and filter box, muted green-gray with lime accent, flat cel-shaded.",
+      "palette": [
+        "#1a1e19",
+        "#30362d",
+        "#525748"
+      ],
+      "zone": "waste",
+      "phase": "B",
+      "gate": "pending",
+      "stats": {
+        "srcMeanDrift": 28.9,
+        "srcMaxDrift": 157,
+        "coverage": 14.9
+      }
+    },
+    {
+      "id": "portraits/armadillo",
+      "file": "assets/portraits/armadillo.webp",
+      "w": 256,
+      "h": 256,
+      "alpha": true,
+      "kb": 26.9,
+      "seed": null,
+      "size": "512x512",
+      "steps": 1,
+      "prompt": "Close upper-body portrait crop derived from generated robot illustration armadillo; no repainting.",
+      "palette": [],
+      "zone": null,
+      "phase": "E",
+      "gate": "pending",
+      "stats": {
+        "coverage": 78.6
+      },
+      "generationSource": "derived-crop",
+      "derivedFrom": "robots/armadillo"
+    },
+    {
+      "id": "portraits/aslan",
+      "file": "assets/portraits/aslan.webp",
+      "w": 256,
+      "h": 256,
+      "alpha": true,
+      "kb": 28.6,
+      "seed": null,
+      "size": "512x512",
+      "steps": 1,
+      "prompt": "Close upper-body portrait crop derived from generated robot illustration aslan; no repainting.",
+      "palette": [],
+      "zone": null,
+      "phase": "E",
+      "gate": "pending",
+      "stats": {
+        "coverage": 59.2
+      },
+      "generationSource": "derived-crop",
+      "derivedFrom": "robots/aslan"
+    },
+    {
+      "id": "portraits/ayi",
+      "file": "assets/portraits/ayi.webp",
+      "w": 256,
+      "h": 256,
+      "alpha": true,
+      "kb": 23.2,
+      "seed": null,
+      "size": "512x512",
+      "steps": 1,
+      "prompt": "Close upper-body portrait crop derived from generated robot illustration ayi; no repainting.",
+      "palette": [],
+      "zone": null,
+      "phase": "E",
+      "gate": "pending",
+      "stats": {
+        "coverage": 75.6
+      },
+      "generationSource": "derived-crop",
+      "derivedFrom": "robots/ayi"
+    },
+    {
+      "id": "portraits/bukalemun",
+      "file": "assets/portraits/bukalemun.webp",
+      "w": 256,
+      "h": 256,
+      "alpha": true,
+      "kb": 29.7,
+      "seed": null,
+      "size": "512x512",
+      "steps": 1,
+      "prompt": "Close upper-body portrait crop derived from generated robot illustration bukalemun; no repainting.",
+      "palette": [],
+      "zone": null,
+      "phase": "E",
+      "gate": "pending",
+      "stats": {
+        "coverage": 43.6
+      },
+      "generationSource": "derived-crop",
+      "derivedFrom": "robots/bukalemun"
+    },
+    {
+      "id": "portraits/dino",
+      "file": "assets/portraits/dino.webp",
+      "w": 256,
+      "h": 256,
+      "alpha": true,
+      "kb": 24.3,
+      "seed": null,
+      "size": "512x512",
+      "steps": 1,
+      "prompt": "Close upper-body portrait crop derived from generated robot illustration dino; no repainting.",
+      "palette": [],
+      "zone": null,
+      "phase": "E",
+      "gate": "pending",
+      "stats": {
+        "coverage": 72.3
+      },
+      "generationSource": "derived-crop",
+      "derivedFrom": "robots/dino"
+    },
+    {
+      "id": "portraits/ejderha",
+      "file": "assets/portraits/ejderha.webp",
+      "w": 256,
+      "h": 256,
+      "alpha": true,
+      "kb": 33.3,
+      "seed": null,
+      "size": "512x512",
+      "steps": 1,
+      "prompt": "Close upper-body portrait crop derived from generated robot illustration ejderha; no repainting.",
+      "palette": [],
+      "zone": null,
+      "phase": "E",
+      "gate": "pending",
+      "stats": {
+        "coverage": 82.2
+      },
+      "generationSource": "derived-crop",
+      "derivedFrom": "robots/ejderha"
+    },
+    {
+      "id": "portraits/gergedan",
+      "file": "assets/portraits/gergedan.webp",
+      "w": 256,
+      "h": 256,
+      "alpha": true,
+      "kb": 23.5,
+      "seed": null,
+      "size": "512x512",
+      "steps": 1,
+      "prompt": "Close upper-body portrait crop derived from generated robot illustration gergedan; no repainting.",
+      "palette": [],
+      "zone": null,
+      "phase": "E",
+      "gate": "pending",
+      "stats": {
+        "coverage": 61.2
+      },
+      "generationSource": "derived-crop",
+      "derivedFrom": "robots/gergedan"
+    },
+    {
+      "id": "portraits/hamster",
+      "file": "assets/portraits/hamster.webp",
+      "w": 256,
+      "h": 256,
+      "alpha": true,
+      "kb": 21.7,
+      "seed": null,
+      "size": "512x512",
+      "steps": 1,
+      "prompt": "Close upper-body portrait crop derived from generated robot illustration hamster; no repainting.",
+      "palette": [],
+      "zone": null,
+      "phase": "E",
+      "gate": "pending",
+      "stats": {
+        "coverage": 87.5
+      },
+      "generationSource": "derived-crop",
+      "derivedFrom": "robots/hamster"
+    },
+    {
+      "id": "portraits/kanguru",
+      "file": "assets/portraits/kanguru.webp",
+      "w": 256,
+      "h": 256,
+      "alpha": true,
+      "kb": 21.2,
+      "seed": null,
+      "size": "512x512",
+      "steps": 1,
+      "prompt": "Close upper-body portrait crop derived from generated robot illustration kanguru; no repainting.",
+      "palette": [],
+      "zone": null,
+      "phase": "E",
+      "gate": "pending",
+      "stats": {
+        "coverage": 38.3
+      },
+      "generationSource": "derived-crop",
+      "derivedFrom": "robots/kanguru"
+    },
+    {
+      "id": "portraits/kaplan",
+      "file": "assets/portraits/kaplan.webp",
+      "w": 256,
+      "h": 256,
+      "alpha": true,
+      "kb": 26.7,
+      "seed": null,
+      "size": "512x512",
+      "steps": 1,
+      "prompt": "Close upper-body portrait crop derived from generated robot illustration kaplan; no repainting.",
+      "palette": [],
+      "zone": null,
+      "phase": "E",
+      "gate": "pending",
+      "stats": {
+        "coverage": 52.1
+      },
+      "generationSource": "derived-crop",
+      "derivedFrom": "robots/kaplan"
+    },
+    {
+      "id": "portraits/kedi",
+      "file": "assets/portraits/kedi.webp",
+      "w": 256,
+      "h": 256,
+      "alpha": true,
+      "kb": 20.3,
+      "seed": null,
+      "size": "512x512",
+      "steps": 1,
+      "prompt": "Close upper-body portrait crop derived from generated robot illustration kedi; no repainting.",
+      "palette": [],
+      "zone": null,
+      "phase": "E",
+      "gate": "pending",
+      "stats": {
+        "coverage": 69.3
+      },
+      "generationSource": "derived-crop",
+      "derivedFrom": "robots/kedi"
+    },
+    {
+      "id": "portraits/kirpi",
+      "file": "assets/portraits/kirpi.webp",
+      "w": 256,
+      "h": 256,
+      "alpha": true,
+      "kb": 31.4,
+      "seed": null,
+      "size": "512x512",
+      "steps": 1,
+      "prompt": "Close upper-body portrait crop derived from generated robot illustration kirpi; no repainting.",
+      "palette": [],
+      "zone": null,
+      "phase": "E",
+      "gate": "pending",
+      "stats": {
+        "coverage": 83.9
+      },
+      "generationSource": "derived-crop",
+      "derivedFrom": "robots/kirpi"
+    },
+    {
+      "id": "portraits/koala",
+      "file": "assets/portraits/koala.webp",
+      "w": 256,
+      "h": 256,
+      "alpha": true,
+      "kb": 22.1,
+      "seed": null,
+      "size": "512x512",
+      "steps": 1,
+      "prompt": "Close upper-body portrait crop derived from generated robot illustration koala; no repainting.",
+      "palette": [],
+      "zone": null,
+      "phase": "E",
+      "gate": "pending",
+      "stats": {
+        "coverage": 62.3
+      },
+      "generationSource": "derived-crop",
+      "derivedFrom": "robots/koala"
+    },
+    {
+      "id": "portraits/kokarca",
+      "file": "assets/portraits/kokarca.webp",
+      "w": 256,
+      "h": 256,
+      "alpha": true,
+      "kb": 19.8,
+      "seed": null,
+      "size": "512x512",
+      "steps": 1,
+      "prompt": "Close upper-body portrait crop derived from generated robot illustration kokarca; no repainting.",
+      "palette": [],
+      "zone": null,
+      "phase": "E",
+      "gate": "pending",
+      "stats": {
+        "coverage": 58.9
+      },
+      "generationSource": "derived-crop",
+      "derivedFrom": "robots/kokarca"
+    },
+    {
+      "id": "portraits/kopek",
+      "file": "assets/portraits/kopek.webp",
+      "w": 256,
+      "h": 256,
+      "alpha": true,
+      "kb": 21.2,
+      "seed": null,
+      "size": "512x512",
+      "steps": 1,
+      "prompt": "Close upper-body portrait crop derived from generated robot illustration kopek; no repainting.",
+      "palette": [],
+      "zone": null,
+      "phase": "E",
+      "gate": "pending",
+      "stats": {
+        "coverage": 59
+      },
+      "generationSource": "derived-crop",
+      "derivedFrom": "robots/kopek"
+    },
+    {
+      "id": "portraits/kunduz",
+      "file": "assets/portraits/kunduz.webp",
+      "w": 256,
+      "h": 256,
+      "alpha": true,
+      "kb": 23.8,
+      "seed": null,
+      "size": "512x512",
+      "steps": 1,
+      "prompt": "Close upper-body portrait crop derived from generated robot illustration kunduz; no repainting.",
+      "palette": [],
+      "zone": null,
+      "phase": "E",
+      "gate": "pending",
+      "stats": {
+        "coverage": 60.1
+      },
+      "generationSource": "derived-crop",
+      "derivedFrom": "robots/kunduz"
+    },
+    {
+      "id": "portraits/kurtadam",
+      "file": "assets/portraits/kurtadam.webp",
+      "w": 256,
+      "h": 256,
+      "alpha": true,
+      "kb": 20.8,
+      "seed": null,
+      "size": "512x512",
+      "steps": 1,
+      "prompt": "Close upper-body portrait crop derived from generated robot illustration kurtadam; no repainting.",
+      "palette": [],
+      "zone": null,
+      "phase": "E",
+      "gate": "pending",
+      "stats": {
+        "coverage": 47.6
+      },
+      "generationSource": "derived-crop",
+      "derivedFrom": "robots/kurtadam"
+    },
+    {
+      "id": "portraits/kus",
+      "file": "assets/portraits/kus.webp",
+      "w": 256,
+      "h": 256,
+      "alpha": true,
+      "kb": 21.5,
+      "seed": null,
+      "size": "512x512",
+      "steps": 1,
+      "prompt": "Close upper-body portrait crop derived from generated robot illustration kus; no repainting.",
+      "palette": [],
+      "zone": null,
+      "phase": "E",
+      "gate": "pending",
+      "stats": {
+        "coverage": 60.8
+      },
+      "generationSource": "derived-crop",
+      "derivedFrom": "robots/kus"
+    },
+    {
+      "id": "portraits/maymun",
+      "file": "assets/portraits/maymun.webp",
+      "w": 256,
+      "h": 256,
+      "alpha": true,
+      "kb": 26.2,
+      "seed": null,
+      "size": "512x512",
+      "steps": 1,
+      "prompt": "Close upper-body portrait crop derived from generated robot illustration maymun; no repainting.",
+      "palette": [],
+      "zone": null,
+      "phase": "E",
+      "gate": "pending",
+      "stats": {
+        "coverage": 53.8
+      },
+      "generationSource": "derived-crop",
+      "derivedFrom": "robots/maymun"
+    },
+    {
+      "id": "portraits/oklukirpi",
+      "file": "assets/portraits/oklukirpi.webp",
+      "w": 256,
+      "h": 256,
+      "alpha": true,
+      "kb": 25.7,
+      "seed": null,
+      "size": "512x512",
+      "steps": 1,
+      "prompt": "Close upper-body portrait crop derived from generated robot illustration oklukirpi; no repainting.",
+      "palette": [],
+      "zone": null,
+      "phase": "E",
+      "gate": "pending",
+      "stats": {
+        "coverage": 74
+      },
+      "generationSource": "derived-crop",
+      "derivedFrom": "robots/oklukirpi"
+    },
+    {
+      "id": "portraits/ordek",
+      "file": "assets/portraits/ordek.webp",
+      "w": 256,
+      "h": 256,
+      "alpha": true,
+      "kb": 23.3,
+      "seed": null,
+      "size": "512x512",
+      "steps": 1,
+      "prompt": "Close upper-body portrait crop derived from generated robot illustration ordek; no repainting.",
+      "palette": [],
+      "zone": null,
+      "phase": "E",
+      "gate": "pending",
+      "stats": {
+        "coverage": 49.6
+      },
+      "generationSource": "derived-crop",
+      "derivedFrom": "robots/ordek"
+    },
+    {
+      "id": "portraits/ornitorenk",
+      "file": "assets/portraits/ornitorenk.webp",
+      "w": 256,
+      "h": 256,
+      "alpha": true,
+      "kb": 25.5,
+      "seed": null,
+      "size": "512x512",
+      "steps": 1,
+      "prompt": "Close upper-body portrait crop derived from generated robot illustration ornitorenk; no repainting.",
+      "palette": [],
+      "zone": null,
+      "phase": "E",
+      "gate": "pending",
+      "stats": {
+        "coverage": 39.6
+      },
+      "generationSource": "derived-crop",
+      "derivedFrom": "robots/ornitorenk"
+    },
+    {
+      "id": "portraits/panda",
+      "file": "assets/portraits/panda.webp",
+      "w": 256,
+      "h": 256,
+      "alpha": true,
+      "kb": 24.4,
+      "seed": null,
+      "size": "512x512",
+      "steps": 1,
+      "prompt": "Close upper-body portrait crop derived from generated robot illustration panda; no repainting.",
+      "palette": [],
+      "zone": null,
+      "phase": "E",
+      "gate": "pending",
+      "stats": {
+        "coverage": 79
+      },
+      "generationSource": "derived-crop",
+      "derivedFrom": "robots/panda"
+    },
+    {
+      "id": "portraits/penguen",
+      "file": "assets/portraits/penguen.webp",
+      "w": 256,
+      "h": 256,
+      "alpha": true,
+      "kb": 23.1,
+      "seed": null,
+      "size": "512x512",
+      "steps": 1,
+      "prompt": "Close upper-body portrait crop derived from generated robot illustration penguen; no repainting.",
+      "palette": [],
+      "zone": null,
+      "phase": "E",
+      "gate": "pending",
+      "stats": {
+        "coverage": 78.5
+      },
+      "generationSource": "derived-crop",
+      "derivedFrom": "robots/penguen"
+    },
+    {
+      "id": "portraits/rakun",
+      "file": "assets/portraits/rakun.webp",
+      "w": 256,
+      "h": 256,
+      "alpha": true,
+      "kb": 21.9,
+      "seed": null,
+      "size": "512x512",
+      "steps": 1,
+      "prompt": "Close upper-body portrait crop derived from generated robot illustration rakun; no repainting.",
+      "palette": [],
+      "zone": null,
+      "phase": "E",
+      "gate": "pending",
+      "stats": {
+        "coverage": 68.3
+      },
+      "generationSource": "derived-crop",
+      "derivedFrom": "robots/rakun"
+    },
+    {
+      "id": "portraits/sincap",
+      "file": "assets/portraits/sincap.webp",
+      "w": 256,
+      "h": 256,
+      "alpha": true,
+      "kb": 35.7,
+      "seed": null,
+      "size": "512x512",
+      "steps": 1,
+      "prompt": "Close upper-body portrait crop derived from generated robot illustration sincap; no repainting.",
+      "palette": [],
+      "zone": null,
+      "phase": "E",
+      "gate": "pending",
+      "stats": {
+        "coverage": 67.8
+      },
+      "generationSource": "derived-crop",
+      "derivedFrom": "robots/sincap"
+    },
+    {
+      "id": "portraits/sirtlan",
+      "file": "assets/portraits/sirtlan.webp",
+      "w": 256,
+      "h": 256,
+      "alpha": true,
+      "kb": 28.2,
+      "seed": null,
+      "size": "512x512",
+      "steps": 1,
+      "prompt": "Close upper-body portrait crop derived from generated robot illustration sirtlan; no repainting.",
+      "palette": [],
+      "zone": null,
+      "phase": "E",
+      "gate": "pending",
+      "stats": {
+        "coverage": 68.2
+      },
+      "generationSource": "derived-crop",
+      "derivedFrom": "robots/sirtlan"
+    },
+    {
+      "id": "portraits/suaygiri",
+      "file": "assets/portraits/suaygiri.webp",
+      "w": 256,
+      "h": 256,
+      "alpha": true,
+      "kb": 24,
+      "seed": null,
+      "size": "512x512",
+      "steps": 1,
+      "prompt": "Close upper-body portrait crop derived from generated robot illustration suaygiri; no repainting.",
+      "palette": [],
+      "zone": null,
+      "phase": "E",
+      "gate": "pending",
+      "stats": {
+        "coverage": 71.4
+      },
+      "generationSource": "derived-crop",
+      "derivedFrom": "robots/suaygiri"
+    },
+    {
+      "id": "portraits/tavsan",
+      "file": "assets/portraits/tavsan.webp",
+      "w": 256,
+      "h": 256,
+      "alpha": true,
+      "kb": 22,
+      "seed": null,
+      "size": "512x512",
+      "steps": 1,
+      "prompt": "Close upper-body portrait crop derived from generated robot illustration tavsan; no repainting.",
+      "palette": [],
+      "zone": null,
+      "phase": "E",
+      "gate": "pending",
+      "stats": {
+        "coverage": 48.3
+      },
+      "generationSource": "derived-crop",
+      "derivedFrom": "robots/tavsan"
+    },
+    {
+      "id": "portraits/tilki",
+      "file": "assets/portraits/tilki.webp",
+      "w": 256,
+      "h": 256,
+      "alpha": true,
+      "kb": 24.1,
+      "seed": null,
+      "size": "512x512",
+      "steps": 1,
+      "prompt": "Close upper-body portrait crop derived from generated robot illustration tilki; no repainting.",
+      "palette": [],
+      "zone": null,
+      "phase": "E",
+      "gate": "pending",
+      "stats": {
+        "coverage": 58.1
+      },
+      "generationSource": "derived-crop",
+      "derivedFrom": "robots/tilki"
+    },
+    {
+      "id": "portraits/timsah",
+      "file": "assets/portraits/timsah.webp",
+      "w": 256,
+      "h": 256,
+      "alpha": true,
+      "kb": 17.4,
+      "seed": null,
+      "size": "512x512",
+      "steps": 1,
+      "prompt": "Close upper-body portrait crop derived from generated robot illustration timsah; no repainting.",
+      "palette": [],
+      "zone": null,
+      "phase": "E",
+      "gate": "pending",
+      "stats": {
+        "coverage": 48.1
+      },
+      "generationSource": "derived-crop",
+      "derivedFrom": "robots/timsah"
+    },
+    {
+      "id": "portraits/yarasa",
+      "file": "assets/portraits/yarasa.webp",
+      "w": 256,
+      "h": 256,
+      "alpha": true,
+      "kb": 21.5,
+      "seed": null,
+      "size": "512x512",
+      "steps": 1,
+      "prompt": "Close upper-body portrait crop derived from generated robot illustration yarasa; no repainting.",
+      "palette": [],
+      "zone": null,
+      "phase": "E",
+      "gate": "pending",
+      "stats": {
+        "coverage": 54.6
+      },
+      "generationSource": "derived-crop",
+      "derivedFrom": "robots/yarasa"
+    },
+    {
+      "id": "portraits/yeti",
+      "file": "assets/portraits/yeti.webp",
+      "w": 256,
+      "h": 256,
+      "alpha": true,
+      "kb": 30.9,
+      "seed": null,
+      "size": "512x512",
+      "steps": 1,
+      "prompt": "Close upper-body portrait crop derived from generated robot illustration yeti; no repainting.",
+      "palette": [],
+      "zone": null,
+      "phase": "E",
+      "gate": "pending",
+      "stats": {
+        "coverage": 73.2
+      },
+      "generationSource": "derived-crop",
+      "derivedFrom": "robots/yeti"
+    },
+    {
+      "id": "portraits/zurafa",
+      "file": "assets/portraits/zurafa.webp",
+      "w": 256,
+      "h": 256,
+      "alpha": true,
+      "kb": 18.8,
+      "seed": null,
+      "size": "512x512",
+      "steps": 1,
+      "prompt": "Close upper-body portrait crop derived from generated robot illustration zurafa; no repainting.",
+      "palette": [],
+      "zone": null,
+      "phase": "E",
+      "gate": "pending",
+      "stats": {
+        "coverage": 31.1
+      },
+      "generationSource": "derived-crop",
+      "derivedFrom": "robots/zurafa"
+    },
+    {
+      "id": "robots/armadillo",
+      "file": "assets/robots/armadillo.webp",
+      "w": 512,
+      "h": 544,
+      "alpha": true,
+      "kb": 73.7,
+      "seed": null,
+      "size": "1024x1024",
+      "steps": 1,
+      "prompt": "Armadillo inspired tracked digger robot with drill and sandy beige armor.",
+      "palette": [],
+      "zone": null,
+      "phase": "R",
+      "gate": "pending",
+      "stats": {
+        "coverage": 81.6
+      },
+      "generationSource": "codex-imagegen"
+    },
+    {
+      "id": "robots/aslan",
+      "file": "assets/robots/aslan.webp",
+      "w": 512,
+      "h": 544,
+      "alpha": true,
+      "kb": 65.7,
+      "seed": null,
+      "size": "1184x1328",
+      "steps": 1,
+      "prompt": "Full-body transparent copper-orange energy robot with cyan torso coil, visor and EMP ring.",
+      "palette": [],
+      "zone": null,
+      "phase": "R",
+      "gate": "pending",
+      "stats": {
+        "coverage": 39.6
+      },
+      "generationSource": "codex-imagegen"
+    },
+    {
+      "id": "robots/ayi",
+      "file": "assets/robots/ayi.webp",
+      "w": 512,
+      "h": 544,
+      "alpha": true,
+      "kb": 69.1,
+      "seed": null,
+      "size": "1214x1295",
+      "steps": 1,
+      "prompt": "Full-body transparent heavy demolition robot BOM-12 with broad brown tank body, tracked legs, gauge face, pressure tank and amber lights.",
+      "palette": [],
+      "zone": null,
+      "phase": "R",
+      "gate": "pending",
+      "stats": {
+        "coverage": 66
+      },
+      "generationSource": "codex-imagegen"
+    },
+    {
+      "id": "robots/bukalemun",
+      "file": "assets/robots/bukalemun.webp",
+      "w": 512,
+      "h": 544,
+      "alpha": true,
+      "kb": 78.1,
+      "seed": null,
+      "size": "1024x1024",
+      "steps": 1,
+      "prompt": "Chameleon inspired slim green robot with layered plates and optical visor.",
+      "palette": [],
+      "zone": null,
+      "phase": "R",
+      "gate": "pending",
+      "stats": {
+        "coverage": 29.3
+      },
+      "generationSource": "codex-imagegen"
+    },
+    {
+      "id": "robots/dino",
+      "file": "assets/robots/dino.webp",
+      "w": 512,
+      "h": 544,
+      "alpha": true,
+      "kb": 64.4,
+      "seed": null,
+      "size": "1024x1024",
+      "steps": 1,
+      "prompt": "Illustrated full-body dinosaur inspired industrial robot, sturdy green armor and mechanical tail.",
+      "palette": [],
+      "zone": null,
+      "phase": "R",
+      "gate": "pending",
+      "stats": {
+        "coverage": 67.6
+      },
+      "generationSource": "codex-imagegen"
+    },
+    {
+      "id": "robots/ejderha",
+      "file": "assets/robots/ejderha.webp",
+      "w": 512,
+      "h": 544,
+      "alpha": true,
+      "kb": 99,
+      "seed": null,
+      "size": "1024x1024",
+      "steps": 1,
+      "prompt": "Dragon inspired tracked furnace robot with olive armor and orange vents.",
+      "palette": [],
+      "zone": null,
+      "phase": "R",
+      "gate": "pending",
+      "stats": {
+        "coverage": 80.3
+      },
+      "generationSource": "codex-imagegen"
+    },
+    {
+      "id": "robots/gergedan",
+      "file": "assets/robots/gergedan.webp",
+      "w": 512,
+      "h": 544,
+      "alpha": true,
+      "kb": 64.2,
+      "seed": null,
+      "size": "1024x1024",
+      "steps": 1,
+      "prompt": "Rhino inspired armored courier robot with turbo wheel feet, gray iron and amber accents.",
+      "palette": [],
+      "zone": null,
+      "phase": "R",
+      "gate": "pending",
+      "stats": {
+        "coverage": 66.1
+      },
+      "generationSource": "codex-imagegen"
+    },
+    {
+      "id": "robots/hamster",
+      "file": "assets/robots/hamster.webp",
+      "w": 512,
+      "h": 544,
+      "alpha": true,
+      "kb": 69.1,
+      "seed": null,
+      "size": "1024x1024",
+      "steps": 1,
+      "prompt": "Hamster inspired round compact robot with orange armor and violet accents.",
+      "palette": [],
+      "zone": null,
+      "phase": "R",
+      "gate": "pending",
+      "stats": {
+        "coverage": 68.5
+      },
+      "generationSource": "codex-imagegen"
+    },
+    {
+      "id": "robots/kanguru",
+      "file": "assets/robots/kanguru.webp",
+      "w": 512,
+      "h": 544,
+      "alpha": true,
+      "kb": 64.1,
+      "seed": null,
+      "size": "1024x1024",
+      "steps": 1,
+      "prompt": "Kangaroo inspired tall spring leg robot with bronze armor and orange visor.",
+      "palette": [],
+      "zone": null,
+      "phase": "R",
+      "gate": "pending",
+      "stats": {
+        "coverage": 35.7
+      },
+      "generationSource": "codex-imagegen"
+    },
+    {
+      "id": "robots/kaplan",
+      "file": "assets/robots/kaplan.webp",
+      "w": 512,
+      "h": 544,
+      "alpha": true,
+      "kb": 64,
+      "seed": null,
+      "size": "x",
+      "steps": 1,
+      "prompt": "Full-body transparent angular cutting robot with burnt orange armor, yellow accents, slim visor, articulated legs and guarded cutter discs.",
+      "palette": [],
+      "zone": null,
+      "phase": "R",
+      "gate": "pending",
+      "stats": {
+        "coverage": 34.4
+      },
+      "generationSource": "codex-imagegen"
+    },
+    {
+      "id": "robots/kedi",
+      "file": "assets/robots/kedi.webp",
+      "w": 512,
+      "h": 544,
+      "alpha": true,
+      "kb": 50.2,
+      "seed": null,
+      "size": "1214x1295",
+      "steps": 1,
+      "prompt": "Full-body transparent humanoid defense robot MIK-0 with lavender steel, single cyan lens, horseshoe back magnet and wheel feet.",
+      "palette": [],
+      "zone": null,
+      "phase": "R",
+      "gate": "pending",
+      "stats": {
+        "coverage": 43.6
+      },
+      "generationSource": "codex-imagegen"
+    },
+    {
+      "id": "robots/kirpi",
+      "file": "assets/robots/kirpi.webp",
+      "w": 512,
+      "h": 544,
+      "alpha": true,
+      "kb": 83,
+      "seed": null,
+      "size": "1024x1024",
+      "steps": 1,
+      "prompt": "Hedgehog inspired compact rolling robot with layered rusty steel armor and amber optic.",
+      "palette": [],
+      "zone": null,
+      "phase": "R",
+      "gate": "pending",
+      "stats": {
+        "coverage": 73.5
+      },
+      "generationSource": "codex-imagegen"
+    },
+    {
+      "id": "robots/koala",
+      "file": "assets/robots/koala.webp",
+      "w": 512,
+      "h": 544,
+      "alpha": true,
+      "kb": 54.2,
+      "seed": null,
+      "size": "1217x1292",
+      "steps": 1,
+      "prompt": "Full-body transparent compact cool-gray maintenance robot with cyan LEDs, calibration mallet and wheel feet.",
+      "palette": [],
+      "zone": null,
+      "phase": "R",
+      "gate": "pending",
+      "stats": {
+        "coverage": 43.3
+      },
+      "generationSource": "codex-imagegen"
+    },
+    {
+      "id": "robots/kokarca",
+      "file": "assets/robots/kokarca.webp",
+      "w": 512,
+      "h": 544,
+      "alpha": true,
+      "kb": 50.6,
+      "seed": null,
+      "size": "1376x1143",
+      "steps": 1,
+      "prompt": "Full-body transparent charcoal waste-treatment robot with green warning LEDs and twin gas nozzles.",
+      "palette": [],
+      "zone": null,
+      "phase": "R",
+      "gate": "pending",
+      "stats": {
+        "coverage": 50.6
+      },
+      "generationSource": "codex-imagegen"
+    },
+    {
+      "id": "robots/kopek",
+      "file": "assets/robots/kopek.webp",
+      "w": 512,
+      "h": 544,
+      "alpha": true,
+      "kb": 51.9,
+      "seed": null,
+      "size": "1214x1295",
+      "steps": 1,
+      "prompt": "Full-body transparent humanoid maintenance robot FIX-8 with amber compact shell, twin mint LED face, wheel feet and a mint welding torch.",
+      "palette": [],
+      "zone": null,
+      "phase": "R",
+      "gate": "pending",
+      "stats": {
+        "coverage": 37.2
+      },
+      "generationSource": "codex-imagegen"
+    },
+    {
+      "id": "robots/kunduz",
+      "file": "assets/robots/kunduz.webp",
+      "w": 512,
+      "h": 544,
+      "alpha": true,
+      "kb": 58.3,
+      "seed": null,
+      "size": "1217x1293",
+      "steps": 1,
+      "prompt": "Full-body transparent sturdy brown rivet-setting robot with amber highlights, visor, articulated legs and heavy hammer.",
+      "palette": [],
+      "zone": null,
+      "phase": "R",
+      "gate": "pending",
+      "stats": {
+        "coverage": 39.7
+      },
+      "generationSource": "codex-imagegen"
+    },
+    {
+      "id": "robots/kurtadam",
+      "file": "assets/robots/kurtadam.webp",
+      "w": 512,
+      "h": 544,
+      "alpha": true,
+      "kb": 52.6,
+      "seed": null,
+      "size": "1024x1536",
+      "steps": 1,
+      "prompt": "Full-body transparent slate-gray alarm robot with red beacon, warning display and long legs.",
+      "palette": [],
+      "zone": null,
+      "phase": "R",
+      "gate": "pending",
+      "stats": {
+        "coverage": 39.1
+      },
+      "generationSource": "codex-imagegen"
+    },
+    {
+      "id": "robots/kus",
+      "file": "assets/robots/kus.webp",
+      "w": 512,
+      "h": 544,
+      "alpha": true,
+      "kb": 54.8,
+      "seed": null,
+      "size": "1024x1024",
+      "steps": 1,
+      "prompt": "Small bird inspired blue flying robot with rotor fan wings and yellow sensor housing.",
+      "palette": [],
+      "zone": null,
+      "phase": "R",
+      "gate": "pending",
+      "stats": {
+        "coverage": 45.1
+      },
+      "generationSource": "codex-imagegen"
+    },
+    {
+      "id": "robots/maymun",
+      "file": "assets/robots/maymun.webp",
+      "w": 512,
+      "h": 544,
+      "alpha": true,
+      "kb": 69.1,
+      "seed": null,
+      "size": "1024x1024",
+      "steps": 1,
+      "prompt": "Monkey inspired agile repair robot with spring legs, hook arm and dark brown plates.",
+      "palette": [],
+      "zone": null,
+      "phase": "R",
+      "gate": "pending",
+      "stats": {
+        "coverage": 35.9
+      },
+      "generationSource": "codex-imagegen"
+    },
+    {
+      "id": "robots/oklukirpi",
+      "file": "assets/robots/oklukirpi.webp",
+      "w": 512,
+      "h": 544,
+      "alpha": true,
+      "kb": 72.1,
+      "seed": null,
+      "size": "1024x1024",
+      "steps": 1,
+      "prompt": "Porcupine inspired tracked rivet robot with brown gray armor and metal quills.",
+      "palette": [],
+      "zone": null,
+      "phase": "R",
+      "gate": "pending",
+      "stats": {
+        "coverage": 77
+      },
+      "generationSource": "codex-imagegen"
+    },
+    {
+      "id": "robots/ordek",
+      "file": "assets/robots/ordek.webp",
+      "w": 512,
+      "h": 544,
+      "alpha": true,
+      "kb": 47.6,
+      "seed": null,
+      "size": "1157x1360",
+      "steps": 1,
+      "prompt": "Full-body transparent small yellow spot-welding robot with single lens, slim legs and forearm punch tool.",
+      "palette": [],
+      "zone": null,
+      "phase": "R",
+      "gate": "pending",
+      "stats": {
+        "coverage": 26.9
+      },
+      "generationSource": "codex-imagegen"
+    },
+    {
+      "id": "robots/ornitorenk",
+      "file": "assets/robots/ornitorenk.webp",
+      "w": 512,
+      "h": 544,
+      "alpha": true,
+      "kb": 53.3,
+      "seed": null,
+      "size": "1024x1024",
+      "steps": 1,
+      "prompt": "Illustrated full-body platypus inspired cooling robot, blue gray armor and cyan details.",
+      "palette": [],
+      "zone": null,
+      "phase": "R",
+      "gate": "pending",
+      "stats": {
+        "coverage": 27.6
+      },
+      "generationSource": "codex-imagegen"
+    },
+    {
+      "id": "robots/panda",
+      "file": "assets/robots/panda.webp",
+      "w": 512,
+      "h": 544,
+      "alpha": true,
+      "kb": 73.6,
+      "seed": null,
+      "size": "x",
+      "steps": 1,
+      "prompt": "Full-body transparent broad heavy press robot with pale gray panels, amber accents, gauge face, hydraulic forearms and tracked legs.",
+      "palette": [],
+      "zone": null,
+      "phase": "R",
+      "gate": "pending",
+      "stats": {
+        "coverage": 68.1
+      },
+      "generationSource": "codex-imagegen"
+    },
+    {
+      "id": "robots/penguen",
+      "file": "assets/robots/penguen.webp",
+      "w": 512,
+      "h": 544,
+      "alpha": true,
+      "kb": 63.3,
+      "seed": null,
+      "size": "1024x1024",
+      "steps": 1,
+      "prompt": "Penguin inspired navy coolant robot with cyan tank and tracked feet.",
+      "palette": [],
+      "zone": null,
+      "phase": "R",
+      "gate": "pending",
+      "stats": {
+        "coverage": 59.3
+      },
+      "generationSource": "codex-imagegen"
+    },
+    {
+      "id": "robots/rakun",
+      "file": "assets/robots/rakun.webp",
+      "w": 512,
+      "h": 544,
+      "alpha": true,
+      "kb": 51.4,
+      "seed": null,
+      "size": "1024x1024",
+      "steps": 1,
+      "prompt": "Illustrated full-body raccoon inspired robot, gray and periwinkle armor with a compact spinner shield.",
+      "palette": [],
+      "zone": null,
+      "phase": "R",
+      "gate": "pending",
+      "stats": {
+        "coverage": 44.8
+      },
+      "generationSource": "codex-imagegen"
+    },
+    {
+      "id": "robots/sincap",
+      "file": "assets/robots/sincap.webp",
+      "w": 512,
+      "h": 544,
+      "alpha": true,
+      "kb": 94.8,
+      "seed": null,
+      "size": "1024x1024",
+      "steps": 1,
+      "prompt": "Squirrel inspired agile orange workshop robot with bolt launcher and cable tail.",
+      "palette": [],
+      "zone": null,
+      "phase": "R",
+      "gate": "pending",
+      "stats": {
+        "coverage": 46.9
+      },
+      "generationSource": "codex-imagegen"
+    },
+    {
+      "id": "robots/sirtlan",
+      "file": "assets/robots/sirtlan.webp",
+      "w": 512,
+      "h": 544,
+      "alpha": true,
+      "kb": 80.2,
+      "seed": null,
+      "size": "1180x1333",
+      "steps": 1,
+      "prompt": "Full-body transparent bronze vibration-test robot with waveform display, resonator dish and wheel feet.",
+      "palette": [],
+      "zone": null,
+      "phase": "R",
+      "gate": "pending",
+      "stats": {
+        "coverage": 57
+      },
+      "generationSource": "codex-imagegen"
+    },
+    {
+      "id": "robots/suaygiri",
+      "file": "assets/robots/suaygiri.webp",
+      "w": 512,
+      "h": 544,
+      "alpha": true,
+      "kb": 62,
+      "seed": null,
+      "size": "1536x1024",
+      "steps": 1,
+      "prompt": "Full-body transparent heavy lavender loader robot with tracked feet, wide body, hydraulic claw hands and gauge face.",
+      "palette": [],
+      "zone": null,
+      "phase": "R",
+      "gate": "pending",
+      "stats": {
+        "coverage": 77.2
+      },
+      "generationSource": "codex-imagegen"
+    },
+    {
+      "id": "robots/tavsan",
+      "file": "assets/robots/tavsan.webp",
+      "w": 512,
+      "h": 544,
+      "alpha": true,
+      "kb": 49.2,
+      "seed": null,
+      "size": "1214x1295",
+      "steps": 1,
+      "prompt": "Full-body transparent spring scout robot ZIP with pale steel shell, cyan eyes, coil back, spring legs and broad feet.",
+      "palette": [],
+      "zone": null,
+      "phase": "R",
+      "gate": "pending",
+      "stats": {
+        "coverage": 32.1
+      },
+      "generationSource": "codex-imagegen"
+    },
+    {
+      "id": "robots/tilki",
+      "file": "assets/robots/tilki.webp",
+      "w": 512,
+      "h": 544,
+      "alpha": true,
+      "kb": 55,
+      "seed": null,
+      "size": "x",
+      "steps": 1,
+      "prompt": "Full-body transparent compact experimental artillery robot with twin back barrels, orange-red panels, amber visor and articulated legs.",
+      "palette": [],
+      "zone": null,
+      "phase": "R",
+      "gate": "pending",
+      "stats": {
+        "coverage": 35.5
+      },
+      "generationSource": "codex-imagegen"
+    },
+    {
+      "id": "robots/timsah",
+      "file": "assets/robots/timsah.webp",
+      "w": 512,
+      "h": 544,
+      "alpha": true,
+      "kb": 44.7,
+      "seed": null,
+      "size": "x",
+      "steps": 1,
+      "prompt": "Full-body transparent long-bodied carrier robot in moss-green steel with single lens, tracked legs and folded articulated rotary crane arm.",
+      "palette": [],
+      "zone": null,
+      "phase": "R",
+      "gate": "pending",
+      "stats": {
+        "coverage": 69
+      },
+      "generationSource": "codex-imagegen"
+    },
+    {
+      "id": "robots/yarasa",
+      "file": "assets/robots/yarasa.webp",
+      "w": 512,
+      "h": 544,
+      "alpha": true,
+      "kb": 58.3,
+      "seed": null,
+      "size": "1024x1024",
+      "steps": 1,
+      "prompt": "Bat inspired hovering purple robot with compact rotor wings and charcoal armor.",
+      "palette": [],
+      "zone": null,
+      "phase": "R",
+      "gate": "pending",
+      "stats": {
+        "coverage": 55.2
+      },
+      "generationSource": "codex-imagegen"
+    },
+    {
+      "id": "robots/yeti",
+      "file": "assets/robots/yeti.webp",
+      "w": 512,
+      "h": 544,
+      "alpha": true,
+      "kb": 82.1,
+      "seed": null,
+      "size": "1024x1024",
+      "steps": 1,
+      "prompt": "Illustrated full-body icy tracked cryo robot, blue armor and frost accents.",
+      "palette": [],
+      "zone": null,
+      "phase": "R",
+      "gate": "pending",
+      "stats": {
+        "coverage": 71.4
+      },
+      "generationSource": "codex-imagegen"
+    },
+    {
+      "id": "robots/zurafa",
+      "file": "assets/robots/zurafa.webp",
+      "w": 512,
+      "h": 544,
+      "alpha": true,
+      "kb": 62,
+      "seed": null,
+      "size": "1024x1024",
+      "steps": 1,
+      "prompt": "Giraffe inspired tall long leg utility robot with yellow green plates and acid nozzle.",
+      "palette": [],
+      "zone": null,
+      "phase": "R",
+      "gate": "pending",
+      "stats": {
+        "coverage": 29.1
+      },
+      "generationSource": "codex-imagegen"
+    },
+    {
+      "id": "tex/cooling-frost",
+      "file": "assets/tex/cooling-frost.webp",
+      "w": 512,
+      "h": 512,
+      "alpha": false,
+      "kb": 10,
+      "seed": 916003,
+      "size": "1242x1242",
+      "steps": 1,
+      "prompt": "Seamless tileable pale blue-gray cooling frost on metal with sparse simple crystals, flat 2D game texture.",
+      "palette": [],
+      "zone": null,
+      "phase": "C",
+      "gate": "pending",
+      "stats": {
+        "seamLR": 2.6,
+        "seamTB": 2.7
+      }
+    },
+    {
+      "id": "tex/copper-plates",
+      "file": "assets/tex/copper-plates.webp",
+      "w": 512,
+      "h": 512,
+      "alpha": false,
+      "kb": 34.9,
+      "seed": 916010,
+      "size": "1242x1242",
+      "steps": 1,
+      "prompt": "Seamless tileable warm copper and brass bolted sheet metal plates with restrained patina.",
+      "palette": [],
+      "zone": null,
+      "phase": "C",
+      "gate": "pending",
+      "stats": {
+        "seamLR": 4.8,
+        "seamTB": 4.1
+      }
+    },
+    {
+      "id": "tex/dark-rubber",
+      "file": "assets/tex/dark-rubber.webp",
+      "w": 512,
+      "h": 512,
+      "alpha": false,
+      "kb": 3.3,
+      "seed": 916007,
+      "size": "1242x1242",
+      "steps": 1,
+      "prompt": "Seamless tileable deep charcoal rubber with sparse molded grooves and scuffs.",
+      "palette": [],
+      "zone": null,
+      "phase": "C",
+      "gate": "pending",
+      "stats": {
+        "seamLR": 0.7,
+        "seamTB": 1
+      }
+    },
+    {
+      "id": "tex/factory-concrete",
+      "file": "assets/tex/factory-concrete.webp",
+      "w": 512,
+      "h": 512,
+      "alpha": false,
+      "kb": 5.1,
+      "seed": 916008,
+      "size": "1242x1242",
+      "steps": 1,
+      "prompt": "Seamless tileable muted warm-gray concrete with sparse aggregate and hairline cracks.",
+      "palette": [],
+      "zone": null,
+      "phase": "C",
+      "gate": "pending",
+      "stats": {
+        "seamLR": 2.4,
+        "seamTB": 2.4
+      }
+    },
+    {
+      "id": "tex/foundry-ash",
+      "file": "assets/tex/foundry-ash.webp",
+      "w": 512,
+      "h": 512,
+      "alpha": false,
+      "kb": 33.3,
+      "seed": 916006,
+      "size": "1242x1242",
+      "steps": 1,
+      "prompt": "Seamless tileable charcoal ash and fine slag dust with subtle rust flecks.",
+      "palette": [],
+      "zone": null,
+      "phase": "C",
+      "gate": "pending",
+      "stats": {
+        "seamLR": 7.1,
+        "seamTB": 7
+      }
+    },
+    {
+      "id": "tex/hazard-stripe",
+      "file": "assets/tex/hazard-stripe.webp",
+      "w": 512,
+      "h": 512,
+      "alpha": false,
+      "kb": 12,
+      "seed": 916009,
+      "size": "1242x1242",
+      "steps": 1,
+      "prompt": "Seamless tileable muted ochre industrial hazard paint with diagonal charcoal stripes and sparse scratches.",
+      "palette": [],
+      "zone": null,
+      "phase": "C",
+      "gate": "pending",
+      "stats": {
+        "seamLR": 1.7,
+        "seamTB": 2.6
+      }
+    },
+    {
+      "id": "tex/oily-water",
+      "file": "assets/tex/oily-water.webp",
+      "w": 512,
+      "h": 512,
+      "alpha": false,
+      "kb": 5.6,
+      "seed": 916004,
+      "size": "1242x1242",
+      "steps": 1,
+      "prompt": "Seamless tileable muted dark teal oily water with broad low-contrast ripple shapes, flat 2D game texture.",
+      "palette": [],
+      "zone": null,
+      "phase": "C",
+      "gate": "pending",
+      "stats": {
+        "seamLR": 1.2,
+        "seamTB": 1.3
+      }
+    },
+    {
+      "id": "tex/oxide-rust",
+      "file": "assets/tex/oxide-rust.webp",
+      "w": 512,
+      "h": 512,
+      "alpha": false,
+      "kb": 6.4,
+      "seed": 916002,
+      "size": "1242x1242",
+      "steps": 1,
+      "prompt": "Seamless tileable oxidized sheet metal: muted rust-brown patches, sparse bolts, flat 2D game texture.",
+      "palette": [],
+      "zone": null,
+      "phase": "C",
+      "gate": "pending",
+      "stats": {
+        "seamLR": 1.6,
+        "seamTB": 6.5
+      }
+    },
+    {
+      "id": "tex/painted-steel",
+      "file": "assets/tex/painted-steel.webp",
+      "w": 512,
+      "h": 512,
+      "alpha": false,
+      "kb": 7,
+      "seed": 916001,
+      "size": "1242x1242",
+      "steps": 1,
+      "prompt": "Seamless tileable painted industrial steel: desaturated blue-gray sheet, sparse rivets and simple scratches, flat 2D game texture.",
+      "palette": [],
+      "zone": null,
+      "phase": "C",
+      "gate": "pending",
+      "stats": {
+        "seamLR": 1.8,
+        "seamTB": 1.4
+      }
+    },
+    {
+      "id": "tex/sandblasted-steel",
+      "file": "assets/tex/sandblasted-steel.webp",
+      "w": 512,
+      "h": 512,
+      "alpha": false,
+      "kb": 22.9,
+      "seed": 916005,
+      "size": "1242x1242",
+      "steps": 1,
+      "prompt": "Seamless tileable beige-gray sandblasted steel with fine abrasion streaks and sparse pits.",
+      "palette": [],
+      "zone": null,
+      "phase": "C",
+      "gate": "pending",
+      "stats": {
+        "seamLR": 4.3,
+        "seamTB": 4.5
+      }
+    },
+    {
+      "id": "weapons/launcher",
+      "file": "assets/weapons/launcher.webp",
+      "w": 960,
+      "h": 540,
+      "alpha": true,
+      "kb": 33.1,
+      "seed": null,
+      "size": "1024x1024",
+      "steps": 1,
+      "prompt": "Compact industrial robot launcher sprite, dark steel barrel, orange stripe and cyan indicators, transparent background.",
+      "palette": [],
+      "zone": null,
+      "phase": "?",
+      "gate": "pending",
+      "stats": {
+        "coverage": 49.8
+      },
+      "generationSource": "codex-imagegen"
+    }
+  ]
+}
