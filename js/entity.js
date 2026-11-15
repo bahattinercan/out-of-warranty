@@ -139,7 +139,7 @@ class Entity {
     const cx = this.x;
     const cy = this.y - this.r;
     if (typeof robotMuzzlePoint === "function") {
-      return robotMuzzlePoint(cx, cy, this.r, this.facing, this.aim);
+      return robotMuzzlePoint(cx, cy, this.r, this.facing, this.aim, this.charDef);
     }
     return {
       x: cx + Math.cos(this.aim) * (this.r + 12),
@@ -372,8 +372,14 @@ class Entity {
 
     // HP barı (kafanın üstünde). Okunabilirlik (2026-10-12): çubuk büyütüldü
     // (34×5 → 40×6) ve koyu bir çerçeve aldı; dolgu oranı uzaktan okunur.
+    // Yükseklik artık SABİT `-r-15` değil: oran grameri (robots.js >
+    // robotTopOffset) her robotun çizilen en üst noktasını veriyor; yüksek
+    // kasklı/antenli robotlarda çubuk kafanın içine giriyordu.
     const bw = 40, bh = 6;
-    const bx = cx - bw / 2, by = cy - this.r - 15;
+    const topOff = typeof robotTopOffset === "function" && this.charDef
+      ? robotTopOffset(this.charDef) * this.r * (typeof RB_VISUAL_SCALE === "number" ? RB_VISUAL_SCALE : 1)
+      : -this.r - 15;
+    const bx = cx - bw / 2, by = cy + topOff - 12;
     ctx.fillStyle = "#00000066";
     ctx.fillRect(bx - 1, by - 1, bw + 2, bh + 2);
     const shownHp = this.displayHp;

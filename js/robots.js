@@ -616,13 +616,69 @@ function _rbHeadAntenna(ctx, chassis, r, color, accent, hy) {
 }
 
 // Kask: -1.32r (tepe) … -0.60r (çene). İnsansı okunurluk için yüz öne taşar.
-function _rbHead(ctx, def, r, color, accent) {
-  const hy = -r * 0.96;
-  const shell = _rbShade(color, 0.12);
-  const outline = _rbShade(color, -0.52);
-  // boyun (kask ile gövde arasında görünür boşluk bırakır)
-  _rbLimb(ctx, 0, hy + r * 0.26, 0, hy + r * 0.46, r * 0.15, _rbShade(color, -0.34));
-  // kask
+// Kask KABUĞU: aileye göre beş ayrı silüet. Tek bir yuvarlak kask 34 robotta
+// aynı olduğu için yüksekliğin ~%30'u kimlik taşımıyordu (bkz. `_rbProportions`
+// başlığındaki ölçüm). Yüz paneli, kaş, çene ve anten altta ORTAK çizilir;
+// buradaki fark yalnız dış kabuk yoludur.
+function _rbHeadShellPath(ctx, chassis, r, hy) {
+  if (chassis === "heavy" || chassis === "digger") {
+    // Düz tepeli, geniş çeneli kutu kask (ağır iş)
+    ctx.beginPath();
+    ctx.moveTo(-r * 0.46, hy - r * 0.18);
+    ctx.lineTo(-r * 0.38, hy - r * 0.36);
+    ctx.lineTo(r * 0.32, hy - r * 0.36);
+    ctx.lineTo(r * 0.48, hy - r * 0.16);
+    ctx.lineTo(r * 0.46, hy + r * 0.24);
+    ctx.lineTo(r * 0.28, hy + r * 0.38);
+    ctx.lineTo(-r * 0.30, hy + r * 0.38);
+    ctx.lineTo(-r * 0.46, hy + r * 0.20);
+    ctx.closePath();
+    return;
+  }
+  if (chassis === "magnetic" || chassis === "flying") {
+    // Kubbe: tam yuvarlak, yanında kulak halkası
+    ctx.beginPath();
+    ctx.ellipse(0, hy - r * 0.02, r * 0.42, r * 0.37, 0, 0, Math.PI * 2);
+    return;
+  }
+  if (chassis === "spring") {
+    // Kapsül: dar, uzun, arkaya doğru sivrilen
+    ctx.beginPath();
+    ctx.moveTo(-r * 0.32, hy - r * 0.04);
+    ctx.quadraticCurveTo(-r * 0.28, hy - r * 0.36, r * 0.08, hy - r * 0.38);
+    ctx.quadraticCurveTo(r * 0.40, hy - r * 0.36, r * 0.42, hy - r * 0.02);
+    ctx.quadraticCurveTo(r * 0.44, hy + r * 0.30, r * 0.16, hy + r * 0.36);
+    ctx.quadraticCurveTo(-r * 0.20, hy + r * 0.38, -r * 0.28, hy + r * 0.18);
+    ctx.quadraticCurveTo(-r * 0.38, hy + 0, -r * 0.32, hy - r * 0.04);
+    ctx.closePath();
+    return;
+  }
+  if (chassis === "wheeled") {
+    // Kama: öne eğik tepe, arkada alçak omuz (hız hissi)
+    ctx.beginPath();
+    ctx.moveTo(-r * 0.30, hy - r * 0.14);
+    ctx.quadraticCurveTo(-r * 0.10, hy - r * 0.36, r * 0.24, hy - r * 0.30);
+    ctx.quadraticCurveTo(r * 0.50, hy - r * 0.24, r * 0.50, hy + r * 0.02);
+    ctx.lineTo(r * 0.40, hy + r * 0.34);
+    ctx.lineTo(-r * 0.26, hy + r * 0.34);
+    ctx.quadraticCurveTo(-r * 0.40, hy + r * 0.22, -r * 0.30, hy - r * 0.14);
+    ctx.closePath();
+    return;
+  }
+  if (chassis === "experimental") {
+    // Kesik köşeli (fasetli) kask: asimetrik/deneysel aile
+    ctx.beginPath();
+    ctx.moveTo(-r * 0.40, hy - r * 0.06);
+    ctx.lineTo(-r * 0.22, hy - r * 0.34);
+    ctx.lineTo(r * 0.16, hy - r * 0.36);
+    ctx.lineTo(r * 0.46, hy - r * 0.12);
+    ctx.lineTo(r * 0.40, hy + r * 0.24);
+    ctx.lineTo(r * 0.12, hy + r * 0.38);
+    ctx.lineTo(-r * 0.28, hy + r * 0.30);
+    ctx.closePath();
+    return;
+  }
+  // Bakım ailesi (ve yedek): yuvarlatılmış takım kutusu
   ctx.beginPath();
   ctx.moveTo(-r * 0.40, hy - r * 0.18);
   ctx.quadraticCurveTo(-r * 0.46, hy + r * 0.16, -r * 0.22, hy + r * 0.36);
@@ -631,8 +687,22 @@ function _rbHead(ctx, def, r, color, accent) {
   ctx.quadraticCurveTo(r * 0.48, hy - r * 0.34, r * 0.10, hy - r * 0.36);
   ctx.quadraticCurveTo(-r * 0.26, hy - r * 0.36, -r * 0.40, hy - r * 0.18);
   ctx.closePath();
+}
+
+function _rbHead(ctx, def, r, color, accent) {
+  const hy = -r * 0.96;
+  const shell = _rbShade(color, 0.12);
+  const outline = _rbShade(color, -0.52);
+  // boyun (kask ile gövde arasında görünür boşluk bırakır)
+  _rbLimb(ctx, 0, hy + r * 0.26, 0, hy + r * 0.46, r * 0.15, _rbShade(color, -0.34));
+  // kask kabuğu (aileye göre silüet)
+  _rbHeadShellPath(ctx, def.chassis, r, hy);
   ctx.fillStyle = shell; ctx.fill();
   ctx.strokeStyle = outline; ctx.lineWidth = Math.max(1.5, r * 0.11); ctx.stroke();
+  // kubbe ailesinde yan kulak halkası (kabuk yolundan sonra, içinde kalır)
+  if (def.chassis === "magnetic" || def.chassis === "flying") {
+    _rbDot(ctx, -r * 0.36, hy + r * 0.06, r * 0.09, _rbShade(color, -0.20), outline);
+  }
   // kask üstüne ışık
   _rbFillGloss(ctx, -r * 0.52, hy - r * 0.52, r * 1.04, r * 0.34, r * 0.16, 0.24);
   // kaş hattı: ağır/kazıcı ailelerde kalınlaşır (kızgın bakış)
@@ -686,20 +756,127 @@ const RB_GUN_MUZZLE = 1.36;
 // KURAL: ölçek hem `drawRobot` hem `robotMuzzlePoint` içinde uygulanır. İkisi
 // ayrışırsa nişan çizgisi/mermi çıkışı çizilen namludan kayar; tests/run.js'teki
 // "Nişan hizası" grubu bu sabiti referans alarak bunu yakalar.
+// ── Oran grameri (silüet kimliği) ──────────────────────────────────────────
+// Ölçüm (2026-11-10, `_robot_silhouette_probe.html`): 34 robotun 561 çiftinin
+// 426'sı IoU ≥ 0.60, ortalama 0.694 ve bir çift birebir aynıydı. Yani kadro
+// "aynı iskeletin renk varyantı" gibi okunuyordu. Sebep renk değil ORAN: gövde,
+// kask ve bacak hep aynı `r` oranlarıyla çiziliyordu.
+//
+// Bu tablo her robota aile verisinden türeyen dört eksen verir (1.0 = nötr):
+//   head   : kask ölçeği — boyun pivotuna (`-0.48r`) göre
+//   torsoX : gövde + omuz genişliği — x ekseni
+//   legs   : bacak uzunluğu — YER TEMASINA (`+1.0r`) göre, ayak yere basılı kalır
+//   stance : ayak açıklığı — yine yer temasına göre
+//
+// Değerler `chassis + body + locomotion` ofsetlerinin toplamı + `def.id`
+// tohumundan gelen küçük sapma. Tamamen deterministik: Math.random/Date.now yok.
+// Bacak uzunluğu üst gövdeyi kaydırdığı için namlu pivotu da kayar; `drawRobot`
+// ile `robotMuzzlePoint` AYNI fonksiyonu okur (aksi hâlde nişan hizası kayar).
+const _RB_PROP_CHASSIS = {
+  //            head  torsoX  legs  stance
+  maintenance: [0.10, -0.02, 0.00, -0.02],
+  magnetic:    [0.16, -0.08, 0.06, -0.06],
+  heavy:       [-0.14, 0.12, -0.14, 0.12],
+  spring:      [0.00, -0.10, 0.18, -0.10],
+  experimental: [0.06, 0.00, 0.12, 0.00],
+  wheeled:     [-0.06, -0.04, -0.08, 0.04],
+  flying:      [0.12, -0.10, 0.08, -0.08],
+  digger:      [-0.10, 0.10, -0.16, 0.14],
+};
+const _RB_PROP_BODY = {
+  round:   [0.10, 0.02, -0.04, 0.00],
+  coil:    [0.02, -0.04, 0.08, -0.02],
+  wide:    [-0.06, 0.10, -0.06, 0.10],
+  tank:    [-0.08, 0.08, -0.08, 0.08],
+  angular: [0.00, -0.06, 0.08, -0.02],
+  compact: [0.08, 0.00, -0.04, 0.00],
+  small:   [0.12, -0.08, -0.08, -0.06],
+  tall:    [-0.04, -0.06, 0.16, -0.08],
+  long:    [0.00, 0.06, -0.06, 0.06],
+  forward: [0.00, 0.06, -0.08, 0.04],
+  flat:    [0.06, 0.12, -0.12, 0.08],
+  low:     [-0.04, 0.10, -0.14, 0.10],
+  u_frame: [-0.02, -0.04, 0.06, 0.00],
+  furnace: [-0.06, 0.08, -0.06, 0.08],
+};
+const _RB_PROP_LOCO = {
+  legs:   [0.00, 0.00, 0.10, -0.02],
+  tracks: [-0.04, 0.06, -0.10, 0.12],
+  wheel:  [0.00, -0.04, 0.00, 0.00],
+  wheels: [0.00, 0.00, 0.04, 0.00],
+  ball:   [0.00, -0.06, -0.08, 0.00],
+  spring: [0.04, -0.02, 0.16, -0.06],
+  rotors: [0.06, -0.06, 0.04, -0.06],
+};
+const _RB_PROP_ZERO = [0, 0, 0, 0];
+// Sınırlar: dış takım (bot/tank) ile iç takım (uçan/ince) arasındaki fark
+// korunur ama uçlarda kask HP çubuğuna değmesin / parçalar gövdeden kopmasın.
+const _RB_PROP_LIMIT = [
+  [0.84, 1.24], // head
+  [0.84, 1.16], // torsoX
+  [0.88, 1.22], // legs
+  [0.88, 1.16], // stance
+];
+
+const _rbPropCache = new Map();
+function _rbProportions(def) {
+  if (!def || def.visualKind !== "robot") return { head: 1, torsoX: 1, legs: 1, stance: 1, upperDy: 0 };
+  const key = def.id || "?";
+  const hit = _rbPropCache.get(key);
+  if (hit) return hit;
+  const c = _RB_PROP_CHASSIS[def.chassis] || _RB_PROP_ZERO;
+  const b = _RB_PROP_BODY[def.body] || _RB_PROP_ZERO;
+  const l = _RB_PROP_LOCO[def.locomotion] || _RB_PROP_ZERO;
+  // Tohum sapması: aynı aileyi paylaşan robotlar (ör. 9 `heavy`) birbirinin
+  // kopyası olmasın diye her eksende ±0.05 kaydırma.
+  const s = _rbSeed(key, "prop");
+  const jit = [
+    (s - 0.5) * 0.10,
+    (((s * 7.13) % 1) - 0.5) * 0.10,
+    (((s * 13.7) % 1) - 0.5) * 0.10,
+    (((s * 23.3) % 1) - 0.5) * 0.10,
+  ];
+  const out = { head: 1, torsoX: 1, legs: 1, stance: 1, upperDy: 0 };
+  const names = ["head", "torsoX", "legs", "stance"];
+  for (let i = 0; i < 4; i++) {
+    const lim = _RB_PROP_LIMIT[i];
+    const v = 1 + c[i] + b[i] + l[i] + jit[i];
+    out[names[i]] = Math.max(lim[0], Math.min(lim[1], v));
+  }
+  // Üst gövdenin dikey kayması (r oranı): kalça `0.04r`den `1 - 0.96·legs`e
+  // gider; torso/kask/kol/namlu bu kadar kaydırılır ki ayaklar yerde kalsın.
+  out.upperDy = 0.96 * (1 - out.legs);
+  _rbPropCache.set(key, out);
+  return out;
+}
+
 const RB_VISUAL_SCALE = 1.10;
 
 // Verilen gövde merkezi, yarıçap, bakış yönü ve nişan açısı için namlu ağzının
 // dünya konumu. Bakış yönü yalnız pivotun aynalanmasını etkiler; namlu HER
 // ZAMAN nişan yönüne bakar (çizimde de `ctx.scale(facing,1)` bunu yapar).
 // `r` fizik yarıçapıdır; çizimle aynı kalmak için görsel ölçek burada uygulanır.
-function robotMuzzlePoint(cx, cy, r, facing, aim) {
+// `charDef` verilirse oran grameri de uygulanır (`_rbProportions`): geniş gövde
+// namlu pivotunu yana, uzun bacak ise omzu yukarı taşır. Çizim aynı iki değeri
+// kullandığı için hiza kaymaz; `tests/run.js` "Nişan hizası" grubu bunu tutar.
+function robotMuzzlePoint(cx, cy, r, facing, aim, charDef) {
   r *= RB_VISUAL_SCALE;
-  const px = cx + (facing < 0 ? -1 : 1) * r * RB_GUN_PIVOT_X;
-  const py = cy + r * RB_GUN_PIVOT_Y;
+  const p = _rbProportions(charDef);
+  const px = cx + (facing < 0 ? -1 : 1) * r * RB_GUN_PIVOT_X * p.torsoX;
+  const py = cy + r * (RB_GUN_PIVOT_Y + p.upperDy);
   return {
     x: px + Math.cos(aim) * r * RB_GUN_MUZZLE,
     y: py + Math.sin(aim) * r * RB_GUN_MUZZLE,
   };
+}
+
+// Robotun ÇİZİLEN en üst noktası (gövde merkezine göre, `r` oranı; negatif =
+// yukarı). `Entity.draw` HP çubuğunu bu noktanın üstüne koyar — sabit `-r`
+// varsayımı yüksek kasklı/antenli robotlarda çubuğu kafanın içine sokuyordu.
+// Pay 0.45r: anten, siren lambası ve sırt modülü kask kabuğunun üstüne taşar.
+function robotTopOffset(charDef) {
+  const p = _rbProportions(charDef);
+  return p.upperDy - 0.48 - 0.84 * p.head - 0.45;
 }
 
 function _rbLauncher(ctx, ang, r, accent, px, py) {
@@ -987,6 +1164,35 @@ function drawRobot(ctx, options) {
   const def = o.charDef;
   if (!def || def.visualKind !== "robot") return false;
 
+  // Roster illüstrasyonları hazır olduğunda karakteri doğrudan üretilmiş
+  // şeffaf sprite ile çiz. Hareket verisi yalnız hafif gövde salınımı verir;
+  // fizik yarıçapı, çarpışma ve namlu koordinatları değişmez.
+  const sprite = typeof assetImage === "function" ? assetImage("robots/" + def.id) : null;
+  if (sprite) {
+    const r = Math.max(4, (o.r || def.r || 14) * RB_VISUAL_SCALE);
+    const facing = o.facing < 0 ? -1 : 1;
+    const motion = o.motion || {};
+    const walk = Math.max(Math.min(1, Math.abs(motion.walkAmp != null ? motion.walkAmp : motion.walk || 0)), Math.min(1, Math.abs(motion.vx || 0) / 2.2));
+    const phase = Number.isFinite(motion.walkPhase) ? motion.walkPhase : (o.timeMs || 0) / 1000 * 4;
+    const bob = motion.onGround === false ? 0 : -Math.abs(Math.cos(phase)) * r * 0.035 * walk + Math.sin((o.timeMs || 0) / 900) * r * 0.01;
+    const sway = Math.sin(phase) * r * 0.018 * walk;
+    ctx.save();
+    ctx.translate((o.cx || 0) + sway, (o.cy || 0) + bob);
+    ctx.scale(facing, 1);
+    ctx.drawImage(sprite, -r * 1.16, -r * 1.52, r * 2.32, r * 3.04);
+    const weapon = Number.isFinite(o.aim) && typeof assetImage === "function" ? assetImage("weapons/launcher") : null;
+    if (weapon) {
+      const localAim = Math.atan2(Math.sin(o.aim), Math.cos(o.aim) * facing);
+      ctx.save();
+      ctx.translate(r * 0.28, -r * 0.42);
+      ctx.rotate(localAim);
+      ctx.drawImage(weapon, -r * 0.40, -r * 0.31, r * 1.35, r * 0.76);
+      ctx.restore();
+    }
+    ctx.restore();
+    return true;
+  }
+
   // Görsel ölçek: fizik yarıçapı olduğu gibi kalır, yalnız çizim büyür
   // (RB_VISUAL_SCALE; aynı sabit `robotMuzzlePoint` içinde de uygulanır).
   const r = Math.max(4, (o.r || def.r || 14) * RB_VISUAL_SCALE);
@@ -1048,9 +1254,17 @@ function drawRobot(ctx, options) {
 
   const shFX = r * 0.36, shFY = -r * 0.38;
   const shBX = -r * 0.34, shBY = -r * 0.38;
+  // Oran grameri: kask ölçeği, gövde genişliği, bacak uzunluğu ve ayak
+  // açıklığı aile verisinden gelir. Bacak uzunluğu üst gövdeyi kaydırır
+  // (`upperDy`), bu yüzden namlu pivotu da kayar — `robotMuzzlePoint` aynı
+  // değerleri okur (nişan hizası bekçisi tests/run.js'te).
+  const props = _rbProportions(def);
+  const torsoX = props.torsoX;
+  const upperDy = props.upperDy * r;
+  const neckY = -r * 0.48;
   // Namlu omuz hizasında taşınır: gövdeyi ortadan kesmesin. Pivot geometrisi
   // `robotMuzzlePoint` ile ortaktır (nişan çizgisi/mermi de aynı noktadan çıkar).
-  const gunX = r * RB_GUN_PIVOT_X, gunY = r * RB_GUN_PIVOT_Y;
+  const gunX = r * RB_GUN_PIVOT_X * torsoX, gunY = r * RB_GUN_PIVOT_Y;
   let handF, handB;
   if (holding) {
     const ax = Math.cos(localAim), ay = Math.sin(localAim);
@@ -1073,6 +1287,9 @@ function drawRobot(ctx, options) {
   // Salınım gövde-yerel uygulanır (aynalamadan etkilenmesin).
   ctx.translate(swayX, bobY);
 
+  // Üst gövde (sırt modülü, omuz topu, arka kol) bacak uzunluğuyla kayar.
+  ctx.save();
+  ctx.translate(0, upperDy);
   // 1) Sırttaki modül/hale (gövdenin arkasında kalır)
   _rbRig(ctx, def.attachment, r, accent, color, timeMs);
   // 2) Yerden süzülen robotlarda omuz arkası pervane
@@ -1086,10 +1303,25 @@ function drawRobot(ctx, options) {
   // 3) Sırttaki omuz topu
   if (_RB_CANNONS.has(def.attachment)) _rbCannon(ctx, def.attachment, r, accent, color);
   // 4) Arka kol (derinlik için koyu; namluyu alttan destekler)
-  _rbArm(ctx, shBX, shBY, handB.x, handB.y, -r * 0.16, r * 0.19, _rbShade(color, -0.16));
+  // Omuz noktaları gövde genişliğiyle ölçeklenir; eller namluya bağlı kalır.
+  _rbArm(ctx, shBX * torsoX, shBY, handB.x, handB.y, -r * 0.16, r * 0.19, _rbShade(color, -0.16));
   _rbHand(ctx, handB.x, handB.y, handAngleB, handSize, _rbShade(color, -0.16), holding);
-  // 5) Bacaklar + gövde + kask
+  ctx.restore();
+  // 5) Bacaklar: YER TEMASINA göre ölçeklenir (ayak yere basılı kalır, kalça
+  //    yukarı/aşağı kayar). Üst gövde aynı kaymayı `upperDy` ile alır.
+  ctx.save();
+  ctx.translate(0, r);
+  ctx.scale(props.stance, props.legs);
+  ctx.translate(0, -r);
   _rbLegs(ctx, def.locomotion, r, color, accent, gait, seedFoot);
+  ctx.restore();
+  // Gövde + kask + namlu + ön kol: bacak kaymasını izler.
+  ctx.save();
+  ctx.translate(0, upperDy);
+  // Genişlik yalnız x ekseninde: gövde/omuz genişler, yükseklik ve namlu
+  // kalınlığı değişmez (namlu bu yüzden ayrı çizilir).
+  ctx.save();
+  ctx.scale(torsoX, 1);
   _rbTorso(ctx, def, r, color, accent, seed);
   if (o.playerTint) {
     // Operatör rengi silueti değiştirmez: yalnız ince bir göğüs şeridi.
@@ -1097,12 +1329,19 @@ function drawRobot(ctx, options) {
     ctx.fillRect(-r * 0.32, -r * 0.20, r * 0.64, r * 0.11);
   }
   _rbShoulders(ctx, def.chassis, r, color, accent);
+  ctx.restore();
+  // Kask: boyun pivotuna göre ölçeklenir (küçük kafa ↔ büyük kafa).
+  ctx.save();
+  ctx.translate(0, neckY);
+  ctx.scale(props.head, props.head);
+  ctx.translate(0, -neckY);
   const hy = _rbHead(ctx, def, r, color, accent);
   _rbHeadGear(ctx, def.attachment, r, accent, hy);
+  ctx.restore();
   // 6) Namlu: ellerin arasına oturur, ön el üstte kalır
   if (holding) _rbLauncher(ctx, localAim, r, accent, gunX, gunY);
   // 7) Ön kol + el (namluyu kavrar) ve elde taşınan alet
-  _rbArm(ctx, shFX, shFY, handF.x, handF.y, r * 0.20, r * 0.21, color);
+  _rbArm(ctx, shFX * torsoX, shFY, handF.x, handF.y, r * 0.20, r * 0.21, color);
   _rbHand(ctx, handF.x, handF.y, handAngleF, handSize, color, holding);
   if (_RB_WRIST_TOOLS.has(def.attachment)) {
     _rbWristTool(ctx, def.attachment, handF.x, handF.y, handAngleF, r, accent, color);
@@ -1110,11 +1349,14 @@ function drawRobot(ctx, options) {
   if (o.upgradeVisuals && o.upgradeVisuals.attachmentGlow) {
     _rbAttachmentGlow(ctx, def.attachment, r, accent, { handFx: handF.x, handFy: handF.y });
   }
+  ctx.restore(); // üst gövde kayması
   // 8) Takılı parça aksesuarları (v5): yuva→parça eşlemesi (id veya spec)
   // verilmezse hiçbir şey çizilmez — parçasız robot görünümü birebir korunur.
   // timeMs/walking canlı efektlerin (tarama çizgisi, egzoz alevi, LED sırası…)
-  // fazını belirler; deterministiktir.
-  _rbPartAccessories(ctx, r, _rbPartSpecs(o.parts), timeMs, walking);
+  // fazını belirler; deterministiktir. Oranlar yuva bazında uygulanır: kask
+  // parçaları kafa ölçeğini, kasa/sırt parçaları gövde genişliğini, ayak
+  // parçaları yer temasını izler (yoksa parça gövdeden kopuyor).
+  _rbPartAccessories(ctx, r, _rbPartSpecs(o.parts), timeMs, walking, props, upperDy);
   ctx.restore();
   return true;
 }
@@ -1500,13 +1742,35 @@ const _RB_PART_SECONDARY = {
   feet: { ax: 0, ay: 0.93, mirror: 1, dx: 0, dy: -0.30, scale: 0.50 },
 };
 
-function _rbPartAccessories(ctx, r, parts, timeMs, walking) {
+function _rbPartAccessories(ctx, r, parts, timeMs, walking, props, upperDy) {
   if (!parts) return;
+  // Yuva bazında oran dönüşümü: kask parçaları kafa ölçeğini, kasa/sırt
+  // parçaları gövde genişliğini, ayak parçaları yer temasını izler. `props`
+  // yoksa (eski çağrı) hiç dönüşüm uygulanmaz.
+  const neckY = -r * 0.48;
+  const warp = props
+    ? (slot) => {
+        ctx.save();
+        if (slot === "feet") {
+          ctx.translate(0, r);
+          ctx.scale(props.stance, props.legs);
+          ctx.translate(0, -r);
+        } else if (slot === "helmet") {
+          ctx.translate(0, (upperDy || 0) + neckY);
+          ctx.scale(props.head, props.head);
+          ctx.translate(0, -neckY);
+        } else {
+          ctx.translate(0, upperDy || 0);
+          ctx.scale(props.torsoX, 1);
+        }
+      }
+    : null;
   for (const slot of _RB_PART_ORDER) {
     const specs = parts[slot];
     if (!specs) continue;
     const family = _RB_PART_DRAW[slot];
     if (!family) continue;
+    if (warp) warp(slot);
     for (let i = 0; i < specs.length; i++) {
       const spec = specs[i];
       if (!spec || !spec.icon) continue;
@@ -1524,5 +1788,6 @@ function _rbPartAccessories(ctx, r, parts, timeMs, walking) {
         ctx.restore();
       }
     }
+    if (warp) ctx.restore();
   }
 }

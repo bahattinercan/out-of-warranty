@@ -34,7 +34,28 @@ Bu ayrım, aynı mekanik yetenek türüne sahip robotların birbirinin renk vary
 - Oyuncunun baktığı yön namluya ek olarak kaskın önü (+x) ve vizörle anlaşılmalı.
 - Ağır ve hafif robotların yalnız yarıçapı değil, ağırlık merkezi de farklı görünmeli.
 - Oyuncu/operatör rengi silüeti değiştirmemeli; yalnız küçük bir şerit veya durum lambasında kullanılmalı.
-- Kask, hale ve baş üstü donanımı HP çubuğunun (`cy - r - 12`) üstüne taşmamalı.
+- Kask, hale ve baş üstü donanımı HP çubuğuna değmemeli. Çubuk yüksekliği artık sabit değil: `robots.js > robotTopOffset(charDef)` çizilen en üst noktayı verir, `Entity.draw` çubuğu onun 12 px üstüne koyar (2026-11-10).
+
+### 3.1 Ölçülen durum ve oran grameri (2026-11-10)
+
+`_robot_silhouette_probe.html` (tarayıcıda açılır, üretim kodu değiştirmez) oyun içi gerçek boyutta alfa maskesi çıkarıp 34 robotun 561 çiftini karşılaştırır:
+
+| Ölçüm | Önce | Sonra |
+| --- | --- | --- |
+| En benzer çift (IoU) | **1.000** (VIZIR ↔ FAN-5, birebir aynı) | 0.915 (SİREN-6 ↔ ASİT-6) |
+| Ortalama IoU | 0.694 | 0.650 |
+| IoU ≥ 0.60 çift | 426 / 561 | 382 / 561 |
+| Birebir aynı aile üçlüsü | 6 karakter (3 grup) | 0 (34/34 tekil) |
+| HP çubuğuna değen kask | 10 / 34 | 0 / 34 (pay 5.6–12.6 px) |
+| Düz görünen robot (değer aralığı < 90) | 6 / 34 | 6 / 34 |
+
+**Neden IoU hâlâ ~0.65?** IoU hem biçimi hem boyutu cezalandırır; 34 insansı robotta gövde+kask+bacak iskeleti ortak olduğu için iki farklı karakter bile %60–70 örtüşür. IoU "kopya var mı" sorusunun aracıdır, "karakterler yeterince farklı mı" sorusunun değil: **gate = max IoU ≤ 0.93 ve birebir aynı aile üçlüsü olmaması**. Görsel kimlik ayrıca kask silüeti, renk ve aparattan gelir.
+
+Mekanizma: `robots.js > _rbProportions(def)` dört eksende oran üretir — `head` (kask ölçeği, boyun pivotuna göre), `torsoX` (gövde/omuz genişliği), `legs` (bacak uzunluğu, **yer temasına** göre; kalça kayar), `stance` (ayak açıklığı) — aile tablolarının toplamı + `def.id` tohumlu sapma, sonra sınırlama. Kask kabuğu aileye göre beş ayrı silüettir (`_rbHeadShellPath`): düz tepeli kutu (ağır/kazıcı), kubbe (mıknatıslı/uçan), kapsül (yaylı), kama (tekerlekli), fasetli (deneysel), yuvarlatılmış kutu (bakım).
+
+**Kural:** yeni robot eklerken oranları elle yazma; `chassis`/`body`/`locomotion` alanlarını doğru doldur. Aynı üçlüyü paylaşan iki karakter silüet kopyası olur — probe bunu yakalar.
+
+Namlu hizası ve HP çubuğu bu oranlara bağlıdır: `robotMuzzlePoint(..., charDef)` ve `robotTopOffset(charDef)`. Çizim ile mantık aynı fonksiyonları okur (`tests/run.js` "Nişan hizası" grubu).
 
 ## 4. İlk beş robot
 

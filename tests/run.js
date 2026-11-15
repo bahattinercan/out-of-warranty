@@ -15,10 +15,10 @@ const path = require("path");
 
 // ── Kaynakları tek sandbox'ta yükle ─────────────────────────────────────────
 const JS_DIR = path.join(__dirname, "..", "js");
-const FILES = ["i18n.js", "version.js", "portal.js", "diagnostics.js", "audio.js", "characters.js", "progression.js", "profile.js", "parts.js", "market.js", "maps.js", "skills.js", "skill-fx.js", "robots.js", "terrain.js", "weapons.js", "entity.js", "projectile.js", "ai.js", "game.js"];
+const FILES = ["i18n.js", "version.js", "portal.js", "diagnostics.js", "audio.js", "characters.js", "progression.js", "profile.js", "parts.js", "market.js", "assets-manifest.js", "assets.js", "maps.js", "skills.js", "skill-fx.js", "robots.js", "terrain.js", "weapons.js", "entity.js", "projectile.js", "ai.js", "game.js"];
 const bundle =
   FILES.map((f) => fs.readFileSync(path.join(JS_DIR, f), "utf8")).join("\n;\n") +
-  "\n;globalThis.__M = { CHARACTERS, MAPS, BIOMES, FACTORY_ZONES, PROP_DRAWERS, WEAPONS, SKILL_PROJECTILES, PROJECTILE_SHAPES, SHARED_SHAPES, PROJ_SUBSTEP, PROJ_MAX_SUBSTEPS, useSkill, drawCharExtras, drawRobot, robotMuzzlePoint, RB_GUN_PIVOT_X, RB_GUN_PIVOT_Y, RB_GUN_MUZZLE, RB_VISUAL_SCALE, Entity, Projectile, Explosion, GRAVITY, Game, BotController, AI_LIMITS, aiWorldKey, aiSimulateShot, aiCoarseCandidates, aiPathIsSafe, aiRandom, AI_DIFFICULTY, aiDamageMultiplier, aiAssignDamageScale, aiSelectWeapon, skillConsumesShot, SKILL_SHOT_KINDS, AI_SKILL_REPLACE_SCORE, " +
+  "\n;globalThis.__M = { CHARACTERS, MAPS, BIOMES, FACTORY_ZONES, PROP_DRAWERS, WEAPONS, SKILL_PROJECTILES, PROJECTILE_SHAPES, SHARED_SHAPES, PROJ_SUBSTEP, PROJ_MAX_SUBSTEPS, useSkill, drawCharExtras, drawRobot, robotMuzzlePoint, robotTopOffset, _rbProportions, RB_GUN_PIVOT_X, RB_GUN_PIVOT_Y, RB_GUN_MUZZLE, RB_VISUAL_SCALE, Entity, Projectile, Explosion, GRAVITY, Game, BotController, AI_LIMITS, aiWorldKey, aiSimulateShot, aiCoarseCandidates, aiPathIsSafe, aiRandom, AI_DIFFICULTY, aiDamageMultiplier, aiAssignDamageScale, aiSelectWeapon, skillConsumesShot, SKILL_SHOT_KINDS, AI_SKILL_REPLACE_SCORE, " +
   "SKILL_FX_SHAPES, SKILL_FX_KIND_DEFAULT, SKILL_FX_EXTENT, spawnSkillFx, updateSkillFx, drawSkillFx, drawSkillFxIcon, drawSkillAura, SkillFx, " +
   "SERVICE_LEVELS, MAX_SERVICE_XP, MAX_TIER, START_SCRAP, BRANCHES, BRANCH_LABELS, TIER_COSTS, TIER_LEVEL_GATES, REWARD_BASE, DIFFICULTY_MULTIPLIER, levelForXp, xpForLevel, nextLevelXp, levelUpMessage, calculateMatchReward, resolveRobotBuild, upgradeEffectText, robotUpgradeSummary, totalTiers, sanitizeUpgrades, nextUpgradeStep, toSafeInt, defaultProfile, defaultRobotProgress, normalizeProfile, loadProfile, saveProfile, getRobotProgress, grantMatchReward, purchaseUpgrade, PROFILE_KEY, createSessionId, " +
   "AMMO_DEPOT_CAP, AMMO_BULK_QTY, AMMO_BULK_QTY_BIG, AMMO_PRICES, ammoPriceFor, ammoBasePrice, weaponPowerScore, weaponStats, sellableWeapons, sanitizeAmmoDepot, getAmmoDepot, setAmmoDepot, mergeDepots, ammoDepotTotal, buyAmmo, mergeAmmoWithDepot, battleLoad, unspentDepot, settleDepot, weaponById, weaponBattleMax, isSellableWeapon, initialAmmo, " +
@@ -436,6 +436,55 @@ for (const ch of chars) {
   } catch (e) { threw = true; }
   check(`${ch.label}: robot çizimi exception atmıyor`, !threw);
   check(`${ch.label}: robot çizildi`, result === true && ctx.calls.fill + ctx.calls.stroke > 0);
+}
+
+// ── Silüet oran grameri (2026-11-10) ───────────────────────────────────────
+// Ölçüm geçmişi: 34 robotun 561 çiftinin 426'sı IoU ≥ 0.60 çıkıyordu ve bir
+// çift birebir aynıydı (VIZIR ↔ FAN-5 = 1.000) — kadro "aynı iskeletin renk
+// varyantı" gibi okunuyordu. Ayrıntı: docs/robot-theme/02_KARAKTER_SISTEMI.md
+// §3.1. Node'da piksel ölçemiyoruz; ölçülebilir olan KÖK NEDEN denetleniyor:
+// aynı (chassis, body, locomotion) üçlüsü aynı oranları üretir → iki robot
+// kaçınılmaz olarak aynı silüet olur. Piksel bekçisi tarayıcıda:
+// `_robot_silhouette_probe.html`.
+group("Robot silüeti — oran grameri ve namlu sözleşmesi");
+{
+  const triples = new Map();
+  for (const ch of chars) {
+    const key = `${ch.chassis}/${ch.body}/${ch.locomotion}`;
+    if (!triples.has(key)) triples.set(key, []);
+    triples.get(key).push(ch.label);
+  }
+  const dupes = [...triples].filter(([, v]) => v.length > 1);
+  check("her robotun gövde/hareket ailesi üçlüsü tekil (silüet kopyası yok)",
+    dupes.length === 0, dupes.map(([k, v]) => `${k} → ${v.join(", ")}`).join(" | "));
+
+  const LIMITS = { head: [0.84, 1.24], torsoX: [0.84, 1.16], legs: [0.88, 1.22], stance: [0.88, 1.16] };
+  for (const ch of chars) {
+    const p = M._rbProportions(ch);
+    const q = M._rbProportions(ch);
+    check(`${ch.label}: oranlar deterministik (aynı girdi → aynı oran)`,
+      p.head === q.head && p.legs === q.legs && p.torsoX === q.torsoX && p.stance === q.stance,
+      JSON.stringify(p));
+    check(`${ch.label}: oranlar sınır içinde`,
+      Object.keys(LIMITS).every((k) => p[k] >= LIMITS[k][0] && p[k] <= LIMITS[k][1]),
+      `head=${p.head.toFixed(2)} torsoX=${p.torsoX.toFixed(2)} legs=${p.legs.toFixed(2)} stance=${p.stance.toFixed(2)}`);
+    check(`${ch.label}: üst gövde kayması bacak ölçeğiyle tutarlı`,
+      Math.abs(p.upperDy - 0.96 * (1 - p.legs)) < 1e-9, `upperDy=${p.upperDy}`);
+    const top = M.robotTopOffset(ch);
+    check(`${ch.label}: HP çubuğu ofseti makul aralıkta`,
+      Number.isFinite(top) && top < -1.2 && top > -2.6, `top=${top.toFixed(3)}r`);
+    for (const facing of [1, -1]) {
+      const m = M.robotMuzzlePoint(0, 0, ch.r, facing, -0.5, ch);
+      check(`${ch.label}: namlu noktası sonlu (facing=${facing})`,
+        Number.isFinite(m.x) && Number.isFinite(m.y), `(${m.x},${m.y})`);
+    }
+  }
+  // Geriye dönük uyum: charDef verilmeyen çağrı nötr oran döndürmeli
+  // (eski testler ve dış çağrılar kırılmasın).
+  const neutral = M._rbProportions(undefined);
+  check("charDef'siz çağrı nötr oran verir",
+    neutral.head === 1 && neutral.torsoX === 1 && neutral.legs === 1 &&
+    neutral.stance === 1 && neutral.upperDy === 0, JSON.stringify(neutral));
 }
 
 // Nişan hizası, son-atış çizgisi ve mermi çıkışı ÇİZİLEN namlunun ağzından

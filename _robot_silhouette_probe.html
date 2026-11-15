@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8" />
+  <title>robot silüet denetimi</title>
+  <!-- Silüet okunurluğu ölçüm sondası.
+   * Oyun içi gerçek boyutta (r = def.r * RB_VISUAL_SCALE) her robotu çizip
+   * alfa maskesini çıkarır ve iki şeyi ölçer:
+   *   1) İkili IoU — "hangi robot hangisinin rengi değişmiş hâli" (hedef < 0.60)
+   *   2) Küçük boyutta kalan ayrı silüet pikseli — gerçek okunurluk
+   * Üretim kodu değiştirmez, yalnız raporlar. Sonuç DOM'a yazılır. -->
+  <style>html,body{margin:0;background:#101820;color:#cfe2f0;font:12px monospace}canvas{display:block}pre{padding:8px}</style>
+</head>
+<body>
+  <canvas id="c" width="240" height="240" style="display:none"></canvas>
+  <pre id="out">çalışıyor…</pre>
+
+  <script src="js/i18n.js"></script>
+  <script src="js/characters.js"></script>
+  <script src="js/robots.js"></script>
+  <script>
+  (function () {
+    const S = 240;                 // kutu
+    const c = document.getElementById("c");
+    const ctx = c.getContext("2d");
+
+    function maskOf(def) {
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.clearRect(0, 0, S, S);
+      drawRobot(ctx, { cx: S / 2, cy: S * 0.62, r: def.r, charDef: def, facing: 1, timeMs: 600, motion: { onGround: true } });
+      const d = ctx.getImageData(0, 0, S, S).data;
+      const m = new Uint8Array(S * S);
+      for (let i = 0; i < S * S; i++) m[i] = d[i * 4 + 3] > 40 ? 1 : 0;
+      return m;
+    }
+
+    function iou(a, b) {
+      let inter = 0, uni = 0;
+      for (let i = 0; i < a.length; i++) {
+        if (a[i] || b[i]) uni++;
+        if (a[i] && b[i]) inter++;
+      }
+      return uni ? inter / uni : 0;
+    }
+
+    function area(m) { let n = 0; for (let i = 0; i < m.length; i++) n += m[i]; return n; }
+
+    // 1. boyutlu piksel kümesini küçültme: oyun içi görünür ayrım
+    // (tekil silüet pikseli = kimsenin kopyası olmayan piksel sayısı)
+    const masks = CHARACTERS.map(maskOf);
+    const n = CHARACTERS.length;
+    const pairs = [];
+    for (let i = 0; i < n; i++) {
+      for (let j = i + 1; j < n; j++) pairs.push({ i, j, v: iou(masks[i], masks[j]) });
+    }
+    pairs.sort((a, b) => b.v - a.v);
+
+    // Her robot için en benzer eşini bul → "silüet kimliği" var mı?
+    const worst = new Map();
+    for (const p of pairs) {
+      if (!worst.has(p.i)) worst.set(p.i, p);
+      if (!worst.has(p.j)) worst.set(p.j, p);
+    }
+    const cloned = [...worst.values()].filter(p => p.v >= 0.60);
+
+    // 3) Değer kontrastı: silüet içindeki parlaklık yayılımı.
+    // Düşük std = "yıkanmış" görünüm; 20 px'te kimlik değerden okunur.
+    function valueStats(def) {
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.clearRect(0, 0, S, S);
+      drawRobot(ctx, { cx: S / 2, cy: S * 0.62, r: def.r, charDef: def, facing: 1, timeMs: 600, motion: { onGround: true } });
+      const d = ctx.getImageData(0, 0, S, S).data;
+      const lum = [];
+      for (let i = 0; i < S * S; i++) {
+        if (d[i * 4 + 3] > 200) lum.push(0.2126 * d[i * 4] + 0.7152 * d[i * 4 + 1] + 0.0722 * d[i * 4 + 2]);
+      }
+      if (!lum.length) return { mean: 0, std: 0, range: 0 };
+      const mean = lum.reduce((a, b) => a + b, 0) / lum.length;
+      const varr = lum.reduce((a, b) => a + (b - mean) * (b - mean), 0) / lum.length;
+      lum.sort((a, b) => a - b);
+      return { mean, std: Math.sqrt(varr), range: lum[Math.floor(lum.length * 0.95)] - lum[Math.floor(lum.length * 0.05)] };
+    }
+    const vs = CHARACTERS.map(valueStats);
+    const avg = k => vs.reduce((a, b) => a + b[k], 0) / vs.length;
+
+    // 4) Yerleşim bekçisi: kask HP çubuğuna değmemeli, ayak yere basmalı.
+    // HP çubuğu `entity.js > draw` içinde `cy - r - 15`den başlar, yüksekliği 6
+    // → alt kenarı `cy - r - 9`. Ayak tabanı fizik tabanı `cy + r`.
+    function boundsOf(def) {
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.clearRect(0, 0, S, S);
+      const cy = S * 0.62;
+      drawRobot(ctx, { cx: S / 2, cy, r: def.r, charDef: def, facing: 1, timeMs: 600, motion: { onGround: true } });
+      const d = ctx.getImageData(0, 0, S, S).data;
+      let top = S, bot = -1;
+      for (let y = 0; y < S; y++) {
+        for (let x = 0; x < S; x++) {
+          if (d[(y * S + x) * 4 + 3] > 40) { if (y < top) top = y; if (y > bot) bot = y; break; }
+        }
+      }
+      return { top: top - cy, bot: bot - cy };
+    }
+    const bounds = CHARACTERS.map(boundsOf);
+    // Aynı robotun NÖTR oranlarla (head/torso/legs = 1) ölçümü: ihlalin bu
+    // değişiklikten mi geldiğini yoksa önceden mi var olduğunu ayırır.
+    const boundsNeutral = CHARACTERS.map((def) => boundsOf(Object.assign({}, def, {
+      id: def.id + "-neutral", chassis: "_none", body: "_none", locomotion: "_none",
+    })));
+
+    const areas = masks.map(area);
+    const lines = [];
+    lines.push("karakter sayısı: " + n);
+    lines.push("boyut: oyun içi gerçek (r = def.r * RB_VISUAL_SCALE)");
+    lines.push("alan (px, ort.): " + Math.round(areas.reduce((a, b) => a + b, 0) / n));
+    lines.push("");
+    lines.push("=== EN BENZER 12 SİLÜET ÇİFTİ (IoU) ===");
+    for (const p of pairs.slice(0, 12)) {
+      lines.push(p.v.toFixed(3) + "  " + CHARACTERS[p.i].label + " ↔ " + CHARACTERS[p.j].label);
+    }
+    const vals = pairs.map(p => p.v);
+    lines.push("");
+    lines.push("IoU ort.: " + (vals.reduce((a, b) => a + b, 0) / vals.length).toFixed(3) +
+      "  ·  medyan: " + vals.sort((a, b) => a - b)[Math.floor(vals.length / 2)].toFixed(3) +
+      "  ·  >0.60 çift: " + pairs.filter(p => p.v >= 0.60).length + "/" + pairs.length);
+    lines.push("silüeti kopya sayılan robot: " + cloned.length + "/" + n + "  (hedef: 0)");
+    lines.push("");
+    lines.push("=== DEĞER KONTRASTI (silüet içi parlaklık, 0-255) ===");
+    lines.push("ort. parlaklık: " + avg("mean").toFixed(1) + "  ·  std: " + avg("std").toFixed(1) +
+      "  ·  p5-p95 aralığı: " + avg("range").toFixed(1));
+    const flat = vs.filter(v => v.range < 90).length;
+    lines.push("aralığı 90'ın altında (düz görünen): " + flat + "/" + n);
+    lines.push("");
+    lines.push("=== YERLEŞİM BEKÇİSİ (HP çubuğu kafaya değmemeli) ===");
+    // Çubuk artık Entity.draw içinde robotTopOffset(def) ile yerleştiriliyor:
+    // alt kenarı = topOffset · r · 1.10 − 6. Kural: ÇİZİLEN en üst piksel bu
+    // çizginin ALTINDA kalmalı (değer daha büyük) ama boşluk da 34 px'i geçmesin.
+    let bad = 0, slackMin = 1e9, slackMax = -1e9;
+    CHARACTERS.forEach((def, i) => {
+      const r = def.r, b = bounds[i];
+      const barBottom = (typeof robotTopOffset === "function" ? robotTopOffset(def) : -1.42) * r * 1.10 - 6;
+      const slack = b.top - barBottom; // >0 → kask çubuğun altında (iyi)
+      slackMin = Math.min(slackMin, slack);
+      slackMax = Math.max(slackMax, slack);
+      if (slack < 0 || slack > 34) {
+        bad++;
+        lines.push("  ⚠ " + def.label + "  kask=" + b.top.toFixed(1) + "  çubuk altı=" + barBottom.toFixed(1) +
+          "  pay=" + slack.toFixed(1) + " px");
+      }
+    });
+    lines.push(bad === 0
+      ? "ihlal yok · pay " + slackMin.toFixed(1) + "-" + slackMax.toFixed(1) + " px"
+      : "ihlal: " + bad + "/" + n + "  (pay " + slackMin.toFixed(1) + "-" + slackMax.toFixed(1) + " px)");
+    // Ayak/taban bilgisi: elde taşınan aparat alt sarkabildiği için gate değil.
+    let low = 0;
+    CHARACTERS.forEach((def, i) => { if (bounds[i].bot > def.r * 1.10 + 3) low++; });
+    lines.push("bilgi: tabanı 1.10r'nin 3 px altında olan robot: " + low + "/" + n +
+      " (aparat/teker geometrisi, gate değil)");
+    lines.push("");
+    lines.push("=== KOPYA LİSTESİ (IoU >= 0.60) ===");
+    if (!cloned.length) lines.push("yok");
+    for (const p of cloned.sort((a, b) => b.v - a.v)) {
+      lines.push("  " + p.v.toFixed(3) + "  " + CHARACTERS[p.i].label + " ↔ " + CHARACTERS[p.j].label);
+    }
+
+    document.getElementById("out").textContent = lines.join("\n");
+    document.title = "IoU>0.60:" + pairs.filter(p => p.v >= 0.60).length + "/" + pairs.length;
+  })();
+  </script>
+</body>
+</html>
