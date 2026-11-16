@@ -2,7 +2,7 @@
 <html lang="tr">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
   <title data-i18n="brand.title">Garanti Dışı (Out of Warranty)</title>
   <link rel="stylesheet" href="css/style.css" />
 </head>
@@ -381,6 +381,33 @@
         <div id="weapon-desc"></div>
       </div>
 
+      <!-- Mobil Dokunmatik D-Pad ve Kontroller -->
+      <div id="mobile-controls" class="hidden" aria-label="Mobil Kontroller">
+        <div id="touch-dpad">
+          <button id="touch-left" class="touch-btn" type="button" aria-label="Sola Yürü" title="Sola Yürü">
+            <svg viewBox="0 0 24 24" width="28" height="28" aria-hidden="true"><path fill="currentColor" d="M15.41 7.41 14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg>
+          </button>
+          <button id="touch-right" class="touch-btn" type="button" aria-label="Sağa Yürü" title="Sağa Yürü">
+            <svg viewBox="0 0 24 24" width="28" height="28" aria-hidden="true"><path fill="currentColor" d="M10 6 8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg>
+          </button>
+          <button id="touch-jump" class="touch-btn" type="button" aria-label="Sıçra" title="Sıçra (W)">
+            <svg viewBox="0 0 24 24" width="28" height="28" aria-hidden="true"><path fill="currentColor" d="M12 8l-6 6 1.41 1.41L12 10.83l4.59 4.58L18 14z"/></svg>
+          </button>
+        </div>
+        <div id="touch-actions">
+          <button id="touch-cancel" class="touch-btn danger hidden" type="button" aria-label="Atışı İptal Et" title="Atışı İptal Et">✕</button>
+        </div>
+      </div>
+
+      <!-- Dikey Ekran Uyarı Katmanı -->
+      <div id="orientation-warning" class="hidden">
+        <div class="orient-box">
+          <span class="orient-icon" aria-hidden="true">🔄</span>
+          <h2 data-i18n="hud.rotateScreen">Lütfen Cihazınızı Yatay Çevirin</h2>
+          <p data-i18n="hud.rotateSub">En iyi oyun deneyimi için yatay (landscape) mod gereklidir.</p>
+        </div>
+      </div>
+
     </div>
 
   </div>
@@ -419,6 +446,7 @@
   <script src="js/net/adapter.js"></script>
   <script src="js/online-lobby.js"></script>
   <script src="js/game.js"></script>
+  <script src="js/mobile.js"></script>
   <script src="js/main.js"></script>
 </body>
 </html>

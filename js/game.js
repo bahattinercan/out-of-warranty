@@ -5749,6 +5749,7 @@ class Game {
       wind.classList.toggle("wind-changed", !!this.windChangeFx);
     }
     this.updateWeaponHud();
+    if (typeof MOBILE !== "undefined") MOBILE.syncVisibility();
   }
 
   // Açılır silah listesi + seçili silahın açıklama paneli + alt panel yuvaları.

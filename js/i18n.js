@@ -289,6 +289,8 @@ const I18N = {
     "skill.consumesShot": "Uses up the turn's shot",
     "hud.turnIdle": "Turn: -",
     "hud.windIdle": "Wind: -",
+    "hud.rotateScreen": "Please Rotate Your Device",
+    "hud.rotateSub": "Landscape orientation is required for optimal gameplay.",
     "hud.language": "Language",
     "hud.fullscreen": "Fullscreen",
     "hud.fullscreen.title": "Fullscreen (F)",

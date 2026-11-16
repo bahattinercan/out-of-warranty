@@ -1,0 +1,20 @@
+{
+  "appId": "com.bahattinercan.outofwarranty",
+  "appName": "Out of Warranty",
+  "webDir": ".",
+  "bundledWebRuntime": false,
+  "server": {
+    "androidScheme": "https"
+  },
+  "android": {
+    "allowMixedContent": true,
+    "webContentsDebuggingEnabled": true
+  },
+  "plugins": {
+    "SplashScreen": {
+      "launchShowDuration": 1500,
+      "backgroundColor": "#081116",
+      "showSpinner": false
+    }
+  }
+}
