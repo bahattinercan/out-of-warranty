@@ -466,6 +466,10 @@ class Terrain {
     const { w, h, ctx } = this;
     const theme = this.theme;
     ctx.clearRect(0, 0, w, h);
+    // Görselin gerçekten boyandığı profil: krater duvarının kırpma poligonu
+    // bununla çizilir ki dolgu kenarı zeminin kendi sınırıyla birebir örtüşsün
+    // (host: kayayan noktalı `surface`, misafir: maskeden türetilen tamsayı).
+    this.paintSurface = heights;
     paintGround(ctx, heights, w, h, theme);      // dikey gradyan + strata + serpme doku
     paintSurfaceBand(ctx, heights, w, h, theme); // grass / rooftop / snow / autumn üst bant
     paintProps(ctx, heights, w, h, theme);       // temaya özel objeler (kraterle aşınır)
@@ -502,41 +506,53 @@ class Terrain {
     return len ? { x: nx / len, y: ny / len } : { x: 0, y: -1 };
   }
 
-  /* Krater iç duvarı — "toprak kesiti". Çemberin ZEMİN İÇİNDE kalan dilimine
-   * (ilk yüzeyin altına) satır satır koyu toprak + yatay sediment şeritleri
+  /* Krater iç duvarı — "toprak kesiti". Krater çemberinin ZEMİN İÇİNDE kalan
+   * dilimini koyu toprak degradesiyle boyar, üstüne soluk jeolojik katmanlar
    * basar; gökyüzüne taşan üst dilim boyanmaz (patlama ağzı gökyüzü kalır).
-   * Satır satır çizilir çünkü clip/Path2D gerekmez (mock ctx testlerinde de
-   * çalışır) ve dolgu yalnız oyulmuş satırlara, yalnız ilk yüzeyin altına düşer. */
+   *
+   * Neden satır/sütun dolgusu DEĞİL: eksen hizalı 1 px dikdörtgenler dolgu
+   * sınırını dünya pikseli adımlarıyla çiziyordu → krater kenarı testere dişi,
+   * sediment şeritleri tarama çizgisi gibi görünüyordu ("pixellik" bildirimi).
+   * Artık iki KIRPMA kesişimi kullanılır: (1) krater çemberi, (2) yüzey
+   * profilinin altı. Canvas kırpmayı kenar yumuşatarak uygular, dolgu tek
+   * dikdörtgen olduğu için adım oluşmaz. */
   paintCraterWall(ctx, cx, cy, radius) {
     const { w, h } = this;
-    const heights = this.voidProfile || this._maskHeights();
+    const profile = this.paintSurface || this.voidProfile || this._maskHeights();
     const dirt = this.theme.dirt;
-    // Derinlik rampası: yüzeye yakın daha açık, dipte neredeyse siyah.
-    const ramp = [];
-    for (let s = 0; s < 6; s++) ramp.push(_shade(dirt, -0.58 - s * 0.06));
-    const seam = _shadeA(dirt, -0.16, 0.42);  // açık sediment şeridi
-    const r2 = radius * radius;
-    const y0 = Math.max(0, Math.ceil(cy - radius));
-    const y1 = Math.min(h - 1, Math.floor(cy + radius));
+    const r = Math.max(0.5, radius - 0.5);
+    const xa = Math.max(0, Math.floor(cx - r) - 1);
+    const xb = Math.min(w - 1, Math.ceil(cx + r) + 1);
+    const yTop = cy - r, yBot = cy + r;
+    if (xb < xa) return;
     ctx.save();
-    for (let y = y0; y <= y1; y++) {
-      const dy = y - cy;
-      const dx = Math.sqrt(Math.max(0, r2 - dy * dy));
-      if (dx < 0.5) continue;
-      const xa = Math.max(0, Math.ceil(cx - dx));
-      const xb = Math.min(w - 1, Math.floor(cx + dx));
-      if (xb < xa) continue;
-      const depth = Math.min(1, (y - (cy - radius)) / (radius * 2));
-      // Sediment: dünyadaki sabit y hizası (haritanın kendi strata çizgileriyle uyumlu)
-      ctx.fillStyle = y % 11 === 0 ? seam : ramp[Math.min(ramp.length - 1, Math.floor(depth * ramp.length))];
-      // Satırı, ilk yüzeyin altında kalan sütun koşularına böl.
-      let start = -1;
-      for (let x = xa; x <= xb + 1; x++) {
-        const top = x <= xb ? (heights[x] == null ? h : heights[x]) : h + 1;
-        const inGround = x <= xb && y >= Math.floor(top);
-        if (inGround) { if (start < 0) start = x; }
-        else if (start >= 0) { ctx.fillRect(start, y, x - start, 1); start = -1; }
-      }
+    // (1) Krater çemberi — yuvarlak ağız kenarı yumuşak çizilir.
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, 0, Math.PI * 2);
+    ctx.clip();
+    // (2) Zemin dilimi — kırpma poligonu yüzey profilini izler; profilin
+    //     tepesine oturan ağız kenarı da böylece merdiven yapmaz.
+    ctx.beginPath();
+    ctx.moveTo(xa, h);
+    for (let x = xa; x <= xb; x++) {
+      const top = profile[x] == null ? h : Math.min(h, Math.max(0, profile[x]));
+      ctx.lineTo(x, top);
+    }
+    ctx.lineTo(xb, h);
+    ctx.closePath();
+    ctx.clip();
+    // Duvar: yüzeye yakın daha açık, dipte daha koyu tek dikey degrade.
+    const grad = ctx.createLinearGradient(0, yTop, 0, yBot);
+    grad.addColorStop(0, _shade(dirt, -0.52));
+    grad.addColorStop(1, _shade(dirt, -0.84));
+    ctx.fillStyle = grad;
+    ctx.fillRect(xa, yTop, xb - xa + 1, yBot - yTop);
+    // Jeolojik katmanlar: 1 px tarama çizgisi değil, 3 px'lik soluk bantlar
+    // (dünyadaki sabit y hizası → haritanın kendi strata çizgileriyle uyumlu).
+    ctx.fillStyle = _shadeA(dirt, -0.05, 0.18);
+    for (let y = Math.ceil(yTop); y <= yBot; y++) {
+      if (y % 19 !== 0) continue;
+      ctx.fillRect(xa, y, xb - xa + 1, 3);
     }
     ctx.restore();
   }

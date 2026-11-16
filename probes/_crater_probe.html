@@ -123,9 +123,10 @@
 window.addEventListener("DOMContentLoaded", () => {
   const canvas = document.getElementById("game");
   const game = new Game(canvas);
+  const params = new URLSearchParams(location.search);
   game.selectedChars = CHARACTERS.slice(0, 2);
   // ?map=<indeks> ile farklı tema sınanır (krater kesiti her zeminde okunmalı).
-  const mapIdx = Math.max(0, Math.min(MAPS.length - 1, Number(new URLSearchParams(location.search).get("map")) || 0));
+  const mapIdx = Math.max(0, Math.min(MAPS.length - 1, Number(params.get("map")) || 0));
   game.selectedMap = MAPS[mapIdx];
   game.playerControls = ["human", "bot"];
   game.mode = "computer";
@@ -173,6 +174,22 @@ window.addEventListener("DOMContentLoaded", () => {
     ...holes.map((h, i) =>
       `delik ${i + 1} (${Math.round(h.x)},${Math.round(h.y)}): arka planlı ${fmt(withBackdrop[i])} · arka plansız ${fmt(noBackdrop[i])}`),
   ];
+  // ?zoom=<n>: ilk kraterin çevresini n kat büyütüp ayrı tuvale basar
+  // (kenar testere dişi / tarama çizgisi gibi piksellik kusurlarını gözle denetlemek için).
+  const zoom = Number(params.get("zoom")) || 0;
+  if (zoom > 0) {
+    const z = document.createElement("canvas");
+    const cw = 300, ch = 210;
+    z.width = cw * zoom; z.height = ch * zoom;
+    z.style.cssText = `position:fixed;right:8px;top:8px;z-index:99;border:2px solid #ffe45e;width:${cw * zoom}px;height:${ch * zoom}px`;
+    const zc = z.getContext("2d");
+    zc.imageSmoothingEnabled = params.get("nearest") !== "1";  // oyunla aynı: yumuşatmalı
+    const srcX = Math.round((holes[0].x - cw / 4) * game._scaleX);
+    const srcY = Math.round((holes[0].y - ch / 3) * game._scaleY);
+    zc.drawImage(canvas, srcX, srcY, cw / game._scaleX * game._scaleX, ch / game._scaleY * game._scaleY, 0, 0, cw * zoom, ch * zoom);
+    document.body.appendChild(z);
+  }
+
   // Kapı kararı: krater arka planı GÖSTERMEMELİ (arka planlı ≈ arka plansız)
   // ve zeminden/gökyüzünden koyu olmalı. Aksi hâlde "saydam krater" hatası geri
   // gelmiştir ("mermiyle vurulmuş yerler saydam görünüyor" bildirimi).
@@ -183,6 +200,27 @@ window.addEventListener("DOMContentLoaded", () => {
     const dark = lum(a) < lum(groundRef) - 8 && lum(a) < lum(skyRef) + 8;
     return `delik ${i + 1}: sızıntı ${leak ? "VAR ✗" : "yok ✓"} · koyu ${dark ? "✓" : "✗"}`;
   });
+  // Piksellik ölçümü: krater merkezinden dikey tarama. Kenar yumuşatma
+  // çalışıyorsa komşu satır farkı küçük olur; satır satır dolguda (eski hâl)
+  // her satırda sıçrama vardı.
+  {
+    const tctx = t.ctx;   // arazi katmanı (ss=2), ekran değil
+    const hx = Math.round(holes[0].x), hy = Math.round(holes[0].y);
+    const rows = [];
+    for (let dy = -22; dy <= 22; dy++) {
+      const d = tctx.getImageData(hx * t.ss, (hy + dy) * t.ss, 1, 1).data;
+      rows.push(0.2126 * d[0] + 0.7152 * d[1] + 0.0722 * d[2]);
+    }
+    let maxJump = 0, jumpRows = 0;
+    for (let i = 1; i < rows.length; i++) {
+      const jump = Math.abs(rows[i] - rows[i - 1]);
+      if (jump > maxJump) maxJump = jump;
+      if (jump > 12) jumpRows++;
+    }
+    rows.length = 0;
+    verdicts.push(`duvar taraması: en büyük satır sıçraması ${maxJump.toFixed(1)} (${jumpRows} sıçrama) — ${maxJump < 12 ? "yumuşak ✓" : "banding ✗"}`);
+  }
+
   const ok = verdicts.every((v) => !v.includes("✗"));
   rows.push("", (ok ? "PASS ✓ kraterler opak ve koyu" : "FAIL ✗ krater hâlâ saydam/parlak"), ...verdicts);
   const box = document.createElement("pre");

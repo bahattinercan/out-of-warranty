@@ -2644,7 +2644,7 @@ group("Maç sonu sonuç kartı");
       fillStyle: "", strokeStyle: "", lineWidth: 1, globalAlpha: 1, font: "",
       set globalCompositeOperation(v) { rec.gco.push(v); ctx._gco = v; },
       get globalCompositeOperation() { return ctx._gco || "source-over"; },
-      save() {}, restore() { ctx._gco = "source-over"; }, clip() {}, scale() {},
+      save() {}, restore() { ctx._gco = "source-over"; }, clip(...a) { rec.clips = (rec.clips || 0) + 1; }, scale() {},
       beginPath() {}, closePath() {}, moveTo() {}, lineTo() {}, arc(...a) { rec.strokes.push({ kind: "arc", a }); },
       rect(...a) { rec.strokes.push({ kind: "rect", a }); },
       fill() { rec.fills.push({ gco: ctx.globalCompositeOperation }); },
@@ -2697,6 +2697,12 @@ group("Maç sonu sonuç kartı");
     t.ctx.rec.gco.slice(gcoBefore).includes("source-atop") &&
     t.ctx.rec.strokes.filter((s) => s.kind === "stroke").length > strokesBefore);
   check("maske oyuldu (çarpışma tarafı değişti)", t.solid[40 * t.w + 60] === 0);
+  // Piksellik regresyonu: duvar dolgusu krater çemberine ve yüzey profilinin
+  // altına KIRPILARAK tek dikdörtgenle boyanır (kenar yumuşatma). Eski sürüm
+  // satır satır 1 px fillRect'lerle çiziyordu → testere dişi kenar + tarama
+  // çizgileri. Kırpma sayısı düşerse o yola geri dönülmüş olur.
+  check("krater duvarı kırpma ile yumuşak boyanır (≥2 clip)", (t.ctx.rec.clips || 0) >= 2,
+    `clip=${t.ctx.rec.clips || 0}`);
 
   // Oyuk katmanı çizim sırası: önce oyuk, sonra arazi görseli.
   const order = [];
