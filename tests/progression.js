@@ -15,7 +15,7 @@ const FILES = ["i18n.js", "characters.js", "progression.js", "profile.js", "part
 const bundle =
   FILES.map((f) => fs.readFileSync(path.join(JS_DIR, f), "utf8")).join("\n;\n") +
   "\n;globalThis.__P = { CHARACTERS, SERVICE_LEVELS, MAX_SERVICE_XP, MAX_TIER, START_SCRAP, BRANCHES, BRANCH_LABELS, TIER_COSTS, TIER_LEVEL_GATES, REWARD_BASE, DIFFICULTY_MULTIPLIER, levelForXp, xpForLevel, nextLevelXp, levelUpMessage, calculateMatchReward, resolveRobotBuild, upgradeEffectText, robotUpgradeSummary, totalTiers, sanitizeUpgrades, nextUpgradeStep, toSafeInt, defaultProfile, defaultRobotProgress, normalizeProfile, loadProfile, saveProfile, getRobotProgress, grantMatchReward, purchaseUpgrade, PROFILE_KEY, CLAIMED_MATCH_LIMIT, createSessionId, " +
-  "PROFILE_SCHEMA_VERSION };";
+  "PROFILE_SCHEMA_VERSION, DEFAULT_UNLOCKED_ROBOTS, ACCOUNT_LEVELS, ROBOT_PRICES, levelForAccountXp, xpForAccountLevel, nextAccountLevelXp, accountLevelUpBonus, accountLevelTitle, robotPriceSpec, isRobotUnlocked, canUnlockRobot, unlockRobot };";
 
 const sandbox = { Math, Date, console, JSON, Set, Map, Array, Object, Number, String, isFinite, parseInt };
 sandbox.globalThis = sandbox;
@@ -262,7 +262,8 @@ group("Profil şeması ve doğrulama");
 {
   const fresh = P.defaultProfile();
   check("yeni profil 200 Hurda ile başlar", fresh.scrap === 200);
-  check("yeni profil şema sürümü taşır", fresh.version === P.PROFILE_SCHEMA_VERSION && P.PROFILE_SCHEMA_VERSION === 6);
+  check("yeni profil şema sürümü taşır", fresh.version === P.PROFILE_SCHEMA_VERSION && P.PROFILE_SCHEMA_VERSION === 7);
+  check("yeni profil varsayılan 2 robotla başlar", fresh.unlockedRobots.length === 2 && fresh.unlockedRobots.includes("kopek") && fresh.unlockedRobots.includes("tavsan"));
   check("varsayılan profil round-trip", JSON.stringify(P.normalizeProfile(fresh)) === JSON.stringify(fresh));
 
   check("boş girdi varsayılana düşer", P.normalizeProfile(undefined).scrap === 200);
@@ -375,6 +376,46 @@ group("Satın alma");
 
   const brokenPurchase = P.purchaseUpgrade(robotProfile("kopek", 100, 1000), "kopek", "chassis", brokenStorage());
   check("depolama kapalıysa satın alma oturumda geçerli kalır", brokenPurchase.ok && brokenPurchase.persisted === false && brokenPurchase.profile.robots.kopek.upgrades.chassis === 1);
+}
+
+// ── 9) Hesap Seviyesi & Robot Satın Alma ────────────────────────────────────
+group("Hesap Seviyesi & Robot Satın Alma");
+{
+  check("başlangıç açık robotları 2 adet", P.DEFAULT_UNLOCKED_ROBOTS.length === 2 && P.DEFAULT_UNLOCKED_ROBOTS.includes("kopek") && P.DEFAULT_UNLOCKED_ROBOTS.includes("tavsan"));
+  check("kopek ve tavsan varsayılan açık", P.isRobotUnlocked(P.defaultProfile(), "kopek") && P.isRobotUnlocked(P.defaultProfile(), "tavsan"));
+  check("diğer robotlar kilitli başlar", !P.isRobotUnlocked(P.defaultProfile(), "kedi") && !P.isRobotUnlocked(P.defaultProfile(), "ayi"));
+
+  check("0 XP → Hesap Sv. 1", P.levelForAccountXp(0) === 1);
+  check("120 XP → Hesap Sv. 2", P.levelForAccountXp(120) === 2);
+  check("seviye atlama ikramiyesi hesaplanır", P.accountLevelUpBonus(1, 2) === 150);
+
+  const p = P.defaultProfile();
+  p.scrap = 1000;
+  // kedi: Sv. 1, 450 Hurda
+  check("kedi satın alınabilir", P.canUnlockRobot(p, "kedi").ok === true && P.canUnlockRobot(p, "kedi").cost === 450);
+
+  // ayi: Sv. 8, 3200 Hurda
+  check("ayi için seviye yetersiz", !P.canUnlockRobot(p, "ayi").ok && P.canUnlockRobot(p, "ayi").reason === "LEVEL_REQUIRED" && P.canUnlockRobot(p, "ayi").requiredLevel === 8);
+
+  // Yetersiz hurda kontrolü
+  const poorProf = P.defaultProfile();
+  poorProf.scrap = 50;
+  check("hurda yetersizken SCRAP_REQUIRED", !P.canUnlockRobot(poorProf, "kedi").ok && P.canUnlockRobot(poorProf, "kedi").reason === "SCRAP_REQUIRED");
+
+  // Satın alma akışı
+  const buyRes = P.unlockRobot(p, "kedi", makeStorage());
+  check("kedi başarıyla satın alınır", buyRes.ok && buyRes.profile.unlockedRobots.includes("kedi") && buyRes.profile.scrap === 550);
+  check("tekrar satın alınamaz", !P.canUnlockRobot(buyRes.profile, "kedi").ok && P.canUnlockRobot(buyRes.profile, "kedi").reason === "ALREADY_UNLOCKED");
+
+  // Maç içi combat ödülü testi
+  const combatReward = P.calculateMatchReward({
+    result: "win",
+    difficulty: "normal",
+    opponentCount: 1,
+    combat: { kills: 2, damageDealt: 250, directHits: 3, firstBlood: true, clutch: false },
+  });
+  check("combat ödülleri hesaplanır", combatReward.combatScrap > 0 && combatReward.scrap > combatReward.baseScrap);
+  check("kill primi doğru", combatReward.details.kills === 2);
 }
 
 // ── Özet ────────────────────────────────────────────────────────────────────

@@ -1,21 +1,83 @@
-# OS / editor junk
-Thumbs.db
-desktop.ini
-.DS_Store
-*.log
+# ============================================================
+# Garanti Dışı (Out of Warranty) — .gitignore
+# Public Repository İçin Güvenlik ve Temizlik Kuralları
+# ============================================================
 
-# Temp / probe outputs
+# --- Ortam Değişkenleri & Gizli Dosyalar (Security & Secrets) ---
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.cert
+*.pfx
+secrets/
+
+# --- İşletim Sistemi Kalıntıları (OS Junk) ---
+Thumbs.db
+Thumbs.db:encryptable
+desktop.ini
+ehthumbs.db
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+
+# --- Editör & IDE Yapılandırmaları (IDEs & Editors) ---
+.vscode/
+*.code-workspace
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.swp
+*.swo
+*~
+*.sublime-project
+*.sublime-workspace
+
+# --- Node & Paket Yöneticileri (Node.js & Package Managers) ---
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+.pnpm-store/
+
+# --- Python Kalıntıları (Python Tools & Cache) ---
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+env/
+ENV/
+*.pyo
+
+# --- Test, Sonda (Probe) & Ekran Görüntüleri ---
+*.log
+logs/
+coverage/
+.nyc_output/
+screenshots/
+/screenshots
 *.tmp
+*.tmp.*
 _*.tmp.html
 probes/*.tmp
 probes/_*.tmp.html
+probes/_*.png
 
-# Node (if tooling is added later)
-node_modules/
-/screenshots
-
-# Build çıktısı (kapalı test / demo paketi)
+# --- Dağıtım & Sanat Üretim Çıktıları (Build Artifacts) ---
 dist/
-
-# Sanat üretim ara çıktıları (masterler + adaylar; yayın varlıkları assets/ altında)
+build/
 art/build/
+*.zip
+*.tar.gz
+
+# --- Yerel Ajan / Araç Klasörleri (Local AI & Tooling) ---
+.orca/
+.agents/
+.gemini/

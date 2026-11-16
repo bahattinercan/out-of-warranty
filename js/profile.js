@@ -52,6 +52,10 @@ function defaultProfile() {
   return {
     version: PROFILE_SCHEMA_VERSION,
     scrap: START_SCRAP,
+    // Genel oyuncu/hesap seviyesi için XP (v7)
+    accountXp: 0,
+    // Sahip olunan (kilidi açılmış) robot id'leri (v7)
+    unlockedRobots: DEFAULT_UNLOCKED_ROBOTS.slice(),
     // Ortak cephane deposu (id -> adet): Cephane Pazarı'ndan alınır ve tüm
     // robotlar tarafından paylaşılır. Şema v4 ile robot kayıtlarından köke taşındı.
     ammo: {},
@@ -151,6 +155,32 @@ function migrateProfile(raw) {
     data.version = 6;
     version = 6;
   }
+  if (version < 7) {
+    // v6 → v7: hesap seviyesi (accountXp) ve açılmış robotlar (unlockedRobots) eklenir.
+    // Başlangıç robotları ("kopek", "tavsan") garanti eklenir; geçmişte oynanmış
+    // robotlar da korunarak açık sayılır.
+    const unlocked = new Set(DEFAULT_UNLOCKED_ROBOTS);
+    if (Array.isArray(data.unlockedRobots)) {
+      for (const id of data.unlockedRobots) if (id) unlocked.add(id);
+    }
+    const oldRobots = data.robots && typeof data.robots === "object" ? data.robots : {};
+    let totalRobotXp = 0;
+    for (const rid of Object.keys(oldRobots)) {
+      const r = oldRobots[rid];
+      if (r && typeof r === "object") {
+        const matches = r.stats && r.stats.matches ? Number(r.stats.matches) : 0;
+        const rxp = Number(r.xp) || 0;
+        totalRobotXp += rxp;
+        if (matches > 0 || rxp > 0) {
+          unlocked.add(rid);
+        }
+      }
+    }
+    data.unlockedRobots = Array.from(unlocked);
+    data.accountXp = toSafeInt(data.accountXp, totalRobotXp);
+    data.version = 7;
+    version = 7;
+  }
   return data;
 }
 
@@ -176,9 +206,19 @@ function normalizeProfile(raw) {
   const parts = sanitizeParts(migrated.parts);
   _crossValidateLoadouts(robots, parts);
 
+  // Açık robotlar (v7): varsayılanlar + sahip olunan bilinen robotlar
+  const rawUnlocked = Array.isArray(migrated.unlockedRobots) ? migrated.unlockedRobots : [];
+  const unlockedSet = new Set(DEFAULT_UNLOCKED_ROBOTS);
+  for (const id of rawUnlocked) {
+    if (knownRobotId(id)) unlockedSet.add(id);
+  }
+  const unlockedRobots = Array.from(unlockedSet);
+
   return {
     version: PROFILE_SCHEMA_VERSION,
     scrap: migrated.scrap == null ? START_SCRAP : toSafeInt(migrated.scrap),
+    accountXp: Math.min(MAX_ACCOUNT_XP, toSafeInt(migrated.accountXp)),
+    unlockedRobots,
     // Ortak depo market.js'te doğrulanır: bilinmeyen/sınırsız silah kayıtları
     // atılır, adetler üst sınıra çekilir.
     ammo: sanitizeAmmoDepot(migrated.ammo),
@@ -266,14 +306,26 @@ function grantMatchReward(profile, options) {
     result: o.result,
     difficulty: o.difficulty,
     opponentCount: o.opponentCount,
+    combat: o.combat,
   });
 
   const robot = ensureRobotProgress(current, o.robotId);
   const levelBefore = levelForXp(robot.xp);
+  const accLevelBefore = levelForAccountXp(current.accountXp);
+
+  // Hurda ve XP aktarımı
   current.scrap += reward.scrap;
   robot.xp = Math.min(MAX_SERVICE_XP, robot.xp + reward.xp); // son eşikte sabitlenir
+  current.accountXp = Math.min(MAX_ACCOUNT_XP, current.accountXp + reward.xp);
   robot.stats.matches += 1;
   if (o.result === "win") robot.stats.wins += 1;
+
+  // Hesap seviyesi atlama ikramiyesi
+  const accLevelAfter = levelForAccountXp(current.accountXp);
+  const levelUpBonus = accountLevelUpBonus(accLevelBefore, accLevelAfter);
+  if (levelUpBonus > 0) {
+    current.scrap += levelUpBonus;
+  }
 
   current.claimedMatches.push(key);
   while (current.claimedMatches.length > CLAIMED_MATCH_LIMIT) current.claimedMatches.shift();
@@ -285,14 +337,40 @@ function grantMatchReward(profile, options) {
     profile: current,
     scrap: reward.scrap,
     xp: reward.xp,
+    levelUpBonus,
     levelBefore,
     levelAfter,
+    accLevelBefore,
+    accLevelAfter,
+    accLevelUp: accLevelAfter > accLevelBefore,
+    rewardDetails: reward,
     message: levelAfter > levelBefore ? levelUpMessage(levelBefore, levelAfter) : "",
     persisted,
   };
 }
 
 // ── Satın alma ──────────────────────────────────────────────────────────────
+
+// Robot kilit açma (satın alma). Arayüz doğrudan profile.unlockedRobots'a yazmaz.
+function unlockRobot(profile, robotId, storage) {
+  if (!knownRobotId(robotId)) return { ok: false, reason: "INVALID_ROBOT" };
+  const current = normalizeProfile(profile);
+  const check = canUnlockRobot(current, robotId);
+  if (!check.ok) return check;
+
+  current.scrap -= check.cost;
+  if (!current.unlockedRobots.includes(robotId)) {
+    current.unlockedRobots.push(robotId);
+  }
+  const persisted = saveProfile(current, storage);
+  return {
+    ok: true,
+    profile: current,
+    cost: check.cost,
+    robotId,
+    persisted,
+  };
+}
 
 // Tek giriş noktası. Arayüz doğrudan profile.scrap'i değiştirmez. Başarıda
 // { ok, profile, cost, newTier, persisted }; hatada { ok:false, reason }.

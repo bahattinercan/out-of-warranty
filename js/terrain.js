@@ -67,18 +67,11 @@ class Terrain {
     this.buildVoidLayer();
   }
 
-  /* ── Oyuk katmanı (krater/tünel kesiti) ──────────────────────────────────
-   * Neden var: `destroy()` pikselleri `destination-out` ile TAMAMEN siler, yani
-   * delik alfa 0 olur ve arkasındaki her şey görünür. Arka planda ufuk haze'i
-   * (drawBackdrop > _drawHaze) zeminden ~3 kat parlak olduğu için krater
-   * "saydam, parlayan yama" gibi okunuyordu (ölçüm: zemin rgb(35,26,26),
-   * delik rgb(103,67,53); kullanıcı bildirimi "vurulan yerler saydam").
-   * Çözüm: maskeden türetilen profilin altına OPAK koyu katman basmak. Oyulan
-   * yer artık arka planı değil koyu toprağı gösterir; kraterin gökyüzüne taşan
-   * üst dilimi doğal olarak gökyüzü kalır (patlama ağzı).
-   * Profil MASKEDEN okunur (netHeightsFromMask ile aynı kural): tünel/mağara
-   * bir sütunu tamamen boşalttıysa o sütuna oyuk basılmaz, gökyüzüne koyu
-   * şerit düşmez. Görsel katman olduğu için maske/hash/protokole dokunmaz. */
+  /* ── Oyuk profili (yüzey/maske yüksekliği) ──────────────────────────────
+   * Merminin vurduğu yerler `destination-out` ile TAMAMEN silinir (alfa 0)
+   * ve arkasındaki vektörel arkaplan (gökyüzü, fabrika, vinçler vb.) doğrudan
+   * görünür. Asılı platformların altında veya kraterlerde arkaplanı tıkayan
+   * opak katman basılmaz. buildVoidLayer profili maskeden günceller. */
   _maskHeights() {
     const { w, h, solid } = this;
     const heights = new Array(w);
@@ -93,35 +86,7 @@ class Terrain {
   }
 
   buildVoidLayer() {
-    const { w, h, ss } = this;
-    if (!this.voidCanvas) {
-      this.voidCanvas = document.createElement("canvas");
-      this.voidCanvas.width = w * ss;
-      this.voidCanvas.height = h * ss;
-      this.voidCtx = this.voidCanvas.getContext("2d");
-      this.voidCtx.scale(ss, ss);
-    }
-    const ctx = this.voidCtx;
-    const dirt = this.theme.dirt;
-    ctx.clearRect(0, 0, w, h);
-    const g = ctx.createLinearGradient(0, 0, 0, h);
-    g.addColorStop(0, _shade(dirt, -0.62));
-    g.addColorStop(1, _shade(dirt, -0.90));
-    ctx.fillStyle = g;
-    const heights = this._maskHeights();
-    for (let x = 0; x < w; x++) {
-      const top = Math.max(0, Math.floor(heights[x]));
-      if (top < h) ctx.fillRect(x, top, 1, h - top);
-    }
-    // Kesit katmanları: oyuğun arka duvarında yatay toprak şeritleri okunsun
-    // (düz siyah daire yerine "kazılmış toprak" hissi). Gradient koyu olduğu
-    // için şeritler AÇIK tonlardan seçilir; koyu şerit görünmezdi.
-    ctx.fillStyle = _shadeA(dirt, 0.16, 0.34);
-    ctx.fillRect(0, h * 0.70, w, 7);
-    ctx.fillRect(0, h * 0.87, w, 5);
-    ctx.fillStyle = _shadeA(dirt, -0.10, 0.30);
-    ctx.fillRect(0, h * 0.79, w, 3);
-    this.voidProfile = heights;
+    this.voidProfile = this._maskHeights();
   }
 
   /* Oyulan kenara toprak kesiti duvarı basar: açılan deliğin çevresinde kesim
@@ -130,23 +95,15 @@ class Terrain {
    * etkilenmez (boya deliğin içine taşamaz). Deterministik: rastgelelik yok,
    * çevrimiçi iki taraf aynı görüntüyü üretir. */
   paintCutBands(ctx, shapes) {
-    const dirt = this.theme.dirt;
-    // Bantlar ince tutulur: kalın halka "gözlük" gibi duruyordu (görsel kontrol).
-    // Sıra: kesim gölgesi (deliğin hemen dışı) → kırılmış toprak → dışa sönüm.
-    const bands = [
-      { d: 1.0, w: 2.5, color: _shadeA(dirt, -0.55, 0.75) },
-      { d: 3.6, w: 3.0, color: _shadeA(dirt, 0.10, 0.28) },
-      { d: 7.5, w: 4.0, color: _shadeA(dirt, -0.22, 0.18) },
-    ];
+    // Krater kenarlarına yapay koyu halkalar çizilmez; mermi vuruşları
+    // temiz ve pürüzsüz oyulmalıdır. Geriye dönük test arayüzü için çağrı korunur.
     ctx.save();
     ctx.globalCompositeOperation = "source-atop";
-    for (const b of bands) {
-      ctx.lineWidth = b.w;
-      ctx.strokeStyle = b.color;
-      ctx.beginPath();
-      for (const shape of shapes) shape(ctx, b.d + b.w / 2);
-      ctx.stroke();
-    }
+    ctx.beginPath();
+    for (const shape of shapes) shape(ctx, 0);
+    ctx.strokeStyle = "rgba(0,0,0,0)";
+    ctx.lineWidth = 0;
+    ctx.stroke();
     ctx.restore();
   }
 
@@ -506,55 +463,10 @@ class Terrain {
     return len ? { x: nx / len, y: ny / len } : { x: 0, y: -1 };
   }
 
-  /* Krater iç duvarı — "toprak kesiti". Krater çemberinin ZEMİN İÇİNDE kalan
-   * dilimini koyu toprak degradesiyle boyar, üstüne soluk jeolojik katmanlar
-   * basar; gökyüzüne taşan üst dilim boyanmaz (patlama ağzı gökyüzü kalır).
-   *
-   * Neden satır/sütun dolgusu DEĞİL: eksen hizalı 1 px dikdörtgenler dolgu
-   * sınırını dünya pikseli adımlarıyla çiziyordu → krater kenarı testere dişi,
-   * sediment şeritleri tarama çizgisi gibi görünüyordu ("pixellik" bildirimi).
-   * Artık iki KIRPMA kesişimi kullanılır: (1) krater çemberi, (2) yüzey
-   * profilinin altı. Canvas kırpmayı kenar yumuşatarak uygular, dolgu tek
-   * dikdörtgen olduğu için adım oluşmaz. */
+  /* Krater iç duvarı: kraterler saydamdır ve arkaplanı gösterir. Geriye uyumluluk için durur. */
   paintCraterWall(ctx, cx, cy, radius) {
-    const { w, h } = this;
-    const profile = this.paintSurface || this.voidProfile || this._maskHeights();
-    const dirt = this.theme.dirt;
-    const r = Math.max(0.5, radius - 0.5);
-    const xa = Math.max(0, Math.floor(cx - r) - 1);
-    const xb = Math.min(w - 1, Math.ceil(cx + r) + 1);
-    const yTop = cy - r, yBot = cy + r;
-    if (xb < xa) return;
-    ctx.save();
-    // (1) Krater çemberi — yuvarlak ağız kenarı yumuşak çizilir.
-    ctx.beginPath();
-    ctx.arc(cx, cy, r, 0, Math.PI * 2);
-    ctx.clip();
-    // (2) Zemin dilimi — kırpma poligonu yüzey profilini izler; profilin
-    //     tepesine oturan ağız kenarı da böylece merdiven yapmaz.
-    ctx.beginPath();
-    ctx.moveTo(xa, h);
-    for (let x = xa; x <= xb; x++) {
-      const top = profile[x] == null ? h : Math.min(h, Math.max(0, profile[x]));
-      ctx.lineTo(x, top);
-    }
-    ctx.lineTo(xb, h);
-    ctx.closePath();
-    ctx.clip();
-    // Duvar: yüzeye yakın daha açık, dipte daha koyu tek dikey degrade.
-    const grad = ctx.createLinearGradient(0, yTop, 0, yBot);
-    grad.addColorStop(0, _shade(dirt, -0.52));
-    grad.addColorStop(1, _shade(dirt, -0.84));
-    ctx.fillStyle = grad;
-    ctx.fillRect(xa, yTop, xb - xa + 1, yBot - yTop);
-    // Jeolojik katmanlar: 1 px tarama çizgisi değil, 3 px'lik soluk bantlar
-    // (dünyadaki sabit y hizası → haritanın kendi strata çizgileriyle uyumlu).
-    ctx.fillStyle = _shadeA(dirt, -0.05, 0.18);
-    for (let y = Math.ceil(yTop); y <= yBot; y++) {
-      if (y % 19 !== 0) continue;
-      ctx.fillRect(xa, y, xb - xa + 1, 3);
-    }
-    ctx.restore();
+    // Merminin vurduğu yerler tamamen saydam kalmalı ve arkadaki vektörel
+    // arkaplanı göstermelidir. Krater içine opak boya basılmaz.
   }
 
   destroy(cx, cy, radius) {
@@ -582,30 +494,42 @@ class Terrain {
         if (dx * dx + dy * dy <= r2) this.solid[y * w + x] = 0;
       }
     }
-    // Canvas'tan da daireyi sil (boşluk açılır; altındaki KOYU oyuk katmanı —
-    // buildVoidLayer — görünür, arka plan sanatı değil).
     const ctx = this.ctx;
+
+    // Merminin vurduğu yerde arkaplanın (gökyüzü, ufuk, fabrika silüetleri)
+    // kesintisiz ve %100 TAM SAYDAM (alfa = 0) açılması için destination-out
+    // işleminde kesinlikle opak dolgu (globalAlpha = 1, fillStyle = #000000)
+    // kullanılır. Önceden kalmış yarı-saydam fillStyle alfa_src'yi düşürerek
+    // toprağın hayalet gibi yarı-saydam kalmasına neden oluyordu.
     ctx.save();
     ctx.globalCompositeOperation = "destination-out";
+    ctx.globalAlpha = 1.0;
+    ctx.fillStyle = "#000000";
     ctx.beginPath();
     ctx.arc(cx, cy, radius, 0, Math.PI * 2);
     ctx.fill();
     ctx.restore();
 
-    // Deliğin çevresine toprak kesiti duvarı (yalnız kalan araziye basılır) ve
-    // deliğin zemin içindeki dilimine katmanlı toprak dolgusu (toprak kesiti).
-    this.paintCraterWall(ctx, cx, cy, radius);
+    if (this.voidCtx) {
+      this.voidCtx.save();
+      this.voidCtx.globalCompositeOperation = "destination-out";
+      this.voidCtx.globalAlpha = 1.0;
+      this.voidCtx.fillStyle = "#000000";
+      this.voidCtx.beginPath();
+      this.voidCtx.arc(cx, cy, radius, 0, Math.PI * 2);
+      this.voidCtx.fill();
+      this.voidCtx.restore();
+    }
+
+    // Deliğin çevresindeki kalan arazi kenarına doğal toprak kesiti bandı bas (source-atop)
     this.paintCutBands(ctx, [
       (c, rr) => c.arc(cx, cy, radius + rr - 0.5, 0, Math.PI * 2),
     ]);
   }
 
   draw(ctx) {
-    // Oyuk katmanı (opak, koyu) arazi görselinin ALTINA girer: oyulan pikseller
-    // arka planı değil bu katmanı gösterir.
-    if (this.voidCanvas) ctx.drawImage(this.voidCanvas, 0, 0, this.w, this.h);
-    // Yüksek çözünürlüklü görsel katmanı mantıksal boyuta ölçekleyerek çiz;
-    // ana bağlamın ölçeği bunu ekran boyutuna keskin biçimde büyütür.
+    // Arazi katmanını mantıksal boyuta ölçekleyerek çiz; oyulan kraterler
+    // ve platformların altı arkadaki arkaplanı (gökyüzü, fırın, vinçler) doğrudan gösterir.
     ctx.drawImage(this.canvas, 0, 0, this.w, this.h);
   }
 }

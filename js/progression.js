@@ -11,7 +11,78 @@
 
 // ── Sabitler ────────────────────────────────────────────────────────────────
 
-const PROFILE_SCHEMA_VERSION = 6; // profile.js ile ortak kayıt şeması sürümü (v3: +ammo, v4: ortak ammo deposu, v5: +parçalar/loadout, v6: yuva başına 2 parça)
+const PROFILE_SCHEMA_VERSION = 7; // profile.js ile ortak kayıt şeması sürümü (v3: +ammo, v4: ortak ammo deposu, v5: +parçalar/loadout, v6: yuva başına 2 parça, v7: +hesap seviyesi/xp ve unlockedRobots)
+
+const DEFAULT_UNLOCKED_ROBOTS = ["kopek", "tavsan"]; // Başlangıçta ücretsiz açık 2 robot (FIX-8 ve ZIP)
+
+// ── Hesap Seviyeleri (Account Level: 1-20) ──────────────────────────────────
+const ACCOUNT_LEVELS = [
+  { level: 1,  xp: 0,     bonusScrap: 0,   title: "Çırak Hurdacısı" },
+  { level: 2,  xp: 120,   bonusScrap: 150, title: "Çırak Hurdacısı II" },
+  { level: 3,  xp: 280,   bonusScrap: 150, title: "Dökümhane Çırağı" },
+  { level: 4,  xp: 500,   bonusScrap: 200, title: "Kıdemli Çırak" },
+  { level: 5,  xp: 800,   bonusScrap: 200, title: "Atölye Teknisyeni" },
+  { level: 6,  xp: 1200,  bonusScrap: 250, title: "Atölye Teknisyeni II" },
+  { level: 7,  xp: 1700,  bonusScrap: 250, title: "Kıdemli Teknisyen" },
+  { level: 8,  xp: 2300,  bonusScrap: 300, title: "Sanayi Operatörü" },
+  { level: 9,  xp: 3000,  bonusScrap: 300, title: "Ağır Sanayi Ustası" },
+  { level: 10, xp: 3800,  bonusScrap: 400, title: "Dökümhane Şefi" },
+  { level: 11, xp: 4700,  bonusScrap: 400, title: "Dökümhane Şefi II" },
+  { level: 12, xp: 5700,  bonusScrap: 450, title: "Baş Mühendis" },
+  { level: 13, xp: 6800,  bonusScrap: 450, title: "Protokol Uzmanı" },
+  { level: 14, xp: 8000,  bonusScrap: 500, title: "Hurda Barikatçısı" },
+  { level: 15, xp: 9300,  bonusScrap: 500, title: "Yıkım Mimarı" },
+  { level: 16, xp: 10700, bonusScrap: 550, title: "Efsanevi Operatör" },
+  { level: 17, xp: 12200, bonusScrap: 550, title: "Döküm Muhafızı" },
+  { level: 18, xp: 13800, bonusScrap: 600, title: "Kıdemli Muhafız" },
+  { level: 19, xp: 15500, bonusScrap: 600, title: "Alaşım Efendisi" },
+  { level: 20, xp: 17500, bonusScrap: 750, title: "Dökümhane Efsanesi" },
+];
+const MAX_ACCOUNT_LEVEL = ACCOUNT_LEVELS.length;
+const MAX_ACCOUNT_XP = ACCOUNT_LEVELS[MAX_ACCOUNT_LEVEL - 1].xp;
+
+// ── Robot Satın Alma & Seviye Kapıları Kataloğu ─────────────────────────────
+const ROBOT_PRICES = {
+  // Başlangıç (Ücretsiz)
+  kopek: { price: 0, level: 1, tier: 0 },
+  tavsan: { price: 0, level: 1, tier: 0 },
+  // Kademe 1: Çırak (450 Hurda)
+  kedi: { price: 450, level: 1, tier: 1 },
+  tilki: { price: 450, level: 2, tier: 1 },
+  ordek: { price: 450, level: 2, tier: 1 },
+  sincap: { price: 450, level: 3, tier: 1 },
+  kirpi: { price: 450, level: 3, tier: 1 },
+  // Kademe 2: Kıdemli (1.500 Hurda)
+  panda: { price: 1500, level: 4, tier: 2 },
+  kaplan: { price: 1500, level: 4, tier: 2 },
+  timsah: { price: 1500, level: 5, tier: 2 },
+  koala: { price: 1500, level: 5, tier: 2 },
+  kunduz: { price: 1500, level: 6, tier: 2 },
+  kokarca: { price: 1500, level: 6, tier: 2 },
+  maymun: { price: 1500, level: 7, tier: 2 },
+  armadillo: { price: 1500, level: 7, tier: 2 },
+  oklukirpi: { price: 1500, level: 7, tier: 2 },
+  // Kademe 3: Ağır Sanayi (3.200 Hurda)
+  ayi: { price: 3200, level: 8, tier: 3 },
+  suaygiri: { price: 3200, level: 8, tier: 3 },
+  sirtlan: { price: 3200, level: 9, tier: 3 },
+  ornitorenk: { price: 3200, level: 9, tier: 3 },
+  yeti: { price: 3200, level: 10, tier: 3 },
+  gergedan: { price: 3200, level: 10, tier: 3 },
+  kanguru: { price: 3200, level: 11, tier: 3 },
+  hamster: { price: 3200, level: 11, tier: 3 },
+  penguen: { price: 3200, level: 12, tier: 3 },
+  // Kademe 4: Dökümhane Efsaneleri (5.500 Hurda)
+  aslan: { price: 5500, level: 13, tier: 4 },
+  kurtadam: { price: 5500, level: 14, tier: 4 },
+  rakun: { price: 5500, level: 14, tier: 4 },
+  dino: { price: 5500, level: 15, tier: 4 },
+  yarasa: { price: 5500, level: 16, tier: 4 },
+  bukalemun: { price: 5500, level: 17, tier: 4 },
+  ejderha: { price: 5500, level: 18, tier: 4 },
+  kus: { price: 5500, level: 19, tier: 4 },
+  zurafa: { price: 5500, level: 20, tier: 4 },
+};
 
 // Servis seviyeleri: xp alanı KÜMÜLATİF eşiktir (levelForXp ile eşleşir).
 const SERVICE_LEVELS = [
@@ -49,6 +120,7 @@ const REWARD_BASE = {
 const DIFFICULTY_MULTIPLIER = { easy: 0.75, normal: 1, hard: 1.25, expert: 1.5 };
 const OPPONENT_STEP = 0.20;         // her ek rakip için +%20
 const REWARD_CAP = { scrap: 150, xp: 180 };
+const COMBAT_REWARD_CAP = { scrap: 450, xp: 500 };
 
 // Gövde dalı
 const ARMOR_CAP = 0.40;                     // zırh mutlak üst sınırı
@@ -102,6 +174,73 @@ function romanTier(tier) {
   return String(t);
 }
 
+// ── Hesap seviyesi (Oyuncu Seviyesi: 1-20) ─────────────────────────────────
+
+function levelForAccountXp(xp) {
+  const n = toSafeInt(xp);
+  let level = 1;
+  for (const s of ACCOUNT_LEVELS) if (n >= s.xp) level = s.level;
+  return level;
+}
+
+function xpForAccountLevel(level) {
+  const l = clampNumber(toSafeInt(level, 1), 1, MAX_ACCOUNT_LEVEL);
+  return ACCOUNT_LEVELS[l - 1].xp;
+}
+
+function nextAccountLevelXp(level) {
+  const l = clampNumber(toSafeInt(level, 1), 1, MAX_ACCOUNT_LEVEL);
+  return l >= MAX_ACCOUNT_LEVEL ? null : ACCOUNT_LEVELS[l].xp;
+}
+
+function accountLevelUpBonus(levelBefore, levelAfter) {
+  const b = toSafeInt(levelBefore, 1);
+  const a = toSafeInt(levelAfter, 1);
+  let totalBonus = 0;
+  for (const s of ACCOUNT_LEVELS) {
+    if (s.level > b && s.level <= a && s.bonusScrap) {
+      totalBonus += s.bonusScrap;
+    }
+  }
+  return totalBonus;
+}
+
+function accountLevelTitle(level) {
+  const l = clampNumber(toSafeInt(level, 1), 1, MAX_ACCOUNT_LEVEL);
+  return ACCOUNT_LEVELS[l - 1].title;
+}
+
+// ── Robot kilit ve satın alma sorgusu ───────────────────────────────────────
+
+function robotPriceSpec(robotId) {
+  if (robotId && ROBOT_PRICES[robotId]) return ROBOT_PRICES[robotId];
+  return { price: 1500, level: 5, tier: 2 };
+}
+
+function isRobotUnlocked(profile, robotId) {
+  if (!robotId) return false;
+  if (DEFAULT_UNLOCKED_ROBOTS.includes(robotId)) return true;
+  if (!profile) return false;
+  const list = Array.isArray(profile.unlockedRobots) ? profile.unlockedRobots : [];
+  return list.includes(robotId);
+}
+
+function canUnlockRobot(profile, robotId) {
+  if (!robotId) return { ok: false, reason: "INVALID_ROBOT" };
+  if (isRobotUnlocked(profile, robotId)) return { ok: false, reason: "ALREADY_UNLOCKED" };
+  const spec = robotPriceSpec(robotId);
+  const p = profile || {};
+  const currentScrap = toSafeInt(p.scrap);
+  const curAccLvl = levelForAccountXp(p.accountXp);
+  if (curAccLvl < spec.level) {
+    return { ok: false, reason: "LEVEL_REQUIRED", requiredLevel: spec.level, level: curAccLvl, cost: spec.price };
+  }
+  if (currentScrap < spec.price) {
+    return { ok: false, reason: "SCRAP_REQUIRED", cost: spec.price, scrap: currentScrap, requiredLevel: spec.level };
+  }
+  return { ok: true, cost: spec.price, requiredLevel: spec.level, tier: spec.tier };
+}
+
 // ── Servis seviyesi ─────────────────────────────────────────────────────────
 
 // Eşik DEĞERİ xp'den küçük veya eşit olan en yüksek seviye. Tam 100 XP seviye 2
@@ -141,17 +280,61 @@ function levelUpMessage(levelBefore, levelAfter) {
 
 // ── Ödül formülü ────────────────────────────────────────────────────────────
 
-// Yalnız doğal GAMEOVER sonucu çağrılır. Taban ödül × zorluk × rakip çarpanı,
-// üst sınırlarla kırpılır. Performans bonusu bilinçli olarak yoktur.
+// Maç sonu ödülü: Taban ödül × zorluk × rakip çarpanı + Maç içi performans primleri
+// (kills, damageDealt, directHits, firstBlood, clutch).
 function calculateMatchReward(options) {
   const o = options || {};
   const base = REWARD_BASE[o.result] || REWARD_BASE.draw;
   const diff = DIFFICULTY_MULTIPLIER[o.difficulty] || 1;
   const opponents = Math.max(1, toSafeInt(o.opponentCount, 1));
   const opponentMult = 1 + OPPONENT_STEP * (opponents - 1);
+
+  const baseScrap = Math.round(base.scrap * diff * opponentMult);
+  const baseXp = Math.round(base.xp * diff * opponentMult);
+
+  // Maç içi performans primleri (combat stats)
+  const c = o.combat || null;
+  if (!c) {
+    return {
+      scrap: Math.min(REWARD_CAP.scrap, baseScrap),
+      xp: Math.min(REWARD_CAP.xp, baseXp),
+      baseScrap,
+      baseXp,
+      combatScrap: 0,
+      combatXp: 0,
+      details: { kills: 0, damageDealt: 0, directHits: 0, firstBlood: false, clutch: false },
+    };
+  }
+
+  const kills = toSafeInt(c.kills);
+  const damageDealt = toSafeInt(c.damageDealt);
+  const directHits = toSafeInt(c.directHits);
+  const firstBlood = !!c.firstBlood;
+  const clutch = !!c.clutch;
+
+  const combatScrap = (kills * 25) +
+                      (Math.floor(damageDealt / 100) * 15) +
+                      (directHits * 5) +
+                      (firstBlood ? 20 : 0) +
+                      (clutch ? 35 : 0);
+
+  const combatXp = (kills * 30) +
+                   (Math.floor(damageDealt / 100) * 20) +
+                   (directHits * 5) +
+                   (firstBlood ? 25 : 0) +
+                   (clutch ? 40 : 0);
+
+  const totalScrap = Math.min(COMBAT_REWARD_CAP.scrap, baseScrap + combatScrap);
+  const totalXp = Math.min(COMBAT_REWARD_CAP.xp, baseXp + combatXp);
+
   return {
-    scrap: Math.min(REWARD_CAP.scrap, Math.round(base.scrap * diff * opponentMult)),
-    xp: Math.min(REWARD_CAP.xp, Math.round(base.xp * diff * opponentMult)),
+    scrap: totalScrap,
+    xp: totalXp,
+    baseScrap,
+    baseXp,
+    combatScrap,
+    combatXp,
+    details: { kills, damageDealt, directHits, firstBlood, clutch },
   };
 }
 

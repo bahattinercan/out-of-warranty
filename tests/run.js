@@ -21,6 +21,7 @@ const bundle =
   "\n;globalThis.__M = { CHARACTERS, MAPS, BIOMES, FACTORY_ZONES, PROP_DRAWERS, WEAPONS, SKILL_PROJECTILES, PROJECTILE_SHAPES, SHARED_SHAPES, PROJ_SUBSTEP, PROJ_MAX_SUBSTEPS, useSkill, drawCharExtras, drawRobot, robotMuzzlePoint, robotTopOffset, _rbProportions, RB_GUN_PIVOT_X, RB_GUN_PIVOT_Y, RB_GUN_MUZZLE, RB_VISUAL_SCALE, Entity, Projectile, Explosion, GRAVITY, Game, Terrain, BotController, AI_LIMITS, aiWorldKey, aiSimulateShot, aiCoarseCandidates, aiPathIsSafe, aiRandom, AI_DIFFICULTY, aiDamageMultiplier, aiAssignDamageScale, aiSelectWeapon, skillConsumesShot, SKILL_SHOT_KINDS, AI_SKILL_REPLACE_SCORE, " +
   "SKILL_FX_SHAPES, SKILL_FX_KIND_DEFAULT, SKILL_FX_EXTENT, spawnSkillFx, updateSkillFx, drawSkillFx, drawSkillFxIcon, drawSkillAura, SkillFx, " +
   "SERVICE_LEVELS, MAX_SERVICE_XP, MAX_TIER, START_SCRAP, BRANCHES, BRANCH_LABELS, TIER_COSTS, TIER_LEVEL_GATES, REWARD_BASE, DIFFICULTY_MULTIPLIER, levelForXp, xpForLevel, nextLevelXp, levelUpMessage, calculateMatchReward, resolveRobotBuild, upgradeEffectText, robotUpgradeSummary, totalTiers, sanitizeUpgrades, nextUpgradeStep, toSafeInt, defaultProfile, defaultRobotProgress, normalizeProfile, loadProfile, saveProfile, getRobotProgress, grantMatchReward, purchaseUpgrade, PROFILE_KEY, createSessionId, " +
+  "DEFAULT_UNLOCKED_ROBOTS, ACCOUNT_LEVELS, ROBOT_PRICES, levelForAccountXp, xpForAccountLevel, nextAccountLevelXp, accountLevelUpBonus, accountLevelTitle, robotPriceSpec, isRobotUnlocked, canUnlockRobot, unlockRobot, " +
   "AMMO_DEPOT_CAP, AMMO_BULK_QTY, AMMO_BULK_QTY_BIG, AMMO_PRICES, ammoPriceFor, ammoBasePrice, weaponPowerScore, weaponStats, sellableWeapons, sanitizeAmmoDepot, getAmmoDepot, setAmmoDepot, mergeDepots, ammoDepotTotal, buyAmmo, mergeAmmoWithDepot, battleLoad, unspentDepot, settleDepot, weaponById, weaponBattleMax, isSellableWeapon, initialAmmo, " +
   "PARTS, PART_SLOTS, SLOT_LABELS, partById, sanitizeParts, sanitizeLoadoutShape, getOwnedParts, isPartOwned, buildPartsSummary, buyPart, equipPart, drawPartIcon, PART_ICON_SHAPES, partEffectText, PART_KNOCKBACK_MIN, _drawPartDots, PARTS_PER_SLOT, loadoutPartIds, AUDIO_SAFE, _rbPartAccessories, _rbPartSpecs, _RB_PART_SECONDARY, MARKET_TABS, " +
   "isSinglePlayerProgressionMode };";
@@ -1935,6 +1936,36 @@ group("Atölye akışı ve sayfalama");
   check("ilk sayfadan geri gidilmez", wg.workshopPage === 0);
   wg.changeWorkshopPage(1);
   check("sonraki sayfaya geçilir", wg.workshopPage === 1);
+
+  // Responsive yerleşim testleri: farklı ekran genişliklerinde sütun ve panel dengesi
+  const l960 = wg.workshopLayout();
+  check("W=960: 4 sütun x 4 satır (16 robot/sayfa)", l960.cols === 4 && l960.rows === 4 && l960.perPage === 16);
+  check("W=960: sağ panel genişliği ferah", l960.rw >= 420 && l960.gridW >= 440);
+
+  wg.W = 735; // 4:3 en-boy oranı (kullanıcı ekran görüntüsü)
+  const l735 = wg.workshopLayout();
+  check("W=735: 3 sütun x 4 satır (12 robot/sayfa)", l735.cols === 3 && l735.rows === 4 && l735.perPage === 12);
+  check("W=735: sol ızgara ve sağ panel dengeli", Math.abs(l735.gridW - l735.rw) <= 25 && l735.rw >= 320);
+  let render735Ok = true;
+  try { M.Game.prototype.renderWorkshop.call(wg, ctx2); } catch (e) { render735Ok = false; console.error(e); }
+  check("W=735: atölye hatasız çizilir", render735Ok && (wg._workshopCardRects || []).length === 12);
+  check("W=735: sol ve sağ alt hizaları eşit", (wg._workshopPageRects || [])[0] && (wg._workshopPageRects[0].y + wg._workshopPageRects[0].h === l735.gy + l735.panelH));
+
+  wg.W = 648; // minimum izin verilen en-boy oranı (1.2)
+  const l648 = wg.workshopLayout();
+  check("W=648: 3 sütun ve güvenli sağ panel", l648.cols === 3 && l648.rw >= 290);
+  let render648Ok = true;
+  try { M.Game.prototype.renderWorkshop.call(wg, ctx2); } catch (e) { render648Ok = false; console.error(e); }
+  check("W=648: atölye hatasız çizilir", render648Ok && wg._workshopActionRect && wg._workshopActionRect.w >= 280);
+
+  wg.W = 1260; // 21:9 ultrawide
+  const l1260 = wg.workshopLayout();
+  check("W=1260: içerik ortalanır (kenar boşlukları dengeli)", l1260.cols === 4 && l1260.startX >= 80 && l1260.totalW <= 1040);
+  let render1260Ok = true;
+  try { M.Game.prototype.renderWorkshop.call(wg, ctx2); } catch (e) { render1260Ok = false; console.error(e); }
+  check("W=1260: atölye hatasız çizilir", render1260Ok);
+
+  wg.W = 960; // normale dön
 }
 
 // ── 8a) Atölye parça takma (mod sekmeleri + yuva paneli + taşıma) ────────
@@ -2097,6 +2128,18 @@ group("Atölye parça takma");
   check("dar pencerede sayfa sayısı artar (34 karakter bölünür)",
     (() => { const gs = Object.create(M.Game.prototype); gs.W = 648; gs.H = 540;
       const n = gs.charSelectLayout().perPage; return n >= 6 && n <= 12 && n % 2 === 0; })());
+
+  // Harita seçim ekranı smoke testi: tüm harita kartları ve önizlemeleri hatasız çizilmeli
+  const ms = Object.create(M.Game.prototype);
+  ms.W = 960; ms.H = 540;
+  ms.input = { mouseX: -1, mouseY: -1, left: false, right: false, charging: false, power: 0 };
+  ms.renderTimeMs = 0;
+  ms.selectedChars = [M.CHARACTERS[0], M.CHARACTERS[1]];
+  ms.selectedMap = null;
+  ms.mapPage = 0;
+  let msOk = true;
+  try { M.Game.prototype.renderMapSelect.call(ms, ctx2); } catch (e) { msOk = false; console.error(e); }
+  check("harita seçimi (MAP_SELECT) tüm önizleme ve kartlarla hatasız çizilir", msOk);
 
   // ── Aksesuar çizimi: parça verilince zenginleşir, verilmeyince birebir korunur ──
   const robotDef = M.CHARACTERS[0];
@@ -2628,14 +2671,14 @@ group("Maç sonu sonuç kartı");
   sandbox.document = prevDoc;
 }
 
-// ── Krater görünümü: oyuk katmanı + toprak kesiti ───────────────────────
-/* Bildirim: "mermiyle vurulmuş yerler saydam görünüyor". Kök neden: `destroy()`
- * `destination-out` ile pikselleri tamamen siliyor, arkasındaki ufuk haze'i
- * (zeminden parlak) görünüyordu. Çözüm: maskeden türetilen profilin altına opak
- * koyu oyuk katmanı (buildVoidLayer) + oyulan kenara `source-atop` toprak
- * kesiti bantları (paintCutBands). Bu grup ikisini de bekçiler. */
+// ── Krater görünümü: saydam oyuk ve arkaplan görünürlüğü ─────────────────
+/* Kullanıcı talebi: "merminin vurduğu yerler tamamen arkaplanı göstersin".
+ * `destroy()` krater dairesini `destination-out` ile tamamen siler (alfa 0).
+ * Böylece vurulan kısımlar opak koyu katmanla tıkanmaz, doğrudan arkadaki
+ * vektörel arkaplanı (gökyüzü, silüet, fabrika) gösterir. Kalan arazi kenarına
+ * ise `source-atop` ile toprak kesiti bantları basılır. */
 {
-  group("Krater görünümü — oyuk katmanı ve toprak kesiti");
+  group("Krater görünümü — saydam oyuk ve arkaplan görünürlüğü");
   // Gerçek Terrain kursun diye kayıt tutan sahte canvas/context.
   const recCtx = () => {
     const rec = { fills: [], rects: [], strokes: [], gco: [], set gcoCur(v) { this._g = v; }, get gcoCur() { return this._g; } };
@@ -2670,47 +2713,34 @@ group("Maç sonu sonuç kartı");
   const t = new M.Terrain(120, 80, flatMap);
   sandbox.document = prevDoc;
 
-  check("oyuk katmanı kuruldu (opak alt katman)", !!t.voidCanvas && !!t.voidCtx,
-    `voidCanvas=${typeof t.voidCanvas}`);
-  const voidCols = t.voidCtx.rec.rects.length;
-  check("oyuk katmanı profilin altını sütun sütun kaplar", voidCols >= t.w,
-    `fillRect=${voidCols}, w=${t.w}`);
-  // Her sütun için oyuk, maskenin İLK katı pikselinden başlamalı (gökyüzüne taşmaz).
+  // Profil maskenin ilk katı pikselini izler.
   let voidAligned = true;
   for (let x = 0; x < t.w; x += 7) {
     const top = t.voidProfile[x];
     const firstSolid = (() => { for (let y = 0; y < t.h; y++) if (t.solid[y * t.w + x]) return y; return t.h; })();
     if (top !== firstSolid) voidAligned = false;
   }
-  check("oyuk profili maskenin ilk katı pikseliyle birebir", voidAligned);
+  check("oyuk profili maskenin ilk katı pikseliyle uyumlu", voidAligned);
 
-  // destroy(): oyuk katmanına DOKUNMAZ (krater koyu kalır), araziden siler.
-  const rectsBefore = t.voidCtx.rec.rects.length;
+  // destroy(): krater alanını destination-out ile tamamen siler (saydam delik)
   const strokesBefore = t.ctx.rec.strokes.filter((s) => s.kind === "stroke").length;
   const gcoBefore = t.ctx.rec.gco.length;
   t.destroy(60, 40, 14);
-  check("destroy oyuk katmanını yeniden üretmez (krater koyu kalır)",
-    t.voidCtx.rec.rects.length === rectsBefore);
-  check("destroy deliği yine tamamen siler (destination-out)",
+  check("destroy deliği tamamen saydam açar (destination-out)",
     t.ctx.rec.gco.slice(gcoBefore).includes("destination-out"));
   check("destroy oyulan kenara toprak kesiti basar (source-atop)",
     t.ctx.rec.gco.slice(gcoBefore).includes("source-atop") &&
     t.ctx.rec.strokes.filter((s) => s.kind === "stroke").length > strokesBefore);
   check("maske oyuldu (çarpışma tarafı değişti)", t.solid[40 * t.w + 60] === 0);
-  // Piksellik regresyonu: duvar dolgusu krater çemberine ve yüzey profilinin
-  // altına KIRPILARAK tek dikdörtgenle boyanır (kenar yumuşatma). Eski sürüm
-  // satır satır 1 px fillRect'lerle çiziyordu → testere dişi kenar + tarama
-  // çizgileri. Kırpma sayısı düşerse o yola geri dönülmüş olur.
-  check("krater duvarı kırpma ile yumuşak boyanır (≥2 clip)", (t.ctx.rec.clips || 0) >= 2,
-    `clip=${t.ctx.rec.clips || 0}`);
 
-  // Oyuk katmanı çizim sırası: önce oyuk, sonra arazi görseli.
-  const order = [];
-  const drawCtx = { drawImage: (img) => order.push(img === t.voidCanvas ? "void" : "terrain") };
+  // Arazi çizimi: arkaplanı kapatan opak oyuk katmanı çizilmez, sadece saydam delikli arazi çizilir.
+  const drawnImgs = [];
+  const drawCtx = { drawImage: (img) => drawnImgs.push(img === t.canvas ? "terrain" : "other") };
   t.draw(drawCtx);
-  check("draw önce oyuk katmanını sonra araziyi çizer", order.join(",") === "void,terrain", order.join(","));
+  check("draw yalnız arazi tuvalini çizer (arkaplan doğrudan görünür)",
+    drawnImgs.length === 1 && drawnImgs[0] === "terrain", drawnImgs.join(","));
 
-  // Misafir yolu: maske uygulanınca oyuk katmanı host maskesinden yeniden kurulur.
+  // Misafir yolu: maske uygulanınca profil yeniden türetilir.
   sandbox.document = { createElement: () => mkCanvas(), getElementById: () => null };
   const gt = new M.Terrain(120, 80, flatMap);
   sandbox.document = prevDoc;
@@ -2721,6 +2751,58 @@ group("Maç sonu sonuç kartı");
   check("buildVoidLayer maskeden profili yeniden türetir",
     gt.voidProfile.every((y) => y === 20) && beforeProfile.some((y) => y !== 20),
     `önce=${beforeProfile[10]}, sonra=${gt.voidProfile[10]}`);
+}
+
+// ── 39) Yeni Oynanış Mekanikleri (Ekran Sarsıntısı, Sandıklar, Variller, Ani Ölüm) ──
+group("Yeni Oynanış Mekanikleri");
+{
+  const g = makeAiGame(180, 720);
+  g.W = 960; g.H = 540;
+  g.crates = [];
+  g.barrels = [];
+  g.damagePopups = [];
+  g.screenShake = { trauma: 0, time: 0, x: 0, y: 0 };
+  g.suddenDeath = false;
+  g.suddenDeathLevel = 0;
+  g.suddenDeathTurns = 12;
+
+  // 1) Ekran sarsıntısı mekaniği
+  M.Game.prototype.triggerScreenShake.call(g, 0.6);
+  check("triggerScreenShake travmayı artırır", g.screenShake.trauma === 0.6);
+  M.Game.prototype.updateScreenShake.call(g, 0.05);
+  check("updateScreenShake travmayı sönümler ve ofset üretir", g.screenShake.trauma < 0.6 && (g.screenShake.x !== 0 || g.screenShake.y !== 0));
+
+  // 2) İkmal sandığı (Airdrop) mekaniği
+  M.Game.prototype.spawnCrate.call(g);
+  check("spawnCrate bir sandık ekler", g.crates.length === 1 && g.crates[0].parachute === true);
+  const crate = g.crates[0];
+  crate.x = g.players[0].x;
+  crate.y = g.players[0].y - g.players[0].r; // oyuncunun hemen üzerine koy
+  crate.kind = "health";
+  g.players[0].hp = 50;
+  M.Game.prototype.updateCrates.call(g, 0.016);
+  check("oyuncu temas edince sandık toplanır ve can artar", crate.dead === true && g.players[0].hp > 50);
+
+  // 3) Patlayıcı variller mekaniği
+  M.Game.prototype.spawnInitialBarrels.call(g);
+  check("spawnInitialBarrels haritada varil oluşturur", g.barrels.length >= 2);
+  const b = g.barrels[0];
+  const oldHp = b.hp;
+  b.hp -= 30;
+  check("varil hasar alabilir", b.hp < oldHp);
+
+  // 4) Ani Ölüm (Sudden Death) mekaniği
+  g.turnId = 12;
+  g.turn = 0;
+  const p = g.players[0];
+  p.y = 530; // en altta
+  p.alive = true;
+  const hpBefore = p.hp;
+  g.suddenDeath = true;
+  g.suddenDeathLevel = 25; // 540 - 25 = 515, p.y=530 > 515 (asit içinde)
+  const acidY = g.H - g.suddenDeathLevel;
+  if (p.y >= acidY) p.damage(20);
+  check("asit seviyesine değen oyuncu ani ölüm hasarı alır", p.hp < hpBefore);
 }
 
 // ── Özet ────────────────────────────────────────────────────────────────

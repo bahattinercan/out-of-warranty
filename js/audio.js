@@ -26,22 +26,33 @@
  *   SFX.win()            — oyun bitti / kazanan
  *   SFX.musicSync(state) — duruma göre arka plan müziğini aç/kapat/tema değiştir
  *   SFX.musicInfo()      — aktif müzik teması ve çalan nota sayısı (tanı/test)
- *   SFX.toggleMute()     — sesi aç/kapat (durumu döndürür)
- *   SFX.setVolume(0..1)  — ses seviyesini ayarla ve kaydet
- *   SFX.getVolume()      — seçili ses seviyesi (sessizde de korunur)
+ *   SFX.toggleMute()     — oyun sesini aç/kapat (durumu döndürür)
+ *   SFX.setVolume(0..1)  — oyun ses seviyesini ayarla ve kaydet
+ *   SFX.getVolume()      — seçili oyun ses seviyesi (sessizde de korunur)
+ *   SFX.toggleMusicMute()— müziği aç/kapat (müzik başlangıçta kapalı gelir)
+ *   SFX.setMusicVolume(0..1)— müzik seviyesini ayarla ve kaydet
+ *   SFX.getMusicVolume() — seçili müzik seviyesi
+ *   SFX.isMusicMuted()   — müzik kapalı mı
  */
 const SFX = (() => {
   let ctx = null;
-  let master = null;
+  let master = null;    // Oyun sesleri (SFX) kazancı
+  let musicGain = null; // Arka plan müziği kazancı
   let noiseBuf = null;
   let muted = false;
   let volume = 1; // %100 eski ana kazanç olan 0.42'ye karşılık gelir
   let lastAudibleVolume = 1;
+
+  // Arka plan müziği: başlangıçta varsayılan olarak kapalıdır.
+  let musicMuted = true;
+  let musicVolume = 0.8;
+  let lastAudibleMusicVolume = 0.8;
+
   let disabled = false;
   let resuming = null;
   const sources = new Map(); // kaynak → bağlantıları temizleyen işlev
 
-  // Mute tercihi (varsa) yükle — file:// üzerinde localStorage çoğu tarayıcıda çalışır
+  // Tercihleri yükle — file:// üzerinde localStorage çoğu tarayıcıda çalışır
   try { muted = localStorage.getItem("nwo_muted") === "1"; } catch (e) { /* yoksay */ }
   try {
     const saved = localStorage.getItem("nwo_volume");
@@ -50,26 +61,61 @@ const SFX = (() => {
   } catch (e) { /* depolama engellense de ses ayarlanabilir */ }
   if (volume > 0) lastAudibleVolume = volume;
 
+  try {
+    const savedMusicMuted = localStorage.getItem("nwo_music_muted");
+    if (savedMusicMuted === "0") musicMuted = false;
+    else if (savedMusicMuted === "1") musicMuted = true;
+    // Kayıtlı tercih yoksa varsayılan: true (oyun başlangıcında müzik kapalı)
+  } catch (e) { /* yoksay */ }
+
+  try {
+    const savedMusicVol = localStorage.getItem("nwo_music_volume");
+    const mVal = Number(savedMusicVol);
+    if (savedMusicVol != null && savedMusicVol !== "" && Number.isFinite(mVal) && mVal >= 0 && mVal <= 1) {
+      musicVolume = mVal;
+    }
+  } catch (e) { /* yoksay */ }
+  if (musicVolume > 0) lastAudibleMusicVolume = musicVolume;
+
   function savePreferences() {
     try {
       localStorage.setItem("nwo_muted", muted ? "1" : "0");
       localStorage.setItem("nwo_volume", String(volume));
+      localStorage.setItem("nwo_music_muted", musicMuted ? "1" : "0");
+      localStorage.setItem("nwo_music_volume", String(musicVolume));
     } catch (e) { /* yoksay */ }
   }
 
   function applyVolume() {
     if (master && !disabled) {
-      try { master.gain.value = muted ? 0 : 0.42 * volume; } catch (error) { disable(error); }
+      try { master.gain.value = (muted || volume === 0) ? 0 : 0.42 * volume; } catch (error) { disable(error); }
     }
-    if (muted || volume === 0) stopAll();
-    else {
-      // Sessizlikte biriken zamanı atla: döngü, kaldığı adımdan şimdiki andan sürer.
+    if (musicGain && !disabled) {
+      try { musicGain.gain.value = (musicMuted || musicVolume === 0) ? 0 : 0.42 * musicVolume; } catch (error) { disable(error); }
+    }
+    if (muted || volume === 0) {
+      stopSfx();
+    }
+    if (musicMuted || musicVolume === 0) {
+      stopMusic(false);
+    } else {
       musicNextTime = 0;
       ensure();
+      if (musicTheme && !musicTimer) startMusic(musicTheme);
+    }
+  }
+
+  function stopSfx() {
+    for (const [source, cleanup] of sources) {
+      if (!musicSources.has(source)) {
+        try { source.stop(); } catch (e) { /* zaten bitmiş olabilir */ }
+        cleanup();
+      }
     }
   }
 
   function stopAll() {
+    stopMusic();
     for (const [source, cleanup] of sources) {
       try { source.stop(); } catch (e) { /* zaten bitmiş olabilir */ }
       cleanup();
@@ -116,7 +162,7 @@ const SFX = (() => {
       resuming = null; // askıda kalan istek yeni denemeyi engellemesin
       try {
         Promise.resolve(ctx.resume()).then(
-          () => { resuming = null; if (ctx.state === "running") musicTick(); },
+          () => { resuming = null; if (ctx.state === "running" && !musicMuted) musicTick(); },
           () => { resuming = null; } // izin gelmediyse sonraki etkileşimde yeniden denenir
         );
       } catch (error) { disable(error); }
@@ -127,7 +173,8 @@ const SFX = (() => {
   // AudioContext'i tembel kur. Tarayıcı devam ettirmeyi reddederse istek
   // yakalanır; sonraki kullanıcı etkileşiminde yeniden denemek mümkündür.
   function ensure() {
-    if (muted || volume === 0 || disabled) return null;
+    const allMuted = (muted || volume === 0) && (musicMuted || musicVolume === 0);
+    if (allMuted || disabled) return null;
     // Tarayıcı dışı (ör. Node test vm) ortamda sessizce devre dışı kal
     if (typeof window === "undefined") return null;
     try {
@@ -135,9 +182,16 @@ const SFX = (() => {
         const AC = window.AudioContext || window.webkitAudioContext;
         if (!AC) return null;
         ctx = new AC();
+        // Master gain: SFX/oyun sesleri için ana kazanç
         master = ctx.createGain();
-        master.gain.value = 0.42 * volume;
+        master.gain.value = (muted || volume === 0) ? 0 : 0.42 * volume;
         master.connect(ctx.destination);
+
+        // Music gain: müzik kanalı için bağımsız kazanç
+        musicGain = ctx.createGain();
+        musicGain.gain.value = (musicMuted || musicVolume === 0) ? 0 : 0.42 * musicVolume;
+        musicGain.connect(ctx.destination);
+
         bindUnlock(); // jest sonrası devam ettirmeyi garantiye al
       }
       if ((ctx.state === "suspended" || ctx.state === "interrupted") && !resuming) {
@@ -180,10 +234,15 @@ const SFX = (() => {
     },
   };
 
+  function playMusic(build) {
+    if (musicMuted || musicVolume === 0 || !ensure()) return;
+    try { build(); } catch (error) { disable(error); }
+  }
+
   // Müzik notası: tek seferlik zarflı ton; kaynak kaydı ortaktır.
   function musicNote(freq, time, opts) {
     if (freq == null) return;
-    play(() => {
+    playMusic(() => {
       const osc = ctx.createOscillator();
       const g = ctx.createGain();
       const t0 = time;
@@ -193,7 +252,7 @@ const SFX = (() => {
       g.gain.setValueAtTime(0.0001, t0);
       g.gain.exponentialRampToValueAtTime(opts.gain, t0 + 0.015);
       g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
-      osc.connect(g).connect(master);
+      osc.connect(g).connect(musicGain || master);
       track(osc, [osc, g]);
       musicSources.add(osc);
       osc.onended = () => musicSources.delete(osc);
@@ -204,7 +263,7 @@ const SFX = (() => {
 
   // Lookahead scheduler: her 120 ms'de bir 0.5 s ilerisini zamanlar.
   function musicTick() {
-    if (muted || volume === 0 || disabled || !ensure()) return;
+    if (musicMuted || musicVolume === 0 || disabled || !ensure()) return;
     const spec = MUSIC_THEMES[musicTheme];
     if (!spec) return;
     const now = ctx.currentTime;
@@ -223,18 +282,18 @@ const SFX = (() => {
     }
   }
 
-  function stopMusic() {
-    if (musicTimer) { clearInterval(musicTimer); musicTimer = null; }
+  function stopMusic(clearTheme = true) {
+    if (musicTimer && clearTheme) { clearInterval(musicTimer); musicTimer = null; }
     for (const osc of musicSources) {
       try { osc.stop(); } catch (e) { /* zaten bitmiş olabilir */ }
     }
     musicSources.clear();
-    musicTheme = null;
+    if (clearTheme) musicTheme = null;
     musicNextTime = 0;
   }
 
   function startMusic(theme) {
-    stopMusic();
+    stopMusic(true);
     musicTheme = theme;
     musicStep = 0;
     musicNextTime = 0; // ilk tick'te güncel zamana oturur
@@ -430,8 +489,17 @@ const SFX = (() => {
       if (state === "AIMING" || state === "PROJECTILE" || state === "SETTLE") target = "battle";
       else if (state === "GAMEOVER") target = null;
       if (target !== musicTheme) {
-        if (target) startMusic(target);
-        else stopMusic();
+        if (target) {
+          if (!musicMuted && musicVolume > 0) startMusic(target);
+          else {
+            musicTheme = target;
+            stopMusic(false);
+          }
+        } else {
+          stopMusic(true);
+        }
+      } else if (target && !musicMuted && musicVolume > 0 && !musicTimer) {
+        startMusic(target);
       }
     },
 
@@ -448,6 +516,28 @@ const SFX = (() => {
     turn() {
       tone({ type: "triangle", freq: 523, dur: 0.1, gain: 0.14 });
       tone({ type: "triangle", freq: 784, dur: 0.14, gain: 0.16, delay: 0.09 });
+    },
+
+    // Geri sayım son 5 saniye tıkı. urgent ise daha tiz ve keskin.
+    timerTick(urgent) {
+      if (urgent) {
+        tone({ type: "square", freq: 880, dur: 0.04, gain: 0.12, attack: 0.002 });
+      } else {
+        tone({ type: "sine", freq: 580, dur: 0.035, gain: 0.08, attack: 0.002 });
+      }
+    },
+
+    // İkmal sandığı alma sesi — yükselen parlak arpej.
+    pickup() {
+      tone({ type: "sine", freq: 587, dur: 0.09, gain: 0.14 });
+      tone({ type: "sine", freq: 880, dur: 0.12, gain: 0.16, delay: 0.06 });
+      tone({ type: "triangle", freq: 1174, dur: 0.16, gain: 0.14, delay: 0.12 });
+    },
+
+    // Ani ölüm alarm sireni.
+    alarm() {
+      tone({ type: "sawtooth", freq: 360, freqEnd: 220, dur: 0.32, gain: 0.22 });
+      tone({ type: "sawtooth", freq: 360, freqEnd: 220, dur: 0.32, gain: 0.22, delay: 0.36 });
     },
 
     // Rüzgâr değişimi: filtrelenmiş hava uğultusu yeni şiddetle büyür. Sağa dönüş
@@ -492,17 +582,53 @@ const SFX = (() => {
       return volume;
     },
 
-    // Sesi aç/kapat — yeni durumu (muted) döndürür.
+    // Oyun sesini aç/kapat — yeni durumu (muted) döndürür.
     toggleMute() {
       if (volume === 0) {
         volume = lastAudibleVolume;
         muted = false;
       } else muted = !muted;
       savePreferences();
-      // Zamanı dondurma: hem çalan hem ileri tarihli kaynakları iptal et.
-      // Hızlı kapat/açta bile eski patlama veya zafer notaları geri gelmez.
       applyVolume();
       return muted;
     },
+
+    // ── Müzik ayarları ──────────────────────────────────────────────────
+    isMusicMuted() { return musicMuted || musicVolume === 0; },
+    getMusicVolume() { return musicVolume; },
+
+    setMusicVolume(value) {
+      if (typeof value !== "number" || !Number.isFinite(value)) return musicVolume;
+      musicVolume = Math.max(0, Math.min(1, value));
+      musicMuted = musicVolume === 0;
+      if (musicVolume > 0) lastAudibleMusicVolume = musicVolume;
+      savePreferences();
+      applyVolume();
+      return musicVolume;
+    },
+
+    toggleMusicMute() {
+      if (musicVolume === 0) {
+        musicVolume = lastAudibleMusicVolume || 0.8;
+        musicMuted = false;
+      } else {
+        musicMuted = !musicMuted;
+      }
+      savePreferences();
+      applyVolume();
+      return musicMuted;
+    },
+
+    setMusicMuted(val) {
+      musicMuted = !!val;
+      savePreferences();
+      applyVolume();
+      return musicMuted;
+    },
+
+    getSfxVolume() { return volume; },
+    setSfxVolume(v) { return this.setVolume(v); },
+    isSfxMuted() { return this.isMuted(); },
+    toggleSfxMute() { return this.toggleMute(); },
   };
 })();

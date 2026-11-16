@@ -18,23 +18,40 @@
           <!-- Simge ile metin ayrı düğümlerde: çeviri yalnız metni değiştirir,
                glif (⛶ / ⏏) kaybolmaz. Öğenin kendi Türkçe metni fallback'tir. -->
           <button id="fullscreen-btn" title="Tam ekran (F)" data-i18n-title="hud.fullscreen.title">⛶ <span data-i18n="hud.fullscreen">Tam Ekran</span></button>
+          <button id="settings-btn" title="Ayarlar (O)" data-i18n-title="hud.settings.title">⚙ <span data-i18n="hud.settings">Ayarlar</span></button>
           <button id="quit-btn" title="Menüye dön (Esc)" data-i18n-title="hud.quit.title">⏏ <span data-i18n="hud.quit">Çıkış</span></button>
         </div>
       </header>
 
       <!-- Ses denetimi HUD'un dışında, sahneye sabit: HUD menülerde gizlenirken
-           (karakter/harita/atölye ekranları) da erişilebilir kalır. -->
+           (karakter/harita/atölye ekranları) da erişilebilir kalır.
+           Oyun sesleri ve arka plan müziği ayrı ayrı ayarlanabilir. -->
       <div id="audio-control" role="group" aria-label="Ses ayarları" data-i18n-aria="hud.audio.group">
-        <button id="mute-btn" type="button" title="Sesi kapat (M)" aria-label="Sesi kapat" aria-pressed="false">
-          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-            <path d="M11 5 6 9H3v6h3l5 4Z" />
-            <path class="sound-waves" d="M15 8a6 6 0 0 1 0 8m3-11a10 10 0 0 1 0 14" />
-            <path class="sound-off" d="m16 9 6 6m0-6-6 6" />
-          </svg>
-          <span id="mute-label">Ses</span>
-        </button>
-        <input id="volume-slider" type="range" min="0" max="100" step="1" value="100" aria-label="Ses düzeyi" data-i18n-aria="hud.volume" />
-        <output id="volume-value" for="volume-slider">100%</output>
+        <div class="audio-row" id="sfx-row">
+          <button id="mute-btn" type="button" title="Sesi kapat (M)" data-i18n-title="hud.mute.off" aria-label="Sesi kapat" data-i18n-aria="hud.mute.off" aria-pressed="false">
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+              <path d="M11 5 6 9H3v6h3l5 4Z" />
+              <path class="sound-waves" d="M15 8a6 6 0 0 1 0 8m3-11a10 10 0 0 1 0 14" />
+              <path class="sound-off" d="m16 9 6 6m0-6-6 6" />
+            </svg>
+            <span id="mute-label" data-i18n="hud.sfx.label">Ses</span>
+          </button>
+          <input id="volume-slider" type="range" min="0" max="100" step="1" value="100" aria-label="Ses düzeyi" data-i18n-aria="hud.volume" />
+          <output id="volume-value" for="volume-slider">100%</output>
+        </div>
+        <div class="audio-row" id="music-row">
+          <button id="music-mute-btn" type="button" title="Müziği aç" data-i18n-title="hud.music.on" aria-label="Müziği aç" data-i18n-aria="hud.music.on" aria-pressed="true">
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+              <path d="M9 18V5l12-2v13" />
+              <circle cx="6" cy="18" r="3" />
+              <circle cx="18" cy="16" r="3" />
+              <path class="music-off" d="m3 3 18 18" />
+            </svg>
+            <span id="music-mute-label" data-i18n="hud.music.label">Müzik</span>
+          </button>
+          <input id="music-volume-slider" type="range" min="0" max="100" step="1" value="0" aria-label="Müzik düzeyi" data-i18n-aria="hud.music.volume" />
+          <output id="music-volume-value" for="music-volume-slider">0%</output>
+        </div>
       </div>
 
       <!-- Dil seçici: seçenekler js/i18n.js'teki LANG_ORDER'dan üretilir — yeni
@@ -72,6 +89,258 @@
             <button id="workshop-btn" data-i18n="hud.goWorkshop">Atölyeye Git</button>
             <button id="restart-btn" data-i18n="hud.playAgain">Tekrar Oyna</button>
             <button id="menu-btn" class="secondary" data-i18n="hud.mainMenu">Ana Menü</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Ayarlar Modalı: ses, görüntü, oynanış, kontroller ve profil yönetimi -->
+      <div id="settings-modal" class="hidden" role="dialog" aria-modal="true" aria-labelledby="settings-title">
+        <div class="settings-card">
+          <div class="settings-header">
+            <div class="settings-title-wrap">
+              <span class="settings-icon" aria-hidden="true">⚙</span>
+              <h2 id="settings-title" data-i18n="settings.title">Ayarlar</h2>
+            </div>
+            <button id="settings-close-btn" class="settings-close" title="Kapat (Esc)" data-i18n-title="settings.close.title">✕</button>
+          </div>
+
+          <div class="settings-tabs" role="tablist">
+            <button class="settings-tab active" data-tab="audio" role="tab" aria-selected="true" data-i18n="settings.tab.audio">Ses</button>
+            <button class="settings-tab" data-tab="graphics" role="tab" aria-selected="false" data-i18n="settings.tab.graphics">Görüntü</button>
+            <button class="settings-tab" data-tab="gameplay" role="tab" aria-selected="false" data-i18n="settings.tab.gameplay">Oynanış</button>
+            <button class="settings-tab" data-tab="controls" role="tab" aria-selected="false" data-i18n="settings.tab.controls">Kontroller</button>
+            <button class="settings-tab" data-tab="profile" role="tab" aria-selected="false" data-i18n="settings.tab.profile">Profil &amp; Veri</button>
+          </div>
+
+          <div class="settings-body">
+            <!-- 1. SES PANELİ -->
+            <div class="settings-panel active" id="tab-audio" role="tabpanel">
+              <div class="settings-group">
+                <h3 data-i18n="settings.audio.sfxHeading">Ses Efektleri</h3>
+                <div class="settings-row">
+                  <label for="st-sfx-slider" data-i18n="settings.audio.sfxVolume">Ses Seviyesi</label>
+                  <div class="settings-control-group">
+                    <input id="st-sfx-slider" type="range" min="0" max="100" step="1" value="100" aria-label="Ses seviyesi" data-i18n-aria="settings.audio.sfxVolume" />
+                    <output id="st-sfx-val">100%</output>
+                  </div>
+                </div>
+                <div class="settings-actions-row">
+                  <button id="st-sfx-mute-btn" type="button" class="settings-btn" data-i18n="settings.audio.mute">Sesi Kapat</button>
+                  <button id="st-sfx-test-btn" type="button" class="settings-btn secondary" data-i18n="settings.audio.test">Sesi Sına</button>
+                </div>
+              </div>
+
+              <div class="settings-group">
+                <h3 data-i18n="settings.audio.musicHeading">Müzik</h3>
+                <div class="settings-row">
+                  <label for="st-music-slider" data-i18n="settings.audio.musicVolume">Müzik Seviyesi</label>
+                  <div class="settings-control-group">
+                    <input id="st-music-slider" type="range" min="0" max="100" step="1" value="0" aria-label="Müzik seviyesi" data-i18n-aria="settings.audio.musicVolume" />
+                    <output id="st-music-val">0%</output>
+                  </div>
+                </div>
+                <div class="settings-actions-row">
+                  <button id="st-music-mute-btn" type="button" class="settings-btn" data-i18n="settings.audio.musicUnmute">Müziği Aç</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- 2. GÖRÜNTÜ PANELİ -->
+            <div class="settings-panel" id="tab-graphics" role="tabpanel">
+              <div class="settings-group">
+                <h3 data-i18n="settings.graphics.heading">Ekran ve Görseller</h3>
+                <div class="settings-row">
+                  <div class="settings-row-label">
+                    <span class="st-main-lbl" data-i18n="settings.graphics.fullscreenLabel">Tam Ekran Modu</span>
+                    <span class="st-sub-lbl" data-i18n="settings.graphics.fullscreenSub">F tuşu ile de açılıp kapatılabilir</span>
+                  </div>
+                  <button id="st-fullscreen-toggle" type="button" class="settings-btn" data-i18n="settings.graphics.enterFullscreen">Tam Ekran Yap</button>
+                </div>
+
+                <div class="settings-row">
+                  <div class="settings-row-label">
+                    <span class="st-main-lbl" data-i18n="settings.graphics.damageLabel">Hasar Sayıları</span>
+                    <span class="st-sub-lbl" data-i18n="settings.graphics.damageSub">Vuruş anında beliren hasar rakamları</span>
+                  </div>
+                  <label class="st-switch">
+                    <input id="st-chk-damage" type="checkbox" checked />
+                    <span class="st-slider round"></span>
+                  </label>
+                </div>
+
+                <div class="settings-row">
+                  <div class="settings-row-label">
+                    <span class="st-main-lbl" data-i18n="settings.graphics.aimLabel">Nişan Kılavuz Çizgisi</span>
+                    <span class="st-sub-lbl" data-i18n="settings.graphics.aimSub">Önceki turun atış açısı ve rehber çizgisi</span>
+                  </div>
+                  <label class="st-switch">
+                    <input id="st-chk-aim" type="checkbox" checked />
+                    <span class="st-slider round"></span>
+                  </label>
+                </div>
+
+                <div class="settings-row">
+                  <div class="settings-row-label">
+                    <span class="st-main-lbl" data-i18n="settings.graphics.fpsLabel">FPS Göstergesi</span>
+                    <span class="st-sub-lbl" data-i18n="settings.graphics.fpsSub">Sol üstte anlık kare hızını göster</span>
+                  </div>
+                  <label class="st-switch">
+                    <input id="st-chk-fps" type="checkbox" />
+                    <span class="st-slider round"></span>
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            <!-- 3. OYNANIŞ PANELİ -->
+            <div class="settings-panel" id="tab-gameplay" role="tabpanel">
+              <div class="settings-group">
+                <h3 data-i18n="settings.gameplay.heading">Oynanış ve Dil</h3>
+                <div class="settings-row">
+                  <div class="settings-row-label">
+                    <span class="st-main-lbl" data-i18n="settings.gameplay.langLabel">Arayüz Dili</span>
+                    <span class="st-sub-lbl" data-i18n="settings.gameplay.langSub">Metin ve seslendirme dilini değiştir</span>
+                  </div>
+                  <select id="st-locale-select" class="settings-select" aria-label="Arayüz Dili"></select>
+                </div>
+                <div class="settings-info-box">
+                  <span class="st-info-title" data-i18n="settings.gameplay.matchRules">Temel Kurallar:</span>
+                  <ul class="st-info-list">
+                    <li data-i18n="settings.gameplay.ruleTurn">Her oyuncunun tur başına nişan ve hareket süresi kısıtlıdır.</li>
+                    <li data-i18n="settings.gameplay.ruleWind">Rüzgar mermilerin uçuş yörüngesini etkiler, tur başında yönü takip edin.</li>
+                    <li data-i18n="settings.gameplay.ruleEnergy">Yürüme ve sıçrama enerji harcar; enerjinizi idareli kullanın.</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+
+            <!-- 4. KONTROLLER PANELİ -->
+            <div class="settings-panel" id="tab-controls" role="tabpanel">
+              <div class="settings-group">
+                <h3 data-i18n="settings.controls.heading">Klavye ve Fare Şeması</h3>
+                <div class="controls-layout">
+                  <!-- Sol Sütun: Hareket ve Savaş -->
+                  <div class="controls-column">
+                    <div class="controls-column-header">
+                      <span class="ctrl-col-icon" aria-hidden="true">⚔️</span>
+                      <span class="ctrl-col-title" data-i18n="settings.controls.combatHeading">Hareket ve Savaş</span>
+                    </div>
+                    <div class="ctrl-row">
+                      <span class="ctrl-action" data-i18n="settings.controls.move">Yürüme (Enerji harcar)</span>
+                      <div class="ctrl-keys">
+                        <kbd>A</kbd><kbd>D</kbd>
+                        <span class="st-key-sep" data-i18n="settings.controls.or">veya</span>
+                        <kbd>←</kbd><kbd>→</kbd>
+                      </div>
+                    </div>
+                    <div class="ctrl-row">
+                      <span class="ctrl-action" data-i18n="settings.controls.jump">Sıçrama</span>
+                      <div class="ctrl-keys">
+                        <kbd>W</kbd>
+                        <span class="st-key-sep" data-i18n="settings.controls.or">veya</span>
+                        <kbd>↑</kbd>
+                      </div>
+                    </div>
+                    <div class="ctrl-row">
+                      <span class="ctrl-action" data-i18n="settings.controls.aim">Nişan Açısı</span>
+                      <div class="ctrl-keys">
+                        <span class="st-mouse-badge">
+                          <svg class="st-svg-mouse" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2C8.7 2 6 4.7 6 8v8c0 3.3 2.7 6 6 6s6-2.7 6-6V8c0-3.3-2.7-6-6-6zm-1 3v4c0 .6.4 1 1 1s1-.4 1-1V5c2.8.5 5 2.9 5 6v1H7v-1c0-3.1 2.2-5.5 5-6z"/></svg>
+                          <span data-i18n="settings.controls.mouseAim">Fare Hareketi</span>
+                        </span>
+                      </div>
+                    </div>
+                    <div class="ctrl-row">
+                      <span class="ctrl-action" data-i18n="settings.controls.shoot">Güç Topla ve Ateş Et</span>
+                      <div class="ctrl-keys">
+                        <span class="st-mouse-badge primary">
+                          <svg class="st-svg-mouse" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2C8.7 2 6 4.7 6 8v8c0 3.3 2.7 6 6 6s6-2.7 6-6V8c0-3.3-2.7-6-6-6zm-1 3v4c0 .6.4 1 1 1s1-.4 1-1V5c2.8.5 5 2.9 5 6v1H7v-1c0-3.1 2.2-5.5 5-6z"/><path fill="currentColor" opacity=".7" d="M7 11V8c0-2.8 2.2-5 5-5v8H7z"/></svg>
+                          <span data-i18n="settings.controls.mouseHold">Sol Tık (Basılı Tut)</span>
+                        </span>
+                      </div>
+                    </div>
+                    <div class="ctrl-row">
+                      <span class="ctrl-action" data-i18n="settings.controls.module">Dahili Modül Yeteneği</span>
+                      <div class="ctrl-keys">
+                        <kbd class="accent">Q</kbd>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Sağ Sütun: Sistem ve Kısayollar -->
+                  <div class="controls-column">
+                    <div class="controls-column-header">
+                      <span class="ctrl-col-icon" aria-hidden="true">⚙️</span>
+                      <span class="ctrl-col-title" data-i18n="settings.controls.systemHeading">Sistem ve Kısayollar</span>
+                    </div>
+                    <div class="ctrl-row">
+                      <span class="ctrl-action" data-i18n="settings.controls.weapons">Silah / Cephane Seçimi</span>
+                      <div class="ctrl-keys">
+                        <kbd>1</kbd><span class="st-key-dash">–</span><kbd>9</kbd>
+                      </div>
+                    </div>
+                    <div class="ctrl-row">
+                      <span class="ctrl-action" data-i18n="settings.controls.fullscreen">Tam Ekran Aç / Kapat</span>
+                      <div class="ctrl-keys">
+                        <kbd>F</kbd>
+                      </div>
+                    </div>
+                    <div class="ctrl-row">
+                      <span class="ctrl-action" data-i18n="settings.controls.mute">Ses Aç / Kapat</span>
+                      <div class="ctrl-keys">
+                        <kbd>M</kbd>
+                      </div>
+                    </div>
+                    <div class="ctrl-row">
+                      <span class="ctrl-action" data-i18n="settings.controls.settings">Ayarlar Menüsü / Geri</span>
+                      <div class="ctrl-keys">
+                        <kbd>O</kbd>
+                        <span class="st-key-sep" data-i18n="settings.controls.or">veya</span>
+                        <kbd>Esc</kbd>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- 5. PROFİL PANELİ -->
+            <div class="settings-panel" id="tab-profile" role="tabpanel">
+              <div class="settings-group">
+                <h3 data-i18n="settings.profile.heading">Profil Bilgisi</h3>
+                <div class="settings-summary-row">
+                  <div class="summary-item"><span class="summary-label" data-i18n="settings.profile.scrapLabel">Mevcut Hurda:</span> <strong id="st-profile-scrap">-</strong></div>
+                  <div class="summary-item"><span class="summary-label" data-i18n="settings.profile.partsLabel">Parça Sayısı:</span> <strong id="st-profile-parts">-</strong></div>
+                </div>
+
+                <div class="settings-row vertical">
+                  <label for="st-export-btn" data-i18n="settings.profile.backupTitle">Profili Yedekle (Dışa Aktar)</label>
+                  <p class="st-desc" data-i18n="settings.profile.backupDesc">Kayıt verinizi panoya kopyalayıp güvende tutabilirsiniz.</p>
+                  <div class="settings-btn-inline">
+                    <button id="st-export-btn" type="button" class="settings-btn" data-i18n="settings.profile.exportBtn">Profili Panoya Kopyala</button>
+                    <span id="st-export-feedback" class="settings-feedback success hidden" role="status"></span>
+                  </div>
+                </div>
+
+                <div class="settings-row vertical">
+                  <label for="st-import-input" data-i18n="settings.profile.restoreTitle">Yedekten Geri Yükle (İçe Aktar)</label>
+                  <p class="st-desc" data-i18n="settings.profile.restoreDesc">Daha önce kopyaladığınız JSON profil verisini yapıştırın.</p>
+                  <div class="settings-import-wrap">
+                    <input id="st-import-input" type="text" placeholder="{&quot;version&quot;:5,...}" aria-label="Profil JSON metni" data-i18n-aria="settings.profile.restorePlaceholder" />
+                    <button id="st-import-btn" type="button" class="settings-btn secondary" data-i18n="settings.profile.importBtn">İçe Aktar</button>
+                  </div>
+                  <div id="st-import-feedback" class="settings-feedback" role="status"></div>
+                </div>
+
+                <div class="settings-row danger-zone">
+                  <div class="settings-row-label">
+                    <span class="st-main-lbl danger" data-i18n="settings.profile.resetHeading">Sıfırlama</span>
+                    <span class="st-sub-lbl" data-i18n="settings.profile.resetWarning">Hurda, parçalar ve geliştirmeler silinir!</span>
+                  </div>
+                  <button id="st-reset-profile-btn" type="button" class="settings-btn danger" data-i18n="settings.profile.resetBtn">Tüm İlerlemeyi Sıfırla</button>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -122,6 +391,7 @@
   <script src="js/portal.js"></script>
   <script src="js/diagnostics.js"></script>
   <script src="js/audio.js"></script>
+  <script src="js/settings.js"></script>
   <script src="js/characters.js"></script>
   <script src="js/progression.js"></script>
   <script src="js/profile.js"></script>

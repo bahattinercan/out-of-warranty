@@ -13,6 +13,8 @@ function setup(options = {}) {
   const sources = [], contexts = [], warnings = [];
   const storage = { nwo_muted: options.muted ? "1" : "0" };
   if (options.volume !== undefined) storage.nwo_volume = options.volume;
+  if (options.musicMuted !== undefined) storage.nwo_music_muted = options.musicMuted ? "1" : "0";
+  if (options.musicVolume !== undefined) storage.nwo_music_volume = String(options.musicVolume);
   let resolveResume, rejectResume;
   const param = () => ({ value: 0,
     setValueAtTime(v, t) { assert(Number.isFinite(v) && Number.isFinite(t)); this.value = v; },
@@ -257,8 +259,33 @@ for (const kind of ["yetenek", "zehir", "ateş"]) {
   });
 }
 
-test("müzik: durum eşlemesi tema değiştirir ve eskisini durdurur", () => {
+test("müzik başlangıçta kapalı gelir ve gameplay sesinden ayrıdır", () => {
   const t = setup();
+  assert.equal(t.SFX.isMusicMuted(), true, "müzik başlangıçta kapalı olmalı");
+  assert.equal(t.SFX.isMuted(), false, "gameplay sesi açık olmalı");
+  t.SFX.musicSync("MODE_SELECT");
+  assert.equal(t.SFX.musicInfo().running, false, "kapalıyken müzik zamanlanmaz");
+  t.SFX.jump();
+  assert.ok(t.sources.length > 0, "oyun efektleri müzik kapalıyken de çalar");
+});
+
+test("oyun sesi ve müzik sesi birbirinden bağımsız ayarlanır ve kaydedilir", () => {
+  const t = setup();
+  t.SFX.toggleMusicMute(); // müziği aç
+  assert.equal(t.SFX.isMusicMuted(), false);
+  assert.equal(t.storage.nwo_music_muted, "0");
+  t.SFX.setMusicVolume(0.5);
+  assert.equal(t.SFX.getMusicVolume(), 0.5);
+  assert.equal(t.storage.nwo_music_volume, "0.5");
+  // SFX'i sessize al: müzik etkilenmemeli
+  t.SFX.toggleMute();
+  assert.equal(t.SFX.isMuted(), true);
+  assert.equal(t.SFX.isMusicMuted(), false, "SFX sessizken müzik açık kalır");
+  t.SFX.musicSync("GAMEOVER");
+});
+
+test("müzik: durum eşlemesi tema değiştirir ve eskisini durdurur", () => {
+  const t = setup({ musicMuted: false });
   t.SFX.musicSync("MODE_SELECT");
   assert.equal(t.SFX.musicInfo().theme, "menu");
   assert.ok(t.SFX.musicInfo().running, "scheduler açık");
@@ -276,20 +303,20 @@ test("müzik: durum eşlemesi tema değiştirir ve eskisini durdurur", () => {
 });
 
 test("müzik: sessizde notaları keser, ses açılınca devam eder", async () => {
-  const t = setup();
+  const t = setup({ musicMuted: false });
   t.SFX.musicSync("MODE_SELECT");
   assert.equal(t.SFX.musicInfo().theme, "menu");
   await new Promise((resolve) => setTimeout(resolve, 260)); // birkaç tick
   const before = t.sources.length;
   assert.ok(before > 0, "menu notası zamanlandı");
-  t.SFX.setVolume(0);
+  t.SFX.setMusicVolume(0);
   const afterMute = t.sources.length;
   await new Promise((resolve) => setTimeout(resolve, 260));
   assert.equal(t.sources.length, afterMute, "sessizken yeni nota zamanlanmaz");
   assert.equal(t.SFX.musicInfo().theme, "menu", "tema korunur, döngü canlı kalır");
-  t.SFX.toggleMute(); // sesi geri aç
+  t.SFX.toggleMusicMute(); // müziği geri aç
   await new Promise((resolve) => setTimeout(resolve, 260));
-  assert.ok(t.sources.length > afterMute, "ses açılınca müzik kaldığı yerden devam eder");
+  assert.ok(t.sources.length > afterMute, "müzik açılınca kaldığı yerden devam eder");
   t.SFX.musicSync("GAMEOVER"); // test sonunda temizle
 });
 (async () => {

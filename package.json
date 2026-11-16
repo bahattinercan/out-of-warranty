@@ -1,5 +1,5 @@
 {
-  "name": "dokumhane-9",
+  "name": "out-of-warranty",
   "private": true,
   "scripts": {
     "models:robots": "node tools/robot-models.js",

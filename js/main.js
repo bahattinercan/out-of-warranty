@@ -14,6 +14,7 @@ window.addEventListener("DOMContentLoaded", () => {
   // çiziciler prosedürel yedeği kullanır (assets.js > assetImage).
   if (typeof assetPreload === "function") assetPreload();
   const game = new Game(canvas);
+  if (typeof GameSettings !== "undefined") GameSettings.init(game);
 
   /* Portal (F5): SDK varsa tembel yüklenir ve başlatılır; yoksa oyun hiç
    * etkilenmez. Portal kendi tam ekranını yönettiği için tarayıcı tam ekran
@@ -84,6 +85,11 @@ window.addEventListener("DOMContentLoaded", () => {
   document.getElementById("fullscreen-btn").addEventListener("click", toggleFullscreen);
   window.addEventListener("keydown", (e) => {
     if ((e.key === "f" || e.key === "F") && !e.repeat) toggleFullscreen();
+    if ((e.key === "o" || e.key === "O") && !e.repeat) {
+      if (typeof GameSettings !== "undefined" && !e.target.matches?.("input, select, textarea")) {
+        GameSettings.toggle();
+      }
+    }
   });
 
   // Ses aç/kapat butonu — etiketi kayıtlı tercihe göre başlat
@@ -92,6 +98,17 @@ window.addEventListener("DOMContentLoaded", () => {
     SFX.setVolume(Number(e.target.value) / 100);
     game.updateMuteButton();
   });
+  const musicMuteBtn = document.getElementById("music-mute-btn");
+  if (musicMuteBtn) {
+    musicMuteBtn.addEventListener("click", () => game.toggleMusicMute());
+  }
+  const musicSlider = document.getElementById("music-volume-slider");
+  if (musicSlider) {
+    musicSlider.addEventListener("input", (e) => {
+      SFX.setMusicVolume(Number(e.target.value) / 100);
+      game.updateMuteButton();
+    });
+  }
   // Ses ayarına geçerken önceki güç doldurma/yürüme girdisini bırak.
   const audioControl = document.getElementById("audio-control");
   const clearGameInput = () => {

@@ -376,115 +376,1008 @@ function drawSkyDecor(ctx, W, H, theme) {
 
 /* ---- Uzak arka plan (her kare, terrain'in arkasında) ---- */
 
-let _backdropCache = {};
-function drawBackdrop(ctx, W, H, theme) {
-  // Raster katman (varsa): uzak + orta görsel hazırsa prosedürel silüetler hiç
-  // çizilmez. Hazır değilse aşağıdaki yol AYNEN çalışır → ilk karede boşluk yok
-  // (file://'de görsel asenkron geldiği için bu yedek zorunlu).
-  // `typeof` koruması: sondalar (`_*.html`) index.html'den elle türediği için
-  // assets.js'i yüklemeyen eski bir kopya açılırsa savaş ekranı çökmesin.
-  if (theme.zoneId && typeof drawBackdropAsset === "function" && drawBackdropAsset(ctx, theme.zoneId, W, H, theme.backdropMid !== false)) {
-    _drawHaze(ctx, W, H, theme);
-    return;
-  }
-  if (!theme.backdrop) { _drawHaze(ctx, W, H, theme); return; }
-  let cache = _backdropCache[theme.id];
-  if (!cache) { cache = _buildBackdrop(theme, W, H); _backdropCache[theme.id] = cache; }
+/* ══════════════════════════════════════════════════════════════════════════
+ * 100% Vektör Arka Plan Çizim Motoru (Zero-Pixel Vector Backdrops)
+ *
+ * Her haritaya özel; çözünürlükten bağımsız (HiDPI / 2K / 4K / Retina),
+ * sıfır pikselleşme, temiz cel-shaded endüstriyel çizgiler ve zengin
+ * katmanlı silüetler.
+ * ══════════════════════════════════════════════════════════════════════════ */
 
-  for (const layer of cache.layers) {
-    ctx.fillStyle = layer.color;
-    ctx.beginPath();
-    ctx.moveTo(0, H);
-    for (const p of layer.points) ctx.lineTo(p.x, p.y);
-    ctx.lineTo(W, H);
-    ctx.closePath();
-    ctx.fill();
-    if (layer.caps) {
-      ctx.fillStyle = "#f4f8ff";
-      for (const c of layer.caps) {
-        ctx.beginPath(); ctx.moveTo(c.x, c.y); ctx.lineTo(c.x - 9, c.y + 11); ctx.lineTo(c.x + 9, c.y + 11); ctx.closePath(); ctx.fill();
-      }
-    }
-    if (layer.windows) {
-      for (const wnd of layer.windows) { ctx.fillStyle = wnd.c; ctx.fillRect(wnd.x, wnd.y, wnd.w, wnd.h); }
-    }
+function drawMapBackdropVector(ctx, W, H, theme) {
+  const scene = theme.scene || "";
+  const zone = theme.zoneId || "";
+  if (scene === "furnace" || zone === "foundry") {
+    _drawFurnaceBackdrop(ctx, W, H, theme);
+  } else if (scene === "crane" || zone === "warehouse") {
+    _drawCraneYardBackdrop(ctx, W, H, theme);
+  } else if (scene === "reactor" || zone === "waste") {
+    _drawReactorGardenBackdrop(ctx, W, H, theme);
+  } else if (scene === "moon" || zone === "scrapyard") {
+    _drawMoonScrapyardBackdrop(ctx, W, H, theme);
+  } else if (scene === "ice" || zone === "cooling") {
+    _drawIceRiftBackdrop(ctx, W, H, theme);
+  } else if (scene === "lab" || zone === "assembly") {
+    _drawFloodedLabBackdrop(ctx, W, H, theme);
+  } else {
+    _drawGenericZoneBackdrop(ctx, W, H, theme);
   }
-  drawMapLandmark(ctx, W, H, theme);
-  _drawHaze(ctx, W, H, theme);
 }
 
-function drawMapLandmark(ctx, W, H, theme) {
-  if (!theme.scene) return;
+function _drawFurnaceBackdrop(ctx, W, H, theme) {
   ctx.save();
-  ctx.globalAlpha = 0.82;
-  ctx.lineWidth = Math.max(2, W * 0.004);
-  ctx.strokeStyle = _shade(theme.grassDeep, -0.12);
-  ctx.fillStyle = _shade(theme.grassDeep, -0.04);
-  const cx = W * 0.5, top = H * 0.18;
-  if (theme.scene === "furnace") {
-    ctx.strokeStyle = "#b65c39"; ctx.lineWidth = W * 0.012;
-    ctx.beginPath(); ctx.moveTo(cx, top); ctx.lineTo(cx, H * 0.39); ctx.stroke();
-    ctx.fillStyle = "#493238"; ctx.beginPath(); ctx.moveTo(cx - W*.10,H*.34); ctx.lineTo(cx-W*.075,H*.46); ctx.lineTo(cx+W*.075,H*.46); ctx.lineTo(cx+W*.10,H*.34); ctx.closePath(); ctx.fill();
-    ctx.strokeStyle = "#f08a43"; ctx.lineWidth = 3; ctx.stroke();
-    ctx.fillStyle = "#ff9e56"; ctx.fillRect(cx-W*.055,H*.40,W*.11,H*.012);
-  } else if (theme.scene === "crane") {
-    ctx.lineWidth = W*.012; ctx.beginPath(); ctx.moveTo(W*.22,H*.52); ctx.lineTo(W*.22,H*.22); ctx.lineTo(W*.60,H*.22); ctx.moveTo(W*.22,H*.31); ctx.lineTo(W*.49,H*.31); ctx.lineTo(W*.49,H*.51); ctx.moveTo(W*.78,H*.52); ctx.lineTo(W*.78,H*.16); ctx.lineTo(W*.94,H*.16); ctx.stroke();
-    ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(W*.60,H*.22); ctx.lineTo(W*.60,H*.38); ctx.stroke(); ctx.fillRect(W*.585,H*.37,W*.03,H*.05);
-  } else if (theme.scene === "reactor") {
-    ctx.fillStyle = "#344b42"; ctx.beginPath(); ctx.ellipse(cx,H*.39,W*.105,H*.16,0,0,Math.PI*2); ctx.fill();
-    ctx.strokeStyle = "#a8ca70"; ctx.lineWidth = 5; ctx.beginPath(); ctx.ellipse(cx,H*.39,W*.075,H*.12,0,0,Math.PI*2); ctx.stroke();
-    ctx.fillStyle = "#d6ed8b"; ctx.beginPath(); ctx.arc(cx,H*.39,W*.025,0,Math.PI*2); ctx.fill();
-    ctx.strokeStyle = "#738c50"; ctx.lineWidth = W*.009; ctx.beginPath(); ctx.moveTo(W*.24,H*.20); ctx.quadraticCurveTo(W*.33,H*.48,cx,H*.49); ctx.moveTo(W*.78,H*.18); ctx.quadraticCurveTo(W*.68,H*.43,cx,H*.49); ctx.stroke();
-  } else if (theme.scene === "moon") {
-    ctx.strokeStyle = "#9ca9b7"; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(W*.29,H*.40,W*.10,-2.5,1.4); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(W*.22,H*.47); ctx.lineTo(W*.35,H*.32); ctx.moveTo(W*.22,H*.32); ctx.lineTo(W*.35,H*.47); ctx.stroke();
-    ctx.fillStyle = "#707c8b"; ctx.fillRect(W*.64,H*.43,W*.12,H*.05); ctx.fillRect(W*.67,H*.39,W*.06,H*.04);
-    ctx.strokeStyle = "#bbc5ca"; ctx.beginPath(); ctx.moveTo(W*.65,H*.48); ctx.lineTo(W*.63,H*.52); ctx.moveTo(W*.75,H*.48); ctx.lineTo(W*.77,H*.52); ctx.stroke();
-  } else if (theme.scene === "ice") {
-    const ice = ctx.createLinearGradient(0,H*.2,0,H*.62);
-    ice.addColorStop(0,"#eefaff"); ice.addColorStop(.48,"#8fc5df"); ice.addColorStop(1,"#426b87");
-    ctx.fillStyle = ice;
-    ctx.beginPath(); ctx.moveTo(W*.12,H*.57); ctx.lineTo(W*.22,H*.38); ctx.lineTo(W*.29,H*.46); ctx.lineTo(W*.37,H*.26); ctx.lineTo(W*.44,H*.48); ctx.lineTo(W*.50,H*.33); ctx.lineTo(W*.57,H*.49); ctx.lineTo(W*.65,H*.29); ctx.lineTo(W*.72,H*.43); ctx.lineTo(W*.83,H*.34); ctx.lineTo(W*.92,H*.55); ctx.closePath(); ctx.fill();
-    ctx.strokeStyle = "#e8fbff"; ctx.lineWidth = Math.max(2,W*.004); ctx.stroke();
-    ctx.strokeStyle = "rgba(44,104,143,.85)"; ctx.lineWidth = Math.max(3,W*.009);
-    ctx.beginPath(); ctx.moveTo(W*.47,H*.42); ctx.lineTo(W*.52,H*.49); ctx.lineTo(W*.48,H*.55); ctx.lineTo(W*.55,H*.62); ctx.stroke();
-    ctx.strokeStyle = "rgba(231,252,255,.9)"; ctx.lineWidth = Math.max(1,W*.002);
-    ctx.beginPath(); ctx.moveTo(W*.43,H*.47); ctx.lineTo(W*.48,H*.51); ctx.moveTo(W*.57,H*.45); ctx.lineTo(W*.53,H*.50); ctx.stroke();
-  } else if (theme.scene === "lab") {
-    ctx.save(); ctx.translate(cx,H*.39); ctx.rotate(-0.14);
-    ctx.fillStyle = "#5b7779"; ctx.fillRect(-W*.095,-H*.09,W*.19,H*.18);
-    ctx.strokeStyle = "#9ed8cf"; ctx.lineWidth = 4; ctx.strokeRect(-W*.095,-H*.09,W*.19,H*.18);
-    ctx.fillStyle = "#73c5bc88"; ctx.fillRect(-W*.065,-H*.06,W*.13,H*.12);
-    ctx.restore();
-    ctx.strokeStyle = "#91beb9"; ctx.lineWidth = 3; ctx.strokeRect(W*.16,H*.27,W*.10,H*.23); ctx.strokeRect(W*.76,H*.27,W*.08,H*.23);
-    ctx.strokeStyle = "rgba(205,246,236,.72)"; ctx.lineWidth = Math.max(2,W*.005);
-    ctx.beginPath(); ctx.moveTo(W*.07,H*.17); ctx.lineTo(W*.93,H*.17); ctx.lineTo(W*.93,H*.22); ctx.lineTo(W*.07,H*.22); ctx.closePath(); ctx.stroke();
-    for (let i=0;i<5;i++) { const xx=W*(.12+i*.19); ctx.strokeStyle=i%2?"#78bbb8":"#b2e3d5"; ctx.lineWidth=2; ctx.beginPath(); ctx.moveTo(xx,H*.18); ctx.lineTo(xx+W*.035,H*.29); ctx.stroke(); }
-    ctx.fillStyle="rgba(60,211,190,.16)"; ctx.fillRect(W*.31,H*.28,W*.38,H*.16);
-    ctx.strokeStyle="#92ddd0"; ctx.strokeRect(W*.31,H*.28,W*.38,H*.16);
+
+  // 1. Zengin Sanayi Gökyüzü ve Işık Gradyanı
+  const skyGrad = ctx.createLinearGradient(0, 0, 0, H * 0.85);
+  skyGrad.addColorStop(0, "#190f1d");
+  skyGrad.addColorStop(0.35, "#3b1723");
+  skyGrad.addColorStop(0.68, "#7a2a22");
+  skyGrad.addColorStop(0.92, "#d65d28");
+  skyGrad.addColorStop(1.0, "#ff8e38");
+  ctx.fillStyle = skyGrad;
+  ctx.fillRect(0, 0, W, H);
+
+  // 2. Dumanlı Kızıl Güneş / Ocaktan Yansıyan Ufuk Parıltısı
+  const sunX = W * 0.74, sunY = H * 0.32;
+  const sunGlow = ctx.createRadialGradient(sunX, sunY, 10, sunX, sunY, W * 0.22);
+  sunGlow.addColorStop(0, "rgba(255, 170, 70, 0.45)");
+  sunGlow.addColorStop(0.4, "rgba(235, 90, 40, 0.22)");
+  sunGlow.addColorStop(1, "rgba(0, 0, 0, 0)");
+  ctx.fillStyle = sunGlow;
+  ctx.beginPath();
+  ctx.arc(sunX, sunY, W * 0.22, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.fillStyle = "#ffb266";
+  ctx.beginPath();
+  ctx.arc(sunX, sunY, 32, 0, Math.PI * 2);
+  ctx.fill();
+
+  // 3. Uzak Katman: Yüksek Soğutma Kuleleri & Fabrika Silüetleri (Far Layer)
+  ctx.fillStyle = "#26151f";
+  // Kule 1 (Sol)
+  ctx.beginPath();
+  ctx.moveTo(W * 0.04, H * 0.65);
+  ctx.quadraticCurveTo(W * 0.08, H * 0.38, W * 0.09, H * 0.24);
+  ctx.lineTo(W * 0.17, H * 0.24);
+  ctx.quadraticCurveTo(W * 0.18, H * 0.38, W * 0.22, H * 0.65);
+  ctx.closePath();
+  ctx.fill();
+  // Kule 2 (Orta-Sağ)
+  ctx.beginPath();
+  ctx.moveTo(W * 0.58, H * 0.65);
+  ctx.quadraticCurveTo(W * 0.62, H * 0.35, W * 0.63, H * 0.20);
+  ctx.lineTo(W * 0.72, H * 0.20);
+  ctx.quadraticCurveTo(W * 0.73, H * 0.35, W * 0.77, H * 0.65);
+  ctx.closePath();
+  ctx.fill();
+
+  // İnce Yüksek Bacalar ve Duman Bulutları
+  const chimneys = [
+    { x: W * 0.03, w: W * 0.022, h: H * 0.44 },
+    { x: W * 0.26, w: W * 0.018, h: H * 0.38 },
+    { x: W * 0.83, w: W * 0.025, h: H * 0.48 },
+    { x: W * 0.93, w: W * 0.020, h: H * 0.40 },
+  ];
+  for (const c of chimneys) {
+    ctx.fillRect(c.x, H * 0.65 - c.h, c.w, c.h);
+    ctx.fillRect(c.x - 3, H * 0.65 - c.h, c.w + 6, 6);
+    ctx.fillStyle = "rgba(45, 20, 26, 0.45)";
+    const topY = H * 0.65 - c.h;
+    ctx.beginPath();
+    ctx.arc(c.x + c.w / 2 + 6, topY - 14, 18, 0, Math.PI * 2);
+    ctx.arc(c.x + c.w / 2 + 20, topY - 32, 26, 0, Math.PI * 2);
+    ctx.arc(c.x + c.w / 2 + 42, topY - 50, 36, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = "#26151f";
   }
+
+  // Uzak Galeri ve Boru Hatları
+  ctx.strokeStyle = "#26151f";
+  ctx.lineWidth = 4;
+  ctx.beginPath();
+  ctx.moveTo(W * 0.08, H * 0.38);
+  ctx.lineTo(W * 0.65, H * 0.42);
+  ctx.moveTo(W * 0.22, H * 0.48);
+  ctx.lineTo(W * 0.85, H * 0.44);
+  ctx.stroke();
+
+  // 4. Orta Katman: Çelik Konstrüksiyon, Tavan Vinci Rayları (Mid Architecture)
+  ctx.strokeStyle = "#381d26";
+  ctx.lineWidth = 6;
+  const gantryY = H * 0.16;
+  ctx.beginPath();
+  ctx.moveTo(0, gantryY);
+  ctx.lineTo(W, gantryY);
+  ctx.moveTo(0, gantryY + 18);
+  ctx.lineTo(W, gantryY + 18);
+  ctx.stroke();
+
+  // Kafes Kiriş Çaprazları (X X X)
+  ctx.lineWidth = 2.5;
+  ctx.beginPath();
+  for (let gx = 0; gx < W; gx += 40) {
+    ctx.moveTo(gx, gantryY);
+    ctx.lineTo(gx + 40, gantryY + 18);
+    ctx.moveTo(gx + 40, gantryY);
+    ctx.lineTo(gx, gantryY + 18);
+  }
+  ctx.stroke();
+
+  // Dikey Taşıyıcı Sütunlar
+  ctx.fillStyle = "#381d26";
+  const cols = [W * 0.15, W * 0.45, W * 0.85];
+  for (const cx of cols) {
+    ctx.fillRect(cx - 8, gantryY, 16, H * 0.6);
+    // Güvenlik Korkuluğu ve Sarı/Siyah İkaz Şeridi (Hazard Stripes)
+    for (let hy = gantryY + 40; hy < H * 0.65; hy += 70) {
+      ctx.fillStyle = "#e2ad3b";
+      ctx.fillRect(cx - 16, hy, 32, 8);
+      ctx.fillStyle = "#1e1318";
+      ctx.beginPath();
+      ctx.moveTo(cx - 14, hy); ctx.lineTo(cx - 8, hy + 8);
+      ctx.moveTo(cx - 4, hy);  ctx.lineTo(cx + 2, hy + 8);
+      ctx.moveTo(cx + 6, hy);  ctx.lineTo(cx + 12, hy + 8);
+      ctx.strokeStyle = "#1e1318"; ctx.lineWidth = 3; ctx.stroke();
+      ctx.fillStyle = "#381d26";
+    }
+  }
+
+  // 5. Odak Noktası: Asılı Dev Döküm Potası (Smelting Ladle) ve Akan Erimiş Metal
+  const lX = W * 0.50, lY = H * 0.32;
+  ctx.strokeStyle = "#5a3038";
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.moveTo(lX - 35, gantryY + 18);
+  ctx.lineTo(lX - 30, lY);
+  ctx.moveTo(lX + 35, gantryY + 18);
+  ctx.lineTo(lX + 30, lY);
+  ctx.stroke();
+
+  // Pota Gövdesi
+  ctx.save();
+  ctx.translate(lX, lY);
+  ctx.rotate(0.14);
+
+  ctx.fillStyle = "#4a262e";
+  ctx.strokeStyle = "#200e14";
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.moveTo(-45, -15);
+  ctx.lineTo(45, -15);
+  ctx.lineTo(36, 42);
+  ctx.quadraticCurveTo(0, 52, -36, 42);
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+
+  ctx.fillStyle = "#5c323b";
+  ctx.fillRect(-48, 8, 96, 6);
+  ctx.fillStyle = "#ff6a20";
+  ctx.beginPath();
+  ctx.ellipse(0, -15, 42, 10, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = "#ffdf79";
+  ctx.beginPath();
+  ctx.ellipse(-12, -15, 26, 6, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+
+  // Erimiş Metal Akıntısı (Molten Metal Cascade)
+  const pourX = lX - 36, pourStartY = lY + 2;
+  const pourEndY = H * 0.72;
+
+  // Dış Işıma Aurası (Ateş Parıltısı)
+  const pourAura = ctx.createLinearGradient(pourX - 25, 0, pourX + 25, 0);
+  pourAura.addColorStop(0, "rgba(255, 90, 0, 0)");
+  pourAura.addColorStop(0.5, "rgba(255, 100, 20, 0.55)");
+  pourAura.addColorStop(1, "rgba(255, 90, 0, 0)");
+  ctx.fillStyle = pourAura;
+  ctx.fillRect(pourX - 30, pourStartY, 60, pourEndY - pourStartY + 10);
+
+  // Ana Lav Dalgası
+  ctx.fillStyle = "#ff5500";
+  ctx.beginPath();
+  ctx.moveTo(pourX - 9, pourStartY);
+  ctx.quadraticCurveTo(pourX - 14, (pourStartY + pourEndY) / 2, pourX - 18, pourEndY);
+  ctx.lineTo(pourX + 18, pourEndY);
+  ctx.quadraticCurveTo(pourX + 14, (pourStartY + pourEndY) / 2, pourX + 9, pourStartY);
+  ctx.closePath();
+  ctx.fill();
+
+  // İç Akkor Çekirdek (Parlak Sarı/Beyaz Sıvı Çelik)
+  ctx.fillStyle = "#fff4b8";
+  ctx.beginPath();
+  ctx.moveTo(pourX - 3, pourStartY);
+  ctx.quadraticCurveTo(pourX - 5, (pourStartY + pourEndY) / 2, pourX - 7, pourEndY);
+  ctx.lineTo(pourX + 7, pourEndY);
+  ctx.quadraticCurveTo(pourX + 5, (pourStartY + pourEndY) / 2, pourX + 3, pourStartY);
+  ctx.closePath();
+  ctx.fill();
+
+  // Erimiş Metal Havuzu / Cüruf Yatağı
+  const poolGrad = ctx.createLinearGradient(0, pourEndY - 5, 0, pourEndY + 35);
+  poolGrad.addColorStop(0, "#ffe885");
+  poolGrad.addColorStop(0.3, "#ff6e1a");
+  poolGrad.addColorStop(1, "#661812");
+  ctx.fillStyle = poolGrad;
+  ctx.beginPath();
+  ctx.ellipse(pourX, pourEndY, 75, 18, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Uçuşan Ateş Kıvılcımları (Sparks & Embers)
+  const sparks = [
+    { x: -18, y: -25, r: 2.2 }, { x: 12, y: -45, r: 1.8 }, { x: -35, y: -70, r: 1.4 },
+    { x: 28, y: -85, r: 2.0 }, { x: -8, y: -110, r: 1.6 }, { x: 42, y: -130, r: 1.5 },
+    { x: -22, y: -155, r: 1.9 }, { x: 16, y: -180, r: 1.3 }, { x: -45, y: -210, r: 1.7 },
+  ];
+  for (const s of sparks) {
+    ctx.fillStyle = "#ffe480";
+    ctx.beginPath();
+    ctx.arc(pourX + s.x, pourEndY + s.y, s.r, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = "rgba(255, 100, 20, 0.35)";
+    ctx.beginPath();
+    ctx.arc(pourX + s.x, pourEndY + s.y, s.r * 2.5, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
   ctx.restore();
 }
 
+function _drawCraneYardBackdrop(ctx, W, H, theme) {
+  ctx.save();
+
+  // 1. Derin Gece & Liman Gökyüzü
+  const skyGrad = ctx.createLinearGradient(0, 0, 0, H * 0.85);
+  skyGrad.addColorStop(0, "#080e1b");
+  skyGrad.addColorStop(0.40, "#121e36");
+  skyGrad.addColorStop(0.75, "#1f3352");
+  skyGrad.addColorStop(1.0, "#334e70");
+  ctx.fillStyle = skyGrad;
+  ctx.fillRect(0, 0, W, H);
+
+  // 2. Parlak Ay & Yumuşak Gece Halesi
+  const moonX = W * 0.82, moonY = H * 0.18;
+  const moonGlow = ctx.createRadialGradient(moonX, moonY, 12, moonX, moonY, 65);
+  moonGlow.addColorStop(0, "rgba(230, 240, 255, 0.35)");
+  moonGlow.addColorStop(0.5, "rgba(180, 210, 255, 0.12)");
+  moonGlow.addColorStop(1, "rgba(0, 0, 0, 0)");
+  ctx.fillStyle = moonGlow;
+  ctx.beginPath();
+  ctx.arc(moonX, moonY, 65, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.fillStyle = "#eaf2fb";
+  ctx.beginPath();
+  ctx.arc(moonX, moonY, 24, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = "#ccd9e8";
+  ctx.beginPath();
+  ctx.arc(moonX - 6, moonY + 4, 5, 0, Math.PI * 2);
+  ctx.arc(moonX + 8, moonY - 5, 3.5, 0, Math.PI * 2);
+  ctx.arc(moonX + 4, moonY + 8, 4, 0, Math.PI * 2);
+  ctx.fill();
+
+  // 3. Liman Arama Işığı (Searchlight Beam)
+  const beamGrad = ctx.createLinearGradient(W * 0.18, H * 0.62, W * 0.45, H * 0.05);
+  beamGrad.addColorStop(0, "rgba(200, 230, 255, 0.22)");
+  beamGrad.addColorStop(1, "rgba(200, 230, 255, 0)");
+  ctx.fillStyle = beamGrad;
+  ctx.beginPath();
+  ctx.moveTo(W * 0.18, H * 0.62);
+  ctx.lineTo(W * 0.40, 0);
+  ctx.lineTo(W * 0.52, 0);
+  ctx.closePath();
+  ctx.fill();
+
+  // 4. Uzak Silüet: Şehir ve Asma Köprü Kuleleri
+  ctx.fillStyle = "#152438";
+  const skyline = [
+    { x: W * 0.05, w: 32, h: 110 }, { x: W * 0.10, w: 28, h: 80 }, { x: W * 0.14, w: 42, h: 140 },
+    { x: W * 0.25, w: 36, h: 95 },  { x: W * 0.32, w: 50, h: 160 }, { x: W * 0.40, w: 30, h: 120 },
+    { x: W * 0.65, w: 45, h: 130 }, { x: W * 0.72, w: 35, h: 90 },  { x: W * 0.88, w: 40, h: 150 },
+  ];
+  for (const b of skyline) {
+    ctx.fillRect(b.x, H * 0.65 - b.h, b.w, b.h);
+    for (let wy = H * 0.65 - b.h + 12; wy < H * 0.65 - 10; wy += 14) {
+      for (let wx = b.x + 6; wx < b.x + b.w - 6; wx += 9) {
+        if ((wx * 13 + wy * 17) % 5 === 0) {
+          ctx.fillStyle = ((wx + wy) % 3 === 0) ? "#ffe680" : "#70d6ff";
+          ctx.fillRect(wx, wy, 3.5, 4.5);
+          ctx.fillStyle = "#152438";
+        }
+      }
+    }
+  }
+
+  // Uzak Asma Köprü Kulesi ve Kablolar
+  const brX = W * 0.54, brH = 175;
+  ctx.fillRect(brX, H * 0.65 - brH, 8, brH);
+  ctx.fillRect(brX + 22, H * 0.65 - brH, 8, brH);
+  ctx.fillRect(brX - 4, H * 0.65 - brH + 30, 38, 5);
+  ctx.strokeStyle = "#152438";
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.moveTo(brX - 60, H * 0.65 - 40);
+  ctx.quadraticCurveTo(brX, H * 0.65 - brH + 10, brX + 15, H * 0.65 - brH);
+  ctx.quadraticCurveTo(brX + 30, H * 0.65 - brH + 10, brX + 90, H * 0.65 - 40);
+  ctx.stroke();
+
+  // 5. Orta Katman: İki Büyük Liman Vinci (Lattice Gantry Cranes)
+  const c1X = W * 0.22, c1BaseY = H * 0.65;
+  ctx.strokeStyle = "#253a54";
+  ctx.fillStyle = "#253a54";
+  ctx.lineWidth = 4;
+
+  ctx.beginPath();
+  ctx.moveTo(c1X - 42, c1BaseY);
+  ctx.lineTo(c1X, c1BaseY - 170);
+  ctx.lineTo(c1X + 42, c1BaseY);
+  ctx.stroke();
+
+  ctx.lineWidth = 2;
+  for (let step = 0; step < 4; step++) {
+    const y1 = c1BaseY - 35 * step, y2 = c1BaseY - 35 * (step + 1);
+    const span1 = 42 * (1 - step / 5), span2 = 42 * (1 - (step + 1) / 5);
+    ctx.beginPath();
+    ctx.moveTo(c1X - span1, y1); ctx.lineTo(c1X + span2, y2);
+    ctx.moveTo(c1X + span1, y1); ctx.lineTo(c1X - span2, y2);
+    ctx.stroke();
+  }
+
+  const boomY = c1BaseY - 170;
+  ctx.lineWidth = 5;
+  ctx.beginPath();
+  ctx.moveTo(c1X - 60, boomY + 8);
+  ctx.lineTo(c1X + 160, boomY - 16);
+  ctx.moveTo(c1X - 60, boomY - 6);
+  ctx.lineTo(c1X + 160, boomY - 30);
+  ctx.stroke();
+
+  ctx.fillRect(c1X - 65, boomY - 12, 22, 24);
+  ctx.fillStyle = "#ffe480";
+  ctx.fillRect(c1X + 8, boomY - 2, 10, 8);
+  ctx.fillStyle = "#253a54";
+
+  const cableX = c1X + 90, cableTopY = boomY - 22;
+  ctx.strokeStyle = "#5a7a9e";
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.moveTo(cableX, cableTopY);
+  ctx.lineTo(cableX, cableTopY + 75);
+  ctx.moveTo(cableX + 32, cableTopY);
+  ctx.lineTo(cableX + 32, cableTopY + 75);
+  ctx.stroke();
+
+  ctx.fillStyle = "#d4682a";
+  ctx.fillRect(cableX - 6, cableTopY + 75, 44, 22);
+  ctx.strokeStyle = "#1b2533";
+  ctx.lineWidth = 1.5;
+  ctx.strokeRect(cableX - 6, cableTopY + 75, 44, 22);
+  for (let kx = cableX - 2; kx < cableX + 36; kx += 7) {
+    ctx.beginPath(); ctx.moveTo(kx, cableTopY + 76); ctx.lineTo(kx, cableTopY + 96); ctx.stroke();
+  }
+
+  const c2X = W * 0.78, c2BaseY = H * 0.65;
+  ctx.strokeStyle = "#203248";
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.moveTo(c2X - 25, c2BaseY); ctx.lineTo(c2X, c2BaseY - 120); ctx.lineTo(c2X + 25, c2BaseY);
+  ctx.moveTo(c2X - 40, c2BaseY - 120); ctx.lineTo(c2X + 90, c2BaseY - 140);
+  ctx.stroke();
+
+  ctx.fillStyle = "#ff2a3a";
+  ctx.beginPath();
+  ctx.arc(c1X, boomY - 32, 3.5, 0, Math.PI * 2);
+  ctx.arc(c2X, c2BaseY - 142, 3, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = "rgba(255, 50, 50, 0.4)";
+  ctx.beginPath();
+  ctx.arc(c1X, boomY - 32, 9, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.restore();
+}
+
+function _drawReactorGardenBackdrop(ctx, W, H, theme) {
+  ctx.save();
+
+  // 1. Toksik Biyom Gökyüzü (Teal to Murky Olive)
+  const skyGrad = ctx.createLinearGradient(0, 0, 0, H);
+  skyGrad.addColorStop(0, "#0c1d1a");
+  skyGrad.addColorStop(0.35, "#183226");
+  skyGrad.addColorStop(0.70, "#2c4b37");
+  skyGrad.addColorStop(1.0, "#486f4a");
+  ctx.fillStyle = skyGrad;
+  ctx.fillRect(0, 0, W, H);
+
+  // 2. Uzak Soğutma Kuleleri ve Çatlak Detayı (krater oyulunca dipsiz boşluk kalmaması için H'ye uzanır)
+  ctx.fillStyle = "#1e332a";
+  const t1X = W * 0.16, t1Y = H;
+  ctx.beginPath();
+  ctx.moveTo(t1X - 60, t1Y);
+  ctx.quadraticCurveTo(t1X - 28, H * 0.45, t1X - 35, H * 0.25);
+  ctx.lineTo(t1X + 35, H * 0.25);
+  ctx.quadraticCurveTo(t1X + 28, H * 0.45, t1X + 60, t1Y);
+  ctx.closePath();
+  ctx.fill();
+
+  ctx.strokeStyle = "#38d95e";
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(t1X - 6, H * 0.28);
+  ctx.lineTo(t1X + 4, H * 0.35);
+  ctx.lineTo(t1X - 8, H * 0.43);
+  ctx.lineTo(t1X + 12, H * 0.52);
+  ctx.stroke();
+
+  const t2X = W * 0.82;
+  ctx.beginPath();
+  ctx.moveTo(t2X - 52, t1Y);
+  ctx.quadraticCurveTo(t2X - 24, H * 0.48, t2X - 30, H * 0.31);
+  ctx.lineTo(t2X + 30, H * 0.31);
+  ctx.quadraticCurveTo(t2X + 24, H * 0.48, t2X + 52, t1Y);
+  ctx.closePath();
+  ctx.fill();
+
+  // 3. Orta Katman: Reaktör Çekirdeği ve Neon Yeşil Radyasyon Işıması
+  const rX = W * 0.50, rY = H * 0.38;
+
+  const radGlow = ctx.createRadialGradient(rX, rY, 15, rX, rY, 110);
+  radGlow.addColorStop(0, "rgba(80, 255, 120, 0.65)");
+  radGlow.addColorStop(0.35, "rgba(50, 210, 90, 0.30)");
+  radGlow.addColorStop(0.75, "rgba(30, 140, 60, 0.10)");
+  radGlow.addColorStop(1, "rgba(0, 0, 0, 0)");
+  ctx.fillStyle = radGlow;
+  ctx.beginPath();
+  ctx.arc(rX, rY, 110, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.fillStyle = "#273a30";
+  ctx.beginPath();
+  ctx.arc(rX, rY, 52, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.strokeStyle = "#435f4f";
+  ctx.lineWidth = 6;
+  ctx.beginPath();
+  ctx.arc(rX, rY, 52, 0, Math.PI * 2);
+  ctx.stroke();
+
+  ctx.fillStyle = "#55ff77";
+  ctx.beginPath();
+  ctx.arc(rX, rY, 28, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = "#eaffb5";
+  ctx.beginPath();
+  ctx.arc(rX, rY, 14, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.strokeStyle = "#a8ca70";
+  ctx.lineWidth = 4;
+  for (let a = 0; a < 8; a++) {
+    const ang = a * (Math.PI / 4);
+    ctx.beginPath();
+    ctx.moveTo(rX + Math.cos(ang) * 28, rY + Math.sin(ang) * 28);
+    ctx.lineTo(rX + Math.cos(ang) * 54, rY + Math.sin(ang) * 54);
+    ctx.stroke();
+  }
+
+  // 4. Doğanın İstila Ettiği Borular ve Sarmaşıklar
+  ctx.strokeStyle = "#2d4838";
+  ctx.lineWidth = 8;
+  ctx.beginPath();
+  ctx.moveTo(W * 0.15, H * 0.22);
+  ctx.quadraticCurveTo(W * 0.32, H * 0.44, rX, rY + 30);
+  ctx.moveTo(W * 0.85, H * 0.20);
+  ctx.quadraticCurveTo(W * 0.68, H * 0.42, rX, rY + 30);
+  ctx.stroke();
+
+  ctx.fillStyle = "#548842";
+  for (let v = 0; v < 14; v++) {
+    const vx = rX - 160 + v * 25;
+    const vy = rY + 20 + Math.sin(v * 0.7) * 16;
+    ctx.beginPath();
+    ctx.ellipse(vx, vy, 8, 4, v * 0.4, 0, Math.PI * 2);
+    ctx.fill();
+    if (v % 3 === 0) {
+      ctx.strokeStyle = "#3e6a32";
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      ctx.moveTo(vx, vy);
+      ctx.quadraticCurveTo(vx - 5, vy + 22, vx + 2, vy + 38);
+      ctx.stroke();
+    }
+  }
+
+  // Uçuşan Biyo-Işıldayan Sporlar
+  const spores = [
+    { x: -70, y: -40, r: 2.4 }, { x: 50, y: -65, r: 2.0 }, { x: -30, y: 55, r: 1.8 },
+    { x: 80, y: 30, r: 2.2 },  { x: -90, y: 80, r: 1.6 }, { x: 30, y: -90, r: 2.5 },
+  ];
+  for (const sp of spores) {
+    ctx.fillStyle = "#a6ff54";
+    ctx.beginPath();
+    ctx.arc(rX + sp.x, rY + sp.y, sp.r, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = "rgba(166, 255, 84, 0.3)";
+    ctx.beginPath();
+    ctx.arc(rX + sp.x, rY + sp.y, sp.r * 2.8, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  ctx.restore();
+}
+
+function _drawMoonScrapyardBackdrop(ctx, W, H, theme) {
+  ctx.save();
+
+  // 1. Derin Uzay Boşluğu Gradyanı
+  const skyGrad = ctx.createLinearGradient(0, 0, 0, H * 0.85);
+  skyGrad.addColorStop(0, "#02040b");
+  skyGrad.addColorStop(0.40, "#070e1e");
+  skyGrad.addColorStop(0.75, "#121d30");
+  skyGrad.addColorStop(1.0, "#1f2d44");
+  ctx.fillStyle = skyGrad;
+  ctx.fillRect(0, 0, W, H);
+
+  // 2. Kozmik Nebula & Yıldız Tozu Bulutları
+  const nebGrad1 = ctx.createRadialGradient(W * 0.28, H * 0.25, 20, W * 0.28, H * 0.25, 140);
+  nebGrad1.addColorStop(0, "rgba(130, 40, 180, 0.18)");
+  nebGrad1.addColorStop(0.6, "rgba(70, 25, 130, 0.08)");
+  nebGrad1.addColorStop(1, "rgba(0, 0, 0, 0)");
+  ctx.fillStyle = nebGrad1;
+  ctx.beginPath(); ctx.arc(W * 0.28, H * 0.25, 140, 0, Math.PI * 2); ctx.fill();
+
+  const nebGrad2 = ctx.createRadialGradient(W * 0.65, H * 0.20, 20, W * 0.65, H * 0.20, 160);
+  nebGrad2.addColorStop(0, "rgba(30, 120, 180, 0.18)");
+  nebGrad2.addColorStop(0.6, "rgba(20, 60, 120, 0.07)");
+  nebGrad2.addColorStop(1, "rgba(0, 0, 0, 0)");
+  ctx.fillStyle = nebGrad2;
+  ctx.beginPath(); ctx.arc(W * 0.65, H * 0.20, 160, 0, Math.PI * 2); ctx.fill();
+
+  // Yoğun Yıldız Kümesi
+  ctx.fillStyle = "#ffffff";
+  for (let i = 0; i < 60; i++) {
+    const sx = ((i * 137.5) % 1) * W;
+    const sy = ((i * 269.3) % 0.58) * H;
+    const sr = 0.5 + ((i * 17) % 3) * 0.5;
+    ctx.beginPath();
+    ctx.arc(sx, sy, sr, 0, Math.PI * 2);
+    ctx.fill();
+    if (i % 9 === 0) {
+      ctx.strokeStyle = "rgba(255, 255, 255, 0.4)";
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(sx - 4, sy); ctx.lineTo(sx + 4, sy);
+      ctx.moveTo(sx, sy - 4); ctx.lineTo(sx, sy + 4);
+      ctx.stroke();
+    }
+  }
+
+  // 3. Gökyüzünde Parlayan Dünya Küresi
+  const eX = W * 0.78, eY = H * 0.22, eR = 36;
+  const earthHalo = ctx.createRadialGradient(eX, eY, eR * 0.8, eX, eY, eR * 1.5);
+  earthHalo.addColorStop(0, "rgba(80, 170, 255, 0.5)");
+  earthHalo.addColorStop(0.5, "rgba(50, 120, 220, 0.2)");
+  earthHalo.addColorStop(1, "rgba(0, 0, 0, 0)");
+  ctx.fillStyle = earthHalo;
+  ctx.beginPath(); ctx.arc(eX, eY, eR * 1.5, 0, Math.PI * 2); ctx.fill();
+
+  ctx.fillStyle = "#1b62b3";
+  ctx.beginPath(); ctx.arc(eX, eY, eR, 0, Math.PI * 2); ctx.fill();
+
+  ctx.fillStyle = "#4a8553";
+  ctx.beginPath();
+  ctx.arc(eX - 10, eY - 8, 12, 0, Math.PI * 2);
+  ctx.arc(eX + 4, eY + 6, 14, 0, Math.PI * 2);
+  ctx.arc(eX - 8, eY + 14, 8, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.fillStyle = "rgba(255, 255, 255, 0.65)";
+  ctx.beginPath();
+  ctx.ellipse(eX - 4, eY - 14, 18, 5, -0.2, 0, Math.PI * 2);
+  ctx.ellipse(eX + 2, eY + 4, 22, 6, 0.3, 0, Math.PI * 2);
+  ctx.ellipse(eX - 6, eY + 18, 16, 4, -0.1, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.fillStyle = "rgba(4, 7, 18, 0.58)";
+  ctx.beginPath();
+  ctx.arc(eX + 12, eY, eR * 1.05, -Math.PI / 2, Math.PI / 2);
+  ctx.quadraticCurveTo(eX + 2, eY, eX + 12, eY - eR * 1.05);
+  ctx.fill();
+
+  // 4. Uzak Ay Krater Sıradağları
+  ctx.fillStyle = "#182030";
+  ctx.beginPath();
+  ctx.moveTo(0, H * 0.65);
+  const lunarPoints = [
+    [0.08, 0.54], [0.18, 0.48], [0.28, 0.58], [0.42, 0.46],
+    [0.55, 0.52], [0.68, 0.44], [0.82, 0.56], [0.94, 0.50], [1.0, 0.58]
+  ];
+  for (const lp of lunarPoints) ctx.lineTo(W * lp[0], H * lp[1]);
+  ctx.lineTo(W, H * 0.65);
+  ctx.closePath();
+  ctx.fill();
+
+  // 5. Orta Katman: Çökmüş Dev Parabolik Uydu Çanağı
+  const dX = W * 0.28, dY = H * 0.42;
+  ctx.save();
+  ctx.translate(dX, dY);
+  ctx.rotate(-0.35);
+
+  ctx.strokeStyle = "#8b9cb0";
+  ctx.lineWidth = 4;
+  ctx.beginPath();
+  ctx.ellipse(0, 0, 75, 24, 0, 0, Math.PI * 2);
+  ctx.stroke();
+
+  ctx.lineWidth = 2;
+  for (let sp = 0; sp < 8; sp++) {
+    const ang = sp * (Math.PI / 4);
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.lineTo(Math.cos(ang) * 75, Math.sin(ang) * 24);
+    ctx.stroke();
+  }
+
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.moveTo(-50, 0); ctx.lineTo(0, -42);
+  ctx.moveTo(50, 0);  ctx.lineTo(0, -42);
+  ctx.moveTo(0, 18);  ctx.lineTo(0, -42);
+  ctx.stroke();
+  ctx.fillStyle = "#70d6ff";
+  ctx.beginPath(); ctx.arc(0, -42, 5, 0, Math.PI * 2); ctx.fill();
+
+  ctx.restore();
+
+  // Terk Edilmiş Gezgin Enkazı (Rover Excavator)
+  const rX = W * 0.68, rY = H * 0.49;
+  ctx.fillStyle = "#334156";
+  ctx.strokeStyle = "#1a2434";
+  ctx.lineWidth = 3;
+  ctx.fillRect(rX - 45, rY - 24, 60, 28);
+  ctx.strokeRect(rX - 45, rY - 24, 60, 28);
+
+  ctx.fillStyle = "#8fbbe2";
+  ctx.beginPath(); ctx.arc(rX - 15, rY - 24, 14, Math.PI, 0); ctx.fill();
+
+  ctx.fillStyle = "#1e293b";
+  ctx.fillRect(rX - 52, rY + 4, 75, 14);
+
+  ctx.strokeStyle = "#8fbbe2";
+  ctx.lineWidth = 4;
+  ctx.beginPath();
+  ctx.moveTo(rX + 15, rY - 14);
+  ctx.lineTo(rX + 45, rY - 38);
+  ctx.lineTo(rX + 65, rY - 18);
+  ctx.stroke();
+
+  // Katlanmış Güneş Paneli Enkazı
+  ctx.fillStyle = "#184570";
+  ctx.strokeStyle = "#70a6db";
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(W * 0.48, H * 0.46);
+  ctx.lineTo(W * 0.58, H * 0.42);
+  ctx.lineTo(W * 0.56, H * 0.52);
+  ctx.lineTo(W * 0.46, H * 0.56);
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+
+  ctx.restore();
+}
+
+function _drawIceRiftBackdrop(ctx, W, H, theme) {
+  ctx.save();
+
+  // 1. Kutup Alacakaranlığı Gradyanı
+  const skyGrad = ctx.createLinearGradient(0, 0, 0, H * 0.85);
+  skyGrad.addColorStop(0, "#0f1c2a");
+  skyGrad.addColorStop(0.35, "#1b354b");
+  skyGrad.addColorStop(0.70, "#39637f");
+  skyGrad.addColorStop(1.0, "#7cb0c7");
+  ctx.fillStyle = skyGrad;
+  ctx.fillRect(0, 0, W, H);
+
+  // 2. Kuzey Işıkları (Aurora Borealis Dalgaları)
+  const aurora1 = ctx.createLinearGradient(0, H * 0.05, 0, H * 0.35);
+  aurora1.addColorStop(0, "rgba(50, 235, 160, 0)");
+  aurora1.addColorStop(0.5, "rgba(50, 235, 160, 0.28)");
+  aurora1.addColorStop(1, "rgba(20, 200, 230, 0)");
+  ctx.fillStyle = aurora1;
+  ctx.beginPath();
+  ctx.moveTo(0, H * 0.22);
+  ctx.bezierCurveTo(W * 0.25, H * 0.08, W * 0.45, H * 0.30, W * 0.70, H * 0.12);
+  ctx.bezierCurveTo(W * 0.85, H * 0.05, W * 0.95, H * 0.20, W, H * 0.16);
+  ctx.lineTo(W, H * 0.35);
+  ctx.lineTo(0, H * 0.35);
+  ctx.closePath();
+  ctx.fill();
+
+  // 3. Buzul Sıradağları (Jagged Glacial Peaks)
+  ctx.fillStyle = "#2d4e68";
+  ctx.beginPath();
+  ctx.moveTo(0, H * 0.65);
+  const glacierPeaks = [
+    [0.10, 0.42], [0.18, 0.52], [0.26, 0.34], [0.36, 0.48], [0.48, 0.28],
+    [0.60, 0.46], [0.72, 0.32], [0.84, 0.50], [0.92, 0.38], [1.0, 0.55]
+  ];
+  for (const gp of glacierPeaks) ctx.lineTo(W * gp[0], H * gp[1]);
+  ctx.lineTo(W, H * 0.65);
+  ctx.closePath();
+  ctx.fill();
+
+  // Karlı Zirve Işıltıları (Snow Facets)
+  ctx.fillStyle = "#d8f2ff";
+  ctx.beginPath();
+  for (let p = 0; p < glacierPeaks.length; p += 2) {
+    const gp = glacierPeaks[p];
+    ctx.moveTo(W * gp[0], H * gp[1]);
+    ctx.lineTo(W * gp[0] - 12, H * gp[1] + 24);
+    ctx.lineTo(W * gp[0] + 14, H * gp[1] + 28);
+    ctx.closePath();
+  }
+  ctx.fill();
+
+  // 4. Kanyonun İçindeki Işıldayan Turkuaz Yarık (Glowing Crevasse)
+  const riftX = W * 0.50, riftY = H * 0.46;
+  const riftGlow = ctx.createRadialGradient(riftX, riftY, 5, riftX, riftY, 65);
+  riftGlow.addColorStop(0, "rgba(0, 240, 255, 0.55)");
+  riftGlow.addColorStop(0.5, "rgba(0, 200, 255, 0.20)");
+  riftGlow.addColorStop(1, "rgba(0, 0, 0, 0)");
+  ctx.fillStyle = riftGlow;
+  ctx.beginPath(); ctx.arc(riftX, riftY, 65, 0, Math.PI * 2); ctx.fill();
+
+  ctx.strokeStyle = "#4deeea";
+  ctx.lineWidth = 4;
+  ctx.beginPath();
+  ctx.moveTo(riftX - 25, H * 0.36);
+  ctx.lineTo(riftX - 5, H * 0.44);
+  ctx.lineTo(riftX + 15, H * 0.50);
+  ctx.lineTo(riftX, H * 0.62);
+  ctx.stroke();
+
+  // 5. Kriyojenik Soğutma Küreleri (Cryo Tanks) ve İskele
+  const tk1X = W * 0.24, tk1Y = H * 0.44, tk1R = 34;
+  ctx.fillStyle = "#507590";
+  ctx.strokeStyle = "#254055";
+  ctx.lineWidth = 3;
+  ctx.beginPath(); ctx.arc(tk1X, tk1Y, tk1R, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+  ctx.beginPath();
+  ctx.ellipse(tk1X, tk1Y, tk1R, 10, 0, 0, Math.PI * 2);
+  ctx.stroke();
+
+  ctx.fillStyle = "#dff6ff";
+  ctx.beginPath();
+  ctx.arc(tk1X - 8, tk1Y - 14, 12, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.strokeStyle = "#324e65";
+  ctx.lineWidth = 4;
+  ctx.beginPath();
+  ctx.moveTo(tk1X - 22, tk1Y + 22); ctx.lineTo(tk1X - 32, H * 0.65);
+  ctx.moveTo(tk1X + 22, tk1Y + 22); ctx.lineTo(tk1X + 32, H * 0.65);
+  ctx.stroke();
+
+  const tk2X = W * 0.76, tk2Y = H * 0.42;
+  ctx.fillStyle = "#4a6d85";
+  ctx.fillRect(tk2X - 18, tk2Y - 30, 36, 60);
+  ctx.strokeRect(tk2X - 18, tk2Y - 30, 36, 60);
+  ctx.beginPath(); ctx.arc(tk2X, tk2Y - 30, 18, Math.PI, 0); ctx.fill(); ctx.stroke();
+
+  const ventX = tk2X, ventY = tk2Y - 48;
+  const steamGrad = ctx.createLinearGradient(ventX, ventY, ventX + 30, ventY - 70);
+  steamGrad.addColorStop(0, "rgba(240, 252, 255, 0.85)");
+  steamGrad.addColorStop(0.5, "rgba(220, 245, 255, 0.45)");
+  steamGrad.addColorStop(1, "rgba(200, 235, 255, 0)");
+  ctx.fillStyle = steamGrad;
+  ctx.beginPath();
+  ctx.arc(ventX + 6, ventY - 15, 14, 0, Math.PI * 2);
+  ctx.arc(ventX + 18, ventY - 38, 22, 0, Math.PI * 2);
+  ctx.arc(ventX + 35, ventY - 65, 32, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.fillStyle = "#dff4ff";
+  const iciclePoints = [W * 0.18, W * 0.22, W * 0.26, W * 0.30, W * 0.70, W * 0.74, W * 0.78];
+  for (const ix of iciclePoints) {
+    const len = 12 + ((ix * 7) % 18);
+    ctx.beginPath();
+    ctx.moveTo(ix - 3, H * 0.50);
+    ctx.lineTo(ix, H * 0.50 + len);
+    ctx.lineTo(ix + 3, H * 0.50);
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  ctx.restore();
+}
+
+function _drawFloodedLabBackdrop(ctx, W, H, theme) {
+  ctx.save();
+
+  // 1. Siber-Endüstriyel Kubbe Tavan ve Işıklar
+  const skyGrad = ctx.createLinearGradient(0, 0, 0, H * 0.85);
+  skyGrad.addColorStop(0, "#08161a");
+  skyGrad.addColorStop(0.35, "#102930");
+  skyGrad.addColorStop(0.70, "#1f4750");
+  skyGrad.addColorStop(1.0, "#3e7882");
+  ctx.fillStyle = skyGrad;
+  ctx.fillRect(0, 0, W, H);
+
+  ctx.strokeStyle = "#163038";
+  ctx.lineWidth = 4;
+  ctx.beginPath();
+  ctx.moveTo(0, H * 0.12); ctx.lineTo(W, H * 0.12);
+  ctx.moveTo(0, H * 0.20); ctx.lineTo(W, H * 0.20);
+  ctx.stroke();
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  for (let tx = 0; tx < W; tx += 45) {
+    ctx.moveTo(tx, H * 0.12); ctx.lineTo(tx + 45, H * 0.20);
+    ctx.moveTo(tx + 45, H * 0.12); ctx.lineTo(tx, H * 0.20);
+  }
+  ctx.stroke();
+
+  ctx.fillStyle = "#70f5ff";
+  for (let lx = W * 0.15; lx < W * 0.9; lx += W * 0.24) {
+    ctx.fillRect(lx, H * 0.20, 48, 5);
+    const coneGrad = ctx.createLinearGradient(lx + 24, H * 0.20, lx + 24, H * 0.55);
+    coneGrad.addColorStop(0, "rgba(112, 245, 255, 0.20)");
+    coneGrad.addColorStop(1, "rgba(112, 245, 255, 0)");
+    ctx.fillStyle = coneGrad;
+    ctx.beginPath();
+    ctx.moveTo(lx, H * 0.20);
+    ctx.lineTo(lx - 25, H * 0.55);
+    ctx.lineTo(lx + 73, H * 0.55);
+    ctx.lineTo(lx + 48, H * 0.20);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = "#70f5ff";
+  }
+
+  // 2. Uzak Katman: Montaj Hatları ve Server Blokları
+  ctx.fillStyle = "#18323a";
+  const racks = [
+    { x: W * 0.08, w: 38, h: 120 }, { x: W * 0.32, w: 45, h: 140 },
+    { x: W * 0.62, w: 42, h: 130 }, { x: W * 0.86, w: 40, h: 125 }
+  ];
+  for (const r of racks) {
+    ctx.fillRect(r.x, H * 0.65 - r.h, r.w, r.h);
+    for (let ly = H * 0.65 - r.h + 10; ly < H * 0.65 - 10; ly += 12) {
+      ctx.fillStyle = (ly % 24 === 0) ? "#00ffcc" : "#39ff14";
+      ctx.fillRect(r.x + 6, ly, 3, 3);
+      ctx.fillRect(r.x + 14, ly, 3, 3);
+    }
+    ctx.fillStyle = "#18323a";
+  }
+
+  // 3. Odak Noktası: Kırık Silindirik Numune/Klon Tüpü
+  const tubX = W * 0.50, tubY = H * 0.40, tubW = 85, tubH = 110;
+
+  const tubGlow = ctx.createRadialGradient(tubX, tubY, 15, tubX, tubY, 80);
+  tubGlow.addColorStop(0, "rgba(0, 245, 212, 0.45)");
+  tubGlow.addColorStop(0.6, "rgba(0, 180, 200, 0.15)");
+  tubGlow.addColorStop(1, "rgba(0, 0, 0, 0)");
+  ctx.fillStyle = tubGlow;
+  ctx.beginPath(); ctx.arc(tubX, tubY, 80, 0, Math.PI * 2); ctx.fill();
+
+  ctx.fillStyle = "rgba(0, 245, 212, 0.35)";
+  ctx.fillRect(tubX - tubW / 2, tubY - tubH / 2, tubW, tubH);
+
+  ctx.fillStyle = "#20464f";
+  ctx.fillRect(tubX - 16, tubY - tubH / 2 + 15, 32, tubH - 30);
+  ctx.fillStyle = "#00ffc4";
+  ctx.beginPath(); ctx.arc(tubX, tubY, 8, 0, Math.PI * 2); ctx.fill();
+
+  ctx.fillStyle = "#2d4e56";
+  ctx.strokeStyle = "#13272d";
+  ctx.lineWidth = 3;
+  ctx.fillRect(tubX - tubW / 2 - 6, tubY - tubH / 2 - 12, tubW + 12, 16);
+  ctx.strokeRect(tubX - tubW / 2 - 6, tubY - tubH / 2 - 12, tubW + 12, 16);
+  ctx.fillRect(tubX - tubW / 2 - 6, tubY + tubH / 2 - 4, tubW + 12, 16);
+  ctx.strokeRect(tubX - tubW / 2 - 6, tubY + tubH / 2 - 4, tubW + 12, 16);
+
+  ctx.fillStyle = "#b8ffff";
+  const bubbles = [
+    { x: -18, y: 25, r: 3 }, { x: 14, y: 12, r: 2.5 },
+    { x: -8, y: -18, r: 2 },  { x: 22, y: -32, r: 3.5 }
+  ];
+  for (const b of bubbles) {
+    ctx.beginPath(); ctx.arc(tubX + b.x, tubY + b.y, b.r, 0, Math.PI * 2); ctx.fill();
+  }
+
+  // 4. Eklemli Robotik Kaynak Kolu
+  const armX = W * 0.26, armY = H * 0.20;
+  ctx.strokeStyle = "#385e68";
+  ctx.lineWidth = 6;
+  ctx.beginPath();
+  ctx.moveTo(armX, armY);
+  ctx.lineTo(armX + 25, armY + 50);
+  ctx.lineTo(armX - 10, armY + 95);
+  ctx.stroke();
+
+  ctx.fillStyle = "#5fbcd0";
+  ctx.beginPath(); ctx.arc(armX + 25, armY + 50, 6, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(armX - 10, armY + 95, 5, 0, Math.PI * 2); ctx.fill();
+
+  ctx.strokeStyle = "rgba(255, 40, 80, 0.75)";
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(armX - 10, armY + 95);
+  ctx.lineTo(armX + 45, armY + 145);
+  ctx.stroke();
+
+  // 5. Taşmış Su Havuzu ve Yüzey Yansımaları
+  const waterY = H * 0.58;
+  const waterGrad = ctx.createLinearGradient(0, waterY, 0, H * 0.68);
+  waterGrad.addColorStop(0, "rgba(0, 180, 200, 0.25)");
+  waterGrad.addColorStop(1, "rgba(10, 40, 50, 0.65)");
+  ctx.fillStyle = waterGrad;
+  ctx.fillRect(0, waterY, W, H * 0.68 - waterY);
+
+  ctx.strokeStyle = "rgba(120, 245, 255, 0.4)";
+  ctx.lineWidth = 2;
+  for (let wy = waterY + 8; wy < H * 0.65; wy += 12) {
+    ctx.beginPath();
+    ctx.moveTo(W * 0.15, wy); ctx.lineTo(W * 0.35, wy);
+    ctx.moveTo(W * 0.42, wy); ctx.lineTo(W * 0.62, wy);
+    ctx.moveTo(W * 0.70, wy); ctx.lineTo(W * 0.88, wy);
+    ctx.stroke();
+  }
+
+  ctx.restore();
+}
+
+function _drawGenericZoneBackdrop(ctx, W, H, theme) {
+  ctx.save();
+  const skyGrad = ctx.createLinearGradient(0, 0, 0, H * 0.85);
+  const s = theme.sky || ["#2a3542", "#4a5d73", "#7e9bb5"];
+  if (s.length >= 3) {
+    skyGrad.addColorStop(0, s[0]); skyGrad.addColorStop(0.5, s[1]); skyGrad.addColorStop(1, s[2]);
+  } else {
+    skyGrad.addColorStop(0, s[0]); skyGrad.addColorStop(1, s[1]);
+  }
+  ctx.fillStyle = skyGrad;
+  ctx.fillRect(0, 0, W, H);
+
+  const col = _shade(theme.dirt || "#334155", -0.4);
+  ctx.fillStyle = col;
+  ctx.fillRect(W * 0.08, H * 0.38, W * 0.16, H * 0.28);
+  ctx.beginPath();
+  ctx.arc(W * 0.16, H * 0.38, W * 0.08, Math.PI, 0);
+  ctx.fill();
+
+  ctx.fillRect(W * 0.32, H * 0.44, W * 0.12, H * 0.22);
+  ctx.fillRect(W * 0.60, H * 0.36, W * 0.14, H * 0.30);
+  ctx.fillRect(W * 0.78, H * 0.42, W * 0.15, H * 0.24);
+
+  ctx.strokeStyle = _shade(theme.dirt || "#334155", -0.2);
+  ctx.lineWidth = 5;
+  ctx.beginPath();
+  ctx.moveTo(W * 0.16, H * 0.46);
+  ctx.lineTo(W * 0.65, H * 0.46);
+  ctx.moveTo(W * 0.35, H * 0.52);
+  ctx.lineTo(W * 0.85, H * 0.52);
+  ctx.stroke();
+
+  ctx.restore();
+}
+
+function drawBackdrop(ctx, W, H, theme) {
+  drawMapBackdropVector(ctx, W, H, theme);
+}
+
+function drawMapLandmark(ctx, W, H, theme) {
+  // Geriye dönük uyumluluk için korundu; detaylar drawMapBackdropVector içinde çizilir.
+}
+
 function _drawHaze(ctx, W, H, theme) {
-  if (!theme.haze) return;
-  // Oyun bandı (robotların gezindiği dikey aralık) yumuşak bir karartma alır:
-  // arkadaki bina/pencere detayı ön plandaki siluetlerle yarışmasın. Kenarları
-  // gradyanla eritildi — düz şerit gökyüzünde yatay bir dikiş bırakıyordu
-  // (ilk deneme, 2026-10-12). Bu katman yalnız arka plana uygulanır; arazi ve
-  // oyuncular bundan sonra çizilir.
-  const band = ctx.createLinearGradient(0, H * 0.40, 0, H * 0.86);
-  band.addColorStop(0, "rgba(0,0,0,0)");
-  band.addColorStop(0.35, "rgba(0,0,0,0.18)");
-  band.addColorStop(0.75, "rgba(0,0,0,0.18)");
-  band.addColorStop(1, "rgba(0,0,0,0)");
-  ctx.fillStyle = band;
-  ctx.fillRect(0, H * 0.40, W, H * 0.46);
-  const g = ctx.createLinearGradient(0, H * 0.42, 0, H * 0.82);
-  g.addColorStop(0, "rgba(0,0,0,0)");
-  g.addColorStop(1, theme.haze);
-  ctx.fillStyle = g;
-  ctx.fillRect(0, H * 0.42, W, H * 0.42);
+  // Vektörel arkaplanda krater içinde yatay dikiş izi / sis kırılması oluşmaması için
+  // arkaplan %100 net ve kesintisiz çizilir.
 }
 
 function _hillLayer(W, H, baseF, amp, len, color) {
@@ -1104,44 +1997,12 @@ function drawMapPreview(ctx, x, y, w, h, theme) {
   _csRoundRect(ctx, x, y, w, h, 8);
   ctx.clip();
 
-  // gökyüzü (2/3 duraklı)
-  const g = ctx.createLinearGradient(0, y, 0, y + h);
-  const sk = theme.sky;
-  if (sk.length >= 3) { g.addColorStop(0, sk[0]); g.addColorStop(0.5, sk[1]); g.addColorStop(1, sk[2]); }
-  else { g.addColorStop(0, sk[0]); g.addColorStop(1, sk[1]); }
-  ctx.fillStyle = g; ctx.fillRect(x, y, w, h);
-
-  // Raster arka plan hazırsa gökyüzü/gece ipucu yerine gerçek katman çizilir.
-  // Arazi profili ve obje ipuçları her iki yolda da kalır: kart oynanış
-  // geometrisini göstermek zorunda, yalnız fon değişir.
-  const rasterBg = theme.zoneId && typeof drawPreviewAsset === "function"
-    ? drawPreviewAsset(ctx, theme.zoneId, x, y, w, h, theme.backdropMid !== false)
-    : false;
-
-  // güneş/ay
-  if (theme.orb && !rasterBg) { ctx.fillStyle = theme.orb; ctx.beginPath(); ctx.arc(x + w - 18, y + 16, 8, 0, Math.PI * 2); ctx.fill(); }
-
-  // yıldız/kar ipucu
-  if ((theme.stars || theme.snow) && !rasterBg) {
-    ctx.fillStyle = theme.stars ? "#ffffffcc" : "#ffffff";
-    for (let i = 0; i < 16; i++) {
-      const sx = x + 4 + ((i * 53) % (w - 8)), sy = y + 4 + ((i * 37) % Math.floor(h * 0.5));
-      ctx.beginPath(); ctx.arc(sx, sy, theme.snow ? 1.4 : 1, 0, Math.PI * 2); ctx.fill();
-    }
-  }
-
-  if (theme.scene && !rasterBg) {
-    ctx.save(); ctx.translate(x, y); drawMapLandmark(ctx, w, h, theme); ctx.restore();
-  }
-
-  // uzak tepe ipucu
-  const land = theme.surface === "snow" ? "#c2d2e2" : theme.grassDeep;
-  if (!rasterBg) {
-    ctx.fillStyle = _mix(sk[sk.length - 1], land, 0.5);
-    ctx.beginPath(); ctx.moveTo(x, y + h);
-    for (let i = 0; i <= w; i += 8) ctx.lineTo(x + i, y + h * 0.52 - 6 * Math.sin(i / 38));
-    ctx.lineTo(x + w, y + h); ctx.closePath(); ctx.fill();
-  }
+  // 100% Vektör arka planı kart boyutuna kusursuz ölçekle
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.scale(w / 960, h / 540);
+  drawMapBackdropVector(ctx, 960, 540, theme);
+  ctx.restore();
 
   // Ana arazi silüeti. Haritaya özel kayıt varsa gerçek maçla aynı profil;
   // eski kayıtlar için arketip önizlemesi geriye uyumluluk amacıyla kalır.
@@ -1166,6 +2027,7 @@ function drawMapPreview(ctx, x, y, w, h, theme) {
   // Gerçek üst yollar ve tüneller kartta da görünür. Koordinatlar kartın kendi
   // boyutuna ölçeklendiği için önizleme ile maç geometrisi aynı kaynaktan gelir.
   if (theme.layout) {
+    const sk = Array.isArray(theme.sky) && theme.sky.length ? theme.sky : ["#2a3542", "#4a5d73", "#7e9bb5"];
     for (const rect of theme.layout.solids || []) {
       const rx = x + rect.x * w, ry = y + rect.y * h;
       const rw = rect.w * w, rh = rect.h * h;

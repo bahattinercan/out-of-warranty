@@ -131,7 +131,7 @@ group("Profil entegrasyonu");
 // ── 4) v3 → v4 göçü (ortak depo) ────────────────────────────────────────────
 group("Profil v3 → v5 göçü (ortak depo)");
 {
-  check("şema sürümü 6", K.PROFILE_SCHEMA_VERSION === 6);
+  check("şema sürümü 7", K.PROFILE_SCHEMA_VERSION === 7);
   const v3 = K.normalizeProfile({
     version: 3, scrap: 777,
     ammo: { grenade: 2 },
@@ -141,7 +141,7 @@ group("Profil v3 → v5 göçü (ortak depo)");
     },
     claimedMatches: ["a"], updatedAt: 123,
   });
-  check("v6 sürümü yazılır", v3.version === 6);
+  check("v7 sürümü yazılır", v3.version === 7);
   check("Hurda korunur", v3.scrap === 777);
   check("XP ve kademeler korunur", v3.robots[ROBOT].xp === 450 && v3.robots[ROBOT].upgrades.chassis === 2);
   check("maç istatistikleri korunur", v3.robots[ROBOT].stats.matches === 7 && v3.robots[ROBOT].stats.wins === 5);
@@ -335,21 +335,21 @@ group("Migrasyon v4→v5");
 {
   const v4 = { version: 4, scrap: 100, ammo: { grenade: 2 }, robots: { [ROBOT]: { xp: 50, upgrades: { chassis: 1, module: 0, core: 0 }, stats: { matches: 2, wins: 1 } } } };
   const p = K.normalizeProfile(v4);
-  check("sürüm 6'ya yükselir", p.version === 6, `= ${p.version}`);
+  check("sürüm 7'ye yükselir", p.version === 7, `= ${p.version}`);
   check("v4 verisi kayıpsız", p.scrap === 100 && K.getAmmoDepot(p).grenade === 2 && p.robots[ROBOT].upgrades.chassis === 1 && p.robots[ROBOT].stats.matches === 2);
   check("parça alanları boş üretilir", JSON.stringify(p.parts) === "[]" && p.robots[ROBOT].loadout.helmet[0] === null);
   const v3 = { version: 3, scrap: 40, robots: { [ROBOT]: { xp: 10, upgrades: {}, stats: {}, ammo: { grenade: 1 } } } };
   const p3 = K.normalizeProfile(v3);
-  check("v3→v6 birleşik göç", p3.version === 6 && K.getAmmoDepot(p3).grenade === 1 && JSON.stringify(p3.parts) === "[]");
+  check("v3→v7 birleşik göç", p3.version === 7 && K.getAmmoDepot(p3).grenade === 1 && JSON.stringify(p3.parts) === "[]");
   const future = K.normalizeProfile({ version: K.PROFILE_SCHEMA_VERSION + 1, scrap: 999 });
   check("gelecek sürüm güvenli fallback", future.version === K.PROFILE_SCHEMA_VERSION && future.scrap === K.START_SCRAP);
   check("bozuk parça alanı göçte ekonomiyi bozmaz", K.normalizeProfile({ version: 4, scrap: 55, parts: 42, robots: null }).scrap === 55);
-  // v5 → v6: tek-id loadout diziye sarılır, ekonomi dokunulmaz.
+  // v5 → v7: tek-id loadout diziye sarılır, ekonomi dokunulmaz.
   const v5 = { version: 5, scrap: 123, parts: ["lehim_yamasi"], robots: { [ROBOT]: { xp: 10, upgrades: {}, stats: {}, loadout: { helmet: null, body: "lehim_yamasi", tool: null, feet: null } } } };
   const p6 = K.normalizeProfile(v5);
-  check("v5→v6 göçü: tek parça diziye sarılır",
-    p6.version === 6 && p6.robots[ROBOT].loadout.body[0] === "lehim_yamasi" && p6.robots[ROBOT].loadout.body[1] === null);
-  check("v5→v6 göçü ekonomiyi korur", p6.scrap === 123 && JSON.stringify(p6.parts) === '["lehim_yamasi"]');
+  check("v5→v7 göçü: tek parça diziye sarılır",
+    p6.version === 7 && p6.robots[ROBOT].loadout.body[0] === "lehim_yamasi" && p6.robots[ROBOT].loadout.body[1] === null);
+  check("v5→v7 göçü ekonomiyi korur", p6.scrap === 123 && JSON.stringify(p6.parts) === '["lehim_yamasi"]');
 }
 
 // ── 14) Parça satın alma ─────────────────────────────────────────────────

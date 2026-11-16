@@ -9,8 +9,8 @@ const JS_DIR = path.join(__dirname, "..", "js");
 const bundle = ["characters.js", "maps.js", "terrain.js"]
   .map((f) => fs.readFileSync(path.join(JS_DIR, f), "utf8"))
   .join("\n;\n") +
-  "\n;globalThis.__MAP_TEST = { MAPS, CHARACTERS, MAP_LAYOUT_SPECS, mapLayoutProfile, getMapSpawnPads, getMapPropPlacements: typeof getMapPropPlacements === \"function\" ? getMapPropPlacements : null, Terrain };";
-const sandbox = { Math, Float32Array, Uint8Array, Array, Object, Set, Map, console };
+  "\n;globalThis.__MAP_TEST = { MAPS, CHARACTERS, MAP_LAYOUT_SPECS, mapLayoutProfile, getMapSpawnPads, getMapPropPlacements: typeof getMapPropPlacements === \"function\" ? getMapPropPlacements : null, Terrain, drawMapPreview: typeof drawMapPreview === \"function\" ? drawMapPreview : null };";
+const sandbox = { Math, Float32Array, Uint8Array, Array, Object, Set, Map, console, _csRoundRect: () => {} };
 sandbox.globalThis = sandbox;
 vm.createContext(sandbox);
 vm.runInContext(bundle, sandbox, { filename:"maps-bundle.js" });
@@ -128,6 +128,20 @@ check("Laboratuvar duvarları gerçek çarpışma maskesindedir",
 const ice = maskFor(M.MAPS.find((m) => m.id === "ice_rift"), true);
 check("Buz Kırığı yarığı zemini dibine kadar gerçekten keser",
   !ice.isSolid(480, 320) && !ice.isSolid(480, 520) && ice.isSolid(400, 400));
+
+if (M.drawMapPreview) {
+  const mockCtx = new Proxy({}, { get: () => () => ({ addColorStop: () => {} }) });
+  for (const map of M.MAPS) {
+    let ok = true, err = null;
+    try {
+      M.drawMapPreview(mockCtx, 0, 0, 200, 150, map);
+    } catch (e) {
+      ok = false;
+      err = e.message;
+    }
+    check(`${map.id}: drawMapPreview hatasız çalışır`, ok, err);
+  }
+}
 
 if (fail) {
   console.error(`\n${fail} harita testi başarısız:`);

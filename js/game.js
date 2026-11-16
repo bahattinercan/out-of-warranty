@@ -32,11 +32,11 @@ const CS_ROWS = 2;
 const MS_COLS = 3;
 const MS_ROWS = 2;
 
-// Atölye grid düzeni: 4 sütun × 3 satır = sayfa başına 12 robot.
+// Atölye grid düzeni: 4 sütun × 4 satır = sayfa başına 16 robot (dar ekranda 3 sütun × 4 satır = 12 robot).
 // WS_PANEL_H, sağdaki detay panelinin sabit yüksekliğidir; üç dal paneli ve
 // eylem düğmesi bu kutunun içinde kalır.
 const WS_COLS = 4;
-const WS_ROWS = 3;
+const WS_ROWS = 4;
 const WS_PANEL_H = 440;
 const WS_FX_DURATION = 0.6; // satın alma sonrası montaj parıltısı (saniye)
 const WS_NOTICE_DURATION = 2.2; // takma/sökme geri bildirim yazısı (saniye)
@@ -124,7 +124,16 @@ class Game {
     // Alt paneldeki silah listesi açılır panel mi açık? (SİLAH DEĞİŞTİR)
     this.weaponMenuOpen = false;
 
-    this.input = { left: false, right: false, mouseX: 0, mouseY: 0, charging: false, power: 0 };
+    this.input = { left: false, right: false, mouseX: 0, mouseY: 0, charging: false, power: 0, mouseMoved: false };
+
+    this.crates = [];
+    this.crateDropCounter = 0;
+    this.barrels = [];
+    this.screenShake = { trauma: 0, time: 0, x: 0, y: 0 };
+    this.suddenDeath = false;
+    this.suddenDeathLevel = 0;
+    this.suddenDeathTurns = 12;
+    this._lastTickSec = null;
 
     this.lastTime = 0;
     this.playerCount = 2;   // seçilen oyuncu sayısı (2–6); COUNT_SELECT'te belirlenir
@@ -181,6 +190,14 @@ class Game {
     this.damagePopups = [];
     this.mines = [];          // kalıcı mayınlar (turlar arası yaşar)
     this.fires = [];          // napalm yanan alanları
+    this.crates = [];
+    this.crateDropCounter = 0;
+    this.barrels = [];
+    this.screenShake = { trauma: 0, time: 0, x: 0, y: 0 };
+    this.suddenDeath = false;
+    this.suddenDeathLevel = 0;
+    this.suddenDeathTurns = 12;
+    this._lastTickSec = null;
     this.tether = null;       // kanca çekme durumu (Kanca tutununca kurulur)
     this.shooterIdx = null;
     this.shotMod = null;      // aktif salvonun nextShot modifikatörü (nextShot yeteneği)
@@ -260,6 +277,15 @@ class Game {
 
     // Maç uygunluk sayaçları: ödül yalnız bu maçta ve yalnız bir kez yazılır.
     const humanIdx = this.players.findIndex((p) => p.control !== "bot");
+    this.combatStats = {
+      kills: 0,
+      damageDealt: 0,
+      directHits: 0,
+      firstBlood: false,
+      clutch: false,
+      firstKillClaimed: false,
+      crateScrap: 0,
+    };
     this.matchProgress = {
       key: `${this.sessionId}:${this.matchId}`,
       humanRobotId: humanIdx >= 0 && this.selectedChars[humanIdx] ? this.selectedChars[humanIdx].id : null,
@@ -278,6 +304,15 @@ class Game {
     this.damagePopups = [];
     this.mines = [];
     this.fires = [];
+    this.crates = [];
+    this.crateDropCounter = 0;
+    this.barrels = [];
+    this.screenShake = { trauma: 0, time: 0, x: 0, y: 0 };
+    this.suddenDeath = false;
+    this.suddenDeathLevel = 0;
+    this.suddenDeathTurns = 12;
+    this._lastTickSec = null;
+    if (typeof this.spawnInitialBarrels === "function") this.spawnInitialBarrels();
     this.tether = null; // yeni salvo: kanca çekme durumunu temizle
     this.weaponMenuOpen = false; // yeni maç: açılır silah listesi kapalı başlar
     this.wind = randWind();
@@ -382,9 +417,28 @@ class Game {
     this.clearTurnInput();
     this.portalGameplay(false);
     this.mode = null;
+    this.onlineRobotSelectReturn = false;
     this.state = "ONLINE_LOBBY";
     this.lobby.open();
     this.updateHud();
+  }
+
+  // Çevrimiçi lobiden tam robot galerisini açar.
+  openOnlineRobotSelect() {
+    this.onlineRobotSelectReturn = true;
+    this.state = "CHAR_SELECT";
+    this.selectedChars = [this.lobby ? this.lobby.robot : CHARACTERS[0]];
+    this.charSelectPhase = 0;
+    this.charPage = this._charPageOf(this.lobby ? this.lobby.robotId : null);
+    this.updateHud();
+  }
+
+  _charPageOf(id) {
+    const idx = CHARACTERS.findIndex((c) => c.id === id);
+    if (idx < 0) return 0;
+    const layout = this.charSelectLayout();
+    const perPage = layout.perPage || (CS_COLS * CS_ROWS);
+    return Math.floor(idx / perPage);
   }
 
   // Ağ bağlamını kapatır (menüye dönüş, maç iptali). Taşıma da kapanır.
@@ -747,50 +801,112 @@ class Game {
 
   renderModeSelect(ctx) {
     const W = this.W, H = this.H;
-    // Fabrika dokusu arka planda kalır; sakin konsol yüzeyi içerikleri öne alır.
+    const timeMs = this.renderTimeMs || 0;
+
+    // Fabrika dokusu arka planda kalır; siber-ızgara ve parçacıklar derinlik katar.
     drawClouds(ctx, W, "rgba(190,215,240,0.14)");
-    _msBackdrop(ctx, W, H);
-    ctx.textAlign = "center"; ctx.textBaseline = "top";
-    ctx.fillStyle = "#ffe45e"; ctx.font = uiTitleFont(Math.min(36, W * 0.042));
-    ctx.fillText(t("brand.title", GAME_TITLE), W / 2, H * 0.075);
-    ctx.fillStyle = "#cfe0ee"; ctx.font = uiTextFont(14);
-    ctx.fillText(
-      t("menu.tagline", "Arena tahsis protokolünü başlat"),
-      W / 2, H * 0.16
-    );
-    // Sürüm damgası (F6): kapalı testte geri bildirim "hangi sürüm" sorusuyla
-    // başlamasın diye menünün sağ alt köşesinde küçük yazıyla durur.
-    if (typeof GAME_VERSION !== "undefined") {
-      ctx.textAlign = "right"; ctx.textBaseline = "bottom";
-      ctx.fillStyle = "#7f93a6"; ctx.font = uiTextFont(10);
-      ctx.fillText("v" + GAME_VERSION + " · " + (typeof GAME_CHANNEL === "undefined" ? "" : GAME_CHANNEL), W - 12, H - 10);
-      ctx.textAlign = "center"; ctx.textBaseline = "top";
-    }
+    _msBackdrop(ctx, W, H, timeMs);
+
+    // ── Sol Üst: Ayarlar Butonu & Operatör Kaynak Rozeti ─────────────────
+    const topY = 16, btnH = 28;
+
+    // Ayarlar düğmesi (Sol üst — Hurda'nın solunda)
+    const setBtnX = 18, setBtnY = topY, setBtnW = 112;
+    const setHovered = this.input.mouseX >= setBtnX && this.input.mouseX <= setBtnX + setBtnW && this.input.mouseY >= setBtnY && this.input.mouseY <= setBtnY + btnH;
+    this._settingsBtnRect = { x: setBtnX, y: setBtnY, w: setBtnW, h: btnH };
+    _csPanel(ctx, setBtnX, setBtnY + (setHovered ? -1 : 0), setBtnW, btnH, {
+      accent: setHovered ? "#71d3bd" : "rgba(113,211,189,0.45)",
+      hover: setHovered, glow: setHovered, rivets: false,
+      fillTop: setHovered ? "rgba(113,211,189,0.22)" : "rgba(113,211,189,0.06)",
+    });
+    ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    ctx.fillStyle = setHovered ? "#ffffff" : "#cfe0ee";
+    ctx.font = uiTitleFont(11, 700);
+    ctx.fillText("⚙ " + t("menu.settings", "AYARLAR"), setBtnX + setBtnW / 2, setBtnY + btnH / 2 + (setHovered ? -1 : 0));
+
+    // Hurda Rozeti (Ayarlar'ın sağında)
     const scrap = this.profile ? this.profile.scrap : START_SCRAP;
-    // Ortak depo: robot başına ayrı depo yok; pazar kartının alt yazısı için
-    // tek depo sayacı yeterlidir.
+    const badgeW = 154, badgeH = btnH;
+    const badgeX = setBtnX + setBtnW + 8, badgeY = topY;
+    const badgeHovered = this.input.mouseX >= badgeX && this.input.mouseX <= badgeX + badgeW && this.input.mouseY >= badgeY && this.input.mouseY <= badgeY + badgeH;
+    this._scrapBadgeRect = { x: badgeX, y: badgeY, w: badgeW, h: badgeH };
+    _csPanel(ctx, badgeX, badgeY + (badgeHovered ? -1 : 0), badgeW, badgeH, {
+      accent: badgeHovered ? "#ffd27a" : "rgba(244,189,98,0.45)",
+      hover: badgeHovered, glow: badgeHovered, rivets: false,
+      fillTop: badgeHovered ? "rgba(244,189,98,0.22)" : "rgba(244,189,98,0.08)",
+    });
+    ctx.textAlign = "left"; ctx.textBaseline = "middle";
+    ctx.font = uiTitleFont(12, 700);
+    ctx.fillStyle = badgeHovered ? "#ffffff" : "#ffd27a";
+    ctx.fillText("🪙 " + t("menu.badge.scrap", "{scrap} Hurda", { scrap }), badgeX + 10, badgeY + badgeH / 2 + (badgeHovered ? -1 : 0));
+    ctx.textAlign = "right";
+    ctx.font = uiTextFont(10, 600);
+    ctx.fillStyle = badgeHovered ? "#71d3bd" : "#8fa6bd";
+    ctx.fillText(t("menu.badge.workshop", "ATÖLYE ›"), badgeX + badgeW - 8, badgeY + badgeH / 2 + (badgeHovered ? -1 : 0));
+
+    // ── Başlık Alanı (Logo & Endüstriyel Damga) ───────────────────────────
+    const titleY = H * 0.052;
+    const titleText = t("brand.title", GAME_TITLE);
+
+    // Başlık aurası (yumuşak radyal ışık)
+    const tglow = ctx.createRadialGradient(W / 2, titleY + 22, 6, W / 2, titleY + 22, 220);
+    tglow.addColorStop(0, "rgba(244, 189, 98, 0.16)");
+    tglow.addColorStop(0.55, "rgba(113, 211, 189, 0.035)");
+    tglow.addColorStop(1, "rgba(0,0,0,0)");
+    ctx.fillStyle = tglow;
+    ctx.fillRect(W / 2 - 240, titleY - 14, 480, 72);
+
+    // Üst mikro damga
+    ctx.textAlign = "center"; ctx.textBaseline = "top";
+    ctx.fillStyle = "rgba(113, 211, 189, 0.65)";
+    ctx.font = uiTitleFont(10, 700);
+    ctx.fillText("PROT-9 // OUT OF WARRANTY", W / 2, titleY);
+
+    // Ana Başlık (Gölge + Parıldayan Neon)
+    ctx.font = uiTitleFont(Math.min(38, W * 0.044), 700);
+    ctx.fillStyle = "rgba(0, 0, 0, 0.75)";
+    ctx.fillText(titleText, W / 2 + 2, titleY + 16);
+    ctx.fillStyle = "#ffe45e";
+    ctx.shadowColor = "rgba(255, 228, 94, 0.42)";
+    ctx.shadowBlur = 10;
+    ctx.fillText(titleText, W / 2, titleY + 14);
+    ctx.shadowBlur = 0;
+
+    // Başlık altı dekoratif tehlike şeridi
+    const stripW = Math.min(280, W * 0.32);
+    _csHazardStrip(ctx, W / 2 - stripW / 2, titleY + 52, stripW, 3);
+
+    // Tagline / Slogan
+    ctx.fillStyle = "#a2b8c2";
+    ctx.font = uiTextFont(12, 600);
+    ctx.fillText(
+      "// " + t("menu.tagline", "Arena tahsis protokolünü başlat") + " //",
+      W / 2, titleY + 60
+    );
+
+    // Ortak depo sayacı (Pazar kartı için)
     const depotTotal = ammoDepotTotal(getAmmoDepot(this.profile));
-    // Her kart kendi imza rengini ve vektör ikonunu taşır: kenarlık, ikon
-    // plakası ve hover parıltısı aynı accent'ten türetilir — menü tek bakışta
-    // bölme bölme okunur (robot/ikili/dişli/mermi/soru glifleri).
+
     const items = [
-      { action: "computer", icon: "robot", accent: "#ff7b7b", title: t("menu.mode.computer.title", "Otomatik Birimlere Karşı"), sub: t("menu.mode.computer.sub", "1 operatör ve 1–3 fabrika robotu") },
-      { action: "local", icon: "ikili", accent: "#7baeff", title: t("menu.mode.local.title", "Yerel Operatörler"), sub: t("menu.mode.local.sub", "Aynı cihazda 2–6 oyuncu") },
-      { action: "online", icon: "ağ", accent: "#63e6be", title: t("menu.mode.online.title", "Çevrimiçi"), sub: t("menu.mode.online.sub", "Oda koduyla 2–6 oyuncu — internet üzerinden") },
+      { action: "computer", icon: "robot", accent: "#ff7b7b", badge: t("menu.mode.badge.ai", "VS BİRİMLER"), title: t("menu.mode.computer.title", "Otomatik Birimlere Karşı"), sub: t("menu.mode.computer.sub", "1 operatör ve 1–3 fabrika robotu") },
+      { action: "local", icon: "ikili", accent: "#7baeff", badge: t("menu.mode.badge.local", "2–6 OYUNCU"), title: t("menu.mode.local.title", "Yerel Operatörler"), sub: t("menu.mode.local.sub", "Aynı cihazda 2–6 oyuncu") },
+      { action: "online", icon: "ağ", accent: "#63e6be", badge: t("menu.mode.badge.online", "CANLI P2P"), title: t("menu.mode.online.title", "Çevrimiçi"), sub: t("menu.mode.online.sub", "Oda koduyla 2–6 oyuncu — internet üzerinden") },
       { action: "workshop", icon: "dişli", accent: "#d8a72f", title: t("menu.mode.workshop.title", "ATÖLYE"), sub: t("menu.mode.workshop.sub", "Robotlarını kalibre et • {scrap} Hurda", { scrap }) },
       { action: "market", icon: "mermi", accent: "#3fae8c", title: t("menu.mode.market.title", "CEPHANE PAZARI"), sub: depotTotal > 0 ? t("menu.mode.market.sub", "Depoda {n} mermi • {scrap} Hurda", { n: depotTotal, scrap }) : t("menu.mode.market.subEmpty", "Ortak mühimmat deposu • {scrap} Hurda", { scrap }) },
       { action: "tutorial", icon: "soru", accent: "#4fc3f7", title: t("menu.mode.tutorial.title", "NASIL OYNANIR"), sub: t("menu.mode.tutorial.sub", "Kontroller ve tur kuralları") },
     ];
-    // Maç modları büyük seçim kartları, servis araçları kompakt alt kartlardır.
+
+    // Kart yerleşimi: üstte 3 büyük mod kartı, altta 3 kompakt servis kartı
     const gap = 16;
     const primaryW = Math.min(276, (W - 48 - gap * 2) / 3);
-    const primaryH = Math.min(184, H * 0.35);
-    const utilityH = Math.min(96, H * 0.19);
+    const primaryH = Math.min(182, H * 0.35);
+    const utilityH = Math.min(92, H * 0.185);
     const primaryY = H * 0.30;
     const utilityY = H - utilityH - 44;
     const primaryStartX = (W - (primaryW * 3 + gap * 2)) / 2;
     const utilityW = (W - 48 - gap * 2) / 3;
     const utilityStartX = (W - (utilityW * 3 + gap * 2)) / 2;
+
     this._modeRects = [];
     for (let i = 0; i < items.length; i++) {
       const it = items[i], primary = i < 3;
@@ -800,80 +916,214 @@ class Game {
       const h = primary ? primaryH : utilityH;
       const hovered = this.input.mouseX >= x && this.input.mouseX <= x + w && this.input.mouseY >= y && this.input.mouseY <= y + h;
       this._modeRects.push({ x, y, w, h, action: it.action });
-      const hy = y + (hovered ? -3 : 0);
+      const hy = y + (hovered ? -4 : 0);
+
+      // Kart Paneli
       _csPanel(ctx, x, hy, w, h, {
         accent: hovered ? it.accent : _hexA(it.accent, 0.58),
         hover: hovered, glow: true, rivets: false,
-        fillTop: hovered ? _hexA(it.accent, 0.19) : _hexA(it.accent, 0.08),
+        fillTop: hovered ? _hexA(it.accent, 0.22) : _hexA(it.accent, 0.08),
       });
+
+      // Kart üstü renkli accent şeridi (3px)
+      ctx.fillStyle = hovered ? it.accent : _hexA(it.accent, 0.75);
+      ctx.fillRect(x + 10, hy + 1, w - 20, 2.5);
+
       if (primary) {
-        _msIcon(ctx, it.icon, x + w / 2, hy + 42, it.accent, hovered);
+        // Sağ üst köşe rozeti (Badge)
+        if (it.badge) {
+          const badgePillW = 76, badgePillH = 17;
+          const badgePillX = x + w - badgePillW - 8;
+          const badgePillY = hy + 8;
+          ctx.fillStyle = hovered ? _hexA(it.accent, 0.25) : "rgba(0,0,0,0.45)";
+          ctx.strokeStyle = _hexA(it.accent, hovered ? 0.9 : 0.4);
+          ctx.lineWidth = 1;
+          _panelPath(ctx, badgePillX, badgePillY, badgePillW, badgePillH, 3);
+          ctx.fill(); ctx.stroke();
+          ctx.textAlign = "center"; ctx.textBaseline = "middle";
+          ctx.font = uiTitleFont(9.5, 700);
+          ctx.fillStyle = hovered ? "#ffffff" : it.accent;
+          ctx.fillText(it.badge, badgePillX + badgePillW / 2, badgePillY + badgePillH / 2);
+        }
+
+        // İkon
+        _msIcon(ctx, it.icon, x + w / 2, hy + 44, it.accent, hovered);
+
+        // Başlık
         ctx.textAlign = "center"; ctx.textBaseline = "middle";
-        const title = _fitTextLines(ctx, it.title, w - 24, 19, uiTitleFont, 2, 13);
-        const sub = _fitTextLines(ctx, it.sub, w - 26, 12, (p) => uiTextFont(p), 2, 10);
-        ctx.fillStyle = "#eef5ff";
-        const titleY = hy + 91;
+        const title = _fitTextLines(ctx, it.title, w - 24, 18, uiTitleFont, 2, 13);
+        const sub = _fitTextLines(ctx, it.sub, w - 26, 11.5, (p) => uiTextFont(p), 2, 10);
+        ctx.fillStyle = hovered ? "#ffffff" : "#eef5ff";
+        const titleY = hy + 92;
         title.lines.forEach((line, row) => ctx.fillText(line, x + w / 2, titleY + row * (title.px + 2)));
-        ctx.fillStyle = "#a9c0c8";
-        sub.lines.forEach((line, row) => ctx.fillText(line, x + w / 2, hy + h - 28 + row * 13));
+
+        // Alt Açıklama
+        ctx.fillStyle = hovered ? "#cfe0ee" : "#8fa6bd";
+        sub.lines.forEach((line, row) => ctx.fillText(line, x + w / 2, hy + h - 28 + row * 12));
+
+        // Hover durumunda alt buton rozeti
+        if (hovered) {
+          ctx.font = uiTitleFont(9, 700);
+          ctx.fillStyle = it.accent;
+          ctx.fillText(t("menu.card.enter", "BAŞLAT ➔"), x + w / 2, hy + h - 8);
+        }
       } else {
+        // Kompakt alt kartlar (Atölye, Pazar, Nasıl Oynanır)
         _msIcon(ctx, it.icon, x + 34, hy + h / 2, it.accent, hovered);
         ctx.textAlign = "left"; ctx.textBaseline = "middle";
-        const title = _fitTextLines(ctx, it.title, w - 82, 15, uiTitleFont, 1, 11);
-        const sub = _fitTextLines(ctx, it.sub, w - 82, 10, (p) => uiTextFont(p), 2, 9);
-        ctx.fillStyle = "#eef5ff";
-        ctx.fillText(title.lines[0], x + 62, hy + h / 2 - 12);
-        ctx.fillStyle = "#a9c0c8";
-        sub.lines.forEach((line, row) => ctx.fillText(line, x + 62, hy + h / 2 + 11 + row * 12));
+        const title = _fitTextLines(ctx, it.title, w - 90, 15, uiTitleFont, 1, 11);
+        const sub = _fitTextLines(ctx, it.sub, w - 90, 10.5, (p) => uiTextFont(p), 2, 9);
+
+        // Başlık
+        ctx.fillStyle = hovered ? "#ffffff" : "#eef5ff";
+        ctx.fillText(title.lines[0], x + 64, hy + h / 2 - 12);
+
+        // Alt metin
+        ctx.fillStyle = hovered ? "#cfe0ee" : "#8fa6bd";
+        sub.lines.forEach((line, row) => ctx.fillText(line, x + 64, hy + h / 2 + 11 + row * 12));
+
+        // Sağ ok glifi
+        ctx.textAlign = "right"; ctx.textBaseline = "middle";
+        ctx.font = uiTitleFont(13, 700);
+        ctx.fillStyle = hovered ? it.accent : "rgba(143, 166, 189, 0.4)";
+        ctx.fillText("›", x + w - 12, hy + h / 2);
       }
     }
+
+    // ── Alt Bar: Konsol İpucu ve Sistem Durumu ────────────────────────────
     ctx.textAlign = "center"; ctx.textBaseline = "middle";
-    ctx.fillStyle = "#78909a"; ctx.font = uiTextFont(10);
-    ctx.fillText(t("menu.hint", "Fare ile bir bölme seç"), W / 2, H - 18);
+    ctx.fillStyle = "#718994"; ctx.font = uiTitleFont(10, 600);
+    ctx.fillText("‹ " + t("menu.hint", "Fare ile bir bölme seç") + " ›", W / 2, H - 18);
+
+    // Sağ alt: Sistem Hazır Rozeti & Sürüm
+    if (typeof GAME_VERSION !== "undefined") {
+      ctx.textAlign = "right"; ctx.textBaseline = "middle";
+      const footY = H - 18;
+      // Yeşil canlı durum ledi
+      ctx.fillStyle = "#63e6be";
+      ctx.font = uiTitleFont(9, 700);
+      ctx.fillText("● " + t("menu.status.ready", "SİSTEM HAZIR") + "  |  v" + GAME_VERSION + (typeof GAME_CHANNEL === "undefined" ? "" : " · " + GAME_CHANNEL), W - 18, footY);
+    }
   }
 
   // ── Zorluk seçimi (DIFFICULTY_SELECT) ────────────────────────────────────
   // Bilgisayara karşı modunda zorluk seviyesi seçilir.
   renderDifficultySelect(ctx) {
     const W = this.W, H = this.H;
-    drawClouds(ctx, W);
-    _msBackdrop(ctx, W, H);
-    ctx.fillStyle = "#ffe45e"; ctx.font = uiTitleFont(28);
+    const timeMs = this.renderTimeMs || 0;
+    drawClouds(ctx, W, "rgba(190,215,240,0.14)");
+    _msBackdrop(ctx, W, H, timeMs);
+
+    // Başlık Bölgesi
+    const titleY = Math.max(26, Math.round(H * 0.12));
+    const titleText = t("mode.difficulty.title", "Zorluk seç");
+
+    // Başlık aurası
+    const tglow = ctx.createRadialGradient(W / 2, titleY + 20, 6, W / 2, titleY + 20, 220);
+    tglow.addColorStop(0, "rgba(244, 189, 98, 0.16)");
+    tglow.addColorStop(0.55, "rgba(113, 211, 189, 0.035)");
+    tglow.addColorStop(1, "rgba(0,0,0,0)");
+    ctx.fillStyle = tglow;
+    ctx.fillRect(W / 2 - 240, titleY - 14, 480, 72);
+
+    // Üst mikro damga
     ctx.textAlign = "center"; ctx.textBaseline = "top";
-    ctx.fillText(t("mode.difficulty.title", "Zorluk seç"), W / 2, H / 2 - 100);
-    // Başlık altı tehlike şeridi (pilot aile dili)
-    _csHazardStrip(ctx, W / 2 - 100, H / 2 - 64, 200, 5);
-    const levels = ["easy", "normal", "hard", "expert"];
-    // Etiketler anahtar + Türkçe kaynak olarak burada durur (difficulty.*).
-    const labels = [
-      t("difficulty.easy", "Kolay"),
-      t("difficulty.normal", "Orta"),
-      t("difficulty.hard", "Zor"),
-      t("difficulty.expert", "Ustalık"),
+    ctx.fillStyle = "rgba(113, 211, 189, 0.65)";
+    ctx.font = uiTitleFont(10, 700);
+    ctx.fillText("PROT-9 // AI SIMULATION CALIBRATION", W / 2, titleY);
+
+    // Ana Başlık
+    ctx.font = uiTitleFont(Math.min(34, Math.round(W * 0.04)), 700);
+    ctx.fillStyle = "rgba(0, 0, 0, 0.75)";
+    ctx.fillText(titleText, W / 2 + 2, titleY + 16);
+    ctx.fillStyle = "#ffe45e";
+    ctx.shadowColor = "rgba(255, 228, 94, 0.42)";
+    ctx.shadowBlur = 10;
+    ctx.fillText(titleText, W / 2, titleY + 14);
+    ctx.shadowBlur = 0;
+
+    // Başlık altı dekoratif tehlike şeridi
+    _csHazardStrip(ctx, W / 2 - 120, titleY + 52, 240, 3);
+
+    // Slogan
+    ctx.fillStyle = "#a2b8c2";
+    ctx.font = uiTextFont(12, 600);
+    ctx.fillText("// " + t("mode.difficulty.sub", "Yapay zeka muharebe kalibrasyonunu seç") + " //", W / 2, titleY + 60);
+
+    const diffs = [
+      { id: "easy", label: t("difficulty.easy", "Kolay"), accent: "#63e6be", badge: "LVL 1", sub: t("difficulty.desc.easy", "Düşük isabet, acemi pilotlar için ideal") },
+      { id: "normal", label: t("difficulty.normal", "Orta"), accent: "#4aa3ff", badge: "LVL 2", sub: t("difficulty.desc.normal", "Dengeli atışlar ve makul refleks") },
+      { id: "hard", label: t("difficulty.hard", "Zor"), accent: "#f4bd62", badge: "LVL 3", sub: t("difficulty.desc.hard", "Yüksek isabet ve agresif manevra") },
+      { id: "expert", label: t("difficulty.expert", "Ustalık"), accent: "#ff5a5a", badge: "LVL 4", sub: t("difficulty.desc.expert", "Mükemmel balistik hesaplama") },
     ];
-    const bw = 130, bh = 60, gap = 16;
-    const totalW = levels.length * bw + (levels.length - 1) * gap;
+
+    const bw = Math.min(182, Math.floor((W - 80) / 4)), bh = 142, gap = 16;
+    const totalW = diffs.length * bw + (diffs.length - 1) * gap;
     const startX = (W - totalW) / 2;
-    const y = H / 2 - 30;
+    const y = Math.round(H / 2 - 36);
+
     this._diffRects = [];
-    for (let i = 0; i < levels.length; i++) {
+    const mx = this.input.mouseX, my = this.input.mouseY;
+
+    for (let i = 0; i < diffs.length; i++) {
+      const it = diffs[i];
       const x = startX + i * (bw + gap);
-      const sel = this.difficulty === levels[i];
-      const hovered = this.input.mouseX >= x && this.input.mouseX <= x + bw && this.input.mouseY >= y && this.input.mouseY <= y + bh;
-      this._diffRects.push({ x, y, w: bw, h: bh, diff: levels[i] });
-      // Seçili zorluk yeşil tint + yeşil kenarla kalıcı vurgulanır
-      _csPanel(ctx, x, y, bw, bh, {
-        accent: sel ? "#4aff4a" : hovered ? "#ffe45e" : "#3b526b",
-        hover: hovered, glow: hovered,
+      const sel = this.difficulty === it.id;
+      const hovered = mx >= x && mx <= x + bw && my >= y && my <= y + bh;
+      const hy = hovered ? y - 3 : y;
+      this._diffRects.push({ x, y, w: bw, h: bh, diff: it.id });
+
+      _csPanel(ctx, x, hy, bw, bh, {
+        accent: sel ? it.accent : hovered ? "#ffe45e" : "#2a3848",
+        hover: hovered, glow: sel || hovered,
         selected: sel,
-        fillTop: sel ? "#1e3a26" : null, fillBottom: sel ? "#12251a" : null,
+        fillTop: sel ? _hexA(it.accent, 0.16) : hovered ? "rgba(255,228,94,0.06)" : null,
       });
-      ctx.fillStyle = sel ? "#8aff8a" : "#eef5ff"; ctx.font = uiTitleFont(16);
-      ctx.textBaseline = "middle";
-      ctx.fillText(labels[i], x + bw / 2, y + bh / 2);
+
+      // Kart üstü renkli şerit
+      ctx.fillStyle = sel ? it.accent : hovered ? "#ffe45e" : _hexA(it.accent, 0.65);
+      ctx.fillRect(x + 10, hy + 1, bw - 20, 2.5);
+
+      // Sağ üst köşe rozeti
+      const badgeW = 46, badgeH = 17;
+      const badgeX = x + bw - badgeW - 8, badgeY = hy + 8;
+      ctx.fillStyle = sel ? _hexA(it.accent, 0.25) : "rgba(0,0,0,0.45)";
+      ctx.strokeStyle = _hexA(it.accent, sel ? 0.9 : 0.4);
+      ctx.lineWidth = 1;
+      _panelPath(ctx, badgeX, badgeY, badgeW, badgeH, 3);
+      ctx.fill(); ctx.stroke();
+      ctx.textAlign = "center"; ctx.textBaseline = "middle";
+      ctx.font = uiTitleFont(9.5, 700);
+      ctx.fillStyle = sel ? "#ffffff" : it.accent;
+      ctx.fillText(it.badge, badgeX + badgeW / 2, badgeY + badgeH / 2);
+
+      // Başlık
+      ctx.textAlign = "left"; ctx.textBaseline = "middle";
+      ctx.font = uiTitleFont(18, 700);
+      ctx.fillStyle = sel ? "#ffffff" : hovered ? "#ffffff" : "#eef5ff";
+      ctx.fillText(it.label, x + 14, hy + 38);
+
+      // Açıklama
+      ctx.fillStyle = sel ? "#cfe0ee" : "#8fa6bd";
+      ctx.font = uiTextFont(11, 500);
+      const subLines = _wrapCanvasText(ctx, it.sub, bw - 26);
+      subLines.forEach((line, row) => ctx.fillText(line, x + 14, hy + 66 + row * 15));
+
+      // Durum alt etiketi
+      if (sel) {
+        ctx.textAlign = "center"; ctx.textBaseline = "middle";
+        ctx.font = uiTitleFont(10, 700);
+        ctx.fillStyle = it.accent;
+        ctx.fillText("✓ " + t("common.selected", "SEÇİLİ"), x + bw / 2, hy + bh - 14);
+      } else if (hovered) {
+        ctx.textAlign = "center"; ctx.textBaseline = "middle";
+        ctx.font = uiTitleFont(9.5, 700);
+        ctx.fillStyle = "#ffe45e";
+        ctx.fillText(t("menu.card.enter", "BAŞLAT ➔"), x + bw / 2, hy + bh - 14);
+      }
     }
+
     // Geri butonu
-    this._backRect = { x: 20, y: H - 50, w: 80, h: 36 };
     this.drawBackButton(ctx, t("common.back", "‹ Geri"));
   }
 
@@ -902,35 +1152,112 @@ class Game {
   // Bilgisayar modunda kaç rakip bot olacağını seç.
   renderBotCountSelect(ctx) {
     const W = this.W, H = this.H;
-    drawClouds(ctx, W);
-    _msBackdrop(ctx, W, H);
-    ctx.fillStyle = "#ffe45e"; ctx.font = uiTitleFont(28);
+    const timeMs = this.renderTimeMs || 0;
+    drawClouds(ctx, W, "rgba(190,215,240,0.14)");
+    _msBackdrop(ctx, W, H, timeMs);
+
+    // Başlık Bölgesi
+    const titleY = Math.max(26, Math.round(H * 0.12));
+    const titleText = t("mode.botCount.title", "Rakip sayısı seç");
+
+    // Başlık aurası
+    const tglow = ctx.createRadialGradient(W / 2, titleY + 20, 6, W / 2, titleY + 20, 220);
+    tglow.addColorStop(0, "rgba(244, 189, 98, 0.16)");
+    tglow.addColorStop(0.55, "rgba(113, 211, 189, 0.035)");
+    tglow.addColorStop(1, "rgba(0,0,0,0)");
+    ctx.fillStyle = tglow;
+    ctx.fillRect(W / 2 - 240, titleY - 14, 480, 72);
+
+    // Üst mikro damga
     ctx.textAlign = "center"; ctx.textBaseline = "top";
-    ctx.fillText(t("mode.botCount.title", "Rakip sayısı seç"), W / 2, H / 2 - 100);
-    // Başlık altı tehlike şeridi (pilot aile dili)
-    _csHazardStrip(ctx, W / 2 - 100, H / 2 - 64, 200, 5);
-    const counts = [1, 2, 3];
-    const labels = [
-      t("opponents.1", "1 Rakip"),
-      t("opponents.2", "2 Rakip"),
-      t("opponents.3", "3 Rakip"),
+    ctx.fillStyle = "rgba(113, 211, 189, 0.65)";
+    ctx.font = uiTitleFont(10, 700);
+    ctx.fillText("PROT-9 // UNIT ASSIGNMENT PROTOCOL", W / 2, titleY);
+
+    // Ana Başlık
+    ctx.font = uiTitleFont(Math.min(34, Math.round(W * 0.04)), 700);
+    ctx.fillStyle = "rgba(0, 0, 0, 0.75)";
+    ctx.fillText(titleText, W / 2 + 2, titleY + 16);
+    ctx.fillStyle = "#ffe45e";
+    ctx.shadowColor = "rgba(255, 228, 94, 0.42)";
+    ctx.shadowBlur = 10;
+    ctx.fillText(titleText, W / 2, titleY + 14);
+    ctx.shadowBlur = 0;
+
+    // Başlık altı dekoratif tehlike şeridi
+    _csHazardStrip(ctx, W / 2 - 120, titleY + 52, 240, 3);
+
+    // Slogan
+    ctx.fillStyle = "#a2b8c2";
+    ctx.font = uiTextFont(12, 600);
+    ctx.fillText("// " + t("mode.botCount.sub", "Simülasyona dahil edilecek rakip robot sayısı") + " //", W / 2, titleY + 60);
+
+    const counts = [
+      { count: 1, title: t("opponents.1", "1 Rakip"), tag: "1v1 DÜELLO", accent: "#4aa3ff", sub: t("opponents.1.desc", "Birebir taktiksel düello"), bots: 1 },
+      { count: 2, title: t("opponents.2", "2 Rakip"), tag: "3'LÜ KARIŞIK", accent: "#f4bd62", sub: t("opponents.2.desc", "Üçlü çapraz ateş mücadelesi"), bots: 2 },
+      { count: 3, title: t("opponents.3", "3 Rakip"), tag: "4'LÜ KAOS", accent: "#ff5a5a", sub: t("opponents.3.desc", "Dörtlü tam saha serbest arbede"), bots: 3 },
     ];
-    const bw = 130, bh = 60, gap = 16;
+
+    const bw = Math.min(210, Math.floor((W - 80) / 3)), bh = 146, gap = 20;
     const totalW = counts.length * bw + (counts.length - 1) * gap;
     const startX = (W - totalW) / 2;
-    const y = H / 2 - 30;
+    const y = Math.round(H / 2 - 36);
+
     this._botCountRects = [];
+    const mx = this.input.mouseX, my = this.input.mouseY;
+
     for (let i = 0; i < counts.length; i++) {
+      const it = counts[i];
       const x = startX + i * (bw + gap);
-      const hovered = this.input.mouseX >= x && this.input.mouseX <= x + bw && this.input.mouseY >= y && this.input.mouseY <= y + bh;
-      this._botCountRects.push({ x, y, w: bw, h: bh, count: counts[i] });
-      _csPanel(ctx, x, y, bw, bh, { accent: hovered ? "#ffe45e" : "#3b526b", hover: hovered, glow: hovered });
-      ctx.fillStyle = "#eef5ff"; ctx.font = uiTitleFont(16);
-      ctx.textBaseline = "middle";
-      ctx.fillText(labels[i], x + bw / 2, y + bh / 2);
+      const hovered = mx >= x && mx <= x + bw && my >= y && my <= y + bh;
+      const hy = hovered ? y - 3 : y;
+      this._botCountRects.push({ x, y, w: bw, h: bh, count: it.count });
+
+      _csPanel(ctx, x, hy, bw, bh, {
+        accent: hovered ? "#ffe45e" : it.accent,
+        hover: hovered, glow: hovered,
+        fillTop: hovered ? "rgba(255,228,94,0.06)" : _hexA(it.accent, 0.05),
+      });
+
+      // Kart üstü renkli şerit
+      ctx.fillStyle = hovered ? "#ffe45e" : _hexA(it.accent, 0.75);
+      ctx.fillRect(x + 10, hy + 1, bw - 20, 2.5);
+
+      // Sağ üst köşe rozeti (Badge)
+      const badgeW = 76, badgeH = 17;
+      const badgeX = x + bw - badgeW - 8, badgeY = hy + 8;
+      ctx.fillStyle = hovered ? _hexA(it.accent, 0.25) : "rgba(0,0,0,0.45)";
+      ctx.strokeStyle = _hexA(it.accent, hovered ? 0.9 : 0.4);
+      ctx.lineWidth = 1;
+      _panelPath(ctx, badgeX, badgeY, badgeW, badgeH, 3);
+      ctx.fill(); ctx.stroke();
+      ctx.textAlign = "center"; ctx.textBaseline = "middle";
+      ctx.font = uiTitleFont(9, 700);
+      ctx.fillStyle = hovered ? "#ffffff" : it.accent;
+      ctx.fillText(it.tag, badgeX + badgeW / 2, badgeY + badgeH / 2);
+
+      // Başlık
+      ctx.textAlign = "left"; ctx.textBaseline = "middle";
+      ctx.font = uiTitleFont(20, 700);
+      ctx.fillStyle = hovered ? "#ffffff" : "#eef5ff";
+      ctx.fillText(it.title, x + 14, hy + 40);
+
+      // Açıklama
+      ctx.fillStyle = hovered ? "#cfe0ee" : "#8fa6bd";
+      ctx.font = uiTextFont(11, 500);
+      const subLines = _wrapCanvasText(ctx, it.sub, bw - 26);
+      subLines.forEach((line, row) => ctx.fillText(line, x + 14, hy + 70 + row * 15));
+
+      // Hover alt etiketi
+      if (hovered) {
+        ctx.textAlign = "center"; ctx.textBaseline = "middle";
+        ctx.font = uiTitleFont(9.5, 700);
+        ctx.fillStyle = "#ffe45e";
+        ctx.fillText(t("menu.card.enter", "BAŞLAT ➔"), x + bw / 2, hy + bh - 14);
+      }
     }
+
     // Geri butonu
-    this._backRect = { x: 20, y: H - 50, w: 80, h: 36 };
     this.drawBackButton(ctx, t("common.back", "‹ Geri"));
   }
 
@@ -960,6 +1287,10 @@ class Game {
       this.updateHud();
       return;
     }
+  }
+
+  openSettings(tab) {
+    if (typeof GameSettings !== "undefined") GameSettings.open(tab);
   }
 
   // ── Atölye (WORKSHOP) ────────────────────────────────────────────────
@@ -998,9 +1329,62 @@ class Game {
     this.updateHud();
   }
 
+  // Atölye ekranının o anki dünya genişliğine (W) göre duyarlı (responsive)
+  // yerleşimi. Sol ızgara (robot kartları ve sayfalama) ile sağ detay paneli
+  // (seviye/geliştirme/parçalar) arasındaki dengeyi sağlar.
+  //
+  // Standart genişlikte (W=960) 4 sütun x 4 satır = 16 robot/sayfa korunur.
+  // Dar ekranda (W < 760, örn. 4:3 veya tablet) kart okunabilirliği için 3 sütun
+  // x 4 satır = 12 robot/sayfa seçilir ve sağ panel sıkışmaz.
+  // Çok geniş ekranlarda (örn. 21:9 ultrawide) aşırı yayılmayı önlemek için içerik
+  // ortalanır.
+  workshopLayout() {
+    const W = this.W || 960;
+    const H = this.H || 540;
+    const gy = 66;
+
+    const margin = Math.max(14, Math.min(24, Math.round(W * 0.025)));
+    const colGap = Math.max(10, Math.min(18, Math.round(W * 0.016)));
+
+    const maxTotalW = 1040;
+    const totalW = Math.min(W - margin * 2, maxTotalW);
+    const startX = Math.round((W - totalW) / 2);
+
+    let cols = 4;
+    if (totalW < 500) cols = 2;
+    else if (totalW < 760) cols = 3;
+
+    const rows = WS_ROWS;
+    const perPage = cols * rows;
+
+    const minRw = Math.min(300, Math.floor(totalW * 0.46));
+    const splitRatio = cols === 4 ? 0.51 : cols === 3 ? 0.49 : 0.46;
+    let targetGridW = Math.round((totalW - colGap) * splitRatio);
+    if (totalW - colGap - targetGridW < minRw) {
+      targetGridW = totalW - colGap - minRw;
+    }
+
+    const cardGap = Math.max(6, Math.min(8, Math.round(targetGridW * 0.018)));
+    const cardW = Math.floor((targetGridW - (cols - 1) * cardGap) / cols);
+    const gridW = cols * cardW + (cols - 1) * cardGap;
+    const gx = startX;
+
+    const rx = gx + gridW + colGap;
+    const rw = totalW - gridW - colGap;
+    const panelH = Math.min(WS_PANEL_H, H - gy - 20);
+
+    return {
+      gx, gy, gridW, cols, rows, perPage,
+      cardW, cardH: 92, cardGap,
+      rx, rw, panelH, colGap,
+      startX, totalW
+    };
+  }
+
   _workshopPageOf(id) {
     const idx = CHARACTERS.findIndex((c) => c.id === id);
-    return idx >= 0 ? Math.floor(idx / (WS_COLS * WS_ROWS)) : 0;
+    const perPage = this.workshopLayout ? this.workshopLayout().perPage : (WS_COLS * WS_ROWS);
+    return idx >= 0 ? Math.floor(idx / perPage) : 0;
   }
 
   // Satın alma/takma sonrası kısa "metal montaj" parıltısı ve geri bildirim
@@ -1021,6 +1405,19 @@ class Game {
   purchaseWorkshopUpgrade() {
     const id = this.workshopSelectedId;
     if (!id) return;
+    // Model kilitliyse önce kilit açma (satın alma) denenir
+    if (!isRobotUnlocked(this.profile, id)) {
+      const buy = unlockRobot(this.profile, id);
+      if (!buy.ok) {
+        if (typeof SFX !== "undefined" && SFX.buzzer) SFX.buzzer();
+        return;
+      }
+      this.profile = buy.profile;
+      if (typeof SFX !== "undefined" && SFX.upgradeTier) SFX.upgradeTier();
+      if (!buy.persisted) notifyStorageFailure();
+      this.updateHud();
+      return;
+    }
     const res = purchaseUpgrade(this.profile, id, this.workshopBranch);
     if (!res.ok) {
       if (res.reason === "LEVEL_REQUIRED" || res.reason === "SCRAP_REQUIRED") SFX.uiClick();
@@ -1195,7 +1592,8 @@ class Game {
   }
 
   changeWorkshopPage(dir) {
-    const totalPages = Math.max(1, Math.ceil(CHARACTERS.length / (WS_COLS * WS_ROWS)));
+    const perPage = this.workshopLayout ? this.workshopLayout().perPage : (WS_COLS * WS_ROWS);
+    const totalPages = Math.max(1, Math.ceil(CHARACTERS.length / perPage));
     const next = this.workshopPage + dir;
     if (next < 0 || next > totalPages - 1) return;
     SFX.uiClick();
@@ -1212,37 +1610,59 @@ class Game {
 
   renderWorkshop(ctx) {
     const W = this.W, H = this.H;
-    drawClouds(ctx, W);
-    _msBackdrop(ctx, W, H);
+    const timeMs = this.renderTimeMs || 0;
+    drawClouds(ctx, W, "rgba(190,215,240,0.14)");
+    _msBackdrop(ctx, W, H, timeMs);
 
-    ctx.fillStyle = "#ffe45e";
-    ctx.font = uiTitleFont(26);
+    const safeTopPad = Math.max(120, this.hudRightInset || 0);
+
+    // Başlık aurası
+    const tglow = ctx.createRadialGradient(W / 2, 22, 6, W / 2, 22, 200);
+    tglow.addColorStop(0, "rgba(244, 189, 98, 0.16)");
+    tglow.addColorStop(0.55, "rgba(113, 211, 189, 0.035)");
+    tglow.addColorStop(1, "rgba(0,0,0,0)");
+    ctx.fillStyle = tglow;
+    ctx.fillRect(W / 2 - 220, 2, 440, 56);
+
     ctx.textAlign = "center";
     ctx.textBaseline = "top";
-    ctx.fillText(t("workshop.title", "ATÖLYE"), W / 2, 20);
+    ctx.fillStyle = "rgba(113, 211, 189, 0.65)";
+    ctx.font = uiTitleFont(9.5, 700);
+    ctx.fillText("PROT-9 // ENGINEERING BAY", W / 2, 8);
+
+    ctx.fillStyle = "#ffe45e";
+    ctx.font = uiTitleFont(Math.min(26, Math.max(20, Math.round(W * 0.028))), 700);
+    ctx.shadowColor = "rgba(255, 228, 94, 0.42)";
+    ctx.shadowBlur = 8;
+    ctx.fillText(t("workshop.title", "ATÖLYE"), W / 2, 19);
+    ctx.shadowBlur = 0;
+
+    _csHazardStrip(ctx, W / 2 - 100, 43, 200, 2.5);
+
     ctx.fillStyle = "#9fb6c9";
-    ctx.font = uiTextFont(12);
+    ctx.font = uiTextFont(Math.min(12, Math.max(10, Math.round(W * 0.013))));
+    const maxSubW = Math.max(240, W - safeTopPad * 2);
     ctx.fillText(this.workshopMode === "parts"
       ? t("workshop.subtitleParts", "Parça tak — parçalar geliştirmelerle aynı maç kapsamında etkindir")
-      : t("workshop.subtitleUpgrades", "Robotlarını kalibre et — geliştirmeler yalnız bilgisayara karşı maçta etkindir"), W / 2, 48);
+      : t("workshop.subtitleUpgrades", "Robotlarını kalibre et — geliştirmeler yalnız bilgisayara karşı maçta etkindir"), W / 2, 49, maxSubW);
 
     const scrap = this.profile ? this.profile.scrap : START_SCRAP;
-    const perPage = WS_COLS * WS_ROWS;
+    const L = this.workshopLayout();
+    const perPage = L.perPage;
     const totalPages = Math.max(1, Math.ceil(CHARACTERS.length / perPage));
     this.workshopPage = Math.max(0, Math.min(this.workshopPage, totalPages - 1));
     const pageStart = this.workshopPage * perPage;
     const pageChars = CHARACTERS.slice(pageStart, pageStart + perPage);
 
     // ── Sol: sayfalı robot grid'i ──────────────────────────────────────
-    const gx = 24, gy = 66, gridW = 452, gap = 8;
-    const cardW = Math.floor((gridW - (WS_COLS - 1) * gap) / WS_COLS);
-    const cardH = 88;
+    const gx = L.gx, gy = L.gy, gridW = L.gridW, cols = L.cols, rows = L.rows;
+    const cardW = L.cardW, cardH = L.cardH, gap = L.cardGap;
     const mx = this.input.mouseX, my = this.input.mouseY;
     this._workshopCardRects = [];
 
     for (let i = 0; i < pageChars.length; i++) {
       const ch = pageChars[i];
-      const col = i % WS_COLS, row = (i / WS_COLS) | 0;
+      const col = i % cols, row = (i / cols) | 0;
       const cx = gx + col * (cardW + gap);
       const cy = gy + row * (cardH + gap);
       this._workshopCardRects.push({ x: cx, y: cy, w: cardW, h: cardH, ch });
@@ -1259,26 +1679,43 @@ class Game {
         fillTop: selected ? "#1b2b1f" : null, fillBottom: selected ? "#122015" : null,
       });
 
+      // Kart üstü robot rengi şerit
+      ctx.fillStyle = hovered ? ch.color : _hexA(ch.color, 0.75);
+      ctx.fillRect(cx + 6, cyv + 1, cardW - 12, 2);
+
       drawRobot(ctx, {
-        cx: cx + cardW / 2, cy: cyv + 30, r: 15, facing: 1, charDef: ch,
+        cx: cx + cardW / 2, cy: cyv + 31, r: 15, facing: 1, charDef: ch,
         timeMs: this.renderTimeMs || 0, motion: { vx: 0, vy: 0, onGround: true },
         upgradeVisuals: { attachmentGlow: sanitizeUpgrades(up).module >= 3 },
         parts: up.loadout,
       });
 
       ctx.fillStyle = ch.color;
-      ctx.font = uiTextFont(12, 700);
+      ctx.font = uiTextFont(Math.min(12, Math.max(10.5, Math.round(cardW * 0.11))), 700);
       ctx.textAlign = "center";
       ctx.textBaseline = "top";
-      ctx.fillText(ch.label, cx + cardW / 2, cyv + 58, cardW - 10);
+      ctx.fillText(ch.label, cx + cardW / 2, cyv + 59, cardW - 8);
       ctx.fillStyle = "#9fb6c9";
-      ctx.font = uiTextFont(9);
-      ctx.fillText(t("workshop.robotCardMeta", "Sv. {level} • {tiers}/9", { level: levelForXp(up.xp), tiers: totalTiers(up) }), cx + cardW / 2, cyv + 72);
+      ctx.font = uiTextFont(Math.min(9, Math.max(8.5, Math.round(cardW * 0.085))));
+      ctx.fillText(t("workshop.robotCardMeta", "Sv. {level} • {tiers}/9", { level: levelForXp(up.xp), tiers: totalTiers(up) }), cx + cardW / 2, cyv + 74, cardW - 8);
+
+      // Kilitli kart simgesi
+      if (!isRobotUnlocked(this.profile, ch.id)) {
+        ctx.fillStyle = "rgba(10, 16, 24, 0.60)";
+        _csRoundRect(ctx, cx, cyv, cardW, cardH, 4);
+        ctx.fill();
+        ctx.font = uiTitleFont(13);
+        ctx.fillStyle = "#ff6b6b";
+        ctx.fillText("🔒", cx + cardW - 10, cyv + 10);
+      }
     }
 
     // Sayfa gezinme (klavye ve fare ile aynı işlevi görür)
+    // Sol sayfalama çubuğunun alt hizası, sağ panelin alt kenarı (gy + panelH) ile eşitlenir.
     this._workshopPageRects = [];
-    const navY = gy + WS_ROWS * cardH + (WS_ROWS - 1) * gap + 16, navW = 96, navH = 30;
+    const navH = 30;
+    const navY = Math.max(gy + rows * cardH + (rows - 1) * gap + 8, gy + L.panelH - navH);
+    const navW = Math.min(96, Math.max(70, Math.floor(gridW * 0.24)));
     const prev = { x: gx, y: navY, w: navW, h: navH, dir: -1 };
     const next = { x: gx + gridW - navW, y: navY, w: navW, h: navH, dir: 1 };
     this._workshopPageRects = [prev, next];
@@ -1288,18 +1725,18 @@ class Game {
       ctx.globalAlpha = canUse ? 1 : 0.35;
       _csPanel(ctx, b.x, b.y, b.w, b.h, { accent: hov ? "#ffe45e" : "#2a3848", hover: hov, glow: hov, rivets: false });
       ctx.fillStyle = "#cfe0ee";
-      ctx.font = uiTextFont(13, 700);
+      ctx.font = uiTextFont(Math.min(13, Math.max(11, Math.round(navW * 0.13))), 700);
       ctx.textAlign = "center"; ctx.textBaseline = "middle";
       ctx.fillText(b.dir < 0 ? t("common.back", "‹ Geri") : t("common.forward", "İleri ›"), b.x + b.w / 2, b.y + b.h / 2);
       ctx.globalAlpha = 1;
     }
     ctx.fillStyle = "#9fb6c9";
-    ctx.font = uiTextFont(13, 700);
+    ctx.font = uiTextFont(Math.min(13, Math.max(11, Math.round(gridW * 0.035))), 700);
     ctx.textAlign = "center"; ctx.textBaseline = "middle";
     ctx.fillText(t("common.page", "Sayfa {n} / {total}", { n: this.workshopPage + 1, total: totalPages }), gx + gridW / 2, navY + navH / 2);
 
     // ── Sağ: seçili robot detayı + üç dal paneli ──────────────────────
-    const rx = 496, rw = W - rx - 24;
+    const rx = L.rx, rw = L.rw, panelH = L.panelH;
     const def = CHARACTERS.find((c) => c.id === this.workshopSelectedId) || CHARACTERS[0];
     const up = getRobotProgress(this.profile, def.id);
     const level = levelForXp(up.xp);
@@ -1309,8 +1746,7 @@ class Game {
     const xpFrac = nextXp != null ? clampNumber(curXp / spanXp, 0, 1) : 1;
 
     // Sağ büyük panel: servis bölmesi — üst kenarında tehlike şeridi.
-    // (Bu ekran başlık altına şerit sığmaz; imza detayı buraya taşındı.)
-    _csPanel(ctx, rx, gy, rw, WS_PANEL_H, { accent: "#2a3848", hazardTop: true });
+    _csPanel(ctx, rx, gy, rw, panelH, { accent: "#2a3848", hazardTop: true });
 
     drawRobot(ctx, {
       cx: rx + rw / 2, cy: gy + 62, r: def.r * 1.5, facing: 1, charDef: def,
@@ -1319,18 +1755,19 @@ class Game {
       parts: up.loadout,
     });
     ctx.fillStyle = "#eef5ff";
-    ctx.font = uiTitleFont(18);
+    ctx.font = uiTitleFont(Math.min(18, Math.max(15, Math.round(rw * 0.045))));
     ctx.textAlign = "center"; ctx.textBaseline = "top";
     ctx.fillText(t("workshop.robotMeta", "{label} · {role}", { label: def.label, role: def.role }), rx + rw / 2, gy + 100);
 
     ctx.fillStyle = "#ffd166";
-    ctx.font = uiTextFont(13, 700);
+    ctx.font = uiTextFont(Math.min(13, Math.max(11, Math.round(rw * 0.032))), 700);
     ctx.fillText(t("workshop.serviceLevel", "Servis Seviyesi {level}{suffix}", {
       level,
       suffix: nextXp != null ? ` — ${up.xp} / ${nextXp} XP` : t("workshop.masterService", " — Usta Servis"),
     }), rx + rw / 2, gy + 124);
 
-    const barX = rx + 20, barW = rw - 40, barY = gy + 144;
+    const barPad = Math.max(14, Math.round(rw * 0.05));
+    const barX = rx + barPad, barW = rw - barPad * 2, barY = gy + 144;
     ctx.fillStyle = "#1e2a38";
     ctx.fillRect(barX, barY, barW, 7);
     ctx.fillStyle = "#63e6be";
@@ -1340,11 +1777,11 @@ class Game {
     const fxT = this.workshopFx ? this.workshopFx.t : WS_FX_DURATION;
     const pulse = Math.max(0, 1 - fxT / WS_FX_DURATION);
     ctx.fillStyle = `rgba(255,228,94,${0.75 + 0.25 * pulse})`;
-    ctx.font = uiTitleFont(Math.round(14 + 3 * pulse));
+    ctx.font = uiTitleFont(Math.round(Math.min(15, Math.max(12, rw * 0.033)) + 3 * pulse));
     ctx.fillText(t("common.scrap", "Hurda: {scrap}", { scrap }), rx + rw / 2, barY + 14);
     if (level >= 4) {
       ctx.fillStyle = "#8fa8ba";
-      ctx.font = uiTextFont(10);
+      ctx.font = uiTextFont(Math.min(10, Math.max(9, Math.round(rw * 0.024))));
       ctx.fillText(t("workshop.stats", "Maç {matches} • Galibiyet {wins}", { matches: up.stats.matches, wins: up.stats.wins }), rx + rw / 2, barY + 36);
     }
 
@@ -1352,37 +1789,72 @@ class Game {
     // görünür; pazar sekmeleriyle aynı dil (1/2 ve Tab tuşları da çalışır).
     this._renderWorkshopModeTabs(ctx, rx, gy, rw, mx, my);
 
-    if (this.workshopMode === "parts") {
+    const isDefUnlocked = isRobotUnlocked(this.profile, def.id);
+    if (!isDefUnlocked) {
+      const spec = robotPriceSpec(def.id);
+      const accXp = this.profile ? this.profile.accountXp : 0;
+      const curAccLvl = levelForAccountXp(accXp);
+      const canBuy = canUnlockRobot(this.profile, def.id);
+
+      const panelBoxY = barY + 45;
+      const panelBoxH = Math.max(140, gy + panelH - panelBoxY - 55);
+      _csPanel(ctx, rx, panelBoxY, rw, panelBoxH, { accent: "#ff6b6b", fillTop: "#1c1418", fillBottom: "#120e10" });
+
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.font = uiTitleFont(30);
+      ctx.fillStyle = "#ff6b6b";
+      ctx.fillText("🔒", rx + rw / 2, panelBoxY + 35);
+
+      ctx.font = uiTitleFont(14, 700);
+      ctx.fillStyle = "#ff8888";
+      ctx.fillText(t("workshop.modelLocked", "BU MODEL KİLİTLİ"), rx + rw / 2, panelBoxY + 70);
+
+      ctx.font = uiTextFont(11.5);
+      ctx.fillStyle = curAccLvl < spec.level ? "#ff8888" : "#8fd9c4";
+      ctx.fillText(t("workshop.reqLevel", "Gereken Hesap Seviyesi: Sv. {req} (Mevcut: Sv. {cur})", { req: spec.level, cur: curAccLvl }), rx + rw / 2, panelBoxY + 98);
+
+      ctx.font = uiTitleFont(13, 700);
+      ctx.fillStyle = "#ffd166";
+      ctx.fillText(t("workshop.reqPrice", "Fiyat: {price} 🔩 Hurda", { price: spec.price }), rx + rw / 2, panelBoxY + 120);
+
+      // Buton
+      const btn = { x: rx, y: panelBoxY + panelBoxH + 6, w: rw, h: Math.max(40, gy + panelH - (panelBoxY + panelBoxH + 6)), isUnlockBtn: true };
+      this._workshopActionRect = btn;
+      const ready = canBuy.ok;
+      const hovBtn = ready && mx >= btn.x && mx <= btn.x + btn.w && my >= btn.y && my <= btn.y + btn.h;
+      _csPanel(ctx, btn.x, btn.y, btn.w, btn.h, {
+        accent: ready ? "#63e6be" : "#3b4650",
+        hover: hovBtn, glow: hovBtn,
+        fillTop: ready ? (hovBtn ? "#1f513c" : "#173a2a") : "#161b20",
+        fillBottom: ready ? (hovBtn ? "#142f24" : "#0f241c") : "#0e1216",
+      });
+      ctx.font = uiTitleFont(12, 700);
+      ctx.fillStyle = ready ? "#d8fff1" : "#8b9aa5";
+      const unlockBtnLabel = ready
+        ? t("workshop.action.unlock", "{cost} 🔩 İLE ETKİNLEŞTİR", { cost: spec.price })
+        : (curAccLvl < spec.level
+          ? t("workshop.action.levelReq", "SEVİYE YETERSİZ (Sv. {level})", { level: spec.level })
+          : t("workshop.action.scrapReq", "HURDA YETERSİZ ({cost} 🔩)", { cost: spec.price }));
+      ctx.fillText(unlockBtnLabel, rx + rw / 2, btn.y + btn.h / 2);
+    } else if (this.workshopMode === "parts") {
       this._renderWorkshopParts(ctx, rx, rw, gy, barY, level, def, up, mx, my);
     } else {
       this._workshopBranchRects = [];
-      const panelH = 58, panelGap = 6;
+      const panelHBranch = 58, panelGap = 6;
       let py = barY + (level >= 4 ? 54 : 36);
       for (const branch of BRANCHES) {
-        const rect = { x: rx, y: py, w: rw, h: panelH, branch };
+        const rect = { x: rx, y: py, w: rw, h: panelHBranch, branch };
         this._workshopBranchRects.push(rect);
         this._drawWorkshopBranch(ctx, rect, def, up, level, branch, mx, my);
-        py += panelH + panelGap;
+        py += panelHBranch + panelGap;
       }
 
       // ── Eylem düğmesi: seçili dalın sonraki kademesini satın alır ─────
       const step = nextUpgradeStep(up, this.workshopBranch);
-      // Plaka panelin alt boşluğunu doldurur ve panel dibine yapışır (alt
-      // boşluk yok): sabit 42px'te plakanın altında boş bir "yuva" kalıyordu,
-      // panel dibine 10px boşluk bırakınca da arada ince bir çizgi görünüyordu
-      // (kullanıcı görsel kabulü). Alt kenar ve köşe perçinleri panelin alt
-      // kenarıyla aynı yere gelir — çift çizgi oluşmaz.
-      const btn = { x: rx, y: py + 4, w: rw, h: Math.max(42, gy + WS_PANEL_H - (py + 4)) };
+      const btn = { x: rx, y: py + 4, w: rw, h: Math.max(42, gy + panelH - (py + 4)) };
       this._workshopActionRect = btn;
-      // Dört durum, dört ayrı okunuş — hepsi metinle de anlatılır:
-      //   ready  yeşil çelik + hover parıltısı (satın alınabilir)
-      //   locked gri plaka + asma kilit glifi (Servis Seviyesi kapısı kapalı)
-      //   short  gri plaka, glif yok (Hurda yetmiyor; geçici engel)
-      //   done   sakin yeşil, sebep "Bu dal tamamlandı" (engel değil, iş yok)
-      // Kilitli durumda ÜST TEHLİKE ŞERİDİ KULLANILMAZ: şerit bu ekranın aile
-      // imzasıdır (sağ panelin üst kenarı). Devre dışı bir düğmede tekrar
-      // edilince hem imza seyrelir hem de pasif kontrol ekranın en gürültülü
-      // öğesi olur (kullanıcı görsel kabulü: "gövde kilidi" tasarım hatası).
+
       let label, reason = "", state;
       if (!step.ok) {
         state = "done";
@@ -1408,15 +1880,19 @@ class Game {
         fillTop: ready ? (hovBtn ? "#1f513c" : "#173a2a") : state === "done" ? "#131d1a" : "#161b20",
         fillBottom: ready ? (hovBtn ? "#142f24" : "#0f241c") : state === "done" ? "#0c1310" : "#0e1216",
       });
-      // İçerik bloğu (etiket + sebep satırı) plakanın ortasına hizalanır;
-      // sebep satırı etiketin 15px altındadır (Math.round: tek satırlı
-      // "hazır" durumunda etiket tam ortada kalır).
+
       const labelY = btn.y + Math.round(reason ? btn.h / 2 - 6.5 : btn.h / 2);
-      ctx.font = uiTitleFont(14);
+      let btnFontSize = Math.min(14, Math.max(11, Math.round(rw * 0.033)));
+      ctx.font = uiTitleFont(btnFontSize);
       ctx.textAlign = "center"; ctx.textBaseline = "middle";
-      // Kilitliyse etiket asma kilit glifiyle birlikte ortalanır (glif solunda).
       const lockW = WS_LOCK_GLYPH_W + 7;
-      const lw = ctx.measureText(label).width;
+      let lw = ctx.measureText(label).width;
+      const maxBtnTextW = btn.w - (state === "locked" ? lockW : 0) - 16;
+      if (lw > maxBtnTextW) {
+        btnFontSize = Math.max(10, Math.floor(btnFontSize * (maxBtnTextW / lw)));
+        ctx.font = uiTitleFont(btnFontSize);
+        lw = ctx.measureText(label).width;
+      }
       const groupX = btn.x + (btn.w - (lw + (state === "locked" ? lockW : 0))) / 2;
       if (state === "locked") _csLockGlyph(ctx, groupX + WS_LOCK_GLYPH_W / 2, labelY, WS_LOCK_GLYPH_W, "#a9b8c3");
       ctx.fillStyle = ready ? "#d8fff1" : state === "done" ? "#a9d8c8" : "#8b9aa5";
@@ -1425,7 +1901,7 @@ class Game {
       ctx.textAlign = "center";
       if (reason) {
         ctx.fillStyle = state === "done" ? "#7f9c92" : "#8fa8ba";
-        ctx.font = uiTextFont(10);
+        ctx.font = uiTextFont(Math.min(10, Math.max(9, Math.round(rw * 0.024))));
         ctx.fillText(reason, btn.x + btn.w / 2, labelY + 15);
       }
     }
@@ -1438,7 +1914,7 @@ class Game {
       ctx.fillStyle = n.color;
       ctx.font = uiTextFont(11, 700);
       ctx.textAlign = "center"; ctx.textBaseline = "bottom";
-      ctx.fillText(n.text, rx + rw / 2, gy + WS_PANEL_H - 8);
+      ctx.fillText(n.text, rx + rw / 2, gy + panelH - 8);
       ctx.globalAlpha = 1;
     }
 
@@ -1477,19 +1953,18 @@ class Game {
     ctx.textAlign = "left";
     ctx.textBaseline = "top";
     ctx.fillStyle = "#eef5ff";
-    ctx.font = uiTextFont(12, 700);
+    ctx.font = uiTextFont(Math.min(12, Math.max(10.5, Math.round(rect.w * 0.033))), 700);
     const tierText = step.ok ? t("workshop.tier", "Kademe {tier}", { tier: romanTier(step.nextTier) }) : t("workshop.maxCalibration", "Tam Kalibrasyon");
-    ctx.fillText(t("workshop.branchPanel", "{branch} — {tier}", { branch: branchLabel(branch), tier: tierText }), rect.x + 10, rect.y + 7);
+    ctx.fillText(t("workshop.branchPanel", "{branch} — {tier}", { branch: branchLabel(branch), tier: tierText }), rect.x + 10, rect.y + 7, rect.w - 20);
 
     ctx.fillStyle = "#8fd9c4";
-    ctx.font = uiTextFont(10);
+    ctx.font = uiTextFont(Math.min(10, Math.max(9, Math.round(rect.w * 0.027))));
     const effect = upgradeEffectText(def, up, branch);
     ctx.fillText(effect, rect.x + 10, rect.y + 23, rect.w - 20);
 
     ctx.fillStyle = "#8fa8ba";
-    ctx.font = uiTextFont(9);
+    ctx.font = uiTextFont(Math.min(9, Math.max(8.5, Math.round(rect.w * 0.025))));
     let status;
-    // Üç durum aynı bilgiyi taşır (kademe • servis seviyesi • maliyet): tek anahtar.
     if (!step.ok) {
       status = t("workshop.current.irreversible", "Mevcut: {tier} • geri alınamaz", { tier: romanTier(currentTier) });
     } else {
@@ -1504,7 +1979,10 @@ class Game {
   _renderWorkshopModeTabs(ctx, rx, gy, rw, mx, my) {
     const mode = this.workshopMode === "parts" ? "parts" : "upgrades";
     const tabs = [{ id: "upgrades", label: t("workshop.tab.upgrades", "GELİŞTİRME") }, { id: "parts", label: t("workshop.tab.parts", "PARÇALAR") }];
-    const w = 118, h = 22, gap = 8, y = gy + 7;
+    const gap = 8;
+    const w = Math.min(130, Math.max(90, Math.floor((rw - 28 - gap) / 2)));
+    const h = 22;
+    const y = gy + 7;
     const x0 = rx + (rw - (w * 2 + gap)) / 2;
     this._workshopModeRects = [];
     tabs.forEach((t, i) => {
@@ -1518,9 +1996,9 @@ class Game {
         fillTop: active ? "#2b2717" : null, fillBottom: active ? "#1a170d" : null,
       });
       ctx.fillStyle = active ? "#ffe45e" : "#9fb6c9";
-      ctx.font = uiTextFont(11, 700);
+      ctx.font = uiTextFont(Math.min(11, Math.max(9.5, Math.round(w * 0.09))), 700);
       ctx.textAlign = "center"; ctx.textBaseline = "middle";
-      ctx.fillText(t.label, x + w / 2, y + h / 2);
+      ctx.fillText(t.label, x + w / 2, y + h / 2, w - 8);
     });
   }
 
@@ -1560,7 +2038,8 @@ class Game {
       ctx.textAlign = "left"; ctx.textBaseline = "middle";
       ctx.fillStyle = "#8affc0"; ctx.font = uiTextFont(12, 700);
       ctx.fillText(t("workshop.pickPart", "{slot} {index} — parça seç", { slot: slotLabel(slot), index: slotIndex + 1 }), rx + 10, py + panelH / 2);
-      const backW = 74, backH = 26;
+      const backW = Math.min(74, Math.max(58, Math.floor(rw * 0.2)));
+      const backH = 26;
       const back = { x: rx + rw - backW - 8, y: py + (panelH - backH) / 2, w: backW, h: backH };
       this._workshopSlotBackRect = back;
       if (totalPages > 1) {
@@ -1571,7 +2050,7 @@ class Game {
       const hovBack = inside(back);
       _csPanel(ctx, back.x, back.y, back.w, back.h, { accent: hovBack ? "#ffe45e" : "#2a3848", hover: hovBack, glow: hovBack, rivets: false });
       ctx.textAlign = "center"; ctx.textBaseline = "middle";
-      ctx.fillStyle = "#cfe0ee"; ctx.font = uiTextFont(12, 700);
+      ctx.fillStyle = "#cfe0ee"; ctx.font = uiTextFont(Math.min(12, Math.max(10.5, Math.round(backW * 0.16))), 700);
       ctx.fillText(t("common.back", "‹ Geri"), back.x + back.w / 2, back.y + back.h / 2);
       py += panelH + panelGap;
 
@@ -1608,14 +2087,14 @@ class Game {
         ctx.textAlign = "left"; ctx.textBaseline = "top";
         ctx.fillStyle = row.part ? "#eef5ff" : "#9fb6c9";
         ctx.font = uiTextFont(12, 700);
-        ctx.fillText(row.part ? row.part.label : t("workshop.clearSlot", "Boş bırak"), rx + 52, py + 6);
+        const badgeW = isEquippedHere || isElsewhere ? 75 : 0;
+        const textMaxW = rw - 58 - badgeW - 10;
+        ctx.fillText(row.part ? row.part.label : t("workshop.clearSlot", "Boş bırak"), rx + 52, py + 6, textMaxW);
         ctx.fillStyle = "#8fd9c4"; ctx.font = uiTextFont(10);
-        // Zaten bu alt yuvada takılı parçada fark "X → X" olurdu; onun yerine
-        // açıklamayı göster (etiketler durumu zaten söylüyor).
         const detail = row.part
           ? (isEquippedHere ? row.part.desc : (partEffectText(def, up, row.partId, slotIndex) || row.part.desc))
           : t("workshop.clearSubSlot", "Bu alt yuvayı boşalt");
-        ctx.fillText(detail, rx + 52, py + 23, rw - 150);
+        ctx.fillText(detail, rx + 52, py + 23, textMaxW);
 
         let badge = "", badgeColor = "#63e6be";
         if (isEquippedHere) badge = t("workshop.partHere", "✓ burada");
@@ -1631,19 +2110,19 @@ class Game {
     }
 
     // ── Yuva satırları: solda yuva adı, sağda alt yuva hücreleri ─────────
-    const labelW = 74;
+    const labelW = Math.min(74, Math.max(54, Math.floor(rw * 0.2)));
     const cellGap = 6;
-    const cellW = Math.floor((rw - labelW - cellGap * (PARTS_PER_SLOT - 1)) / PARTS_PER_SLOT);
+    const cellW = Math.floor((rw - labelW - 14 - cellGap * (PARTS_PER_SLOT - 1)) / PARTS_PER_SLOT);
     const cursorIndex = this.workshopSlotIndex || 0;
     for (const slot of PART_SLOTS) {
       const rowY = py;
       _csPanel(ctx, rx, rowY, rw, panelH, { accent: "#242f3b", rivets: false });
       ctx.textAlign = "left"; ctx.textBaseline = "middle";
-      ctx.fillStyle = "#9fb6c9"; ctx.font = uiTextFont(10, 700);
-      ctx.fillText(slotLabel(slot).toUpperCase(), rx + 10, rowY + panelH / 2);
+      ctx.fillStyle = "#9fb6c9"; ctx.font = uiTextFont(Math.min(10, Math.max(9, Math.round(labelW * 0.14))), 700);
+      ctx.fillText(slotLabel(slot).toUpperCase(), rx + 8, rowY + panelH / 2, labelW - 10);
 
       for (let i = 0; i < PARTS_PER_SLOT; i++) {
-        const cx = rx + labelW + i * (cellW + cellGap);
+        const cx = rx + labelW + 6 + i * (cellW + cellGap);
         const rect = { x: cx, y: rowY + 5, w: cellW, h: panelH - 10, slot, index: i };
         this._workshopSlotRects.push(rect);
         const part = partById(loadout[slot][i]);
@@ -1653,23 +2132,26 @@ class Game {
           accent: part ? "#63e6be" : isCursor ? "#ffe45e" : hov ? "#ffe45e" : "#1c2530",
           hover: hov, glow: hov, rivets: false,
         });
+        const iconSize = Math.min(26, Math.max(18, Math.round(cellW * 0.22)));
         if (part) {
           ctx.save();
-          ctx.translate(rect.x + 5, rect.y + (rect.h - 26) / 2);
-          drawPartIcon(ctx, part, 26);
+          ctx.translate(rect.x + 5, rect.y + (rect.h - iconSize) / 2);
+          drawPartIcon(ctx, part, iconSize);
           ctx.restore();
         }
         ctx.textAlign = "left"; ctx.textBaseline = "middle";
-        ctx.fillStyle = part ? "#eef5ff" : "#5f6d78"; ctx.font = uiTextFont(11, 700);
-        ctx.fillText(part ? part.label : t("workshop.empty", "Boş"), rect.x + (part ? 35 : 10), rect.y + rect.h / 2, rect.w - 42);
+        ctx.fillStyle = part ? "#eef5ff" : "#5f6d78";
+        ctx.font = uiTextFont(Math.min(11, Math.max(9.5, Math.round(cellW * 0.095))), 700);
+        const textX = rect.x + (part ? iconSize + 9 : 8);
+        ctx.fillText(part ? part.label : t("workshop.empty", "Boş"), textX, rect.y + rect.h / 2, rect.w - (part ? iconSize + 13 : 14));
       }
       py += panelH + panelGap;
     }
 
     // İpucu satırı: ne yapılacağını yazıyla söyler.
     ctx.textAlign = "center"; ctx.textBaseline = "top";
-    ctx.fillStyle = "#6d7f8d"; ctx.font = uiTextFont(10);
-    ctx.fillText(t("workshop.partsHint", "Hücreye tıkla → parça seç • yuva başına {perSlot} parça • sökme ücretsiz", { perSlot: PARTS_PER_SLOT }), rx + rw / 2, py + 6);
+    ctx.fillStyle = "#6d7f8d"; ctx.font = uiTextFont(Math.min(10, Math.max(8.5, Math.round(rw * 0.026))));
+    ctx.fillText(t("workshop.partsHint", "Hücreye tıkla → parça seç • yuva başına {perSlot} parça • sökme ücretsiz", { perSlot: PARTS_PER_SLOT }), rx + rw / 2, py + 6, rw - 20);
   }
 
   handleWorkshopClick(mx, my) {
@@ -1734,6 +2216,16 @@ class Game {
   }
 
   handleModeSelectClick(mx, my) {
+    if (this._scrapBadgeRect && this.hitRect(this._scrapBadgeRect, mx, my)) {
+      SFX.uiClick();
+      this.openWorkshop();
+      return;
+    }
+    if (this._settingsBtnRect && this.hitRect(this._settingsBtnRect, mx, my)) {
+      SFX.uiClick();
+      this.openSettings();
+      return;
+    }
     for (const r of this._modeRects || []) {
       if (mx >= r.x && mx <= r.x + r.w && my >= r.y && my <= r.y + r.h) {
         SFX.uiClick();
@@ -1803,16 +2295,48 @@ class Game {
   // çizilir; her satır [tuş, açıklama] ikilisidir, açıklama kutuya sarılır.
   renderTutorial(ctx) {
     const W = this.W, H = this.H;
-    drawClouds(ctx, W);
-    _msBackdrop(ctx, W, H);
-    ctx.textAlign = "left"; ctx.textBaseline = "top";
-    ctx.fillStyle = "#ffe45e"; ctx.font = uiTitleFont(26);
-    ctx.textAlign = "center";
-    ctx.fillText(t("tutorial.title", "NASIL OYNANIR"), W / 2, 12);
-    _csHazardStrip(ctx, W / 2 - 100, 48, 200, 4);
+    const timeMs = this.renderTimeMs || 0;
+    drawClouds(ctx, W, "rgba(190,215,240,0.14)");
+    _msBackdrop(ctx, W, H, timeMs);
 
-    const KEY_COL = 116;          // tuş sütunu genişliği
-    const ROW_FONT = 12, ROW_GAP = 14;
+    // Başlık Bölgesi
+    const titleY = 10;
+    const titleText = t("tutorial.title", "NASIL OYNANIR");
+
+    // Başlık aurası
+    const tglow = ctx.createRadialGradient(W / 2, titleY + 22, 6, W / 2, titleY + 22, 220);
+    tglow.addColorStop(0, "rgba(244, 189, 98, 0.16)");
+    tglow.addColorStop(0.55, "rgba(113, 211, 189, 0.035)");
+    tglow.addColorStop(1, "rgba(0,0,0,0)");
+    ctx.fillStyle = tglow;
+    ctx.fillRect(W / 2 - 240, titleY - 6, 480, 68);
+
+    // Üst mikro damga
+    ctx.textAlign = "center"; ctx.textBaseline = "top";
+    ctx.fillStyle = "rgba(113, 211, 189, 0.65)";
+    ctx.font = uiTitleFont(9.5, 700);
+    ctx.fillText("PROT-9 // COMBAT INITIATION MANUAL", W / 2, titleY);
+
+    // Ana Başlık
+    ctx.font = uiTitleFont(22, 700);
+    ctx.fillStyle = "rgba(0, 0, 0, 0.75)";
+    ctx.fillText(titleText, W / 2 + 1.5, titleY + 15);
+    ctx.fillStyle = "#ffe45e";
+    ctx.shadowColor = "rgba(255, 228, 94, 0.42)";
+    ctx.shadowBlur = 8;
+    ctx.fillText(titleText, W / 2, titleY + 14);
+    ctx.shadowBlur = 0;
+
+    // Başlık altı dekoratif tehlike şeridi
+    _csHazardStrip(ctx, W / 2 - 110, titleY + 40, 220, 2.5);
+
+    // Slogan / Alt açıklama
+    ctx.fillStyle = "#a2b8c2";
+    ctx.font = uiTextFont(11.5, 600);
+    ctx.fillText("// " + t("tutorial.sub", "Saha kontrolleri ve temel muharebe kuralları") + " //", W / 2, titleY + 47);
+
+    const KEY_COL = 126;          // tuş sütunu genişliği
+    const ROW_GAP = 14;
     // Tuş/ad metinleri veri: her satır [tus, aciklama] ve ikisi de çevrilir.
     const panels = [
       {
@@ -1851,60 +2375,101 @@ class Game {
 
     const gap = 14;
     const pw = Math.min(440, Math.floor((W - 3 * gap) / 2));
-    // Panel yüksekliği: başlık bölgesi + en uzun satır kümesine göre hesaplanır.
     const ph = 118;
     const startX = Math.max(8, (W - (2 * pw + gap)) / 2);
-    const startY = 64;
+    const startY = 78;
 
     for (let i = 0; i < panels.length; i++) {
       const col = i % 2, row = (i / 2) | 0;
       const x = startX + col * (pw + gap);
-      const y = startY + row * (118 + gap);
-      _csPanel(ctx, x, y, pw, ph, { accent: panels[i].accent });
-      // Panel başlığı: aksan rengiyle, ince tehlike şeridi solda
-      _csHazardStrip(ctx, x + 10, y + 9, 14, 3);
-      ctx.fillStyle = panels[i].accent;
-      ctx.font = uiTitleFont(12);
-      ctx.textAlign = "left"; ctx.textBaseline = "middle";
-      ctx.fillText(panels[i].title, x + 30, y + 11);
+      const y = startY + row * (ph + gap);
+      _csPanel(ctx, x, y, pw, ph, { accent: panels[i].accent, fillTop: _hexA(panels[i].accent, 0.05) });
 
-      let ry = y + 28;
+      // Kart üstü renkli şerit
+      ctx.fillStyle = _hexA(panels[i].accent, 0.85);
+      ctx.fillRect(x + 10, y + 1, pw - 20, 2.5);
+
+      // Panel başlığı
+      _csHazardStrip(ctx, x + 12, y + 11, 14, 3);
+      ctx.fillStyle = panels[i].accent;
+      ctx.font = uiTitleFont(12, 700);
+      ctx.textAlign = "left"; ctx.textBaseline = "middle";
+      ctx.fillText(panels[i].title, x + 34, y + 13);
+
+      let ry = y + 29;
       for (const [key, desc] of panels[i].rows) {
-        ctx.textAlign = "left"; ctx.textBaseline = "top";
+        // Keycap kutucuğu
+        ctx.font = uiTextFont(11, 700);
+        const kw = Math.max(26, Math.min(KEY_COL - 16, Math.round(ctx.measureText(key).width + 12)));
+        const kh = 20;
+        const kx = x + 12;
+        const ky = ry;
+
+        ctx.fillStyle = "rgba(7, 18, 24, 0.75)";
+        ctx.strokeStyle = _hexA(panels[i].accent, 0.45);
+        ctx.lineWidth = 1;
+        _csRoundRect(ctx, kx, ky, kw, kh, 4);
+        ctx.fill(); ctx.stroke();
+
+        // Keycap üst parlama çizgisi (3D derinlik hissi)
+        ctx.fillStyle = "rgba(255, 255, 255, 0.12)";
+        ctx.fillRect(kx + 2, ky + 1, kw - 4, 1);
+
+        // Keycap metni
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
         ctx.fillStyle = panels[i].keyColor;
-        ctx.font = uiTextFont(12, 700);
-        ctx.fillText(key, x + 10, ry + 1);
+        ctx.font = uiTextFont(11, 700);
+        ctx.fillText(key, kx + kw / 2, ky + kh / 2);
+
+        // Açıklama metni
+        ctx.textAlign = "left";
         ctx.fillStyle = "#cfe0ee";
-        ctx.font = uiTextFont(12);
-        const lines = _wrapCanvasText(ctx, desc, pw - 24 - KEY_COL);
-        for (let j = 0; j < lines.length; j++) ctx.fillText(lines[j], x + 14 + KEY_COL, ry + j * ROW_GAP);
-        ry += Math.max(18, lines.length * ROW_GAP + 5);
+        ctx.font = uiTextFont(11.5);
+        const lines = _wrapCanvasText(ctx, desc, pw - 20 - KEY_COL);
+        const descX = x + KEY_COL + 6;
+        if (lines.length === 1) {
+          ctx.textBaseline = "middle";
+          ctx.fillText(lines[0], descX, ky + kh / 2);
+        } else {
+          ctx.textBaseline = "top";
+          for (let j = 0; j < lines.length; j++) {
+            ctx.fillText(lines[j], descX, ky + j * ROW_GAP);
+          }
+        }
+        ry += Math.max(22, lines.length * ROW_GAP + 6);
       }
     }
 
     // Tur akışı şeridi: iki panel sütunu kadar geniş, altta özet
-    const stripW = 2 * pw + gap, stripX = startX, stripY = startY + 2 * 118 + gap + 6;
-    _csPanel(ctx, stripX, stripY, stripW, 44, { accent: "#3b526b" });
+    const stripW = 2 * pw + gap, stripX = startX, stripY = startY + 2 * ph + gap + 4, stripH = 46;
+    _csPanel(ctx, stripX, stripY, stripW, stripH, { accent: "rgba(113,211,189,0.4)", fillTop: "rgba(113,211,189,0.06)" });
     ctx.textAlign = "center"; ctx.textBaseline = "middle";
-    ctx.fillStyle = "#eef5ff"; ctx.font = uiTextFont(13, 700);
-    ctx.fillText(t("tutorial.strip.flow", "Bir tur: hareket et → nişan al → gücü doldur → ateş et"), stripX + stripW / 2, stripY + 15);
-    ctx.fillStyle = "#9fb6c9"; ctx.font = uiTextFont(12);
-    ctx.fillText(t("tutorial.strip.turn", "Atış çözümlenince veya süre dolunca sıra sıradaki robota geçer — son ayakta kalan kazanır"), stripX + stripW / 2, stripY + 32);
+    ctx.fillStyle = "#eef5ff"; ctx.font = uiTextFont(12.5, 700);
+    ctx.fillText(t("tutorial.strip.flow", "Bir tur: hareket et → nişan al → gücü doldur → ateş et"), stripX + stripW / 2, stripY + 16);
+    ctx.fillStyle = "#8fa6bd"; ctx.font = uiTextFont(11.5);
+    ctx.fillText(t("tutorial.strip.turn", "Atış çözümlenince veya süre dolunca sıra sıradaki robota geçer — son ayakta kalan kazanır"), stripX + stripW / 2, stripY + 33);
 
-    // Öğreticiyi oyna butonu: basit rehberli bölümü başlatır (yeşil = başlat)
-    const bw = Math.min(320, stripW), bx = stripX + (stripW - bw) / 2, by = stripY + 58, bh = 42;
+    // Öğreticiyi oyna butonu: basit rehberli bölümü başlatır
+    const bw = Math.min(320, stripW), bx = stripX + (stripW - bw) / 2, by = stripY + stripH + 16, bh = 42;
     const playHover = this.hitRect({ x: bx, y: by, w: bw, h: bh }, this.input.mouseX, this.input.mouseY);
     this._tutPlayRect = { x: bx, y: by, w: bw, h: bh };
-    _csPanel(ctx, bx, by, bw, bh, {
+    const bhy = playHover ? by - 2 : by;
+    _csPanel(ctx, bx, bhy, bw, bh, {
       accent: playHover ? "#ffe45e" : "#4aff4a",
       hover: playHover, glow: playHover,
-      fillTop: "#1e3a26", fillBottom: "#12251a",
+      fillTop: playHover ? "rgba(74,255,74,0.22)" : "#1e3a26",
+      fillBottom: "#12251a",
     });
-    ctx.fillStyle = playHover ? "#ffe45e" : "#8aff8a";
-    ctx.font = uiTitleFont(15);
-    ctx.fillText(t("tutorial.play", "▶ ÖĞRETİCİYİ OYNA"), bx + bw / 2, by + bh / 2);
-    ctx.fillStyle = "#9fb6c9"; ctx.font = uiTextFont(11);
-    ctx.fillText(t("tutorial.play.desc", "Basit bölüm: 1v1, rüzgârsız, adım adım rehberli"), bx + bw / 2, by + bh + 12);
+
+    ctx.fillStyle = playHover ? "#ffe45e" : "#63e6be";
+    ctx.fillRect(bx + 12, bhy + 1, bw - 24, 2);
+
+    ctx.fillStyle = playHover ? "#ffffff" : "#8aff8a";
+    ctx.font = uiTitleFont(14.5, 700);
+    ctx.fillText(t("tutorial.play", "▶ ÖĞRETİCİYİ OYNA"), bx + bw / 2, bhy + bh / 2);
+    ctx.fillStyle = "#8fa6bd"; ctx.font = uiTextFont(11);
+    ctx.fillText(t("tutorial.play.desc", "Basit bölüm: 1v1, rüzgârsız, adım adım rehberli"), bx + bw / 2, bhy + bh + 13);
 
     // Geri: ana menüye dönüş (Esc ile aynı rota)
     this.drawBackButton(ctx, t("common.mainMenu", "‹ Ana Menü"));
@@ -2129,15 +2694,34 @@ class Game {
   // eski alt yazı satırı sekme bandına dönüştüğü için gridY=84 KAYMAZ.
   renderMarket(ctx) {
     const W = this.W, H = this.H;
-    drawClouds(ctx, W);
-    _msBackdrop(ctx, W, H);
+    const timeMs = this.renderTimeMs || 0;
+    drawClouds(ctx, W, "rgba(190,215,240,0.14)");
+    _msBackdrop(ctx, W, H, timeMs);
 
-    const scrap = this.profile ? this.profile.scrap : START_SCRAP;
+    // Başlık aurası
+    const tglow = ctx.createRadialGradient(W / 2, 18, 6, W / 2, 18, 200);
+    tglow.addColorStop(0, "rgba(244, 189, 98, 0.16)");
+    tglow.addColorStop(0.55, "rgba(113, 211, 189, 0.035)");
+    tglow.addColorStop(1, "rgba(0,0,0,0)");
+    ctx.fillStyle = tglow;
+    ctx.fillRect(W / 2 - 220, 0, 440, 52);
+
     ctx.textAlign = "center";
     ctx.textBaseline = "top";
+    ctx.fillStyle = "rgba(113, 211, 189, 0.65)";
+    ctx.font = uiTitleFont(9, 700);
+    ctx.fillText("PROT-9 // BLACK MARKET ACQUISITIONS", W / 2, 6);
+
     ctx.fillStyle = "#ffe45e";
-    ctx.font = uiTitleFont(22);
-    ctx.fillText(t("market.title", "PAZAR"), W / 2, 14);
+    ctx.font = uiTitleFont(22, 700);
+    ctx.shadowColor = "rgba(255, 228, 94, 0.42)";
+    ctx.shadowBlur = 8;
+    ctx.fillText(t("market.title", "PAZAR"), W / 2, 17);
+    ctx.shadowBlur = 0;
+
+    _csHazardStrip(ctx, W / 2 - 100, 39, 200, 2);
+
+    const scrap = this.profile ? this.profile.scrap : START_SCRAP;
     this._renderMarketTabs(ctx, scrap);
 
     const gap = 12;
@@ -2611,54 +3195,124 @@ class Game {
 
   renderCountSelect(ctx) {
     const W = this.W, H = this.H;
-    drawClouds(ctx, W);
-    _msBackdrop(ctx, W, H);
+    const timeMs = this.renderTimeMs || 0;
+    drawClouds(ctx, W, "rgba(190,215,240,0.14)");
+    _msBackdrop(ctx, W, H, timeMs);
 
+    // Başlık Bölgesi
+    const titleY = Math.max(24, Math.round(H * 0.11));
+    const titleText = t("mode.playerCount.title", "Kaç oyuncu?");
+
+    // Başlık aurası
+    const tglow = ctx.createRadialGradient(W / 2, titleY + 20, 6, W / 2, titleY + 20, 220);
+    tglow.addColorStop(0, "rgba(244, 189, 98, 0.16)");
+    tglow.addColorStop(0.55, "rgba(113, 211, 189, 0.035)");
+    tglow.addColorStop(1, "rgba(0,0,0,0)");
+    ctx.fillStyle = tglow;
+    ctx.fillRect(W / 2 - 240, titleY - 14, 480, 72);
+
+    // Üst mikro damga
+    ctx.textAlign = "center"; ctx.textBaseline = "top";
+    ctx.fillStyle = "rgba(113, 211, 189, 0.65)";
+    ctx.font = uiTitleFont(10, 700);
+    ctx.fillText("PROT-9 // LOCAL MULTIPLAYER SETUP", W / 2, titleY);
+
+    // Ana Başlık
+    ctx.font = uiTitleFont(Math.min(34, Math.round(W * 0.04)), 700);
+    ctx.fillStyle = "rgba(0, 0, 0, 0.75)";
+    ctx.fillText(titleText, W / 2 + 2, titleY + 16);
     ctx.fillStyle = "#ffe45e";
-    ctx.font = uiTitleFont(30);
-    ctx.textAlign = "center";
-    ctx.textBaseline = "top";
-    ctx.fillText(t("brand.title", GAME_TITLE), W / 2, H / 2 - 132);
-    ctx.fillStyle = "#cfe0ee";
-    ctx.font = uiTitleFont(18);
-    ctx.fillText(t("mode.playerCount.title", "Kaç oyuncu?"), W / 2, H / 2 - 84);
-    // Başlık altı tehlike şeridi (pilot aile dili)
-    _csHazardStrip(ctx, W / 2 - 130, H / 2 - 62, 260, 5);
+    ctx.shadowColor = "rgba(255, 228, 94, 0.42)";
+    ctx.shadowBlur = 10;
+    ctx.fillText(titleText, W / 2, titleY + 14);
+    ctx.shadowBlur = 0;
 
-    const BTN = 64, GAP = 16;
+    // Başlık altı dekoratif tehlike şeridi
+    _csHazardStrip(ctx, W / 2 - 120, titleY + 52, 240, 3);
+
+    // Slogan
+    ctx.fillStyle = "#a2b8c2";
+    ctx.font = uiTextFont(12, 600);
+    ctx.fillText("// " + t("mode.playerCount.sub", "Aynı ekranda sırayla oynayacak oyuncu adedi") + " //", W / 2, titleY + 60);
+
+    const BTN_W = Math.min(106, Math.floor((W - 80) / 5 - 12)), BTN_H = 128, GAP = 14;
     const count = MAX_PLAYERS - MIN_PLAYERS + 1;
-    const totalW = count * BTN + (count - 1) * GAP;
+    const totalW = count * BTN_W + (count - 1) * GAP;
     const startX = (W - totalW) / 2;
-    const y = Math.round(H / 2 - 40);
+    const y = Math.round(H / 2 - 38);
     this._countRects = [];
     const mx = this.input.mouseX, my = this.input.mouseY;
 
     for (let i = 0; i < count; i++) {
       const nPlayers = MIN_PLAYERS + i;
-      const x = startX + i * (BTN + GAP);
-      this._countRects.push({ x, y, w: BTN, h: BTN, n: nPlayers });
+      const x = startX + i * (BTN_W + GAP);
+      this._countRects.push({ x, y, w: BTN_W, h: BTN_H, n: nPlayers });
 
-      const hovered = mx >= x && mx <= x + BTN && my >= y && my <= y + BTN;
+      const hovered = mx >= x && mx <= x + BTN_W && my >= y && my <= y + BTN_H;
       const isDefault = nPlayers === this.playerCount;
-      _csPanel(ctx, x, y, BTN, BTN, {
+      const hy = hovered ? y - 3 : y;
+      const pColor = PLAYER_TINTS[i % PLAYER_TINTS.length];
+
+      _csPanel(ctx, x, hy, BTN_W, BTN_H, {
         accent: hovered ? "#ffe45e" : isDefault ? "#4aa3ff" : "#2a3848",
-        hover: hovered, glow: hovered,
+        hover: hovered, glow: hovered || isDefault,
         selected: isDefault,
+        fillTop: isDefault ? "rgba(74,163,255,0.12)" : hovered ? "rgba(255,228,94,0.06)" : null,
       });
 
-      ctx.fillStyle = "#eef5ff";
-      ctx.font = uiTitleFont(26);
+      // Kart üstü renk çizgisi
+      ctx.fillStyle = hovered ? "#ffe45e" : isDefault ? "#4aa3ff" : _hexA(pColor, 0.7);
+      ctx.fillRect(x + 8, hy + 1, BTN_W - 16, 2.5);
+
+      // Sayı
+      ctx.fillStyle = hovered ? "#ffffff" : isDefault ? "#4aa3ff" : "#eef5ff";
+      ctx.font = uiTitleFont(30, 700);
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
-      ctx.fillText(String(nPlayers), x + BTN / 2, y + BTN / 2 + 1);
+      ctx.fillText(String(nPlayers), x + BTN_W / 2, hy + 38);
+
+      // Oyuncu renk paleti noktaları
+      const dotR = 3.5, dotGap = 3;
+      const totalDotsW = nPlayers * (dotR * 2) + (nPlayers - 1) * dotGap;
+      const dotsStartX = x + (BTN_W - totalDotsW) / 2 + dotR;
+      for (let d = 0; d < nPlayers; d++) {
+        ctx.beginPath();
+        ctx.arc(dotsStartX + d * (dotR * 2 + dotGap), hy + 68, dotR, 0, Math.PI * 2);
+        ctx.fillStyle = PLAYER_TINTS[d % PLAYER_TINTS.length];
+        ctx.fill();
+      }
+
+      // Oyuncu etiketi
+      ctx.fillStyle = hovered ? "#cfe0ee" : "#8fa6bd";
+      ctx.font = uiTitleFont(10, 700);
+      ctx.fillText(t("mode.playerCount.players", "{n} OYUNCU", { n: nPlayers }), x + BTN_W / 2, hy + 88);
+
+      // Alt durum
+      if (isDefault) {
+        ctx.font = uiTitleFont(9, 700);
+        ctx.fillStyle = "#4aa3ff";
+        ctx.fillText("✓ " + t("common.selected", "SEÇİLİ"), x + BTN_W / 2, hy + BTN_H - 12);
+      } else if (hovered) {
+        ctx.font = uiTitleFont(9, 700);
+        ctx.fillStyle = "#ffe45e";
+        ctx.fillText(t("menu.card.enter", "BAŞLAT ➔"), x + BTN_W / 2, hy + BTN_H - 12);
+      }
     }
 
-    ctx.fillStyle = "#9fb6c9";
-    ctx.font = uiTextFont(13);
+    // Alt bilgilendirme çubuğu
+    const infoW = Math.min(520, W - 60);
+    const infoX = (W - infoW) / 2;
+    const infoY = y + BTN_H + 20;
+    _csPanel(ctx, infoX, infoY, infoW, 46, { accent: "rgba(113,211,189,0.3)", rivets: false, fillTop: "rgba(113,211,189,0.04)" });
+    ctx.fillStyle = "#eef5ff";
+    ctx.font = uiTextFont(12, 600);
     ctx.textAlign = "center";
-    ctx.textBaseline = "top";
-    ctx.fillText(t("mode.playerCount.hint", "Bir sayıya tıkla — sonra her oyuncu sırayla robotunu seçer"), W / 2, y + BTN + 24);
-    ctx.fillText(t("mode.playerCount.hintFast", "Test için 2 oyuncu en hızlısıdır"), W / 2, y + BTN + 44);
+    ctx.textBaseline = "middle";
+    ctx.fillText(t("mode.playerCount.hint", "Bir sayıya tıkla — sonra her oyuncu sırayla robotunu seçer"), W / 2, infoY + 14);
+    ctx.fillStyle = "#8fa6bd";
+    ctx.font = uiTextFont(11);
+    ctx.fillText(t("mode.playerCount.hintFast", "Test için 2 oyuncu en hızlısıdır"), W / 2, infoY + 32);
+
     // Geri: oyuncu sayısı ekranından ana menüye dönüş (Esc ile aynı rota).
     this.drawBackButton(ctx, t("common.mainMenu", "‹ Ana Menü"));
   }
@@ -2707,6 +3361,10 @@ class Game {
       // oyun içindeyse menüye dön.
       if (e.key === "Escape") {
         e.preventDefault();
+        if (typeof GameSettings !== "undefined" && GameSettings.isOpen()) {
+          GameSettings.close();
+          return;
+        }
         // Açık silah listesi varsa önce onu kapat (menüye dönmeden).
         if (this.weaponMenuOpen && this.state === "AIMING") { this.weaponMenuOpen = false; this.updateHud(); return; }
         this.goBack(); return;
@@ -2731,6 +3389,28 @@ class Game {
       }
       if (this.state === "AIMING" && this.isLocalTurn() && (e.key === "a" || e.key === "A" || e.key === "ArrowLeft")) this.input.left = true;
       if (this.state === "AIMING" && this.isLocalTurn() && (e.key === "d" || e.key === "D" || e.key === "ArrowRight")) this.input.right = true;
+      if (this.state === "AIMING" && this.isLocalTurn()) {
+        const a = this.active;
+        // İnce açı ayarı: R/F tuşları veya Shift+Yukarı / Aşağı Ok
+        if (e.key === "r" || e.key === "R" || (e.key === "ArrowUp" && (e.shiftKey || this.input.charging))) {
+          e.preventDefault();
+          const dir = a.facing >= 0 ? -1 : 1;
+          a.aim += dir * 0.028;
+          this.input.mouseX = a.x + Math.cos(a.aim) * 120;
+          this.input.mouseY = (a.y - a.r) + Math.sin(a.aim) * 120;
+          this.input.mouseMoved = false;
+          return;
+        }
+        if (e.key === "f" || e.key === "F" || e.key === "ArrowDown") {
+          e.preventDefault();
+          const dir = a.facing >= 0 ? 1 : -1;
+          a.aim += dir * 0.028;
+          this.input.mouseX = a.x + Math.cos(a.aim) * 120;
+          this.input.mouseY = (a.y - a.r) + Math.sin(a.aim) * 120;
+          this.input.mouseMoved = false;
+          return;
+        }
+      }
       if (e.code === "Space") { e.preventDefault(); this.startCharge(); }
       if (e.key === "w" || e.key === "W" || e.key === "ArrowUp") {
         e.preventDefault();
@@ -2774,6 +3454,7 @@ class Game {
       const r = rect();
       this.input.mouseX = (e.clientX - r.left) * (this.W / r.width);
       this.input.mouseY = (e.clientY - r.top) * (this.H / r.height);
+      this.input.mouseMoved = true;
     });
     this.canvas.addEventListener("mousedown", (e) => this.pressCanvas(e, e.button));
 
@@ -2794,6 +3475,7 @@ class Game {
       const pt = this.pointerWorld(t);
       this.input.mouseX = pt.x;
       this.input.mouseY = pt.y;
+      this.input.mouseMoved = true;
     }, { passive: false });
     const endTouch = (e) => {
       if (e.cancelable) e.preventDefault();
@@ -3072,7 +3754,14 @@ class Game {
     this.updateMuteButton();
   }
 
+  // Müziği aç/kapat (Müzik butonu).
+  toggleMusicMute() {
+    SFX.toggleMusicMute();
+    this.updateMuteButton();
+  }
+
   updateMuteButton() {
+    // SFX / Oyun sesi
     const btn = document.getElementById("mute-btn");
     const muted = SFX.isMuted();
     const percent = Math.round(SFX.getVolume() * 100);
@@ -3095,10 +3784,34 @@ class Game {
     }
     const value = document.getElementById("volume-value");
     if (value) value.textContent = `${percent}%`;
+
+    // Arka plan müziği
+    const musicBtn = document.getElementById("music-mute-btn");
+    const musicMuted = typeof SFX.isMusicMuted === "function" ? SFX.isMusicMuted() : false;
+    const musicPercent = typeof SFX.getMusicVolume === "function" ? Math.round(SFX.getMusicVolume() * 100) : 0;
+    if (musicBtn) {
+      musicBtn.setAttribute("aria-pressed", String(musicMuted));
+      musicBtn.setAttribute("aria-label", musicMuted ? t("hud.music.on", "Müziği aç") : t("hud.music.off", "Müziği kapat"));
+      musicBtn.title = musicMuted ? t("hud.music.on", "Müziği aç") : t("hud.music.off", "Müziği kapat");
+    }
+    const musicLabel = document.getElementById("music-mute-label");
+    if (musicLabel) musicLabel.textContent = musicMuted ? t("hud.music.labelOn", "Müzik") : t("hud.music.labelOff", "Müzik");
+    if (control) {
+      control.dataset.musicMuted = String(musicMuted);
+      control.style.setProperty("--music-fill", `${musicMuted ? 0 : musicPercent}%`);
+    }
+    const musicSlider = document.getElementById("music-volume-slider");
+    if (musicSlider) {
+      musicSlider.value = musicMuted ? 0 : musicPercent;
+      musicSlider.setAttribute("aria-valuetext", `%${musicPercent}${musicMuted ? ", kapalı" : ""}`);
+    }
+    const musicValue = document.getElementById("music-volume-value");
+    if (musicValue) musicValue.textContent = musicMuted ? "0%" : `${musicPercent}%`;
   }
 
   // Oyundan çık: bekleyen bot kararını ve girdileri temizleyip mod menüsüne dön.
   quitToMenu() {
+    this.recoverCanvas();
     this.clearTurnInput();
     // Portal (F5): menüye dönüş oynanış molasıdır; maç sonu kartından
     // gelindiyse maç arası reklam fırsatı değerlendirilir.
@@ -3145,6 +3858,10 @@ class Game {
   // Bağlama duyarlı "geri/iptal": önce atış iptali, sonra ekranlar arası geri,
   // oyun içindeyse menüye dön. (Esc tuşu buraya bağlı.)
   goBack() {
+    if (typeof GameSettings !== "undefined" && GameSettings.isOpen()) {
+      GameSettings.close();
+      return;
+    }
     if (this.cancelCharge()) return;
     // Atölye: açık parça listesi varsa önce listeden çıkılır (ekran kapanmaz).
     if (this.state === "WORKSHOP" && this.workshopSlotOpen) { this.closeWorkshopSlot(); return; }
@@ -3162,6 +3879,12 @@ class Game {
 
   // Karakter seçiminde geri: P2 seçiyorsa P1 seçimine dön.
   charBack() {
+    if (this.onlineRobotSelectReturn) {
+      this.onlineRobotSelectReturn = false;
+      this.state = "ONLINE_LOBBY";
+      this.updateHud();
+      return;
+    }
     if (this.charSelectPhase > 0) {
       // Önceki oyuncuya dön, onun seçimini temizle
       this.charSelectPhase--;
@@ -3279,6 +4002,7 @@ class Game {
       const r = Math.max(1, Math.round(spec.radius));
       this.explosions.push(new Explosion(x, y, r));
       SFX.explosion(r);
+      this.triggerScreenShake(Math.min(1.0, r / 45 * 0.55));
       return;
     }
     const shooter = this.shooterIdx !== null ? this.players[this.shooterIdx] : null;
@@ -3289,6 +4013,7 @@ class Game {
     this.terrain.destroy(x, y, radius);
     this.explosions.push(new Explosion(x, y, radius));
     SFX.explosion(radius);
+    this.triggerScreenShake(Math.min(1.0, radius / 45 * 0.55));
 
     let dmgMult = this._shooterDamageMult(shooter);
     if (mod) dmgMult *= mod.dmgMult;
@@ -3308,6 +4033,24 @@ class Game {
           anyHit = true;
           if (!p.alive) anyKilled = true;
           this.damagePopups.push({ x: p.x, y: p.y - p.r - 16, amount: actual, age: 0 });
+          if (actual >= 45) {
+            this.damagePopups.push({ x: p.x, y: p.y - p.r - 34, text: "KRİTİK! 🔥", color: "#ffd166", scale: 1.15, age: 0 });
+          }
+          // Maç içi insan performansı takibi (Combat Primleri)
+          if (shooter && shooter.control !== "bot" && p !== shooter && this.combatStats) {
+            this.combatStats.damageDealt += actual;
+            if (dist < p.r + 6) this.combatStats.directHits++;
+            if (!p.alive) {
+              this.combatStats.kills++;
+              if (!this.combatStats.firstKillClaimed) {
+                this.combatStats.firstKillClaimed = true;
+                this.combatStats.firstBlood = true;
+                this.damagePopups.push({ x: p.x, y: p.y - p.r - 48, text: "İLK KAN! 🩸 +20 🔩", color: "#ff4444", scale: 1.25, age: 0 });
+              }
+            }
+          }
+        } else if (rawDmg > 0) {
+          this.damagePopups.push({ x: p.x, y: p.y - p.r - 28, text: "KALKANLA ENGELLENDİ!", color: "#62d9ff", scale: 1.05, age: 0 });
         }
         // Aşındırıcı mermi: atıcı hariç hedefe zamanlı hasar bulaştır
         if (spec.poison && p !== shooter) {
@@ -3322,6 +4065,34 @@ class Game {
     }
     if (anyHit) SFX.hit();
     if (anyKilled) SFX.eliminate();
+
+    // Varil ve sandık patlama etkileri
+    if (this.barrels) {
+      for (const b of this.barrels) {
+        if (!b.alive) continue;
+        const bd = Math.hypot(b.x - x, b.y - y);
+        if (bd < radius + b.r) {
+          const fall = 1 - bd / (radius + b.r);
+          b.hp -= Math.round((spec.damage || 35) * fall);
+          if (b.hp <= 0 && b.alive) {
+            b.alive = false;
+            setTimeout(() => {
+              this.explode(b.x, b.y, { radius: 52, damage: 48, knockback: 13, special: "Varil" });
+              this.damagePopups.push({ x: b.x, y: b.y - 20, text: "VARİL PATLADI! 💥", color: "#ff8c00", scale: 1.25, age: 0 });
+            }, 90);
+          }
+        }
+      }
+    }
+    if (this.crates) {
+      for (const c of this.crates) {
+        if (c.dead) continue;
+        if (Math.hypot(c.x - x, c.y - y) < radius + 12) {
+          c.dead = true;
+          this.damagePopups.push({ x: c.x, y: c.y - 12, text: "SANDIK İMHA EDİLDİ!", color: "#ff9966", scale: 1.0, age: 0 });
+        }
+      }
+    }
 
     // Misket: patlama noktasından yukarı-dışarı parçacıklar saç (kendi spec'iyle;
     // clusterSpec'in cluster bayrağı olmadığından tekrar bölünmezler).
@@ -3347,8 +4118,13 @@ class Game {
     if (actual > 0) {
       this.damagePopups.push({ x: target.x, y: target.y - target.r - 16, amount: actual, age: 0 });
       SFX.hit();
-      if (!target.alive) SFX.eliminate();
+      if (actual >= 45) {
+        this.damagePopups.push({ x: target.x, y: target.y - target.r - 34, text: "KRİTİK! 🔥", color: "#ffd166", scale: 1.15, age: 0 });
+      }
+    } else if (amount > 0) {
+      this.damagePopups.push({ x: target.x, y: target.y - target.r - 28, text: "KALKANLA ENGELLENDİ!", color: "#62d9ff", scale: 1.05, age: 0 });
     }
+    if (!target.alive) SFX.eliminate();
     return actual;
   }
 
@@ -3467,7 +4243,13 @@ class Game {
       // Sonuç yalnız burada belirlenir; ödül de yalnız burada ve bir kez yazılır.
       // showOverlay ödül hesaplamaz, yalnız hazır sonuç modelini gösterir.
       const humanIdx = this.matchProgress ? this.matchProgress.humanIndex : 0;
-      const result = winner ? (winner === this.players[humanIdx] ? "win" : "loss") : "draw";
+      const humanPlayer = this.players[humanIdx];
+      const result = winner ? (winner === humanPlayer ? "win" : "loss") : "draw";
+      if (result === "win" && humanPlayer && this.combatStats) {
+        if (humanPlayer.hp <= humanPlayer.maxHp * 0.20) {
+          this.combatStats.clutch = true;
+        }
+      }
       const reward = this.grantMatchReward(result);
       if (this.mode === "tutorial") {
         // Öğretici maç: ödül yok, sonucu rehber diliyle anlat.
@@ -3503,6 +4285,31 @@ class Game {
     // Sırayı yaşayan bir sonraki oyuncuya geçir
     do { this.turn = (this.turn + 1) % this.players.length; }
     while (!this.players[this.turn].alive);
+
+    // İkmal sandığı (Airdrop): her 3 turda bir paraşütle sandık bırak
+    this.crateDropCounter = (this.crateDropCounter || 0) + 1;
+    if (this.crateDropCounter >= 3 && (!this.crates || this.crates.length < 3)) {
+      this.crateDropCounter = 0;
+      this.spawnCrate();
+    }
+
+    // Ani Ölüm (Sudden Death): 12. turdan itibaren devreye girer
+    if (this.turnId >= (this.suddenDeathTurns || 12)) {
+      if (!this.suddenDeath) {
+        this.suddenDeath = true;
+        if (typeof SFX !== "undefined" && SFX.alarm) SFX.alarm();
+        this.triggerScreenShake(0.75);
+        this.damagePopups.push({ x: this.W / 2, y: 110, text: "⚠️ ANİ ÖLÜM BAŞLADI! ⚠️", color: "#ff3333", scale: 1.45, age: 0 });
+      }
+      this.suddenDeathLevel = (this.suddenDeathLevel || 0) + 14;
+      const acidY = this.H - this.suddenDeathLevel;
+      for (const p of this.players) {
+        if (p.alive && p.y >= acidY) {
+          this.damagePlayer(p, 20);
+          this.damagePopups.push({ x: p.x, y: p.y - p.r - 20, text: "ASİT HASARI! -20 ☣️", color: "#76ff03", scale: 1.15, age: 0 });
+        }
+      }
+    }
 
     const windChanged = this.advanceWind();
     this.turnId++;
@@ -3552,6 +4359,7 @@ class Game {
       result,
       difficulty: this.difficulty,
       opponentCount: mp.opponentCount,
+      combat: this.combatStats,
     });
     if (!res.ok) return null;
     this.profile = res.profile;
@@ -3601,6 +4409,9 @@ class Game {
     // Kalıcı tehlikeler: mayınlar (yakınlık tetikler) + napalm ateşleri (DoT)
     this.updateMines(dt);
     this.updateFires(dt);
+    this.updateBarrels(dt);
+    this.updateCrates(dt);
+    this.updateScreenShake(dt);
 
     // Hücum modülü: hareket hâlindeyken çarptığı rakibe temas hasarı verir
     // hasarı uygular; yere konunca biter.
@@ -3640,7 +4451,7 @@ class Game {
       } else {
         if (this.input.left) a.walk(-1, this.terrain);
         if (this.input.right) a.walk(1, this.terrain);
-        a.aimTowards(this.input.mouseX, this.input.mouseY);
+        if (this.input.mouseMoved !== false) a.aimTowards(this.input.mouseX, this.input.mouseY);
       }
 
       // Güç doldurma stamina harcamaz; stamina yalnızca yürümede tükenir
@@ -3648,6 +4459,19 @@ class Game {
         this.input.power = Math.min(1, this.input.power + 0.012);
         const markerPct = a.lastShot ? a.lastShot.power * 100 : null;
         updatePowerBar(this.input.power, true, markerPct);
+      }
+
+      // Tur süresi: son 5 saniyede geri sayım sesli uyarısı
+      if (this.isHumanTurn() && this.turnTimer <= 5.1 && this.turnTimer > 0) {
+        const sec = Math.ceil(this.turnTimer);
+        if (sec !== this._lastTickSec) {
+          this._lastTickSec = sec;
+          if (typeof SFX !== "undefined" && SFX.timerTick) {
+            SFX.timerTick(sec <= 2);
+          }
+        }
+      } else {
+        this._lastTickSec = null;
       }
 
       // Tur süresi: dolunca sıra otomatik biter (atış dolduruluyorsa ateşle)
@@ -3673,12 +4497,32 @@ class Game {
         const res = pr.update(this.terrain, this.wind);
         const offScreen = !!res && !res.hit;
 
+        // Mermi–varil çarpışması
+        let hitBarrel = null, hitPlayer = null, hitAt = null;
+        if (!offScreen && this.barrels) {
+          for (const b of this.barrels) {
+            if (!b.alive) continue;
+            const hit = Projectile.sweepHit(x0, y0, pr.x, pr.y, b.x, b.y, b.r + pr.r);
+            if (hit) { hitBarrel = b; hitAt = hit; break; }
+          }
+        }
+        if (hitBarrel) {
+          hitBarrel.hp = 0;
+          hitBarrel.alive = false;
+          pr.dead = true;
+          this.explode(hitAt.x, hitAt.y, pr.spec);
+          setTimeout(() => {
+            this.explode(hitBarrel.x, hitBarrel.y, { radius: 52, damage: 48, knockback: 13, special: "Varil" });
+            this.damagePopups.push({ x: hitBarrel.x, y: hitBarrel.y - 20, text: "VARİL PATLADI! 💥", color: "#ff8c00", scale: 1.25, age: 0 });
+          }, 90);
+          continue;
+        }
+
         // Mermi–karakter çarpışması. Yalnız varış noktasına bakmak yerine
         // katedilen doğru parçası sınanır (bkz. Projectile.sweepHit); patlama
         // noktası da yoldaki temas noktasıdır ki doğrudan isabet doğru yere yazılsın.
         // passPlayers'lı yardımcı mermiler (ışınlanma topu, kanca) robotlardan
         // geçer: hasarsızdır, robot üzerinde takılıp kalmamalı.
-        let hitPlayer = null, hitAt = null;
         if (!offScreen && !pr.spec.passPlayers) {
           for (const p of this.players) {
             if (!p.alive) continue;
@@ -3692,6 +4536,7 @@ class Game {
           if (pr.spec.directHitDamage) {
             const shooter = this.shooterIdx !== null ? this.players[this.shooterIdx] : null;
             this.damagePlayer(hitPlayer, Math.round(pr.spec.directHitDamage * this._shooterDamageMult(shooter)));
+            this.damagePopups.push({ x: hitPlayer.x, y: hitPlayer.y - hitPlayer.r - 34, text: "DOĞRUDAN İSABET! 🎯", color: "#ff4d4d", scale: 1.15, age: 0 });
           }
           this.explode(hitAt.x, hitAt.y, pr.spec);
           continue;
@@ -3841,7 +4686,18 @@ class Game {
   render() {
     this.resize();
     const ctx = this.ctx;
+    if (!ctx) return;
+
+    // Görsel koruma (canvas state guard): her karenin başında transform,
+    // globalAlpha, globalCompositeOperation, filter ve shadow durumunu
+    // sıfırla. Böylece önceki kareden veya çöken bir fonksiyondan kalan
+    // sızıntılar sonraki karelerin çizimini ve tüm oyun görselini bozmaz.
     ctx.setTransform(this._scaleX, 0, 0, this._scaleY, 0, 0);
+    ctx.globalAlpha = 1;
+    ctx.globalCompositeOperation = "source-over";
+    if (ctx.filter && ctx.filter !== "none") ctx.filter = "none";
+    ctx.shadowBlur = 0;
+    ctx.shadowColor = "transparent";
     ctx.clearRect(0, 0, this.W, this.H);
 
     if (this.state === "ONLINE_LOBBY") {
@@ -3891,6 +4747,13 @@ class Game {
       return;
     }
 
+    // Savaş alanını sarsıntı ofsetiyle çiz
+    const hasShake = this.screenShake && (Math.abs(this.screenShake.x) > 0.01 || Math.abs(this.screenShake.y) > 0.01);
+    if (hasShake) {
+      ctx.save();
+      ctx.translate(Math.round(this.screenShake.x), Math.round(this.screenShake.y));
+    }
+
     // Haritaya özgü gökyüzü + uzak silüet + temalı bulutlar (hepsi terrain'in arkasında)
     drawSky(ctx, this.W, this.H, this.terrain.theme);
     drawBackdrop(ctx, this.W, this.H, this.terrain.theme);
@@ -3898,6 +4761,8 @@ class Game {
     this.terrain.draw(ctx);
     this.drawMines(ctx);
     this.drawFires(ctx);
+    this.drawBarrels(ctx);
+    this.drawCrates(ctx);
 
     for (let i = 0; i < this.players.length; i++) {
       const p = this.players[i];
@@ -3908,7 +4773,9 @@ class Game {
     if (typeof drawSkillFx === "function") drawSkillFx(ctx, this);
 
     if (this.state === "AIMING") {
-      this.drawLastAngle(ctx);
+      if (typeof GameSettings === "undefined" || GameSettings.get("aimGuide")) {
+        this.drawLastAngle(ctx);
+      }
       this.drawAim(ctx);
       if (this.active.weaponSpec.airdrop) this.drawAirdropTarget(ctx);
       // Modül kartı artık canvas'a değil alt paneldeki modül yuvasına çizilir
@@ -3918,8 +4785,15 @@ class Game {
     for (const pr of this.projectiles) pr.draw(ctx);
     this.drawTether(ctx); // kanca ipi: mermilerin üstünde, patlamaların altında
     for (const ex of this.explosions) ex.draw(ctx);
-    this.drawDamagePopups(ctx);
+    this.drawSuddenDeath(ctx);
+    if (typeof GameSettings === "undefined" || GameSettings.get("damagePopups")) {
+      this.drawDamagePopups(ctx);
+    }
     this.drawWindChangeFx(ctx);
+
+    if (hasShake) {
+      ctx.restore();
+    }
 
     // Öğretici koç paneli: turun tepesinde, vignette'in altında
     if (this.mode === "tutorial") this.drawTutorialCoach(ctx);
@@ -3929,6 +4803,22 @@ class Game {
 
     // Sinematik vignette — tüm sahnenin üstüne, en son
     drawVignette(ctx, this.W, this.H);
+
+    // FPS Göstergesi (Ayarlar)
+    if (typeof GameSettings !== "undefined" && GameSettings.get("showFps")) {
+      const fpsVal = (typeof DIAG !== "undefined" && Number.isFinite(DIAG.fps)) ? DIAG.fps : FPS;
+      ctx.save();
+      ctx.font = uiTitleFont(11, 700);
+      ctx.textAlign = "left";
+      ctx.textBaseline = "top";
+      ctx.fillStyle = "rgba(11, 26, 32, 0.75)";
+      ctx.fillRect(8, 8, 64, 20);
+      ctx.strokeStyle = "rgba(113, 211, 189, 0.4)";
+      ctx.strokeRect(8, 8, 64, 20);
+      ctx.fillStyle = "#71d3bd";
+      ctx.fillText("FPS: " + fpsVal, 14, 12);
+      ctx.restore();
+    }
   }
 
   // Değişen rüzgâr yönünde kayan çizgiler ve kısa bir merkez bildirimi.
@@ -3966,39 +4856,79 @@ class Game {
 
   renderCharSelect(ctx) {
     const W = this.W, H = this.H;
+    const timeMs = this.renderTimeMs || 0;
 
-    drawClouds(ctx, W);
-    ctx.fillStyle = "#000000aa";
-    ctx.fillRect(0, 0, W, H);
+    drawClouds(ctx, W, "rgba(190,215,240,0.14)");
+    _msBackdrop(ctx, W, H, timeMs);
 
     // Başlık
     const phase = this.charSelectPhase;
     const total = this.selectedChars.length;
-    ctx.fillStyle = PLAYER_TINTS[phase % PLAYER_TINTS.length];
-    ctx.font = uiTitleFont(24);
+
+    // Sağ üst köşe: Hesap Seviyesi + Hurda Rozeti
+    const accXp = this.profile ? this.profile.accountXp : 0;
+    const accLvl = levelForAccountXp(accXp);
+    const scrap = this.profile ? this.profile.scrap : 0;
+    const nxtXp = nextAccountLevelXp(accLvl);
+    ctx.textAlign = "right";
+    ctx.textBaseline = "top";
+    ctx.font = uiTitleFont(13, 700);
+    ctx.fillStyle = "#ffd166";
+    ctx.fillText(`🔩 ${scrap} Hurda`, W - 18, 14);
+    ctx.font = uiTextFont(11, 700);
+    ctx.fillStyle = "#63e6be";
+    ctx.fillText(`Hesap Sv. ${accLvl}${nxtXp != null ? ` (${accXp}/${nxtXp} XP)` : ""}`, W - 18, 32);
+
+    // Başlık aurası
+    const tglow = ctx.createRadialGradient(W / 2, 26, 6, W / 2, 26, 200);
+    tglow.addColorStop(0, "rgba(244, 189, 98, 0.16)");
+    tglow.addColorStop(0.55, "rgba(113, 211, 189, 0.035)");
+    tglow.addColorStop(1, "rgba(0,0,0,0)");
+    ctx.fillStyle = tglow;
+    ctx.fillRect(W / 2 - 220, 4, 440, 56);
+
     ctx.textAlign = "center";
     ctx.textBaseline = "top";
-    const chooser = isSinglePlayerProgressionMode(this.mode) ? (phase === 0 ? "Robotunu seç" : "Bilgisayarın robotunu seç") : `Oyuncu ${phase + 1} / ${total} — robot seç`;
-    ctx.fillText(chooser, W / 2, 28);
+    if (this.onlineRobotSelectReturn) {
+      ctx.fillStyle = "rgba(113, 211, 189, 0.65)";
+      ctx.font = uiTitleFont(9.5, 700);
+      ctx.fillText("PROT-9 // ONLINE COMBAT LOADOUT", W / 2, 10);
+      ctx.fillStyle = "#ffe45e";
+      ctx.font = uiTitleFont(22, 700);
+      ctx.fillText(t("online.charSelect.title", "Çevrimiçi Robotunu Seç"), W / 2, 24);
+      _csHazardStrip(ctx, W / 2 - 100, 48, 200, 2.5);
+      ctx.fillStyle = "#cfe0ee";
+      ctx.font = uiTextFont(11.5);
+      ctx.fillText(t("online.charSelect.sub", "Maçta kullanmak istediğin robotun kartına tıkla"), W / 2, 54);
+    } else {
+      ctx.fillStyle = "rgba(113, 211, 189, 0.65)";
+      ctx.font = uiTitleFont(9.5, 700);
+      ctx.fillText("PROT-9 // COMBAT UNIT SELECTION", W / 2, 10);
+      ctx.fillStyle = PLAYER_TINTS[phase % PLAYER_TINTS.length];
+      ctx.font = uiTitleFont(22, 700);
+      const chooser = isSinglePlayerProgressionMode(this.mode) ? (phase === 0 ? "Robotunu seç" : "Bilgisayarın robotunu seç") : `Oyuncu ${phase + 1} / ${total} — robot seç`;
+      ctx.fillText(chooser, W / 2, 24);
+      _csHazardStrip(ctx, W / 2 - 100, 48, 200, 2.5);
 
-    // Önceki oyuncuların seçtikleri (özet satırı)
-    const picked = [];
-    for (let i = 0; i < phase; i++) {
-      if (this.selectedChars[i]) {
-        const ctrl = this.playerControls[i] || "human";
-        const icon = ctrl === "bot" ? "🤖" : "★";
-        picked.push(`${icon} O${i + 1}: ${this.selectedChars[i].label}`);
+      // Önceki oyuncuların seçtikleri (özet satırı)
+      const picked = [];
+      for (let i = 0; i < phase; i++) {
+        if (this.selectedChars[i]) {
+          const ctrl = this.playerControls[i] || "human";
+          const icon = ctrl === "bot" ? "🤖" : "★";
+          picked.push(`${icon} O${i + 1}: ${this.selectedChars[i].label}`);
+        }
       }
-    }
-    if (picked.length) {
-      ctx.fillStyle = "#9fd6a8";
-      ctx.font = uiTextFont(13, 700);
-      ctx.fillText(picked.join("   •   ") + "   ✓", W / 2, 62);
-    } else if (this.mode === "local") {
-      // Yerel maçta yükseltmeler kapalıdır; oyuncuya açıkça söylenir.
-      ctx.fillStyle = "#9fb6c9";
-      ctx.font = uiTextFont(12);
-      ctx.fillText(t("charSelect.localNote", "Standart kalibrasyon — geliştirmeler kapalı"), W / 2, 62);
+      if (picked.length) {
+        ctx.fillStyle = "#9fd6a8";
+        ctx.font = uiTextFont(12, 700);
+        ctx.fillText(picked.join("   •   ") + "   ✓", W / 2, 56);
+      } else if (this.mode === "local") {
+        // Yerel maçta yükseltmeler kapalıdır; oyuncuya açıkça söylenir.
+        ctx.fillStyle = "#9fb6c9";
+        ctx.font = uiTextFont(11.5);
+        ctx.fillText(t("charSelect.localNote", "Standart kalibrasyon — geliştirmeler kapalı"), W / 2, 56);
+      }
     }
 
     // Kart ölçüsü dünya genişliğinden gelir (charSelectLayout) — tüm dikey
@@ -4026,7 +4956,7 @@ class Game {
     const rowsUsed = Math.ceil(pageChars.length / COLS);
     const totalW = colsUsed * CARD_W + (colsUsed - 1) * GAP;
     const startX = (W - totalW) / 2;
-    const startY = 80;
+    const startY = 76;
 
     this._cardRects = [];
 
@@ -4039,8 +4969,9 @@ class Game {
 
       const mx = this.input.mouseX, my = this.input.mouseY;
       const hovered = mx >= cx && mx <= cx + CARD_W && my >= cy && my <= cy + CARD_H;
+      const isOnlineActive = !!(this.onlineRobotSelectReturn && this.lobby && this.lobby.robotId === ch.id);
       // Daha önceki oyunculardan biri bu karakteri seçtiyse işaretle (yine de seçilebilir)
-      const taken = this.selectedChars.slice(0, phase).includes(ch);
+      const taken = !this.onlineRobotSelectReturn && this.selectedChars.slice(0, phase).includes(ch);
 
       ctx.save();
 
@@ -4049,10 +4980,14 @@ class Game {
       // kenar + kalın çerçeveyle işaretlenmeye devam eder.
       const cyv = cy + (hovered ? -2 : 0);
       _csPanel(ctx, cx, cyv, CARD_W, CARD_H, {
-        accent: hovered ? "#ffe45e" : taken ? "#ff7b7b" : "#2a3848",
-        hover: hovered, glow: hovered,
-        selected: taken,
+        accent: hovered ? "#ffe45e" : isOnlineActive ? "#4fc3f7" : taken ? "#ff7b7b" : "#2a3848",
+        hover: hovered, glow: hovered || isOnlineActive,
+        selected: isOnlineActive || taken,
       });
+
+      // Kart üstü robot rengi şerit
+      ctx.fillStyle = hovered ? ch.color : _hexA(ch.color, 0.75);
+      ctx.fillRect(cx + 8, cyv + 1, CARD_W - 16, 2.5);
 
       // ── Karakter önizleme ─────────────────────────────────────
       const pcx = cx + CARD_W / 2, pcy = cyv + CHAR_CY;
@@ -4135,6 +5070,72 @@ class Game {
       ctx.font = uiTextFont(10);
       ctx.textBaseline = "top";
       ctx.fillText(ch.skill.desc, cx + CARD_W / 2, cyv + SKILL_Y + 21, CARD_W - 16);
+
+      if (isOnlineActive) {
+        ctx.fillStyle = "#4fc3f7";
+        ctx.font = uiTextFont(9, 700);
+        ctx.textAlign = "right";
+        ctx.textBaseline = "bottom";
+        ctx.fillText(t("online.charSelect.current", "SEÇİLİ"), cx + CARD_W - 8, cyv + CARD_H - 4);
+      }
+
+      // Kilitli robot kaplaması (v7)
+      const unlocked = isRobotUnlocked(this.profile, ch.id);
+      if (!unlocked) {
+        ctx.fillStyle = "rgba(10, 16, 24, 0.88)";
+        _csRoundRect(ctx, cx, cyv, CARD_W, CARD_H, 6);
+        ctx.fill();
+
+        const spec = robotPriceSpec(ch.id);
+        const accXp = this.profile ? this.profile.accountXp : 0;
+        const curAccLvl = levelForAccountXp(accXp);
+        const curScrap = this.profile ? this.profile.scrap : 0;
+        const canBuy = canUnlockRobot(this.profile, ch.id);
+
+        ctx.font = uiTitleFont(24);
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillStyle = canBuy.ok ? "#ffd166" : "#ff6b6b";
+        ctx.fillText("🔒", cx + CARD_W / 2, cyv + CARD_H / 2 - 28);
+
+        ctx.font = uiTitleFont(11, 700);
+        ctx.textBaseline = "top";
+        if (curAccLvl < spec.level) {
+          ctx.fillStyle = "#ff6b6b";
+          ctx.fillText(t("charSelect.locked", "KİLİTLİ"), cx + CARD_W / 2, cyv + CARD_H / 2 - 6);
+          ctx.font = uiTextFont(10, 700);
+          ctx.fillStyle = "#ffaa88";
+          ctx.fillText(t("charSelect.reqLevel", "Hesap Sv. {level} Gerekli", { level: spec.level }), cx + CARD_W / 2, cyv + CARD_H / 2 + 10);
+          ctx.fillStyle = "#8fa8ba";
+          ctx.fillText(t("charSelect.reqPrice", "Fiyat: {price} 🔩", { price: spec.price }), cx + CARD_W / 2, cyv + CARD_H / 2 + 26);
+        } else if (curScrap < spec.price) {
+          ctx.fillStyle = "#ffd166";
+          ctx.fillText(t("charSelect.locked", "KİLİTLİ"), cx + CARD_W / 2, cyv + CARD_H / 2 - 6);
+          ctx.font = uiTextFont(10, 700);
+          ctx.fillStyle = "#ff8888";
+          ctx.fillText(`${spec.price} 🔩`, cx + CARD_W / 2, cyv + CARD_H / 2 + 10);
+          ctx.fillStyle = "#8fa8ba";
+          ctx.font = uiTextFont(9);
+          ctx.fillText(t("charSelect.balance", "(Bakiye: {scrap} 🔩)", { scrap: curScrap }), cx + CARD_W / 2, cyv + CARD_H / 2 + 26);
+        } else {
+          ctx.fillStyle = "#63e6be";
+          ctx.fillText(t("charSelect.canUnlock", "SATIN ALABİLİRSİN!"), cx + CARD_W / 2, cyv + CARD_H / 2 - 10);
+
+          const btnW = CARD_W - 20, btnH = 26;
+          const bx = cx + 10, by = cyv + CARD_H / 2 + 8;
+          ctx.fillStyle = hovered ? "#2b6b55" : "#1a4738";
+          _csRoundRect(ctx, bx, by, btnW, btnH, 4);
+          ctx.fill();
+          ctx.strokeStyle = hovered ? "#63e6be" : "#3ea882";
+          ctx.lineWidth = 1.5;
+          ctx.stroke();
+
+          ctx.fillStyle = "#ffffff";
+          ctx.font = uiTitleFont(10.5, 700);
+          ctx.textBaseline = "middle";
+          ctx.fillText(t("charSelect.buyAction", "{price} 🔩 SATIN AL", { price: spec.price }), cx + CARD_W / 2, by + btnH / 2);
+        }
+      }
 
       ctx.restore();
     }
@@ -4225,6 +5226,33 @@ class Game {
     for (const rect of this._cardRects) {
       if (mx >= rect.x && mx <= rect.x + rect.w && my >= rect.y && my <= rect.y + rect.h) {
         SFX.uiClick();
+
+        // Kilitli karakter kontrolü ve satın alma
+        const unlocked = isRobotUnlocked(this.profile, rect.ch.id);
+        if (!unlocked) {
+          const buy = unlockRobot(this.profile, rect.ch.id);
+          if (buy.ok) {
+            this.profile = buy.profile;
+            if (typeof SFX !== "undefined" && SFX.upgradeTier) SFX.upgradeTier();
+            this.damagePopups.push({ x: rect.x + rect.w / 2, y: rect.y + rect.h / 2, text: `${rect.ch.label} SATIN ALINDI! 🔩`, color: "#63e6be", scale: 1.2, age: 0 });
+            this.updateHud();
+          } else {
+            if (typeof SFX !== "undefined" && SFX.buzzer) SFX.buzzer();
+            const reasonMsg = buy.reason === "LEVEL_REQUIRED"
+              ? `Hesap Sv. ${buy.requiredLevel} Gerekli!`
+              : `Yetersiz Hurda! (${buy.cost} 🔩 Gerekli)`;
+            this.damagePopups.push({ x: rect.x + rect.w / 2, y: rect.y + rect.h / 2, text: reasonMsg, color: "#ff6b6b", scale: 1.1, age: 0 });
+          }
+          return;
+        }
+
+        if (this.onlineRobotSelectReturn) {
+          this.onlineRobotSelectReturn = false;
+          if (this.lobby) this.lobby.selectRobot(rect.ch);
+          this.state = "ONLINE_LOBBY";
+          this.updateHud();
+          return;
+        }
         this.selectedChars[this.charSelectPhase] = rect.ch;
         if (this.charSelectPhase < this.selectedChars.length - 1) {
           this.charSelectPhase++;   // sıradaki oyuncu seçsin
@@ -4244,23 +5272,41 @@ class Game {
   // Harita seçim ekranı: her karaktere özgü temalı haritalar, önizlemeli kartlar.
   renderMapSelect(ctx) {
     const W = this.W, H = this.H;
+    const timeMs = this.renderTimeMs || 0;
 
-    drawClouds(ctx, W);
-    _msBackdrop(ctx, W, H);
+    drawClouds(ctx, W, "rgba(190,215,240,0.14)");
+    _msBackdrop(ctx, W, H, timeMs);
 
-    // Başlık
-    ctx.fillStyle = "#ffe45e";
-    ctx.font = uiTitleFont(24);
+    // Başlık Bölgesi
+    const titleY = 14;
+    const tglow = ctx.createRadialGradient(W / 2, titleY + 18, 6, W / 2, titleY + 18, 200);
+    tglow.addColorStop(0, "rgba(244, 189, 98, 0.16)");
+    tglow.addColorStop(0.55, "rgba(113, 211, 189, 0.035)");
+    tglow.addColorStop(1, "rgba(0,0,0,0)");
+    ctx.fillStyle = tglow;
+    ctx.fillRect(W / 2 - 220, titleY - 10, 440, 60);
+
     ctx.textAlign = "center";
     ctx.textBaseline = "top";
-    ctx.fillText(t("mapSelect.title", "Harita Seç"), W / 2, 20);
+    ctx.fillStyle = "rgba(113, 211, 189, 0.65)";
+    ctx.font = uiTitleFont(9.5, 700);
+    ctx.fillText("PROT-9 // COMBAT ARENA PROTOCOL", W / 2, titleY);
+
+    ctx.fillStyle = "#ffe45e";
+    ctx.font = uiTitleFont(22, 700);
+    ctx.shadowColor = "rgba(255, 228, 94, 0.42)";
+    ctx.shadowBlur = 8;
+    ctx.fillText(t("mapSelect.title", "Harita Seç"), W / 2, titleY + 13);
+    ctx.shadowBlur = 0;
+
+    _csHazardStrip(ctx, W / 2 - 110, titleY + 40, 220, 2.5);
 
     // Seçilen karakterler özeti (2–6 oyuncu)
-    ctx.font = uiTextFont(13);
+    ctx.font = uiTitleFont(12, 700);
     ctx.fillStyle = "#cfe0ee";
     ctx.fillText(
       this.selectedChars.map((c) => c ? c.label : "?").join("  ⚔  "),
-      W / 2, 50
+      W / 2, titleY + 48
     );
 
     // ── Sayfalama: haritalar MS_COLS × MS_ROWS grid'e bölünür ──
@@ -4302,6 +5348,10 @@ class Game {
         hover: hovered, glow: hovered,
         selected: isSelected,
       });
+
+      // Kart üstü harita rengi şerit
+      ctx.fillStyle = hovered ? m.accent : _hexA(m.accent, 0.75);
+      ctx.fillRect(cx + 8, cyv + 1, CARD_W - 16, 2.5);
 
       // Önizleme (arazi şekli = skill arketipi) + monitör iç çerçevesi:
       // panel içinde küçük bir saha monitörü gibi okunur.
@@ -4370,16 +5420,23 @@ class Game {
 
   // Sol-üst köşeye t("common.back", "‹ Geri") butonu çiz ve hit-test için _backRect'i sakla.
   drawBackButton(ctx, label) {
-    const x = 16, y = 16, w = 104, h = 32;
+    const x = 16, y = 16, w = 114, h = 32;
     this._backRect = { x, y, w, h };
     const mx = this.input.mouseX, my = this.input.mouseY;
     const hov = mx >= x && mx <= x + w && my >= y && my <= y + h;
     ctx.save();
-    _csPanel(ctx, x, y, w, h, { accent: hov ? "#ffe45e" : "#2a3848", hover: hov, glow: hov, rivets: false });
-    ctx.fillStyle = "#cfe0ee";
-    ctx.font = uiTextFont(13, 700);
+    const hy = hov ? y - 1 : y;
+    _csPanel(ctx, x, hy, w, h, {
+      accent: hov ? "#71d3bd" : "rgba(113,211,189,0.45)",
+      hover: hov,
+      glow: hov,
+      rivets: false,
+      fillTop: hov ? "rgba(113,211,189,0.22)" : "rgba(113,211,189,0.06)",
+    });
+    ctx.fillStyle = hov ? "#ffffff" : "#cfe0ee";
+    ctx.font = uiTitleFont(11.5, 700);
     ctx.textAlign = "center"; ctx.textBaseline = "middle";
-    ctx.fillText(label || t("common.back", "‹ Geri"), x + w / 2, y + h / 2);
+    ctx.fillText(label || t("common.back", "‹ Geri"), x + w / 2, hy + h / 2);
     ctx.restore();
   }
 
@@ -4415,20 +5472,21 @@ class Game {
   drawDamagePopups(ctx) {
     for (const d of this.damagePopups) {
       const t = d.age / 1.1;          // 0 -> 1
-      const alpha = 1 - t;            // sona doğru sön
-      // İlk anda hızlı büyü ("pop"), sonra normal boyutta kal
-      const pop = d.age < 0.12 ? d.age / 0.12 : 1;
-      const size = 14 + 8 * pop;
+      const alpha = Math.max(0, 1 - t); // sona doğru sön
+      const pop = d.age < 0.14 ? d.age / 0.14 : 1;
+      const baseSize = d.text ? 13 : 15;
+      const scale = d.scale || 1.0;
+      const size = Math.round((baseSize + 6 * pop) * scale);
 
       ctx.save();
-      ctx.globalAlpha = Math.max(0, alpha);
-      ctx.font = uiTextFont(size, 700);
+      ctx.globalAlpha = alpha;
+      ctx.font = uiTextFont(size, 800);
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
-      ctx.lineWidth = 3;
-      ctx.strokeStyle = "#000000aa";
-      ctx.fillStyle = "#ff5e5e";
-      const txt = `-${d.amount}`;
+      ctx.lineWidth = 3.5;
+      ctx.strokeStyle = "#000000cc";
+      ctx.fillStyle = d.color || "#ff5e5e";
+      const txt = d.text ? d.text : `-${d.amount}`;
       ctx.strokeText(txt, d.x, d.y);
       ctx.fillText(txt, d.x, d.y);
       ctx.restore();
@@ -4469,17 +5527,17 @@ class Game {
     ctx.fillStyle = "#ff8c1a";
     ctx.fill();
 
-    // derece etiketi (siyah konturlu, gökyüzünde okunur)
+    // derece etiketi (noktanın altına, merkez hizalı — güncel nişanla çakışmayı önler)
     const deg = Math.round(-ang * 180 / Math.PI);
-    ctx.font = uiTextFont(13, 700);
-    ctx.textBaseline = "middle";
-    const tx = ex + (a.facing >= 0 ? 8 : -8);
-    ctx.textAlign = a.facing >= 0 ? "left" : "right";
+    ctx.font = uiTextFont(12, 700);
+    ctx.textBaseline = "top";
+    ctx.textAlign = "center";
     ctx.lineWidth = 3;
-    ctx.strokeStyle = "#000000aa";
-    ctx.strokeText(`${deg}°`, tx, ey);
+    ctx.strokeStyle = "#000000cc";
+    const lastLabel = typeof t === "function" ? t("hud.lastShotAngle", "Son: {deg}°", { deg }) : `Son: ${deg}°`;
+    ctx.strokeText(lastLabel, ex, ey + 7);
     ctx.fillStyle = "#ff8c1a";
-    ctx.fillText(`${deg}°`, tx, ey);
+    ctx.fillText(lastLabel, ex, ey + 7);
     ctx.restore();
   }
 
@@ -4489,6 +5547,8 @@ class Game {
     const len = 28 + this.input.power * 70;
     const ex = m.x + Math.cos(a.aim) * len;
     const ey = m.y + Math.sin(a.aim) * len;
+
+    ctx.save();
     ctx.setLineDash([4, 5]);
     ctx.beginPath();
     ctx.moveTo(m.x, m.y);
@@ -4497,11 +5557,45 @@ class Game {
     ctx.strokeStyle = "#ffffffaa";
     ctx.stroke();
     ctx.setLineDash([]);
+
     // ok ucu
     ctx.beginPath();
-    ctx.arc(ex, ey, 3, 0, Math.PI * 2);
+    ctx.arc(ex, ey, 3.5, 0, Math.PI * 2);
     ctx.fillStyle = "#ffe45e";
     ctx.fill();
+
+    // Güncel nişan açısı etiketi (reticle noktasının hemen üstüne, merkez hizalı)
+    const deg = Math.round(-a.aim * 180 / Math.PI);
+    ctx.font = uiTextFont(12, 700);
+    ctx.textBaseline = "bottom";
+    ctx.textAlign = "center";
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = "#000000cc";
+    ctx.strokeText(`${deg}°`, ex, ey - 6);
+    ctx.fillStyle = "#ffe45e";
+    ctx.fillText(`${deg}°`, ex, ey - 6);
+
+    // Balistik Kılavuz (Yörünge Tahmini Noktaları)
+    const spec = a.heldWeaponSpec || WEAPONS[a.weapon] || WEAPONS[0];
+    const power = Math.max(0.12, this.input.power || 0.18);
+    const spd = spec.baseSpeed + power * spec.speedMul;
+    let simX = m.x, simY = m.y;
+    let simVx = Math.cos(a.aim) * spd, simVy = Math.sin(a.aim) * spd;
+    const grav = (spec.gravity || 0.9) * GRAVITY;
+    const windF = (this.wind || 0) * (spec.windFactor || 0.02);
+
+    for (let step = 1; step <= 8; step++) {
+      simVx += windF * 1.5;
+      simVy += grav * 1.5;
+      simX += simVx * 1.5;
+      simY += simVy * 1.5;
+      const alpha = Math.max(0.1, (1 - step / 9) * 0.65);
+      ctx.fillStyle = `rgba(255, 235, 110, ${alpha})`;
+      ctx.beginPath();
+      ctx.arc(simX, simY, Math.max(1.2, 2.8 - step * 0.2), 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.restore();
   }
 
   updateHud() {
@@ -4633,8 +5727,9 @@ class Game {
         // Not: yerel değişken adı `secs` — `t` olsaydı bu blokta global t()
         // çeviri fonksiyonunu gölgelerdi.
         const secs = Math.ceil(this.turnTimer);
-        banner.textContent = t("hud.banner.turn", "Sıra: {name}  ⏱ {secs}s", { name: this.active.name, secs });
-        banner.style.color = secs <= 5 ? "#ff6b6b" : (this.active.playerTint || this.active.color);
+        const sdTag = this.suddenDeath ? "  ⚠️ ANİ ÖLÜM!" : "";
+        banner.textContent = t("hud.banner.turn", "Sıra: {name}  ⏱ {secs}s", { name: this.active.name, secs }) + sdTag;
+        banner.style.color = (this.suddenDeath || secs <= 5) ? "#ff6b6b" : (this.active.playerTint || this.active.color);
       }
     }
     const wind = document.getElementById("wind-indicator");
@@ -5050,11 +6145,340 @@ class Game {
     ctx.restore();
   }
 
+  spawnInitialBarrels() {
+    this.barrels = [];
+    if (!this.terrain) return;
+    const candidates = [0.22, 0.50, 0.78];
+    for (const fx of candidates) {
+      const bx = Math.round(this.W * fx);
+      const by = this.terrain.surfaceBelow(bx, 0);
+      if (by > 40 && by < this.H - 40) {
+        this.barrels.push({ x: bx, y: by - 10, r: 10, hp: 25, maxHp: 25, alive: true });
+      }
+    }
+  }
+
+  updateBarrels(dt) {
+    if (!this.barrels || !this.terrain) return;
+    for (const b of this.barrels) {
+      if (!b.alive) continue;
+      const ground = this.terrain.surfaceBelow(b.x, Math.max(0, b.y - 8));
+      if (b.y < ground - b.r) {
+        b.y = Math.min(ground - b.r, b.y + 4);
+      }
+      if (b.y > this.H - 8) b.alive = false;
+    }
+    this.barrels = this.barrels.filter((b) => b.alive);
+  }
+
+  drawBarrels(ctx) {
+    if (!this.barrels || !this.barrels.length) return;
+    for (const b of this.barrels) {
+      if (!b.alive) continue;
+      ctx.save();
+      const bw = 14, bh = 18;
+      const bx = b.x - bw / 2, by = b.y - bh / 2;
+
+      // Silindirik varil gövdesi (koyu kırmızı endüstriyel)
+      const grad = ctx.createLinearGradient(bx, by, bx + bw, by);
+      grad.addColorStop(0, "#8b1515");
+      grad.addColorStop(0.4, "#d32f2f");
+      grad.addColorStop(1, "#5f0909");
+      ctx.fillStyle = grad;
+      _csRoundRect(ctx, bx, by, bw, bh, 2.5);
+
+      // Üst ve alt metal çemberler
+      ctx.fillStyle = "#263238";
+      ctx.fillRect(bx, by + 1, bw, 2.5);
+      ctx.fillRect(bx, by + bh - 3.5, bw, 2.5);
+
+      // Sarı-siyah tehlike şeridi (ortada)
+      ctx.fillStyle = "#ffd600";
+      ctx.fillRect(bx, by + 7, bw, 4);
+      ctx.fillStyle = "#212121";
+      ctx.fillRect(bx + 3, by + 7, 2.5, 4);
+      ctx.fillRect(bx + 9, by + 7, 2.5, 4);
+
+      // Alev simgesi
+      ctx.font = uiTextFont(8, 800);
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillStyle = "#ffffff";
+      ctx.fillText("🔥", b.x, by - 4);
+      ctx.restore();
+    }
+  }
+
+  spawnCrate() {
+    if (!this.crates) this.crates = [];
+    if (this.crates.length >= 3) return;
+    const x = Math.round(this.W * (0.16 + Math.random() * 0.68));
+    const roll = Math.random();
+    let kind = "weapon";
+    let weaponId = "cluster";
+    let qty = 2;
+    let amount = 35;
+
+    if (roll < 0.40) {
+      kind = "weapon";
+      const choices = [
+        { id: "nuke", q: 1 },
+        { id: "mirv", q: 1 },
+        { id: "airstrike", q: 1 },
+        { id: "megacluster", q: 1 },
+        { id: "cluster", q: 2 },
+        { id: "drill", q: 2 },
+        { id: "napalm", q: 2 },
+        { id: "rubbertrio", q: 2 },
+        { id: "teleportball", q: 2 },
+        { id: "hook", q: 2 }
+      ];
+      const picked = choices[Math.floor(Math.random() * choices.length)];
+      weaponId = picked.id;
+      qty = picked.q;
+    } else if (roll < 0.65) {
+      kind = "health";
+      amount = 35;
+    } else if (roll < 0.85) {
+      kind = "scrap";
+      amount = 50;
+    } else {
+      kind = "shield";
+    }
+
+    this.crates.push({
+      x,
+      y: -20,
+      vy: 1.35,
+      onGround: false,
+      parachute: true,
+      kind,
+      weaponId,
+      qty,
+      amount,
+      wobble: Math.random() * Math.PI,
+      dead: false
+    });
+    this.damagePopups.push({ x, y: 35, text: kind === "scrap" ? "🔩 HURDA SANDIĞI GELİYOR!" : "📦 İKMAL SANDIĞI GELİYOR!", color: kind === "scrap" ? "#ffd166" : "#ffe45e", scale: 1.05, age: 0 });
+  }
+
+  updateCrates(dt) {
+    if (!this.crates) return;
+    for (const c of this.crates) {
+      if (c.dead) continue;
+      if (!c.onGround) {
+        c.y += c.vy;
+        c.wobble += dt * 3.5;
+        if (this.terrain && this.terrain.isSolid(c.x, c.y + 10)) {
+          c.onGround = true;
+          c.parachute = false;
+          c.y = this.terrain.surfaceBelow(c.x, Math.max(0, c.y - 12)) - 8;
+        }
+        if (c.y > this.H) c.dead = true;
+      }
+
+      for (const p of this.players) {
+        if (!p.alive) continue;
+        const dist = Math.hypot(p.x - c.x, (p.y - p.r) - c.y);
+        if (dist < p.r + 14) {
+          c.dead = true;
+          if (c.kind === "weapon") {
+            p.ammo[c.weaponId] = (p.ammo[c.weaponId] || 0) + c.qty;
+            const wObj = WEAPONS.find((w) => w.id === c.weaponId);
+            const wName = wObj ? wObj.name : "Cephane";
+            this.damagePopups.push({ x: c.x, y: c.y - 14, text: `+${c.qty} ${wName}! 📦`, color: "#ffe45e", scale: 1.15, age: 0 });
+            if (typeof SFX !== "undefined" && SFX.pickup) SFX.pickup();
+            this.updateWeaponHud();
+          } else if (c.kind === "health") {
+            const healed = Math.min(c.amount, p.maxHp - p.hp);
+            p.hp = Math.min(p.maxHp, p.hp + c.amount);
+            this.damagePopups.push({ x: c.x, y: c.y - 14, text: `+${healed > 0 ? healed : c.amount} HP! 🔧`, color: "#63e6be", scale: 1.15, age: 0 });
+            if (typeof SFX !== "undefined" && SFX.skill) SFX.skill("heal");
+          } else if (c.kind === "scrap") {
+            const scrapAmt = c.amount || 50;
+            if (this.profile) this.profile.scrap += scrapAmt;
+            if (this.combatStats) this.combatStats.crateScrap = (this.combatStats.crateScrap || 0) + scrapAmt;
+            this.damagePopups.push({ x: c.x, y: c.y - 14, text: `+${scrapAmt} HURDA! 🔩`, color: "#ffd166", scale: 1.25, age: 0 });
+            if (typeof SFX !== "undefined" && SFX.upgradeTier) SFX.upgradeTier();
+            this.updateHud();
+          } else if (c.kind === "shield") {
+            p.blockShield = true;
+            this.damagePopups.push({ x: c.x, y: c.y - 14, text: "KUTUP KALKANI! 🛡️", color: "#62d9ff", scale: 1.15, age: 0 });
+            if (typeof SFX !== "undefined" && SFX.skill) SFX.skill("shield");
+          }
+          break;
+        }
+      }
+    }
+    this.crates = this.crates.filter((c) => !c.dead);
+  }
+
+  drawCrates(ctx) {
+    if (!this.crates || !this.crates.length) return;
+    for (const c of this.crates) {
+      if (c.dead) continue;
+      ctx.save();
+      if (c.parachute) {
+        const wobble = Math.sin(c.wobble || 0) * 3;
+        const px = c.x + wobble;
+        const py = c.y - 18;
+        ctx.strokeStyle = "rgba(220, 230, 240, 0.75)";
+        ctx.lineWidth = 1.2;
+        ctx.beginPath();
+        ctx.moveTo(px - 14, py); ctx.lineTo(c.x - 7, c.y - 7);
+        ctx.moveTo(px - 5, py);  ctx.lineTo(c.x - 3, c.y - 7);
+        ctx.moveTo(px + 5, py);  ctx.lineTo(c.x + 3, c.y - 7);
+        ctx.moveTo(px + 14, py); ctx.lineTo(c.x + 7, c.y - 7);
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.arc(px, py, 16, Math.PI, 0, false);
+        ctx.fillStyle = c.kind === "weapon" ? "#ff8c1a" : c.kind === "health" ? "#2ecc71" : c.kind === "scrap" ? "#ffd166" : "#3498db";
+        ctx.fill();
+        ctx.lineWidth = 2;
+        ctx.strokeStyle = "#ffffffcc";
+        ctx.stroke();
+
+        ctx.fillStyle = "#ffffffaa";
+        ctx.beginPath();
+        ctx.moveTo(px - 6, py - 15);
+        ctx.quadraticCurveTo(px, py - 6, px + 6, py - 15);
+        ctx.lineTo(px + 3, py);
+        ctx.quadraticCurveTo(px, py - 4, px - 3, py);
+        ctx.closePath();
+        ctx.fill();
+      }
+
+      const cx = c.x - 8, cy = c.y - 8, cw = 16, ch = 16;
+      ctx.fillStyle = "#6d4c41";
+      ctx.fillRect(cx, cy, cw, ch);
+      ctx.strokeStyle = "#37474f";
+      ctx.lineWidth = 2;
+      ctx.strokeRect(cx, cy, cw, ch);
+
+      ctx.strokeStyle = "#4e342e";
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(cx + 2, cy + 2); ctx.lineTo(cx + cw - 2, cy + ch - 2);
+      ctx.moveTo(cx + cw - 2, cy + 2); ctx.lineTo(cx + 2, cy + ch - 2);
+      ctx.stroke();
+
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.font = uiTitleFont(10, 800);
+      if (c.kind === "weapon") {
+        ctx.fillStyle = "#ffe45e";
+        ctx.fillText("✦", c.x, c.y);
+      } else if (c.kind === "health") {
+        ctx.fillStyle = "#63e6be";
+        ctx.fillText("+", c.x, c.y);
+      } else if (c.kind === "scrap") {
+        ctx.fillStyle = "#ffd166";
+        ctx.fillText("🔩", c.x, c.y);
+      } else {
+        ctx.fillStyle = "#62d9ff";
+        ctx.fillText("◆", c.x, c.y);
+      }
+      ctx.restore();
+    }
+  }
+
+  triggerScreenShake(amount) {
+    if (!this.screenShake) this.screenShake = { trauma: 0, time: 0, x: 0, y: 0 };
+    this.screenShake.trauma = Math.min(1.0, this.screenShake.trauma + (amount || 0.5));
+  }
+
+  updateScreenShake(dt) {
+    if (this.screenShake && this.screenShake.trauma > 0) {
+      this.screenShake.trauma = Math.max(0, this.screenShake.trauma - dt * 2.8);
+      this.screenShake.time += dt;
+      const p = Math.pow(this.screenShake.trauma, 1.8);
+      const maxOffset = 13;
+      this.screenShake.x = (Math.sin(this.screenShake.time * 62) + Math.cos(this.screenShake.time * 43)) * 0.5 * maxOffset * p;
+      this.screenShake.y = (Math.cos(this.screenShake.time * 55) - Math.sin(this.screenShake.time * 37)) * 0.5 * maxOffset * p;
+    } else if (this.screenShake) {
+      this.screenShake.x = 0;
+      this.screenShake.y = 0;
+    }
+  }
+
+  drawSuddenDeath(ctx) {
+    if (!this.suddenDeath || !(this.suddenDeathLevel > 0)) return;
+    ctx.save();
+    const acidY = this.H - this.suddenDeathLevel;
+    const t = (this.renderTimeMs || 0) * 0.003;
+
+    const grad = ctx.createLinearGradient(0, acidY, 0, this.H);
+    grad.addColorStop(0, "rgba(0, 230, 118, 0.78)");
+    grad.addColorStop(0.2, "rgba(27, 94, 32, 0.88)");
+    grad.addColorStop(1, "rgba(10, 40, 15, 0.96)");
+
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.moveTo(0, this.H);
+    ctx.lineTo(0, acidY);
+    for (let x = 0; x <= this.W; x += 30) {
+      const wave = Math.sin(t * 3 + x * 0.04) * 4 + Math.cos(t * 2 + x * 0.02) * 2;
+      ctx.lineTo(x, acidY + wave);
+    }
+    ctx.lineTo(this.W, this.H);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.strokeStyle = "rgba(185, 255, 102, 0.9)";
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    for (let x = 0; x <= this.W; x += 30) {
+      const wave = Math.sin(t * 3 + x * 0.04) * 4 + Math.cos(t * 2 + x * 0.02) * 2;
+      if (x === 0) ctx.moveTo(x, acidY + wave);
+      else ctx.lineTo(x, acidY + wave);
+    }
+    ctx.stroke();
+
+    for (let i = 0; i < 8; i++) {
+      const bx = ((i * 127 + t * 40) % (this.W - 40)) + 20;
+      const by = acidY + 8 + ((i * 31 + t * 50) % Math.max(10, this.suddenDeathLevel - 10));
+      const br = 2 + (i % 3);
+      ctx.fillStyle = "rgba(185, 255, 102, 0.65)";
+      ctx.beginPath();
+      ctx.arc(bx, by, br, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+
+  // Görsel bozulma kurtarma mekanizması (canvas state recovery):
+  // Çizim sırasında beklenmedik bir hata fırlatıldığında veya eksik save/restore
+  // oluştuğunda canvas durumunu temiz varsayılana döndürür.
+  recoverCanvas() {
+    try {
+      if (this.canvas && this.canvas.width) {
+        this.canvas.width = this.canvas.width;
+      }
+      const ctx = this.ctx;
+      if (ctx) {
+        ctx.setTransform(this._scaleX || 1, 0, 0, this._scaleY || 1, 0, 0);
+        ctx.globalAlpha = 1;
+        ctx.globalCompositeOperation = "source-over";
+        if (ctx.filter && ctx.filter !== "none") ctx.filter = "none";
+        ctx.shadowBlur = 0;
+        ctx.shadowColor = "transparent";
+        ctx.clearRect(0, 0, this.W, this.H);
+      }
+    } catch (e) {
+      console.warn("recoverCanvas hatası:", e);
+    }
+  }
+
   loop(ts) {
     requestAnimationFrame(this.loop.bind(this));
     this.renderTimeMs = ts;
     if (typeof DIAG !== "undefined") DIAG.frame(ts);   // tanılama: FPS örneği (F6)
-    SFX.musicSync(this.state, this.mode); // arka plan müziği tema senkronu
+    try {
+      SFX.musicSync(this.state, this.mode); // arka plan müziği tema senkronu
+    } catch (e) {
+      /* ses senkron hatası oyunu durdurmaz */
+    }
 
     // FPS'i 60'a sabitle: yeterli süre geçmediyse bu kareyi atla.
     // (1ms tolerans: tam 60Hz ekranlarda yanlışlıkla 30 FPS'e düşmeyi önler.)
@@ -5064,8 +6488,20 @@ class Game {
     this.lastTime = ts - (elapsed % FRAME_TIME);
 
     // Sabit adım: her güncelleme tam olarak 1/60 saniye ilerler.
-    this.update(1 / FPS);
-    this.render();
+    try {
+      this.update(1 / FPS);
+    } catch (err) {
+      console.error("[Game Loop] Update hatası yakalandı:", err);
+      if (typeof DIAG !== "undefined") DIAG.record("error", "Update: " + (err && err.message));
+    }
+
+    try {
+      this.render();
+    } catch (err) {
+      console.error("[Game Loop] Render hatası yakalandı:", err);
+      if (typeof DIAG !== "undefined") DIAG.record("error", "Render: " + (err && err.message));
+      this.recoverCanvas();
+    }
   }
 
   // Küçük çarpı/panel hit yardımcı: menü kartlarında tekrar eden test.
@@ -5394,34 +6830,96 @@ function _hexA(hex, a) {
   return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${a})`;
 }
 
-// Ana menü arka planı: koyu fabrika zemini ve iki yumuşak renk alanı.
-function _msBackdrop(ctx, W, H) {
+// Ana menü arka planı: koyu fabrika zemini, siber-ızgara, süzülen kıvılcımlar ve köşe HUD çerçeveleri.
+function _msBackdrop(ctx, W, H, timeMs) {
   const grad = ctx.createLinearGradient(0, 0, 0, H);
-  grad.addColorStop(0, "#0b1a20e8");
-  grad.addColorStop(0.58, "#09151af0");
-  grad.addColorStop(1, "#071116f7");
+  grad.addColorStop(0, "#0b1a20");
+  grad.addColorStop(0.58, "#09151a");
+  grad.addColorStop(1, "#071116");
   ctx.fillStyle = grad;
   ctx.fillRect(0, 0, W, H);
-  const glow = ctx.createRadialGradient(W * 0.5, H * 0.22, 8, W * 0.5, H * 0.22, H * 0.8);
-  glow.addColorStop(0, "rgba(113,211,189,0.10)");
-  glow.addColorStop(0.48, "rgba(244,189,98,0.035)");
+
+  // Siber-ızgara dokusu
+  ctx.save();
+  ctx.lineWidth = 1;
+  ctx.strokeStyle = "rgba(113, 211, 189, 0.025)";
+  const gridSize = 48;
+  for (let gx = gridSize; gx < W; gx += gridSize) {
+    ctx.beginPath();
+    ctx.moveTo(gx, 0);
+    ctx.lineTo(gx, H);
+    ctx.stroke();
+  }
+  for (let gy = gridSize; gy < H; gy += gridSize) {
+    ctx.beginPath();
+    ctx.moveTo(0, gy);
+    ctx.lineTo(W, gy);
+    ctx.stroke();
+  }
+
+  // Atmosferik radyal ışık aurası
+  const glow = ctx.createRadialGradient(W * 0.5, H * 0.22, 10, W * 0.5, H * 0.22, H * 0.85);
+  glow.addColorStop(0, "rgba(113,211,189,0.12)");
+  glow.addColorStop(0.48, "rgba(244,189,98,0.04)");
   glow.addColorStop(1, "rgba(113,211,189,0)");
   ctx.fillStyle = glow;
   ctx.fillRect(0, 0, W, H);
+
+  // Canlı süzülen parçacıklar (yavaşça yükselen kıvılcım tozları)
+  const t = (timeMs || 0) * 0.0008;
+  for (let i = 0; i < 20; i++) {
+    const seed = i + 1;
+    const px = Math.floor((seed * 173.3 + Math.sin(t + seed * 2) * 26 + (t * 12 * (seed % 3 + 1))) % W);
+    const py = Math.floor((H + 20) - ((seed * 89.7 + t * (22 + (seed % 4) * 8)) % (H + 40)));
+    const pa = Math.max(0.12, Math.min(0.55, 0.28 + Math.sin(t * 3 + seed) * 0.18));
+    ctx.fillStyle = seed % 3 === 0 ? `rgba(244,189,98,${pa})` : `rgba(113,211,189,${pa})`;
+    ctx.fillRect(px, py, (seed % 2) + 1.5, (seed % 2) + 1.5);
+  }
+
+  // Köşe braketleri (Endüstriyel HUD çerçevesi)
+  ctx.strokeStyle = "rgba(113, 211, 189, 0.22)";
+  ctx.lineWidth = 1.5;
+  const bSize = 14, bPad = 10;
+  // Sol üst
+  ctx.beginPath();
+  ctx.moveTo(bPad, bPad + bSize); ctx.lineTo(bPad, bPad); ctx.lineTo(bPad + bSize, bPad);
+  ctx.stroke();
+  // Sağ üst
+  ctx.beginPath();
+  ctx.moveTo(W - bPad - bSize, bPad); ctx.lineTo(W - bPad, bPad); ctx.lineTo(W - bPad, bPad + bSize);
+  ctx.stroke();
+  // Sol alt
+  ctx.beginPath();
+  ctx.moveTo(bPad, H - bPad - bSize); ctx.lineTo(bPad, H - bPad); ctx.lineTo(bPad + bSize, H - bPad);
+  ctx.stroke();
+  // Sağ alt
+  ctx.beginPath();
+  ctx.moveTo(W - bPad - bSize, H - bPad); ctx.lineTo(W - bPad, H - bPad); ctx.lineTo(W - bPad, H - bPad - bSize);
+  ctx.stroke();
+
+  ctx.restore();
 }
 
 // Kart üstü ikon plakası: kesik köşeli mini bölme + vektör glif. Her mod kendi
 // imza ikonunu taşır; lit=true (hover) plakayı ve glifi parıltıyla yakar.
 // Glifler kartın kendi accent renginde çizilir — ikonsuz kart kalmaz.
 function _msIcon(ctx, kind, cx, cy, accent, lit) {
-  const col = lit ? accent : _hexA(accent, 0.85);
+  const col = lit ? accent : _hexA(accent, 0.88);
   ctx.save();
+  // Hover'da plaka arkası renk aurası
+  if (lit) {
+    const aura = ctx.createRadialGradient(cx, cy, 2, cx, cy, 28);
+    aura.addColorStop(0, _hexA(accent, 0.35));
+    aura.addColorStop(1, _hexA(accent, 0));
+    ctx.fillStyle = aura;
+    ctx.fillRect(cx - 30, cy - 30, 60, 60);
+  }
   // Plaka: kart gövdesinden hafif ayrılan kesik köşeli mini bölme
-  _panelPath(ctx, cx - 19, cy - 19, 38, 38, 5);
-  ctx.fillStyle = _hexA(accent, lit ? 0.22 : 0.09);
+  _panelPath(ctx, cx - 20, cy - 20, 40, 40, 5);
+  ctx.fillStyle = _hexA(accent, lit ? 0.24 : 0.10);
   ctx.fill();
-  ctx.lineWidth = 1.2;
-  ctx.strokeStyle = _hexA(accent, lit ? 0.9 : 0.4);
+  ctx.lineWidth = lit ? 1.5 : 1.2;
+  ctx.strokeStyle = _hexA(accent, lit ? 0.95 : 0.45);
   ctx.stroke();
   const atlasCells = { robot: 9, "dişli": 8, mermi: 11, "ağ": 5, soru: 15 };
   const atlas = typeof assetImage === "function" ? assetImage("atlases/ui") : null;
@@ -5567,12 +7065,18 @@ function renderOverlayReward(reward) {
   if (!detail) return;
   if (reward && reward.ok) {
     const lines = [t("overlay.reward", "+{scrap} Hurda  •  +{xp} Servis XP", { scrap: reward.scrap, xp: reward.xp })];
+    if (reward.rewardDetails && reward.rewardDetails.combatScrap > 0) {
+      lines.push(`Savaş Primleri: +${reward.rewardDetails.combatScrap} 🔩 Hurda`);
+    }
     if (reward.doubled) lines.push(t("overlay.ad.doubled", "Reklam ödülü: Hurda 2× 🎬"));
     if (reward.levelAfter > reward.levelBefore) {
       lines.push(t("overlay.levelUp", "{robot}Servis Seviyesi {before} → {after}", {
         robot: reward.robotLabel ? reward.robotLabel + " " : "",
         before: reward.levelBefore, after: reward.levelAfter,
       }));
+    }
+    if (reward.accLevelAfter > reward.accLevelBefore) {
+      lines.push(`🎉 HESAP SEVİYESİ ATLADIN! Sv. ${reward.accLevelBefore} → Sv. ${reward.accLevelAfter} (+${reward.levelUpBonus || 0} 🔩 İkramiye!)`);
     }
     if (reward.message) lines.push(reward.message);
     detail.textContent = lines.join("\n");

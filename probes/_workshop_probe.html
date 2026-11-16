@@ -6,8 +6,14 @@
   <title>Atölye (Geliştirme + Parçalar) — görsel doğrulama</title>
   <style>
     body { margin: 0; background: #05080c; }
-    canvas { position: fixed; left: 0; width: 960px; height: 540px; }
-    #c1 { top: 0; } #c2 { top: 540px; } #c3 { top: 1080px; } #c4 { top: 1620px; }
+    canvas { position: absolute; left: 0; }
+    #c1 { top: 0; width: 960px; height: 540px; }
+    #c2 { top: 540px; width: 960px; height: 540px; }
+    #c3 { top: 1080px; width: 960px; height: 540px; }
+    #c4 { top: 1620px; width: 960px; height: 540px; }
+    #c5 { top: 2160px; width: 735px; height: 540px; }
+    #c6 { top: 2700px; width: 648px; height: 540px; }
+    #c7 { top: 3240px; width: 1260px; height: 540px; }
   </style>
 </head>
 <body>
@@ -15,6 +21,9 @@
   <canvas id="c2" width="960" height="540"></canvas>
   <canvas id="c3" width="960" height="540"></canvas>
   <canvas id="c4" width="960" height="540"></canvas>
+  <canvas id="c5" width="735" height="540"></canvas>
+  <canvas id="c6" width="648" height="540"></canvas>
+  <canvas id="c7" width="1260" height="540"></canvas>
   <!-- Oyunla aynı klasik script sırası -->
   <script src="js/i18n.js"></script>
   <script src="js/portal.js"></script>
@@ -115,6 +124,21 @@
     cs.profile = normalizeProfile(PROFILE);
     cs.updateHud = () => {};
     cs.renderCharSelect(document.getElementById("c4").getContext("2d"));
+
+    // 5) Duyarlı Atölye — 4:3 En-Boy Oranı (W=735, 3 sütun x 3 satır dengeli yerleşim)
+    const g5 = makeWs("upgrades");
+    g5.W = 735;
+    g5.renderWorkshop(document.getElementById("c5").getContext("2d"));
+
+    // 6) Duyarlı Atölye — Kompakt Ekran (W=648, minimum aspect 1.2)
+    const g6 = makeWs("parts");
+    g6.W = 648;
+    g6.renderWorkshop(document.getElementById("c6").getContext("2d"));
+
+    // 7) Duyarlı Atölye — 21:9 Ultrawide Ekran (W=1260, ortalanmış düzen)
+    const g7 = makeWs("upgrades");
+    g7.W = 1260;
+    g7.renderWorkshop(document.getElementById("c7").getContext("2d"));
   </script>
 </body>
 </html>
