@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<base href="../">
+  <meta charset="UTF-8" />
+  <title>Karakter seçimi — dünya genişliği sığdırma sondası</title>
+  <link rel="stylesheet" href="css/style.css" />
+  <style>
+    /* Dünya genişliği 648–1620 arasında değişir (Game.resize). Beş genişlik alt
+       alta çizilir; her kartın kırpılmadan görünmesi beklenir. */
+    body { margin: 0; background: #05080c; }
+    canvas { position: fixed; left: 0; display: block; }
+    #c0 { top: 0; }      #c1 { top: 550px; }   #c2 { top: 1100px; }
+    #c3 { top: 1650px; } #c4 { top: 2200px; }
+    h2 { position: fixed; left: 700px; margin: 0; color: #ffe45e; font: 12px monospace; z-index: 5; }
+    #t0 { top: 4px; } #t1 { top: 554px; } #t2 { top: 1104px; } #t3 { top: 1654px; } #t4 { top: 2204px; }
+  </style>
+</head>
+<body>
+  <canvas id="c0"></canvas>
+  <canvas id="c1"></canvas>
+  <canvas id="c2"></canvas>
+  <canvas id="c3"></canvas>
+  <canvas id="c4"></canvas>
+  <h2 id="t0"></h2><h2 id="t1"></h2><h2 id="t2"></h2><h2 id="t3"></h2><h2 id="t4"></h2>
+  <script src="js/i18n.js"></script>
+  <script src="js/portal.js"></script>
+  <script src="js/audio.js"></script>
+  <script src="js/characters.js"></script>
+  <script src="js/progression.js"></script>
+  <script src="js/profile.js"></script>
+  <script src="js/parts.js"></script>
+  <script src="js/market.js"></script>
+  <script src="js/assets-manifest.js"></script>
+  <script src="js/assets.js"></script>
+  <script src="js/maps.js"></script>
+  <script src="js/skills.js"></script>
+  <script src="js/skill-fx.js"></script>
+  <script src="js/robots.js"></script>
+  <script src="js/terrain.js"></script>
+  <script src="js/weapons.js"></script>
+  <script src="js/entity.js"></script>
+  <script src="js/projectile.js"></script>
+  <script src="js/ai.js"></script>
+  <script src="js/game.js"></script>
+  <script>
+    // Sahte oyun nesnesi: karakter seçimi yalnız bu alanları okur (DOM'a dokunmaz).
+    function makeFake(W) {
+      const g = Object.create(Game.prototype);
+      g.W = W; g.H = 540;
+      g.input = { mouseX: -1, mouseY: -1 };
+      g.renderTimeMs = 0;
+      g.mode = "computer";
+      g.playerCount = 2;
+      g.charSelectPhase = 0;
+      g.charPage = 0;
+      g.selectedChars = [];
+      g.playerControls = ["human", "bot"];
+      g.profile = normalizeProfile({ version: 5, scrap: 260 });
+      g.updateHud = () => {};
+      return g;
+    }
+
+    const WIDTHS = [648, 720, 800, 960, 1620];
+    WIDTHS.forEach((W, i) => {
+      const cv = document.getElementById("c" + i);
+      cv.width = W; cv.height = 540;
+      cv.style.width = W + "px"; cv.style.height = "540px";
+      const g = makeFake(W);
+      g.renderCharSelect(cv.getContext("2d"));
+      const L = g.charSelectLayout();
+      const rects = g._cardRects;
+      const over = rects.filter((r) => r.x < 0 || r.x + r.w > W).length;
+      const t = document.getElementById("t" + i);
+      t.textContent = `W=${W} · ${L.cols} sütun · kart ${L.cardW}px · sayfa başına ${L.perPage}` +
+        (over ? ` · ⚠️ TAŞAN ${over}` : " · ✓ sığıyor");
+      t.style.color = over ? "#ff7b7b" : "#9fd6a8";
+    });
+  </script>
+</body>
+</html>

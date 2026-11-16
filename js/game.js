@@ -4001,9 +4001,11 @@ class Game {
       ctx.fillText(t("charSelect.localNote", "Standart kalibrasyon — geliştirmeler kapalı"), W / 2, 62);
     }
 
-    // Kart sabitleri — tüm dikey pozisyonlar cx/cy'ye göreli, ch.r'dan bağımsız.
-    // 2 satırlık grid'e sığması için kart yüksekliği ve iç aralıklar sıkıştırıldı.
-    const CARD_W = 150, CARD_H = 186, GAP = 10, GAP_Y = 10;
+    // Kart ölçüsü dünya genişliğinden gelir (charSelectLayout) — tüm dikey
+    // pozisyonlar cx/cy'ye göreli, ch.r'dan bağımsız. 2 satırlık grid'e sığması
+    // için kart yüksekliği ve iç aralıklar sıkıştırıldı.
+    const L = this.charSelectLayout();
+    const CARD_W = L.cardW, CARD_H = L.cardH, GAP = L.gap, GAP_Y = L.gapY;
     const CHAR_CY = 46;   // karakter merkezi (kart-içi y)
     const NAME_Y  = 70;   // isim başlangıcı
     const SUMMARY_Y = 86; // servis seviyesi + dal özeti satırı
@@ -4012,9 +4014,10 @@ class Game {
     const SEP_Y   = STAT_Y + STAT_GAP * 3 + 2;  // 148
     const SKILL_Y = SEP_Y + 6;                   // 154
 
-    // ── Sayfalama: karakterler CS_COLS sütun × CS_ROWS satırlık grid'e bölünür ──
-    const COLS = CS_COLS, PER_PAGE = CS_COLS * CS_ROWS;
-    const totalPages = Math.ceil(CHARACTERS.length / PER_PAGE);
+    // ── Sayfalama: karakterler COLS sütun × CS_ROWS satırlık grid'e bölünür;
+    // sütun sayısı pencere genişliğine göre değişir (dar pencerede 4, genişte 6).
+    const COLS = L.cols, PER_PAGE = L.perPage;
+    const totalPages = Math.max(1, Math.ceil(CHARACTERS.length / PER_PAGE));
     this.charPage = Math.max(0, Math.min(this.charPage, totalPages - 1));
     const pageStart = this.charPage * PER_PAGE;
     const pageChars = CHARACTERS.slice(pageStart, pageStart + PER_PAGE);
@@ -4125,12 +4128,13 @@ class Game {
       ctx.font = uiTextFont(10, 700);
       ctx.textAlign = "center";
       ctx.textBaseline = "top";
-      ctx.fillText(`[Q]  ${ch.skill.label}`, cx + CARD_W / 2, cyv + SKILL_Y + 1);
+      // Dar kartta uzun yetenek adı taşmasın: punto sabit, genişlik kırpılır.
+      ctx.fillText(`[Q]  ${ch.skill.label}`, cx + CARD_W / 2, cyv + SKILL_Y + 1, CARD_W - 16);
 
       ctx.fillStyle = "#7899aa";
       ctx.font = uiTextFont(10);
       ctx.textBaseline = "top";
-      ctx.fillText(ch.skill.desc, cx + CARD_W / 2, cyv + SKILL_Y + 21);
+      ctx.fillText(ch.skill.desc, cx + CARD_W / 2, cyv + SKILL_Y + 21, CARD_W - 16);
 
       ctx.restore();
     }
@@ -4168,10 +4172,39 @@ class Game {
     this.drawBackButton(ctx, t("common.back", "‹ Geri"));
   }
 
+  // Karakter seçim grid'inin o anki dünya genişliğine göre düzeni (sütun sayısı
+  // + kart ölçüsü). Çizim, sayfa değiştirme ve tıklama aynı yerden okur — grid
+  // tek kaynaktan üretilir.
+  //
+  // Neden gerekli: dünya genişliği pencere en-boy oranına göre 648–1620 arasında
+  // değişir (resize()). Sabit 6 × 150 px grid (950 px) dar pencerede taşıyordu —
+  // iki yandaki sütunlar kırpılıyor, kartların yarısı görünmüyordu (kullanıcı
+  // bildirimi: "kartlar tam gözükmüyor"). Sütun sayısı kart okunabilir kalana
+  // kadar azaltılır (6 → 4), geniş ekranda 6 sütun ve 150 px tavan korunur.
+  charSelectLayout() {
+    const SIDE = 24;             // iki yanda kalan güvenli boşluk (dünya px)
+    const GAP = 10, GAP_Y = 10;
+    const CARD_H = 186;
+    const CARD_W_MAX = 150;      // tasarım ölçüsü: içerik bu genişlikte tam sığar
+    const CARD_W_MIN = 132;      // altına inince isim/çubuk/ipucu metni sıkışıyor
+    const fit = (n) => Math.min(CARD_W_MAX, (this.W - SIDE * 2 - (n - 1) * GAP) / n);
+    let cols = CS_COLS;
+    let cardW = fit(cols);
+    for (; cols > 3; cols--) {
+      cardW = fit(cols);
+      if (cardW >= CARD_W_MIN) break;
+    }
+    // 4 sütun bile sığmıyorsa 3 sütuna düşülür (en dar dünya: 648 px → 193 px
+    // kart, yani okunabilirlik yeniden sağlanır).
+    if (cols === 3) cardW = fit(3);
+    cardW = Math.floor(cardW);
+    return { cols, cardW, cardH: CARD_H, gap: GAP, gapY: GAP_Y, perPage: cols * CS_ROWS };
+  }
+
   // Karakter seçim sayfasını sınırlar içinde değiştir
   changeCharPage(dir) {
     if (this.state !== "CHAR_SELECT") return;
-    const totalPages = Math.ceil(CHARACTERS.length / (CS_COLS * CS_ROWS));
+    const totalPages = Math.max(1, Math.ceil(CHARACTERS.length / this.charSelectLayout().perPage));
     this.charPage = Math.max(0, Math.min(this.charPage + dir, totalPages - 1));
   }
 

@@ -2068,6 +2068,36 @@ group("Atölye parça takma");
   try { M.Game.prototype.renderCharSelect.call(cs, ctx2); } catch (e) { csOk = false; console.error(e); }
   check("karakter seçimi parça rozetiyle hatasız çizilir", csOk);
 
+  // Karakter kartları dünya genişliğine uymalı (regresyon): dünya genişliği
+  // pencere oranına göre 648–1620 arasında değişir. Sabit 6 × 150 px grid
+  // (950 px) dar pencerede iki yandan kırpılıyordu — "kartlar tam gözükmüyor".
+  const gridOverflow = [], gridCols = [];
+  for (const w of [648, 700, 800, 900, 960, 1100, 1400, 1620]) {
+    const gs = Object.create(M.Game.prototype);
+    gs.W = w; gs.H = 540;
+    gs.input = { mouseX: -1, mouseY: -1, left: false, right: false, charging: false, power: 0 };
+    gs.renderTimeMs = 0;
+    gs.mode = "computer";
+    gs.playerCount = 2;
+    gs.charSelectPhase = 0;
+    gs.charPage = 0;
+    gs.selectedChars = [];
+    gs.playerControls = ["human", "bot"];
+    gs.profile = pwg.profile;
+    gs.updateHud = () => {};
+    try { M.Game.prototype.renderCharSelect.call(gs, ctx2); } catch (e) { console.error(e); gridOverflow.push("çizim: " + w); }
+    for (const r of gs._cardRects) {
+      if (r.x < -0.5 || r.x + r.w > w + 0.5 || r.y < -0.5 || r.y + r.h > 540 + 0.5) gridOverflow.push(w + "px");
+    }
+    gridCols.push(gs.charSelectLayout().cols);
+  }
+  check("karakter kartları 648–1620 px arasında taşmıyor", gridOverflow.length === 0);
+  check("dar pencerede sütun azalır, geniş pencerede 6'ya döner",
+    gridCols[0] <= 4 && gridCols[gridCols.length - 1] === 6 && gridCols.every((c) => c >= 3 && c <= 6));
+  check("dar pencerede sayfa sayısı artar (34 karakter bölünür)",
+    (() => { const gs = Object.create(M.Game.prototype); gs.W = 648; gs.H = 540;
+      const n = gs.charSelectLayout().perPage; return n >= 6 && n <= 12 && n % 2 === 0; })());
+
   // ── Aksesuar çizimi: parça verilince zenginleşir, verilmeyince birebir korunur ──
   const robotDef = M.CHARACTERS[0];
   const sig = (parts) => {
