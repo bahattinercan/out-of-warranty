@@ -851,9 +851,12 @@ const DATA_CATALOGS = [
   {
     get: () => { try { return PARTS; } catch (e) { return null; } },
     prefix: "part",
+    // `hint` yolu YOK: parça spec'lerinde `hint` alanı tanımlı değil (yalnız
+    // label + desc var, pazar kartı da yalnız bunları okur). Kayıtlı olmayan
+    // alan için anahtar üretmek `part.*.hint` sözlük anahtarlarını zorunlu
+    // kılıyor ve testi kırıyordu (24 kullanılmayan anahtar).
     paths: [
       { key: "label", id: "id", at: ["label"] },
-      { key: "hint", id: "id", at: ["hint"] },
       { key: "desc", id: "id", at: ["desc"] },
     ],
   },

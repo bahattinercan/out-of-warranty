@@ -136,11 +136,14 @@ vm.runInContext(
 );
 const CAT = catSandbox.__CAT;
 check("katalog çeviri alanı üretildi", CAT.entries.length >= 40, `${CAT.entries.length} alan`);
-// Kayıtlı kataloglar: silah 60 + parça 48 + robot 102 + harita 83 + servis 10 = 303
-// (bölge adı bölgeye göre anahtarlanır: 34 harita 9 bölge adını paylaşır, bu yüzden
-// benzersiz anahtar sayısı bakılır).
+// Kayıtlı kataloglar (DATA_CATALOGS): silah 60 + parça 48 + robot 102 +
+// servis 10 + harita 12 + bölge adı 6 = 238. Bölge adı bölgeye göre
+// anahtarlanır (aynı bölgeyi paylaşan haritalar tek anahtar üretir), bu yüzden
+// benzersiz anahtar sayısı bakılır. Parçalarda `hint` alanı yok — katalog
+// yapılandırması yalnız GERÇEKTEN var olan alanları listelemeli, yoksa
+// kullanılmayan sözlük anahtarları zorunlu hâle gelir.
 const uniqueCatKeys = new Set(CAT.entries.map((e) => e.key));
-check("tüm katalog alanları çeviri kapsamında", uniqueCatKeys.size === 262, `${uniqueCatKeys.size} alan`);
+check("tüm katalog alanları çeviri kapsamında", uniqueCatKeys.size === 238, `${uniqueCatKeys.size} alan`);
 const missingCat = CAT.entries.filter((e) => CAT.I18N.en[e.key] === undefined).map((e) => e.key);
 check("her katalog alanı `en` sözlüğünde var", missingCat.length === 0, missingCat.slice(0, 6).join(", "));
 for (const pre of CAT.prefixes) {

@@ -3,6 +3,6 @@
   "private": true,
   "scripts": {
     "models:robots": "node tools/robot-models.js",
-    "verify": "python tests/art-prep.py && node tools/art-gate.js && node tests/robot-rig.js && node tests/run.js && node tests/release.js && node tests/net-game.js && node tools/build.js --dry"
+    "verify": "python tests/art-prep.py && node tools/art-gate.js && node tests/robot-rig.js && node tests/run.js && node tests/i18n.js && node tests/net-integration.js && node tests/release.js && node tests/net-game.js && node tools/build.js --dry"
   }
 }

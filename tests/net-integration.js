@@ -235,7 +235,13 @@ check("yükleme onaylarından sonra iki taraf PLAYING", s.host.phase === I.NET_P
 // ── 2) Tur: misafir atar, host uygular ────────────────────────────────────
 s = handshake(setup());
 check("sıra misafirde", s.hostWorld.turn === 1);
-const shot = playShot(s, 1, -Math.PI / 3, 0.8, "at1");
+/* Atış açısı AŞAĞI DİK (π/2). Neden: arazi her kurulumda rastgele üretiliyor,
+ * yatay/eğik atışta mermi ekran dışına çıkabiliyor ve hiç krater açılmıyordu
+ * (eski açı -π/3 sağ-yukarı gidip x>960'a taşıyor, "arazi oyuldu" kontrolü
+ * "adım 46" ile kırılıyordu). Dik atış kısa sürede zemini oyar; doğrulama
+ * (maske eşitliği, terrainVersion) aynı kod yolunu sınar. */
+const PLUNGE = Math.PI / 2;
+const shot = playShot(s, 1, PLUNGE, 0.8, "at1");
 check("atış simüle edildi ve arazi oyuldu", s.hostWorld.pendingTerrain.length === 0 && s.host.terrainVersion > 0, "adım " + shot.steps);
 check("host arazi değişikliğini yayınladı", s.host.transport.status === I.NET_TRANSPORT_STATUS.OPEN);
 let maskEqual2 = true;
@@ -250,7 +256,7 @@ check("tur sonu durum hash'i aynı", I.netSnapshotHash(I.netCaptureState(s.hostW
 const beforeCount = s.hostWorld.projectiles.length;
 // Aynı komut KİMLİĞİ ve AYNI payload (fingerprint eşleşmeli; farklı payload
 // protokol hatası sayılır ve reddedilir — bu da ayrı sınanır).
-const dupCmd = { kind: I.NET_CMD.RELEASE, chargeId: "at1", weaponId: "bazooka", angle: -Math.PI / 3, power: 0.8 };
+const dupCmd = { kind: I.NET_CMD.RELEASE, chargeId: "at1", weaponId: "bazooka", angle: PLUNGE, power: 0.8 };
 const dupRes = s.host.handleHostMessage(1, msg(I.NET_MSG.CMD, { seq: 3, id: "at1", cmd: dupCmd }));
 const conflictRes = s.host.handleHostMessage(1, msg(I.NET_MSG.CMD, {
   seq: 4, id: "at1", cmd: { kind: I.NET_CMD.RELEASE, chargeId: "at1", weaponId: "bazooka", angle: -1, power: 0.9 },
@@ -264,7 +270,9 @@ s = handshake(setup());
 let hashOk = true, terrainOk = true;
 for (let turn = 0; turn < 5; turn++) {
   const shooter = s.hostWorld.turn;
-  playShot(s, shooter, shooter === 0 ? -Math.PI / 3 : (-Math.PI * 2) / 3, 0.7 + 0.05 * turn, "t" + turn);
+  // Dik atış: rastgele araziye ve açıya bağlı ıskalamayı önler (hasar kontrolü
+  // "canlar düştü" de böylece deterministik olur).
+  playShot(s, shooter, PLUNGE, 0.7 + 0.05 * turn, "t" + turn);
   s.host.endTurn(s.hostWorld.turn);            // kurallar sırayı çevirir
   s.host.broadcastState(I.netCaptureState(s.hostWorld, { tick: turn + 1, includeBuild: false }));
   const h = I.netSnapshotHash(I.netCaptureState(s.hostWorld, { includeBuild: false }));
