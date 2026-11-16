@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<base href="../">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Krater görünümü sondası</title>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <div id="app">
+    <div id="stage">
+      <header id="hud">
+        <div class="center">
+          <div id="turn-banner">Sıra: -</div>
+          <div id="wind-indicator" role="status" aria-live="polite">Rüzgar: -</div>
+          <button id="fullscreen-btn" title="Tam ekran (F)" data-i18n-title="hud.fullscreen.title">⛶ <span data-i18n="hud.fullscreen">Tam Ekran</span></button>
+          <button id="quit-btn" title="Menüye dön (Esc)" data-i18n-title="hud.quit.title">⏏ <span data-i18n="hud.quit">Çıkış</span></button>
+        </div>
+      </header>
+
+      <div id="audio-control" role="group" aria-label="Ses ayarları">
+        <button id="mute-btn" type="button" title="Sesi kapat (M)" aria-label="Sesi kapat" aria-pressed="false">
+          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+            <path d="M11 5 6 9H3v6h3l5 4Z" />
+            <path class="sound-waves" d="M15 8a6 6 0 0 1 0 8m3-11a10 10 0 0 1 0 14" />
+            <path class="sound-off" d="m16 9 6 6m0-6-6 6" />
+          </svg>
+          <span id="mute-label">Ses</span>
+        </button>
+        <input id="volume-slider" type="range" min="0" max="100" step="1" value="100" aria-label="Ses düzeyi" />
+        <output id="volume-value" for="volume-slider">100%</output>
+      </div>
+
+      <canvas id="game" width="960" height="540"></canvas>
+
+      <div id="power-bar" class="hidden">
+        <div id="power-fill"></div>
+        <div id="power-marker" class="hidden" title="Son atış gücü"></div>
+      </div>
+
+      <div id="storage-warning" class="hidden" role="status" aria-live="polite"></div>
+
+      <div id="overlay" class="hidden">
+        <div class="overlay-card">
+          <h1 id="overlay-title">Tahsis Tamamlandı</h1>
+          <p id="overlay-sub"></p>
+          <div id="overlay-reward" class="hidden" role="status"></div>
+          <div class="overlay-actions">
+            <button id="workshop-btn">Atölyeye Git</button>
+            <button id="restart-btn">Tekrar Oyna</button>
+            <button id="menu-btn" class="secondary">Ana Menü</button>
+          </div>
+        </div>
+      </div>
+
+      <footer id="battle-bar" class="hidden">
+        <div id="players" role="list" aria-label="Robotlar"></div>
+        <div id="battle-actions">
+          <button id="weapon-toggle" type="button" title="Silah listesini aç/kapat (1–9)">
+            <span data-i18n="hud.weaponToggle.a">SİLAH</span><span data-i18n="hud.weaponToggle.b">DEĞİŞTİR</span>
+          </button>
+          <button class="act-slot" id="slot-weapon" type="button" data-slot="weapon" title="Seçili silah">
+            <canvas class="slot-icon" width="44" height="44"></canvas>
+            <span class="slot-count"></span><span class="slot-name"></span>
+          </button>
+          <button class="act-slot" id="slot-skill" type="button" data-slot="skill" title="Dahili modül (Q)">
+            <canvas class="slot-icon" width="44" height="44"></canvas>
+            <span class="slot-count"></span><span class="slot-name"></span>
+          </button>
+          <button class="act-slot" id="slot-teleport" type="button" data-slot="teleport" title="Işınlanma Topu">
+            <canvas class="slot-icon" width="44" height="44"></canvas>
+            <span class="slot-count"></span><span class="slot-name"></span>
+          </button>
+          <button class="act-slot" id="slot-hook" type="button" data-slot="hook" title="Kanca">
+            <canvas class="slot-icon" width="44" height="44"></canvas>
+            <span class="slot-count"></span><span class="slot-name"></span>
+          </button>
+        </div>
+      </footer>
+
+      <div id="weapon-panel" class="hidden">
+        <div id="weapon-bar"></div>
+        <div id="weapon-desc"></div>
+      </div>
+
+    </div>
+
+  </div>
+
+  <!-- Klasik scriptler: file:// üzerinden çift tıklayınca çalışır -->
+  <script src="js/i18n.js"></script>
+  <script src="js/portal.js"></script>
+  <script src="js/audio.js"></script>
+  <script src="js/characters.js"></script>
+  <script src="js/progression.js"></script>
+  <script src="js/profile.js"></script>
+  <script src="js/parts.js"></script>
+  <script src="js/market.js"></script>
+  <script src="js/assets-manifest.js"></script>
+  <script src="js/assets.js"></script>
+  <script src="js/maps.js"></script>
+  <script src="js/skills.js"></script>
+  <script src="js/skill-fx.js"></script>
+  <script src="js/robots.js"></script>
+  <script src="js/terrain.js"></script>
+  <script src="js/weapons.js"></script>
+  <script src="js/entity.js"></script>
+  <script src="js/projectile.js"></script>
+  <script src="js/ai.js"></script>
+  <script src="js/net/protocol.js"></script>
+  <script src="js/net/transport.js"></script>
+  <script src="js/net/state.js"></script>
+  <script src="js/net/session.js"></script>
+  <script src="js/net/adapter.js"></script>
+  <script src="js/online-lobby.js"></script>
+  <script src="js/game.js"></script>
+
+<script>
+// Krater sondası: savaş sahnesi kurar, araziye delik açar ve deliğin içinde
+// NE göründüğünü pikselle ölçer. Amaç: "mermiyle vurulmuş yerler saydam
+// görünüyor" bildiriminin kaynağını ayırmak (gökyüzü mü, arka plan katmanı mı).
+window.addEventListener("DOMContentLoaded", () => {
+  const canvas = document.getElementById("game");
+  const game = new Game(canvas);
+  game.selectedChars = CHARACTERS.slice(0, 2);
+  // ?map=<indeks> ile farklı tema sınanır (krater kesiti her zeminde okunmalı).
+  const mapIdx = Math.max(0, Math.min(MAPS.length - 1, Number(new URLSearchParams(location.search).get("map")) || 0));
+  game.selectedMap = MAPS[mapIdx];
+  game.playerControls = ["human", "bot"];
+  game.mode = "computer";
+  game.startGame();
+  game.updateHud();
+  game.render();
+
+  const t = game.terrain;
+  const W = game.W;
+  const holes = [W * 0.30, W * 0.5, W * 0.70].map((hx) => {
+    const sy = t.surfaceBelow(hx, 0);
+    t.destroy(hx, sy + 26, 30);
+    t.destroy(hx + 30, sy + 14, 20);
+    return { x: hx, y: sy + 26 };
+  });
+
+  const sample = (wx, wy) => {
+    const ctx = canvas.getContext("2d");
+    const sx = Math.round(wx * game._scaleX), sy = Math.round(wy * game._scaleY);
+    const d = ctx.getImageData(Math.min(sx, canvas.width - 1), Math.min(sy, canvas.height - 1), 1, 1).data;
+    return [d[0], d[1], d[2], d[3]];
+  };
+  const fmt = (c) => `rgba(${c.join(",")})`;
+
+  game.render();
+  const withBackdrop = holes.map((h) => sample(h.x, h.y));
+  const skyRef = sample(W * 0.5, 40);
+  const groundRef = sample(W * 0.5, game.H - 20);
+
+  // Arka plan katmanlarını kaldır: delik saf gökyüzünü mü gösteriyor?
+  const savedBackdrop = window.drawBackdrop;
+  const savedClouds = window.drawClouds;
+  window.drawBackdrop = () => {};
+  window.drawClouds = () => {};
+  game.render();
+  const noBackdrop = holes.map((h) => sample(h.x, h.y));
+  window.drawBackdrop = savedBackdrop;
+  window.drawClouds = savedClouds;
+  game.render();
+
+  const rows = [
+    `harita: ${MAPS[mapIdx].label || MAPS[mapIdx].id}`,
+    `gökyüzü referansı: ${fmt(skyRef)}`,
+    `zemin referansı:   ${fmt(groundRef)}`,
+    ...holes.map((h, i) =>
+      `delik ${i + 1} (${Math.round(h.x)},${Math.round(h.y)}): arka planlı ${fmt(withBackdrop[i])} · arka plansız ${fmt(noBackdrop[i])}`),
+  ];
+  // Kapı kararı: krater arka planı GÖSTERMEMELİ (arka planlı ≈ arka plansız)
+  // ve zeminden/gökyüzünden koyu olmalı. Aksi hâlde "saydam krater" hatası geri
+  // gelmiştir ("mermiyle vurulmuş yerler saydam görünüyor" bildirimi).
+  const lum = (c) => 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2];
+  const verdicts = holes.map((h, i) => {
+    const a = withBackdrop[i], b = noBackdrop[i];
+    const leak = Math.abs(lum(a) - lum(b)) > 6;
+    const dark = lum(a) < lum(groundRef) - 8 && lum(a) < lum(skyRef) + 8;
+    return `delik ${i + 1}: sızıntı ${leak ? "VAR ✗" : "yok ✓"} · koyu ${dark ? "✓" : "✗"}`;
+  });
+  const ok = verdicts.every((v) => !v.includes("✗"));
+  rows.push("", (ok ? "PASS ✓ kraterler opak ve koyu" : "FAIL ✗ krater hâlâ saydam/parlak"), ...verdicts);
+  const box = document.createElement("pre");
+  box.id = "report";
+  box.textContent = rows.join("\n");
+  box.style.cssText = "position:fixed;left:8px;bottom:8px;z-index:99;background:#000000dd;color:#9fd6a8;font:12px monospace;padding:8px;margin:0";
+  document.body.appendChild(box);
+});
+</script>
+
+</body>
+</html>

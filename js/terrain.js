@@ -37,6 +37,10 @@ class Terrain {
     this.canvas.height = height * this.ss;
     this.ctx = this.canvas.getContext("2d");
     this.ctx.scale(this.ss, this.ss);
+    // Oyuk katmanı: arazi oyulunca arka plan sanatı değil koyu toprak kesiti
+    // görünsün diye profilin ALTINA basılan opak katman (buildVoidLayer).
+    this.voidCanvas = null;
+    this.voidCtx = null;
     this.generate();
   }
 
@@ -60,6 +64,90 @@ class Terrain {
     this.gaps = [];          // artık uçurum yok
     this.paintTerrain(heights);
     this.paintLayoutGeometry();
+    this.buildVoidLayer();
+  }
+
+  /* ── Oyuk katmanı (krater/tünel kesiti) ──────────────────────────────────
+   * Neden var: `destroy()` pikselleri `destination-out` ile TAMAMEN siler, yani
+   * delik alfa 0 olur ve arkasındaki her şey görünür. Arka planda ufuk haze'i
+   * (drawBackdrop > _drawHaze) zeminden ~3 kat parlak olduğu için krater
+   * "saydam, parlayan yama" gibi okunuyordu (ölçüm: zemin rgb(35,26,26),
+   * delik rgb(103,67,53); kullanıcı bildirimi "vurulan yerler saydam").
+   * Çözüm: maskeden türetilen profilin altına OPAK koyu katman basmak. Oyulan
+   * yer artık arka planı değil koyu toprağı gösterir; kraterin gökyüzüne taşan
+   * üst dilimi doğal olarak gökyüzü kalır (patlama ağzı).
+   * Profil MASKEDEN okunur (netHeightsFromMask ile aynı kural): tünel/mağara
+   * bir sütunu tamamen boşalttıysa o sütuna oyuk basılmaz, gökyüzüne koyu
+   * şerit düşmez. Görsel katman olduğu için maske/hash/protokole dokunmaz. */
+  _maskHeights() {
+    const { w, h, solid } = this;
+    const heights = new Array(w);
+    for (let x = 0; x < w; x++) {
+      let top = h;
+      for (let y = 0; y < h; y++) {
+        if (solid[y * w + x]) { top = y; break; }
+      }
+      heights[x] = top;
+    }
+    return heights;
+  }
+
+  buildVoidLayer() {
+    const { w, h, ss } = this;
+    if (!this.voidCanvas) {
+      this.voidCanvas = document.createElement("canvas");
+      this.voidCanvas.width = w * ss;
+      this.voidCanvas.height = h * ss;
+      this.voidCtx = this.voidCanvas.getContext("2d");
+      this.voidCtx.scale(ss, ss);
+    }
+    const ctx = this.voidCtx;
+    const dirt = this.theme.dirt;
+    ctx.clearRect(0, 0, w, h);
+    const g = ctx.createLinearGradient(0, 0, 0, h);
+    g.addColorStop(0, _shade(dirt, -0.62));
+    g.addColorStop(1, _shade(dirt, -0.90));
+    ctx.fillStyle = g;
+    const heights = this._maskHeights();
+    for (let x = 0; x < w; x++) {
+      const top = Math.max(0, Math.floor(heights[x]));
+      if (top < h) ctx.fillRect(x, top, 1, h - top);
+    }
+    // Kesit katmanları: oyuğun arka duvarında yatay toprak şeritleri okunsun
+    // (düz siyah daire yerine "kazılmış toprak" hissi). Gradient koyu olduğu
+    // için şeritler AÇIK tonlardan seçilir; koyu şerit görünmezdi.
+    ctx.fillStyle = _shadeA(dirt, 0.16, 0.34);
+    ctx.fillRect(0, h * 0.70, w, 7);
+    ctx.fillRect(0, h * 0.87, w, 5);
+    ctx.fillStyle = _shadeA(dirt, -0.10, 0.30);
+    ctx.fillRect(0, h * 0.79, w, 3);
+    this.voidProfile = heights;
+  }
+
+  /* Oyulan kenara toprak kesiti duvarı basar: açılan deliğin çevresinde kesim
+   * gölgesi + taze toprak şeridi + sönümlenen dış bant. `source-atop` kullanılır
+   * → yalnız KALAN arazi piksellerine dokunur; silinmiş delik ve gökyüzü
+   * etkilenmez (boya deliğin içine taşamaz). Deterministik: rastgelelik yok,
+   * çevrimiçi iki taraf aynı görüntüyü üretir. */
+  paintCutBands(ctx, shapes) {
+    const dirt = this.theme.dirt;
+    // Bantlar ince tutulur: kalın halka "gözlük" gibi duruyordu (görsel kontrol).
+    // Sıra: kesim gölgesi (deliğin hemen dışı) → kırılmış toprak → dışa sönüm.
+    const bands = [
+      { d: 1.0, w: 2.5, color: _shadeA(dirt, -0.55, 0.75) },
+      { d: 3.6, w: 3.0, color: _shadeA(dirt, 0.10, 0.28) },
+      { d: 7.5, w: 4.0, color: _shadeA(dirt, -0.22, 0.18) },
+    ];
+    ctx.save();
+    ctx.globalCompositeOperation = "source-atop";
+    for (const b of bands) {
+      ctx.lineWidth = b.w;
+      ctx.strokeStyle = b.color;
+      ctx.beginPath();
+      for (const shape of shapes) shape(ctx, b.d + b.w / 2);
+      ctx.stroke();
+    }
+    ctx.restore();
   }
 
   // Her maçta farklı, eğlenceli arazi: yumuşak tepeler + rastgele karakter
@@ -212,7 +300,8 @@ class Terrain {
     }
 
     // Tünel boşlukları, ana yüzey çizildikten sonra gerçekten silinir. Böylece
-    // görüntü ile çarpışma maskesi aynı üst-alt yolu gösterir.
+    // görüntü ile çarpışma maskesi aynı üst-alt yolu gösterir. Delik koyu oyuk
+    // katmanını gösterir (buildVoidLayer) ve kenarına toprak kesiti basılır.
     for (const spec of layout.cuts || []) {
       const r = this.layoutRect(spec);
       ctx.save();
@@ -225,6 +314,10 @@ class Terrain {
       ctx.lineWidth = 4;
       ctx.strokeRect(r.x + 2, r.y + 2, Math.max(1, r.w - 4), Math.max(1, r.h - 4));
       ctx.restore();
+      // Kraterlerle aynı kesit dili: tünel ağzında da toprak katmanları.
+      this.paintCutBands(ctx, [
+        (c, d) => c.rect(r.x - d, r.y - d, r.w + d * 2, r.h + d * 2),
+      ]);
     }
 
     // Buz kırığı: kesitin iki duvarına katman ve çatlak çizgileri ekle. Maske
@@ -409,6 +502,45 @@ class Terrain {
     return len ? { x: nx / len, y: ny / len } : { x: 0, y: -1 };
   }
 
+  /* Krater iç duvarı — "toprak kesiti". Çemberin ZEMİN İÇİNDE kalan dilimine
+   * (ilk yüzeyin altına) satır satır koyu toprak + yatay sediment şeritleri
+   * basar; gökyüzüne taşan üst dilim boyanmaz (patlama ağzı gökyüzü kalır).
+   * Satır satır çizilir çünkü clip/Path2D gerekmez (mock ctx testlerinde de
+   * çalışır) ve dolgu yalnız oyulmuş satırlara, yalnız ilk yüzeyin altına düşer. */
+  paintCraterWall(ctx, cx, cy, radius) {
+    const { w, h } = this;
+    const heights = this.voidProfile || this._maskHeights();
+    const dirt = this.theme.dirt;
+    // Derinlik rampası: yüzeye yakın daha açık, dipte neredeyse siyah.
+    const ramp = [];
+    for (let s = 0; s < 6; s++) ramp.push(_shade(dirt, -0.58 - s * 0.06));
+    const seam = _shadeA(dirt, -0.16, 0.42);  // açık sediment şeridi
+    const r2 = radius * radius;
+    const y0 = Math.max(0, Math.ceil(cy - radius));
+    const y1 = Math.min(h - 1, Math.floor(cy + radius));
+    ctx.save();
+    for (let y = y0; y <= y1; y++) {
+      const dy = y - cy;
+      const dx = Math.sqrt(Math.max(0, r2 - dy * dy));
+      if (dx < 0.5) continue;
+      const xa = Math.max(0, Math.ceil(cx - dx));
+      const xb = Math.min(w - 1, Math.floor(cx + dx));
+      if (xb < xa) continue;
+      const depth = Math.min(1, (y - (cy - radius)) / (radius * 2));
+      // Sediment: dünyadaki sabit y hizası (haritanın kendi strata çizgileriyle uyumlu)
+      ctx.fillStyle = y % 11 === 0 ? seam : ramp[Math.min(ramp.length - 1, Math.floor(depth * ramp.length))];
+      // Satırı, ilk yüzeyin altında kalan sütun koşularına böl.
+      let start = -1;
+      for (let x = xa; x <= xb + 1; x++) {
+        const top = x <= xb ? (heights[x] == null ? h : heights[x]) : h + 1;
+        const inGround = x <= xb && y >= Math.floor(top);
+        if (inGround) { if (start < 0) start = x; }
+        else if (start >= 0) { ctx.fillRect(start, y, x - start, 1); start = -1; }
+      }
+    }
+    ctx.restore();
+  }
+
   destroy(cx, cy, radius) {
     /* Çevrimiçi (F3c): yetkili host oymayı kaydederken parametreleri YUVARLAR
      * ve kazımayı da yuvarlanmış değerlerle yapar. Misafir aynı tam sayıları
@@ -434,7 +566,8 @@ class Terrain {
         if (dx * dx + dy * dy <= r2) this.solid[y * w + x] = 0;
       }
     }
-    // Canvas'tan da daireyi sil (boşluk açılır, arkadaki gökyüzü görünür)
+    // Canvas'tan da daireyi sil (boşluk açılır; altındaki KOYU oyuk katmanı —
+    // buildVoidLayer — görünür, arka plan sanatı değil).
     const ctx = this.ctx;
     ctx.save();
     ctx.globalCompositeOperation = "destination-out";
@@ -443,10 +576,18 @@ class Terrain {
     ctx.fill();
     ctx.restore();
 
-
+    // Deliğin çevresine toprak kesiti duvarı (yalnız kalan araziye basılır) ve
+    // deliğin zemin içindeki dilimine katmanlı toprak dolgusu (toprak kesiti).
+    this.paintCraterWall(ctx, cx, cy, radius);
+    this.paintCutBands(ctx, [
+      (c, rr) => c.arc(cx, cy, radius + rr - 0.5, 0, Math.PI * 2),
+    ]);
   }
 
   draw(ctx) {
+    // Oyuk katmanı (opak, koyu) arazi görselinin ALTINA girer: oyulan pikseller
+    // arka planı değil bu katmanı gösterir.
+    if (this.voidCanvas) ctx.drawImage(this.voidCanvas, 0, 0, this.w, this.h);
     // Yüksek çözünürlüklü görsel katmanı mantıksal boyuta ölçekleyerek çiz;
     // ana bağlamın ölçeği bunu ekran boyutuna keskin biçimde büyütür.
     ctx.drawImage(this.canvas, 0, 0, this.w, this.h);

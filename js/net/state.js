@@ -124,6 +124,10 @@ function netApplyTerrain(game, payload) {
   t.solid.set(dec.solid);
   t.version = Number.isInteger(payload.version) ? payload.version : 0;
   if (typeof t.paintTerrain === "function") t.paintTerrain(netHeightsFromMask(t.solid, t.w, t.h));
+  // Görsel oyuk katmanı da host maskesinden kurulmalı: aksi hâlde misafirde
+  // arazi profilinin altındaki koyu katman hostunkinden farklı olur (oyuk
+  // katmanı maskeden türetilir, yerel generate() sonucundan değil).
+  if (typeof t.buildVoidLayer === "function") t.buildVoidLayer();
   return { ok: true, hash: dec.hash };
 }
 

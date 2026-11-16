@@ -18,7 +18,7 @@ const JS_DIR = path.join(__dirname, "..", "js");
 const FILES = ["i18n.js", "version.js", "portal.js", "diagnostics.js", "audio.js", "characters.js", "progression.js", "profile.js", "parts.js", "market.js", "assets-manifest.js", "assets.js", "maps.js", "skills.js", "skill-fx.js", "robots.js", "terrain.js", "weapons.js", "entity.js", "projectile.js", "ai.js", "game.js"];
 const bundle =
   FILES.map((f) => fs.readFileSync(path.join(JS_DIR, f), "utf8")).join("\n;\n") +
-  "\n;globalThis.__M = { CHARACTERS, MAPS, BIOMES, FACTORY_ZONES, PROP_DRAWERS, WEAPONS, SKILL_PROJECTILES, PROJECTILE_SHAPES, SHARED_SHAPES, PROJ_SUBSTEP, PROJ_MAX_SUBSTEPS, useSkill, drawCharExtras, drawRobot, robotMuzzlePoint, robotTopOffset, _rbProportions, RB_GUN_PIVOT_X, RB_GUN_PIVOT_Y, RB_GUN_MUZZLE, RB_VISUAL_SCALE, Entity, Projectile, Explosion, GRAVITY, Game, BotController, AI_LIMITS, aiWorldKey, aiSimulateShot, aiCoarseCandidates, aiPathIsSafe, aiRandom, AI_DIFFICULTY, aiDamageMultiplier, aiAssignDamageScale, aiSelectWeapon, skillConsumesShot, SKILL_SHOT_KINDS, AI_SKILL_REPLACE_SCORE, " +
+  "\n;globalThis.__M = { CHARACTERS, MAPS, BIOMES, FACTORY_ZONES, PROP_DRAWERS, WEAPONS, SKILL_PROJECTILES, PROJECTILE_SHAPES, SHARED_SHAPES, PROJ_SUBSTEP, PROJ_MAX_SUBSTEPS, useSkill, drawCharExtras, drawRobot, robotMuzzlePoint, robotTopOffset, _rbProportions, RB_GUN_PIVOT_X, RB_GUN_PIVOT_Y, RB_GUN_MUZZLE, RB_VISUAL_SCALE, Entity, Projectile, Explosion, GRAVITY, Game, Terrain, BotController, AI_LIMITS, aiWorldKey, aiSimulateShot, aiCoarseCandidates, aiPathIsSafe, aiRandom, AI_DIFFICULTY, aiDamageMultiplier, aiAssignDamageScale, aiSelectWeapon, skillConsumesShot, SKILL_SHOT_KINDS, AI_SKILL_REPLACE_SCORE, " +
   "SKILL_FX_SHAPES, SKILL_FX_KIND_DEFAULT, SKILL_FX_EXTENT, spawnSkillFx, updateSkillFx, drawSkillFx, drawSkillFxIcon, drawSkillAura, SkillFx, " +
   "SERVICE_LEVELS, MAX_SERVICE_XP, MAX_TIER, START_SCRAP, BRANCHES, BRANCH_LABELS, TIER_COSTS, TIER_LEVEL_GATES, REWARD_BASE, DIFFICULTY_MULTIPLIER, levelForXp, xpForLevel, nextLevelXp, levelUpMessage, calculateMatchReward, resolveRobotBuild, upgradeEffectText, robotUpgradeSummary, totalTiers, sanitizeUpgrades, nextUpgradeStep, toSafeInt, defaultProfile, defaultRobotProgress, normalizeProfile, loadProfile, saveProfile, getRobotProgress, grantMatchReward, purchaseUpgrade, PROFILE_KEY, createSessionId, " +
   "AMMO_DEPOT_CAP, AMMO_BULK_QTY, AMMO_BULK_QTY_BIG, AMMO_PRICES, ammoPriceFor, ammoBasePrice, weaponPowerScore, weaponStats, sellableWeapons, sanitizeAmmoDepot, getAmmoDepot, setAmmoDepot, mergeDepots, ammoDepotTotal, buyAmmo, mergeAmmoWithDepot, battleLoad, unspentDepot, settleDepot, weaponById, weaponBattleMax, isSellableWeapon, initialAmmo, " +
@@ -2596,6 +2596,95 @@ group("Maç sonu sonuç kartı");
   check("Tekrar Oyna maçı yeniden başlatır", rg.state === "AIMING" && rg.players.length === 2);
   check("Tekrar Oyna sonuç kartını kapatır", nodes["overlay"].classList.contains("hidden"));
   sandbox.document = prevDoc;
+}
+
+// ── Krater görünümü: oyuk katmanı + toprak kesiti ───────────────────────
+/* Bildirim: "mermiyle vurulmuş yerler saydam görünüyor". Kök neden: `destroy()`
+ * `destination-out` ile pikselleri tamamen siliyor, arkasındaki ufuk haze'i
+ * (zeminden parlak) görünüyordu. Çözüm: maskeden türetilen profilin altına opak
+ * koyu oyuk katmanı (buildVoidLayer) + oyulan kenara `source-atop` toprak
+ * kesiti bantları (paintCutBands). Bu grup ikisini de bekçiler. */
+{
+  group("Krater görünümü — oyuk katmanı ve toprak kesiti");
+  // Gerçek Terrain kursun diye kayıt tutan sahte canvas/context.
+  const recCtx = () => {
+    const rec = { fills: [], rects: [], strokes: [], gco: [], set gcoCur(v) { this._g = v; }, get gcoCur() { return this._g; } };
+    const ctx = {
+      rec,
+      fillStyle: "", strokeStyle: "", lineWidth: 1, globalAlpha: 1, font: "",
+      set globalCompositeOperation(v) { rec.gco.push(v); ctx._gco = v; },
+      get globalCompositeOperation() { return ctx._gco || "source-over"; },
+      save() {}, restore() { ctx._gco = "source-over"; }, clip() {}, scale() {},
+      beginPath() {}, closePath() {}, moveTo() {}, lineTo() {}, arc(...a) { rec.strokes.push({ kind: "arc", a }); },
+      rect(...a) { rec.strokes.push({ kind: "rect", a }); },
+      fill() { rec.fills.push({ gco: ctx.globalCompositeOperation }); },
+      stroke() { rec.strokes.push({ kind: "stroke", gco: ctx.globalCompositeOperation }); },
+      fillRect(...a) { rec.rects.push({ a, gco: ctx.globalCompositeOperation }); },
+      strokeRect() {}, clearRect() { rec.rects.length = 0; },
+      createLinearGradient: () => ({ addColorStop() {} }),
+      createRadialGradient: () => ({ addColorStop() {} }),
+      setLineDash() {}, fillText() {}, measureText: () => ({ width: 0 }),
+    };
+    return ctx;
+  };
+  const canvases = [];
+  const mkCanvas = () => {
+    const c = { width: 0, height: 0, style: {}, ctx: recCtx(), getContext() { return this.ctx; } };
+    canvases.push(c);
+    return c;
+  };
+  const prevDoc = sandbox.document;
+  sandbox.document = { createElement: () => mkCanvas(), getElementById: () => null };
+
+  const flatMap = { id: "test", dirt: "#4a3529", sky: ["#111", "#222"], grassTop: "#3a7", grassDeep: "#285", surface: "grass" };
+  const t = new M.Terrain(120, 80, flatMap);
+  sandbox.document = prevDoc;
+
+  check("oyuk katmanı kuruldu (opak alt katman)", !!t.voidCanvas && !!t.voidCtx,
+    `voidCanvas=${typeof t.voidCanvas}`);
+  const voidCols = t.voidCtx.rec.rects.length;
+  check("oyuk katmanı profilin altını sütun sütun kaplar", voidCols >= t.w,
+    `fillRect=${voidCols}, w=${t.w}`);
+  // Her sütun için oyuk, maskenin İLK katı pikselinden başlamalı (gökyüzüne taşmaz).
+  let voidAligned = true;
+  for (let x = 0; x < t.w; x += 7) {
+    const top = t.voidProfile[x];
+    const firstSolid = (() => { for (let y = 0; y < t.h; y++) if (t.solid[y * t.w + x]) return y; return t.h; })();
+    if (top !== firstSolid) voidAligned = false;
+  }
+  check("oyuk profili maskenin ilk katı pikseliyle birebir", voidAligned);
+
+  // destroy(): oyuk katmanına DOKUNMAZ (krater koyu kalır), araziden siler.
+  const rectsBefore = t.voidCtx.rec.rects.length;
+  const strokesBefore = t.ctx.rec.strokes.filter((s) => s.kind === "stroke").length;
+  const gcoBefore = t.ctx.rec.gco.length;
+  t.destroy(60, 40, 14);
+  check("destroy oyuk katmanını yeniden üretmez (krater koyu kalır)",
+    t.voidCtx.rec.rects.length === rectsBefore);
+  check("destroy deliği yine tamamen siler (destination-out)",
+    t.ctx.rec.gco.slice(gcoBefore).includes("destination-out"));
+  check("destroy oyulan kenara toprak kesiti basar (source-atop)",
+    t.ctx.rec.gco.slice(gcoBefore).includes("source-atop") &&
+    t.ctx.rec.strokes.filter((s) => s.kind === "stroke").length > strokesBefore);
+  check("maske oyuldu (çarpışma tarafı değişti)", t.solid[40 * t.w + 60] === 0);
+
+  // Oyuk katmanı çizim sırası: önce oyuk, sonra arazi görseli.
+  const order = [];
+  const drawCtx = { drawImage: (img) => order.push(img === t.voidCanvas ? "void" : "terrain") };
+  t.draw(drawCtx);
+  check("draw önce oyuk katmanını sonra araziyi çizer", order.join(",") === "void,terrain", order.join(","));
+
+  // Misafir yolu: maske uygulanınca oyuk katmanı host maskesinden yeniden kurulur.
+  sandbox.document = { createElement: () => mkCanvas(), getElementById: () => null };
+  const gt = new M.Terrain(120, 80, flatMap);
+  sandbox.document = prevDoc;
+  gt.solid.fill(0);
+  for (let x = 0; x < gt.w; x++) for (let y = 20; y < gt.h; y++) gt.solid[y * gt.w + x] = 1;
+  const beforeProfile = gt.voidProfile.slice();
+  gt.buildVoidLayer();
+  check("buildVoidLayer maskeden profili yeniden türetir",
+    gt.voidProfile.every((y) => y === 20) && beforeProfile.some((y) => y !== 20),
+    `önce=${beforeProfile[10]}, sonra=${gt.voidProfile[10]}`);
 }
 
 // ── Özet ────────────────────────────────────────────────────────────────
