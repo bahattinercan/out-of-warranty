@@ -281,7 +281,7 @@ The game and repository are proprietary, all rights reserved, as described in th
 - Settings, locale and the player profile are stored in browser local storage.
 - Online lobby uses PeerJS signalling; portal SDKs load only for CrazyGames or Poki builds.
 - Diagnostics are copied to the clipboard only when requested; the game sends no diagnostics.
-- Read [Privacy & Data (Turkish)](./docs/gizlilik-ve-veri.md) for storage keys, deletion steps and publication notes.
+- Read [Privacy & Data (Turkish)](./docs/gizlilik-ve-veri.md) (policy publication address: https://bahattinercan.github.io/out-of-warranty/gizlilik-ve-veri.html; the same text is available in English at https://bahattinercan.github.io/out-of-warranty/privacy-en.html) for storage keys, deletion steps and publication notes.
 
 
 ---
