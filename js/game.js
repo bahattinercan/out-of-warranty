@@ -1683,12 +1683,23 @@ class Game {
       ctx.fillStyle = hovered ? ch.color : _hexA(ch.color, 0.75);
       ctx.fillRect(cx + 6, cyv + 1, cardW - 12, 2);
 
-      drawRobot(ctx, {
-        cx: cx + cardW / 2, cy: cyv + 31, r: 15, facing: 1, charDef: ch,
-        timeMs: this.renderTimeMs || 0, motion: { vx: 0, vy: 0, onGround: true },
-        upgradeVisuals: { attachmentGlow: sanitizeUpgrades(up).module >= 3 },
-        parts: up.loadout,
-      });
+      const cardSplash = typeof assetImage === "function" ? assetImage("splashes/" + ch.id) : null;
+      if (cardSplash) {
+        const splashSize = Math.min(56, cardW - 12, cardH - 36);
+        const splashX = cx + (cardW - splashSize) / 2;
+        const splashY = cyv + 2;
+        ctx.drawImage(cardSplash, splashX, splashY, splashSize, splashSize);
+        ctx.fillStyle = "rgba(8, 12, 18, 0.82)";
+        _csRoundRect(ctx, cx + 4, cyv + 57, cardW - 8, cardH - 60, 3);
+        ctx.fill();
+      } else {
+        drawRobot(ctx, {
+          cx: cx + cardW / 2, cy: cyv + 31, r: 15, facing: 1, charDef: ch,
+          timeMs: this.renderTimeMs || 0, motion: { vx: 0, vy: 0, onGround: true },
+          upgradeVisuals: { attachmentGlow: sanitizeUpgrades(up).module >= 3 },
+          parts: up.loadout,
+        });
+      }
 
       ctx.fillStyle = ch.color;
       ctx.font = uiTextFont(Math.min(12, Math.max(10.5, Math.round(cardW * 0.11))), 700);
@@ -1748,41 +1759,64 @@ class Game {
     // Sağ büyük panel: servis bölmesi — üst kenarında tehlike şeridi.
     _csPanel(ctx, rx, gy, rw, panelH, { accent: "#2a3848", hazardTop: true });
 
-    drawRobot(ctx, {
-      cx: rx + rw / 2, cy: gy + 62, r: def.r * 1.5, facing: 1, charDef: def,
-      timeMs: this.renderTimeMs || 0, motion: { vx: 0, vy: 0, onGround: true },
-      upgradeVisuals: { attachmentGlow: sanitizeUpgrades(up).module >= 3 },
-      parts: up.loadout,
-    });
+    const splash = typeof assetImage === "function" ? assetImage("splashes/" + def.id) : null;
+    const splashW = Math.min(136, Math.max(82, Math.round(rw * 0.32)));
+    const splashX = rx + 8, splashY = gy + 31, splashH = 124;
+    const splashSize = Math.min(splashW, splashH);
+    const splashImageX = splashX + (splashW - splashSize) / 2;
+    const splashImageY = splashY + (splashH - splashSize) / 2;
+    if (splash) {
+      ctx.save();
+      ctx.beginPath();
+      _csRoundRect(ctx, splashImageX, splashImageY, splashSize, splashSize, 5);
+      ctx.clip();
+      ctx.drawImage(splash, splashImageX, splashImageY, splashSize, splashSize);
+      ctx.restore();
+      ctx.strokeStyle = "rgba(143, 217, 196, 0.58)";
+      ctx.lineWidth = 1;
+      _csRoundRect(ctx, splashImageX, splashImageY, splashSize, splashSize, 5);
+      ctx.stroke();
+    } else {
+      drawRobot(ctx, {
+        cx: rx + splashW / 2 + 8, cy: gy + 80, r: def.r * 1.5, facing: 1, charDef: def,
+        timeMs: this.renderTimeMs || 0, motion: { vx: 0, vy: 0, onGround: true },
+        upgradeVisuals: { attachmentGlow: sanitizeUpgrades(up).module >= 3 },
+        parts: up.loadout,
+      });
+    }
+    const infoX = splashX + splashW + 12;
+    const infoW = Math.max(80, rx + rw - infoX - 8);
     ctx.fillStyle = "#eef5ff";
-    ctx.font = uiTitleFont(Math.min(18, Math.max(15, Math.round(rw * 0.045))));
-    ctx.textAlign = "center"; ctx.textBaseline = "top";
-    ctx.fillText(t("workshop.robotMeta", "{label} · {role}", { label: def.label, role: def.role }), rx + rw / 2, gy + 100);
+    ctx.font = uiTitleFont(Math.min(18, Math.max(13, Math.round(infoW * 0.075))));
+    ctx.textAlign = "left"; ctx.textBaseline = "top";
+    ctx.fillText(t("workshop.robotMeta", "{label} · {role}", { label: def.label, role: def.role }), infoX, gy + 40, infoW);
 
     ctx.fillStyle = "#ffd166";
-    ctx.font = uiTextFont(Math.min(13, Math.max(11, Math.round(rw * 0.032))), 700);
+    ctx.font = uiTextFont(Math.min(13, Math.max(9, Math.round(infoW * 0.047))), 700);
     ctx.fillText(t("workshop.serviceLevel", "Servis Seviyesi {level}{suffix}", {
       level,
       suffix: nextXp != null ? ` — ${up.xp} / ${nextXp} XP` : t("workshop.masterService", " — Usta Servis"),
-    }), rx + rw / 2, gy + 124);
+    }), infoX, gy + 65, infoW);
 
     const barPad = Math.max(14, Math.round(rw * 0.05));
     const barX = rx + barPad, barW = rw - barPad * 2, barY = gy + 144;
+    const heroBarX = infoX, heroBarW = infoW, heroBarY = gy + 91;
     ctx.fillStyle = "#1e2a38";
-    ctx.fillRect(barX, barY, barW, 7);
+    ctx.fillRect(heroBarX, heroBarY, heroBarW, 7);
     ctx.fillStyle = "#63e6be";
-    ctx.fillRect(barX, barY, barW * xpFrac, 7);
+    ctx.fillRect(heroBarX, heroBarY, heroBarW * xpFrac, 7);
 
     // Hurda bakiyesi: satın alma sonrası kısa süre vurgulanır.
     const fxT = this.workshopFx ? this.workshopFx.t : WS_FX_DURATION;
     const pulse = Math.max(0, 1 - fxT / WS_FX_DURATION);
     ctx.fillStyle = `rgba(255,228,94,${0.75 + 0.25 * pulse})`;
-    ctx.font = uiTitleFont(Math.round(Math.min(15, Math.max(12, rw * 0.033)) + 3 * pulse));
-    ctx.fillText(t("common.scrap", "Hurda: {scrap}", { scrap }), rx + rw / 2, barY + 14);
+    ctx.font = uiTitleFont(Math.round(Math.min(15, Math.max(11, infoW * 0.055)) + 3 * pulse));
+    ctx.textAlign = "left";
+    ctx.fillText(t("common.scrap", "Hurda: {scrap}", { scrap }), infoX, gy + 105, infoW);
     if (level >= 4) {
       ctx.fillStyle = "#8fa8ba";
-      ctx.font = uiTextFont(Math.min(10, Math.max(9, Math.round(rw * 0.024))));
-      ctx.fillText(t("workshop.stats", "Maç {matches} • Galibiyet {wins}", { matches: up.stats.matches, wins: up.stats.wins }), rx + rw / 2, barY + 36);
+      ctx.font = uiTextFont(Math.min(10, Math.max(8, Math.round(infoW * 0.036))));
+      ctx.fillText(t("workshop.stats", "Maç {matches} • Galibiyet {wins}", { matches: up.stats.matches, wins: up.stats.wins }), infoX, gy + 125, infoW);
     }
 
     // Mod sekmeleri (sağ panelin tepesi): GELİŞTİRME ↔ PARÇALAR. İki modda da
@@ -3665,7 +3699,7 @@ class Game {
   _applyModule() {
     const kind = this.active.skillKind;
     if (useSkill(this.active, this)) {
-      SFX.skill(kind);
+      SFX.skill(kind, this.active.skillId);
       // Hasar veren modül turun atış hakkını doldurur: bu tur artık ateş
       // edilemez, sıra fizik yatıştıktan sonra biter.
       if (skillConsumesShot(kind)) this.spendSkillShot(this.active);
@@ -3901,8 +3935,15 @@ class Game {
   // Harita seçiminde geri: karakter seçimine (P2 yeniden seçer) dön.
   mapBack() {
     this.state = "CHAR_SELECT";
-    this.charSelectPhase = this.selectedChars.length - 1; // son oyuncu yeniden seçsin
-    this.selectedChars[this.charSelectPhase] = null;
+    const botsAutoSelect = this.mode === "computer" &&
+      this.playerControls[0] === "human" && this.playerControls.slice(1).includes("bot");
+    if (botsAutoSelect) {
+      this.charSelectPhase = 0;
+      this.selectedChars.fill(null);
+    } else {
+      this.charSelectPhase = this.selectedChars.length - 1; // son oyuncu yeniden seçsin
+      this.selectedChars[this.charSelectPhase] = null;
+    }
     this.selectedMap = null;
     this.charPage = 0;
     this.updateHud();
@@ -4001,7 +4042,7 @@ class Game {
     if (this.onlineGuest) {
       const r = Math.max(1, Math.round(spec.radius));
       this.explosions.push(new Explosion(x, y, r));
-      SFX.explosion(r);
+      SFX.explosion(r, spec);
       this.triggerScreenShake(Math.min(1.0, r / 45 * 0.55));
       return;
     }
@@ -4012,7 +4053,7 @@ class Game {
 
     this.terrain.destroy(x, y, radius);
     this.explosions.push(new Explosion(x, y, radius));
-    SFX.explosion(radius);
+    SFX.explosion(radius, spec);
     this.triggerScreenShake(Math.min(1.0, radius / 45 * 0.55));
 
     let dmgMult = this._shooterDamageMult(shooter);
@@ -4235,7 +4276,6 @@ class Game {
     }
     if (alive.length <= 1) {
       this.state = "GAMEOVER";
-      SFX.win();
       // Maç bitti: kullanılmayan satın alınmış mermi envantere geri yazılır
       // (ödül yazımından önce; ikisi de aynı profil nesnesini güncelliyor).
       this._settleAmmoDepot();
@@ -4245,6 +4285,9 @@ class Game {
       const humanIdx = this.matchProgress ? this.matchProgress.humanIndex : 0;
       const humanPlayer = this.players[humanIdx];
       const result = winner ? (winner === humanPlayer ? "win" : "loss") : "draw";
+      if (result === "win") SFX.win();
+      else if (result === "loss") SFX.lose();
+      else SFX.draw();
       if (result === "win" && humanPlayer && this.combatStats) {
         if (humanPlayer.hp <= humanPlayer.maxHp * 0.20) {
           this.combatStats.clutch = true;
@@ -4870,14 +4913,13 @@ class Game {
     const accLvl = levelForAccountXp(accXp);
     const scrap = this.profile ? this.profile.scrap : 0;
     const nxtXp = nextAccountLevelXp(accLvl);
-    ctx.textAlign = "right";
+    ctx.textAlign = "center";
     ctx.textBaseline = "top";
-    ctx.font = uiTitleFont(13, 700);
+    ctx.font = uiTextFont(10, 700);
     ctx.fillStyle = "#ffd166";
-    ctx.fillText(`🔩 ${scrap} Hurda`, W - 18, 14);
-    ctx.font = uiTextFont(11, 700);
+    ctx.fillText(`🔩 ${scrap} Hurda`, W / 2 - 82, 72);
     ctx.fillStyle = "#63e6be";
-    ctx.fillText(`Hesap Sv. ${accLvl}${nxtXp != null ? ` (${accXp}/${nxtXp} XP)` : ""}`, W - 18, 32);
+    ctx.fillText(`Hesap Sv. ${accLvl}${nxtXp != null ? ` · ${accXp}/${nxtXp} XP` : ""}`, W / 2 + 62, 72);
 
     // Başlık aurası
     const tglow = ctx.createRadialGradient(W / 2, 26, 6, W / 2, 26, 200);
@@ -4956,7 +4998,7 @@ class Game {
     const rowsUsed = Math.ceil(pageChars.length / COLS);
     const totalW = colsUsed * CARD_W + (colsUsed - 1) * GAP;
     const startX = (W - totalW) / 2;
-    const startY = 76;
+    const startY = 90;
 
     this._cardRects = [];
 
@@ -4991,20 +5033,33 @@ class Game {
 
       // ── Karakter önizleme ─────────────────────────────────────
       const pcx = cx + CARD_W / 2, pcy = cyv + CHAR_CY;
+      const splash = typeof assetImage === "function" ? assetImage("splashes/" + ch.id) : null;
+      if (splash) {
+        const splashSize = Math.min(64, CARD_W - 28, NAME_Y - 6);
+        const splashX = pcx - splashSize / 2, splashY = cyv + 3;
+        ctx.save();
+        ctx.beginPath();
+        _csRoundRect(ctx, splashX, splashY, splashSize, splashSize, 6);
+        ctx.clip();
+        ctx.drawImage(splash, splashX, splashY, splashSize, splashSize);
+        ctx.restore();
+        ctx.strokeStyle = _hexA(ch.color, 0.75);
+        ctx.lineWidth = 1.5;
+        _csRoundRect(ctx, splashX, splashY, splashSize, splashSize, 6);
+        ctx.stroke();
+      } else {
+        ctx.beginPath(); ctx.arc(pcx, pcy, 24, 0, Math.PI * 2);
+        ctx.fillStyle = ch.color + "1a"; ctx.fill();
+        ctx.beginPath(); ctx.arc(pcx, pcy, 19, 0, Math.PI * 2);
+        ctx.fillStyle = ch.color + "2e"; ctx.fill();
 
-      ctx.beginPath(); ctx.arc(pcx, pcy, 24, 0, Math.PI * 2);
-      ctx.fillStyle = ch.color + "1a"; ctx.fill();
-      ctx.beginPath(); ctx.arc(pcx, pcy, 19, 0, Math.PI * 2);
-      ctx.fillStyle = ch.color + "2e"; ctx.fill();
-
-      drawRobot(ctx, {
-        cx: pcx, cy: pcy, r: ch.r, facing: 1, charDef: ch,
-        timeMs: this.renderTimeMs || 0,
-        motion: { vx: 0, vy: 0, onGround: true },
-        // Karakter seçimi: takılı parçalar rozetle birlikte robotta da görünür
-        // (oyuncu ne aldığını seçim ekranında görsün).
-        parts: getRobotProgress(this.profile, ch.id).loadout,
-      });
+        drawRobot(ctx, {
+          cx: pcx, cy: pcy, r: ch.r, facing: 1, charDef: ch,
+          timeMs: this.renderTimeMs || 0,
+          motion: { vx: 0, vy: 0, onGround: true },
+          parts: getRobotProgress(this.profile, ch.id).loadout,
+        });
+      }
 
       // ── İsim + servis seviyesi ─────────────────────────────────
       // "Sv." rozeti sağ üst köşede (isim satırından ayrı): ikisi aynı
@@ -5254,18 +5309,35 @@ class Game {
           return;
         }
         this.selectedChars[this.charSelectPhase] = rect.ch;
-        if (this.charSelectPhase < this.selectedChars.length - 1) {
-          this.charSelectPhase++;   // sıradaki oyuncu seçsin
+        this.autoSelectBotRobots(rect.ch);
+        const nextPhase = this.selectedChars.findIndex((selected) => !selected);
+        if (nextPhase >= 0) {
+          this.charSelectPhase = nextPhase;   // yerel maçta sıradaki insan oyuncu seçsin
           this.charPage = 0;        // ilk sayfadan başlasın
           this.updateHud();
         } else {
-          // Tüm oyuncular seçti → harita seçim ekranına geç (kendi haritası sayfasına git)
+          // İnsanlar ve otomatik seçilen botlar hazır → harita seçimine geç.
           this.state = "MAP_SELECT";
           this.gotoOwnMapPage();
           this.updateHud();
         }
         return;
       }
+    }
+  }
+
+  autoSelectBotRobots(humanRobot) {
+    if (this.mode !== "computer" || !Array.isArray(this.playerControls)) return;
+    const botSlots = [];
+    for (let i = 0; i < this.playerControls.length; i++) {
+      if (this.playerControls[i] === "bot") botSlots.push(i);
+    }
+    if (!botSlots.length) return;
+
+    const available = CHARACTERS.filter((robot) => robot !== humanRobot);
+    for (const slot of botSlots) {
+      const choiceIndex = Math.floor(Math.random() * available.length);
+      this.selectedChars[slot] = available.splice(choiceIndex, 1)[0];
     }
   }
 

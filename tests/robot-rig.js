@@ -18,11 +18,13 @@ const context = () => {
   const stack = [];
   const arcs = [];
   const images = [];
+  const imageDraws = [];
   const point = (x, y) => ({ x: matrix[0] * x + matrix[2] * y + matrix[4], y: matrix[1] * x + matrix[3] * y + matrix[5] });
   return new Proxy({
     point, arcs,
     images,
-    drawImage(image) { images.push(image.id); },
+    imageDraws,
+    drawImage(image, ...args) { images.push(image.id); imageDraws.push({ id: image.id, args }); },
     save() { stack.push(matrix.slice()); },
     restore() { matrix = stack.pop(); },
     translate(x, y) { const p = point(x, y); matrix[4] = p.x; matrix[5] = p.y; },
@@ -39,6 +41,15 @@ const context = () => {
   });
 };
 
+const armLines = [], armJoints = [];
+const armContext = new Proxy({
+  lineTo(x, y) { armLines.push([x, y]); },
+  arc(x, y, radius) { armJoints.push({ x, y, radius }); },
+}, { get: (target, key) => target[key] || noop, set: (target, key, value) => { target[key] = value; return true; } });
+sandbox._rbArm(armContext, 0, 0, 12, 0, 1, 2, "#e8a020", { elbow: { x: 6, y: 4 } });
+assert.ok(armLines.length >= 12, "robot kolları iki zırh segmenti ve kenar çizgileriyle çizilmeli");
+assert.equal(armJoints.length, 3, "omuz, dirsek ve bilek mafsalları çizilmeli");
+
 const originalHand = sandbox._rbHand;
 let hands = [];
 sandbox._rbHand = (ctx, x, y, angle, size, color, grip) => {
@@ -52,6 +63,8 @@ for (const charDef of CHARACTERS) {
   sandbox.drawRobot(ctx, { charDef, r: charDef.r, aim: -0.6, facing: 1 });
   assert.ok(ctx.images.includes("robot-models/" + charDef.id + "-body"), charDef.label + ": özel gövde SVG'si kullanılmalı");
   assert.ok(ctx.images.includes("robot-models/" + charDef.id + "-head"), charDef.label + ": özel kafa SVG'si kullanılmalı");
+  const headDraw = ctx.imageDraws.find(draw => draw.id === "robot-models/" + charDef.id + "-head");
+  assert.equal(headDraw.args[2], charDef.r * 1.1 * 2, charDef.label + ": splash oranına uygun büyük kafa kullanılmalı");
   assert.equal(hands.filter(hand => hand.grip).length, 2,
     charDef.label + ": görseller yüklüyken iki el de silahı tutmalı");
 }

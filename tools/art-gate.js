@@ -29,6 +29,7 @@ const BUDGET = [
   { prefix: "tex/", maxKb: 1229, perAsset: 200, label: "doku (10)" },
   { prefix: "ui/", maxKb: 410, perAsset: 120, label: "UI kiti (9)" },
   { prefix: "portraits/", maxKb: 1024, perAsset: 60, label: "portre (34)" },
+  { prefix: "splashes/", maxKb: 2560, perAsset: 100, label: "karakter splash (34)" },
   { prefix: "robots/", maxKb: 3072, perAsset: 100, label: "robot sprite (34)" },
   { prefix: "robot-models/", maxKb: 512, perAsset: 24, label: "robot model parts (68 SVG)" },
   { prefix: "atlases/", maxKb: 2048, perAsset: 512, label: "görsel atlasları" },
@@ -111,6 +112,9 @@ for (const a of assets) {
   }
   if (a.id.startsWith("ui/") || a.id.startsWith("portraits/")) {
     check(`${a.id}: alfa var`, a.alpha === true);
+  }
+  if (a.id.startsWith("splashes/")) {
+    check(`${a.id}: splash must be opaque`, a.alpha === false);
   }
   if (a.id.startsWith("robots/")) {
     check(`${a.id}: alfa var`, a.alpha === true);

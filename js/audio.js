@@ -15,7 +15,7 @@
  *   SFX.jump()           — zıplama
  *   SFX.teleport()       — ışınlanma (Işınlanma Topu varış)
  *   SFX.hook()           — kanca tutunma/atma (Kanca)
- *   SFX.skill(kind)      — karakter yeteneği (türüne göre)
+ *   SFX.skill(kind, id)   — karakter yeteneği (türüne ve modülüne göre)
  *   SFX.hit()            — isabet/hasar
  *   SFX.eliminate()      — bir oyuncu elendi
  *   SFX.weaponSwitch()   — silah değiştir
@@ -23,13 +23,13 @@
  *   SFX.uiClick()        — menü tıklaması
  *   SFX.turn()           — sıra yeni oyuncuya geçti
  *   SFX.windChange(a, b) — rüzgâr yönü/şiddeti değişti
- *   SFX.win()            — oyun bitti / kazanan
+ *   SFX.win()/lose()/draw() — maç sonucu jingle'ı
  *   SFX.musicSync(state) — duruma göre arka plan müziğini aç/kapat/tema değiştir
  *   SFX.musicInfo()      — aktif müzik teması ve çalan nota sayısı (tanı/test)
  *   SFX.toggleMute()     — oyun sesini aç/kapat (durumu döndürür)
  *   SFX.setVolume(0..1)  — oyun ses seviyesini ayarla ve kaydet
  *   SFX.getVolume()      — seçili oyun ses seviyesi (sessizde de korunur)
- *   SFX.toggleMusicMute()— müziği aç/kapat (müzik başlangıçta kapalı gelir)
+ *   SFX.toggleMusicMute()— müziği aç/kapat (yeni profilde müzik açık gelir)
  *   SFX.setMusicVolume(0..1)— müzik seviyesini ayarla ve kaydet
  *   SFX.getMusicVolume() — seçili müzik seviyesi
  *   SFX.isMusicMuted()   — müzik kapalı mı
@@ -43,14 +43,15 @@ const SFX = (() => {
   let volume = 1; // %100 eski ana kazanç olan 0.42'ye karşılık gelir
   let lastAudibleVolume = 1;
 
-  // Arka plan müziği: başlangıçta varsayılan olarak kapalıdır.
-  let musicMuted = true;
-  let musicVolume = 0.8;
-  let lastAudibleMusicVolume = 0.8;
+  // Yeni profilde müzik, ses efektlerinden daha düşük seviyede başlar.
+  let musicMuted = false;
+  let musicVolume = 0.58;
+  let lastAudibleMusicVolume = 0.58;
 
   let disabled = false;
   let resuming = null;
   const sources = new Map(); // kaynak → bağlantıları temizleyen işlev
+  const musicVoiceGains = new Map();
 
   // Tercihleri yükle — file:// üzerinde localStorage çoğu tarayıcıda çalışır
   try { muted = localStorage.getItem("nwo_muted") === "1"; } catch (e) { /* yoksay */ }
@@ -65,7 +66,7 @@ const SFX = (() => {
     const savedMusicMuted = localStorage.getItem("nwo_music_muted");
     if (savedMusicMuted === "0") musicMuted = false;
     else if (savedMusicMuted === "1") musicMuted = true;
-    // Kayıtlı tercih yoksa varsayılan: true (oyun başlangıcında müzik kapalı)
+    // Kayıtlı tercih yoksa müzik açık başlar; kaydedilmiş sessizlik korunur.
   } catch (e) { /* yoksay */ }
 
   try {
@@ -137,6 +138,7 @@ const SFX = (() => {
   function track(source, nodes) {
     const cleanup = () => {
       sources.delete(source);
+      musicVoiceGains.delete(source);
       source.onended = null;
       for (const node of nodes) {
         try { node.disconnect(); } catch (e) { /* bağlantı zaten ayrılmış olabilir */ }
@@ -218,19 +220,21 @@ const SFX = (() => {
   let musicStep = 0;
   let musicNextTime = 0;
 
-  // İki tını: battle (sessiz nabız), menu (sakin pad).
-  // Frekanslar pentatonik C dizisinden; tüm desenler sabit, rastgele yok.
+  // On altı sekizlik adımlı, sabit ve seyrek desenler. Müzik SFX'in arkasında kalır;
+  // frekanslar megafabrika atmosferi için düşük, kirli tınılardan seçilmiştir.
   const MUSIC_THEMES = {
     battle: {
-      bpm: 132,
-      melody: [null, null, null, null], // melodi yok: yalnız nabız
-      bass: { 0: 65.41, 2: 65.41, 4: 98.0, 6: 65.41 }, // düşük kalp atışı
-      pulse: true, // her adımda çok kısık tik
+      bpm: 92,
+      melody: [null, 196, null, 233.08, null, 174.61, null, 261.63, null, 196, null, 155.56, null, 174.61, 233.08, null],
+      bass: [55, null, null, 55, null, null, 73.42, null, 55, null, 55, null, null, 49, null, null],
+      pad: [110, null, null, null, null, null, null, null, 130.81, null, null, null, null, null, null, null],
+      beat: true,
     },
     menu: {
-      bpm: 76,
-      melody: [261.63, 329.63, 392.0, 493.88],
-      bass: { 0: 130.81, 4: 98.0 },
+      bpm: 68,
+      melody: [null, 261.63, null, null, 311.13, null, 233.08, null, null, 196, null, 233.08, null, null, 174.61, null],
+      bass: [65.41, null, null, null, null, null, null, null, 58.27, null, null, null, null, null, null, null],
+      pad: [130.81, null, null, null, null, null, null, null, 116.54, null, null, null, null, null, null, null],
     },
   };
 
@@ -244,20 +248,56 @@ const SFX = (() => {
     if (freq == null) return;
     playMusic(() => {
       const osc = ctx.createOscillator();
+      const filter = ctx.createBiquadFilter();
       const g = ctx.createGain();
       const t0 = time;
       const dur = opts.dur;
       osc.type = opts.type || "triangle";
       osc.frequency.setValueAtTime(freq, t0);
+      filter.type = "lowpass";
+      filter.frequency.setValueAtTime(opts.cutoff || 1900, t0);
       g.gain.setValueAtTime(0.0001, t0);
       g.gain.exponentialRampToValueAtTime(opts.gain, t0 + 0.015);
       g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
-      osc.connect(g).connect(musicGain || master);
-      track(osc, [osc, g]);
+      osc.connect(filter).connect(g).connect(musicGain || master);
+      track(osc, [osc, filter, g]);
+      musicVoiceGains.set(osc, g);
       musicSources.add(osc);
-      osc.onended = () => musicSources.delete(osc);
+      const cleanup = sources.get(osc);
+      osc.onended = () => {
+        musicSources.delete(osc);
+        if (cleanup) cleanup();
+      };
       osc.start(t0);
       osc.stop(t0 + dur + 0.05);
+    });
+  }
+
+  // Filtrelenmiş hava/metal dokusu: ölçü başında kısa, düşük seviyeli bir katman.
+  function musicNoise(time, opts) {
+    playMusic(() => {
+      const src = ctx.createBufferSource();
+      const filter = ctx.createBiquadFilter();
+      const g = ctx.createGain();
+      const dur = opts.dur;
+      src.buffer = noiseBuffer();
+      filter.type = "bandpass";
+      filter.frequency.setValueAtTime(opts.freq, time);
+      filter.Q.value = 0.55;
+      g.gain.setValueAtTime(0.0001, time);
+      g.gain.exponentialRampToValueAtTime(opts.gain, time + 0.04);
+      g.gain.exponentialRampToValueAtTime(0.0001, time + dur);
+      src.connect(filter).connect(g).connect(musicGain || master);
+      track(src, [src, filter, g]);
+      musicVoiceGains.set(src, g);
+      musicSources.add(src);
+      const cleanup = sources.get(src);
+      src.onended = () => {
+        musicSources.delete(src);
+        if (cleanup) cleanup();
+      };
+      src.start(time);
+      src.stop(time + dur + 0.03);
     });
   }
 
@@ -268,24 +308,38 @@ const SFX = (() => {
     if (!spec) return;
     const now = ctx.currentTime;
     if (!(musicNextTime > now - 0.001)) musicNextTime = now + 0.06; // bayat kayıt → güncelle
-    const stepDur = 60 / spec.bpm / 2; // sekizlik nota adımları
+    const stepDur = 60 / spec.bpm / 2;
     while (musicNextTime < now + 0.5) {
       const t = musicNextTime;
-      const barStep = musicStep % 8;
-      const melody = spec.melody[musicStep % spec.melody.length];
-      if (melody != null) musicNote(melody, t, { gain: 0.09, dur: stepDur * 1.2 });
-      const bass = spec.bass[barStep % 8];
-      if (bass != null) musicNote(bass, t, { gain: 0.12, dur: stepDur * 3.2 });
-      if (spec.pulse) musicNote(160, t, { gain: 0.028, dur: 0.05 });
+      const step = musicStep % 16;
+      const melody = spec.melody[step];
+      if (melody != null) musicNote(melody, t, { type: "triangle", gain: 0.12, dur: stepDur * 1.5 });
+      const bass = spec.bass[step];
+      if (bass != null) musicNote(bass, t, { type: "sine", gain: 0.16, dur: stepDur * 3.6 });
+      const pad = spec.pad[step];
+      if (pad != null) {
+        musicNote(pad, t, { type: "sawtooth", gain: 0.028, dur: stepDur * 7.5 });
+        musicNote(pad * 1.5, t, { type: "triangle", gain: 0.016, dur: stepDur * 7.5 });
+      }
+      if (spec.beat && (step === 0 || step === 8)) musicNote(41.2, t, { type: "sine", gain: 0.075, dur: 0.12 });
+      if (step === 0 || step === 8) musicNoise(t, { freq: spec.beat ? 1050 : 520, gain: 0.018, dur: stepDur * 2.5 });
       musicStep++;
       musicNextTime += stepDur;
     }
   }
 
   function stopMusic(clearTheme = true) {
-    if (musicTimer && clearTheme) { clearInterval(musicTimer); musicTimer = null; }
+    if (musicTimer) { clearInterval(musicTimer); musicTimer = null; }
+    const now = ctx ? ctx.currentTime : 0;
     for (const osc of musicSources) {
-      try { osc.stop(); } catch (e) { /* zaten bitmiş olabilir */ }
+      const voiceGain = musicVoiceGains.get(osc);
+      try {
+        if (voiceGain && ctx) {
+          voiceGain.gain.setValueAtTime(Math.max(0.0001, voiceGain.gain.value || 0.0001), now);
+          voiceGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.035);
+          osc.stop(now + 0.04);
+        } else osc.stop();
+      } catch (e) { /* zaten bitmiş olabilir */ }
     }
     musicSources.clear();
     if (clearTheme) musicTheme = null;
@@ -302,7 +356,18 @@ const SFX = (() => {
   }
 
   function play(build) {
+    if (muted || volume === 0 || disabled) return;
     if (!ensure()) return;
+    let activeSfx = 0;
+    for (const source of sources.keys()) if (!musicSources.has(source)) activeSfx++;
+    if (activeSfx >= 40) {
+      for (const [source, cleanup] of sources) {
+        if (musicSources.has(source)) continue;
+        try { source.stop(); } catch (e) { /* zaten bitmiş olabilir */ }
+        cleanup();
+        break;
+      }
+    }
     try { build(); } catch (error) { disable(error); }
   }
 
@@ -378,19 +443,40 @@ const SFX = (() => {
     shoot(spec) {
       const radius = spec && spec.radius ? spec.radius : 40;
       const heavy = Math.max(0, Math.min(1, (radius - 30) / 70)); // 0 hafif → 1 ağır
-      tone({ type: "square", freq: 320 - heavy * 140, freqEnd: 80 - heavy * 30,
-             dur: 0.1 + heavy * 0.06, gain: 0.22, attack: 0.003 });
-      noise({ filter: "highpass", freq: 900 - heavy * 400, dur: 0.07 + heavy * 0.05, gain: 0.16 });
+      const id = spec && typeof spec === "object" ? spec.id : "";
+      if (id === "sniper") {
+        noise({ filter: "highpass", freq: 3200, freqEnd: 1200, dur: 0.075, gain: 0.21 });
+        tone({ type: "sine", freq: 780, freqEnd: 170, dur: 0.11, gain: 0.12, attack: 0.001 });
+      } else if (id === "shotgun") {
+        noise({ filter: "highpass", freq: 2500, freqEnd: 700, dur: 0.12, gain: 0.2 });
+        tone({ type: "square", freq: 190, freqEnd: 65, dur: 0.13, gain: 0.2, attack: 0.001 });
+      } else if (id === "drill") {
+        noise({ filter: "bandpass", freq: 950, freqEnd: 2400, dur: 0.2, gain: 0.18, Q: 1.6 });
+        tone({ type: "sawtooth", freq: 145, freqEnd: 310, dur: 0.14, gain: 0.12 });
+      } else if (["grenade", "grenadetrio", "sticky", "rubber", "rubbertrio", "mine"].includes(id)) {
+        tone({ type: "triangle", freq: 165, freqEnd: 82, dur: 0.17, gain: 0.22, attack: 0.002 });
+        noise({ filter: "lowpass", freq: 520, freqEnd: 180, dur: 0.09, gain: 0.12 });
+      } else {
+        tone({ type: "sawtooth", freq: 250 - heavy * 100, freqEnd: 68 - heavy * 24,
+               dur: 0.13 + heavy * 0.08, gain: 0.19, attack: 0.003 });
+        noise({ filter: "highpass", freq: 1500 - heavy * 700, freqEnd: 400, dur: 0.1 + heavy * 0.05, gain: 0.12 });
+      }
     },
 
     // Patlama: pes "boom" (gürültü + alçalan ton). Yarıçap büyüdükçe daha derin/uzun.
-    explosion(radius) {
+    explosion(radius, spec) {
       const r = radius || 40;
       const big = Math.max(0, Math.min(1, (r - 30) / 90));
       const dur = 0.3 + big * 0.45;
-      noise({ filter: "lowpass", freq: 900 + big * 600, freqEnd: 60, dur, gain: 0.4, Q: 1 });
-      tone({ type: "sine", freq: 150 - big * 60, freqEnd: 38, dur: dur * 0.9, gain: 0.34, attack: 0.004 });
-      tone({ type: "triangle", freq: 90 - big * 30, freqEnd: 30, dur: dur, gain: 0.22, attack: 0.004 });
+      const id = spec && spec.id;
+      const isFire = id === "napalm" || id === "fireball";
+      const isMetal = id === "drill" || id === "sniper";
+      noise({ filter: isFire ? "bandpass" : "lowpass", freq: isFire ? 1100 : 720 + big * 500,
+        freqEnd: isFire ? 2600 : 55, dur: isFire ? dur * 0.7 : dur,
+        gain: isFire ? 0.18 : 0.29, Q: isFire ? 0.8 : 1 });
+      tone({ type: isMetal ? "triangle" : "sine", freq: 138 - big * 72, freqEnd: 34,
+        dur: dur * 0.9, gain: 0.22, attack: 0.004 });
+      if (big > 0.35) noise({ filter: "lowpass", freq: 180, freqEnd: 48, delay: 0.035, dur: dur * 0.8, gain: 0.12 });
     },
 
     // Zıplama: kısa yukarı kayan "boing".
@@ -413,42 +499,51 @@ const SFX = (() => {
     },
 
     // Karakter yeteneği — türüne göre ayrı karakter.
-    skill(kind) {
+    skill(kind, id) {
+      const identity = String(id || kind);
+      let signature = 0;
+      for (let i = 0; i < identity.length; i++) signature = (signature * 31 + identity.charCodeAt(i)) % 13;
+      const shift = (signature - 6) * 9;
+      const skillTone = (opts) => tone({ ...opts, freq: opts.freq + shift,
+        ...(opts.freqEnd == null ? {} : { freqEnd: opts.freqEnd + shift }) });
       switch (kind) {
         case "heal":
-          tone({ type: "sine", freq: 523, dur: 0.16, gain: 0.18 });
-          tone({ type: "sine", freq: 659, dur: 0.16, gain: 0.18, delay: 0.08 });
-          tone({ type: "sine", freq: 784, dur: 0.22, gain: 0.2,  delay: 0.16 });
+          skillTone({ type: "sine", freq: 523, dur: 0.16, gain: 0.14 });
+          skillTone({ type: "triangle", freq: 659, dur: 0.16, gain: 0.13, delay: 0.08 });
+          skillTone({ type: "sine", freq: 784, dur: 0.22, gain: 0.14, delay: 0.16 });
           break;
         case "shield":
         case "damageReduce":
-          tone({ type: "triangle", freq: 880, freqEnd: 1320, dur: 0.22, gain: 0.2 });
-          tone({ type: "sine", freq: 1760, dur: 0.18, gain: 0.1, delay: 0.04 });
+          skillTone({ type: "triangle", freq: 220, freqEnd: 880, dur: 0.32, gain: 0.16 });
+          skillTone({ type: "sine", freq: 1320, dur: 0.18, gain: 0.07, delay: 0.06 });
           break;
         case "nextShot":
-          tone({ type: "square", freq: 440, freqEnd: 880, dur: 0.16, gain: 0.16 });
+          skillTone({ type: "sawtooth", freq: 110, freqEnd: 440, dur: 0.25, gain: 0.14 });
+          noise({ filter: "bandpass", freq: 450, freqEnd: 1300, dur: 0.16, gain: 0.08, delay: 0.08, Q: 2 });
           break;
         case "jump":
         case "glide":
-          tone({ type: "sine", freq: 300, freqEnd: 720, dur: 0.24, gain: 0.2 });
+          skillTone({ type: "sine", freq: 180, freqEnd: 620, dur: 0.22, gain: 0.16 });
+          noise({ filter: "highpass", freq: 1800, freqEnd: 600, dur: 0.13, gain: 0.08 });
           break;
         case "dash":
-          noise({ filter: "bandpass", freq: 600, freqEnd: 2600, dur: 0.26, gain: 0.3, Q: 2 });
+          noise({ filter: "bandpass", freq: 350, freqEnd: 2400, dur: 0.2, gain: 0.18, Q: 1.5 });
           break;
         case "dig":
-          noise({ filter: "lowpass", freq: 500, freqEnd: 120, dur: 0.3, gain: 0.32 });
+          noise({ filter: "lowpass", freq: 900, freqEnd: 100, dur: 0.32, gain: 0.21 });
+          skillTone({ type: "sawtooth", freq: 72, freqEnd: 48, dur: 0.28, gain: 0.12 });
           break;
         case "melee":
-          noise({ filter: "highpass", freq: 1200, dur: 0.09, gain: 0.3 });
-          tone({ type: "square", freq: 200, freqEnd: 70, dur: 0.14, gain: 0.26 });
+          noise({ filter: "highpass", freq: 1900, freqEnd: 800, dur: 0.07, gain: 0.16 });
+          skillTone({ type: "square", freq: 135, freqEnd: 48, dur: 0.16, gain: 0.19 });
           break;
         case "radial":
         case "quake":
-          tone({ type: "sine", freq: 130, freqEnd: 45, dur: 0.4, gain: 0.34 });
-          noise({ filter: "lowpass", freq: 600, freqEnd: 80, dur: 0.4, gain: 0.26 });
+          skillTone({ type: "sine", freq: 92, freqEnd: 36, dur: 0.42, gain: 0.2 });
+          noise({ filter: "lowpass", freq: 520, freqEnd: 72, dur: 0.35, gain: 0.16 });
           break;
         default: // spit vb. ateş sesiyle zaten çalıyor; yine de hafif bir vurgu
-          tone({ type: "triangle", freq: 500, freqEnd: 760, dur: 0.14, gain: 0.16 });
+          skillTone({ type: "triangle", freq: 390, freqEnd: 650, dur: 0.14, gain: 0.12 });
       }
     },
 
@@ -569,6 +664,20 @@ const SFX = (() => {
       tone({ type: "triangle", freq: 1568, dur: 0.4, gain: 0.16, delay: 0.48 });
     },
 
+    // Yenilgi — kısa, alçalan mekanik kapanış.
+    lose() {
+      tone({ type: "triangle", freq: 330, freqEnd: 196, dur: 0.32, gain: 0.14 });
+      tone({ type: "sine", freq: 82, freqEnd: 42, dur: 0.48, gain: 0.18, delay: 0.08 });
+      noise({ filter: "lowpass", freq: 420, freqEnd: 90, dur: 0.35, gain: 0.09, delay: 0.1 });
+    },
+
+    // Beraberlik — iki kısa, çözümsüz metalik nota.
+    draw() {
+      tone({ type: "triangle", freq: 294, dur: 0.2, gain: 0.12 });
+      tone({ type: "triangle", freq: 311, dur: 0.28, gain: 0.1, delay: 0.22 });
+      tone({ type: "sine", freq: 78, dur: 0.3, gain: 0.1, delay: 0.22 });
+    },
+
     isMuted() { return muted || volume === 0; },
     getVolume() { return volume; },
 
@@ -609,7 +718,7 @@ const SFX = (() => {
 
     toggleMusicMute() {
       if (musicVolume === 0) {
-        musicVolume = lastAudibleMusicVolume || 0.8;
+        musicVolume = lastAudibleMusicVolume || 0.58;
         musicMuted = false;
       } else {
         musicMuted = !musicMuted;

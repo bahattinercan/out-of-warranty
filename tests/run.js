@@ -1670,6 +1670,37 @@ group("Mod seçimi ve bot turu entegrasyonu");
   check("bot sayısı sonrası karakter seçimi", menu.state === "CHAR_SELECT" && menu.playerCount === 2);
   check("kontroller insan + bot olarak işaretlenir", menu.playerControls.join(",") === "human,bot");
 
+  const botPick = Object.create(M.Game.prototype);
+  Object.assign(botPick, {
+    state: "CHAR_SELECT", mode: "computer", playerCount: 3, charSelectPhase: 0,
+    selectedChars: [null, null, null], playerControls: ["human", "bot", "bot"],
+    _cardRects: [{ x: 0, y: 0, w: 20, h: 20, ch: M.CHARACTERS[0] }],
+    input: { mouseX: -1, mouseY: -1 }, profile: null, updateHud() {},
+    hitBackButton: () => false,
+  });
+  M.Game.prototype.handleCharSelectClick.call(botPick, 10, 10);
+  check("insan robotunu seçince bot robotları atanır ve harita seçimine geçilir",
+    botPick.state === "MAP_SELECT" && botPick.selectedChars[0] === M.CHARACTERS[0] &&
+    botPick.selectedChars.slice(1).every(Boolean) &&
+    new Set(botPick.selectedChars.map((robot) => robot.id)).size === botPick.selectedChars.length,
+    JSON.stringify({ state: botPick.state, selected: botPick.selectedChars.map((robot) => robot && robot.id) }));
+  M.Game.prototype.mapBack.call(botPick);
+  check("haritadan geri dönünce bot seçimi kullanıcı robotu seçimine döner",
+    botPick.state === "CHAR_SELECT" && botPick.charSelectPhase === 0 &&
+    botPick.selectedChars.every((robot) => robot === null));
+
+  const localPick = Object.create(M.Game.prototype);
+  Object.assign(localPick, {
+    state: "CHAR_SELECT", mode: "local", playerCount: 2, charSelectPhase: 0,
+    selectedChars: [null, null], playerControls: ["human", "human"],
+    _cardRects: [{ x: 0, y: 0, w: 20, h: 20, ch: M.CHARACTERS[0] }],
+    input: { mouseX: -1, mouseY: -1 }, profile: null, updateHud() {},
+    hitBackButton: () => false,
+  });
+  M.Game.prototype.handleCharSelectClick.call(localPick, 10, 10);
+  check("yerel maçta karakter seçimi sıradaki insana geçer",
+    localPick.state === "CHAR_SELECT" && localPick.charSelectPhase === 1 && localPick.selectedChars[1] === null);
+
   const local = Object.create(M.Game.prototype);
   local.updateHud = () => {}; local.beginMode("local"); local.beginCharSelect(6);
   check("yerel mod 2–6 oyunculu akışı korur", local.state === "CHAR_SELECT" && local.playerCount === 6 && local.playerControls.every((c) => c === "human"));

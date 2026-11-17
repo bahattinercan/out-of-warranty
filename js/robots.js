@@ -210,10 +210,34 @@ function robotArmPose(sx, sy, hx, hy, upperLength, lowerLength, bend) {
 }
 
 function _rbArm(ctx, sx, sy, hx, hy, bend, w, color, pose) {
-  // Wild Ones stili: Karakterlerin kolları değil, elleri vardır (floating hands).
-  // Kol boruları, dirsek mafsalları ve omuz bağlantısı çizilmez; eller bağımsız yüzer.
   const arm = pose || robotArmPose(sx, sy, hx, hy, w * 3.8, w * 4.0, bend);
   const ex = arm.elbow.x, ey = arm.elbow.y;
+  const outline = _rbShade(color, -0.58);
+  const plate = (x1, y1, x2, y2, scale) => {
+    const dx = x2 - x1, dy = y2 - y1;
+    const length = Math.hypot(dx, dy);
+    if (length < 0.001) return;
+    const plateLength = Math.max(w * 0.9, length * 0.42);
+    const plateWidth = w * scale;
+    ctx.save();
+    ctx.translate((x1 + x2) / 2, (y1 + y2) / 2);
+    ctx.rotate(Math.atan2(dy, dx));
+    _rbRoundRect(ctx, -plateLength / 2, -plateWidth / 2, plateLength, plateWidth, plateWidth * 0.22);
+    ctx.fillStyle = _rbShade(color, 0.16); ctx.fill();
+    ctx.strokeStyle = outline; ctx.lineWidth = Math.max(0.8, w * 0.12); ctx.stroke();
+    _rbLine(ctx, -plateLength * 0.28, -plateWidth * 0.22, plateLength * 0.24, -plateWidth * 0.22,
+      "rgba(255,255,255,0.48)", Math.max(0.7, w * 0.08));
+    ctx.restore();
+  };
+
+  // İki kaplamalı uzuv ve belirgin mafsallar, eli ve silah tutuşunu değiştirmez.
+  _rbLimb(ctx, sx, sy, ex, ey, w * 0.9, color);
+  _rbLimb(ctx, ex, ey, hx, hy, w * 0.82, _rbShade(color, -0.10));
+  plate(sx, sy, ex, ey, 0.70);
+  plate(ex, ey, hx, hy, 0.62);
+  _rbJoint(ctx, sx, sy, w * 0.53, _rbShade(color, -0.20));
+  _rbJoint(ctx, ex, ey, w * 0.46, color);
+  _rbJoint(ctx, hx, hy, w * 0.32, _rbShade(color, -0.08));
   return { ex, ey };
 }
 
@@ -1673,7 +1697,8 @@ function drawRobot(ctx, options) {
   ctx.rotate(headTilt);
   ctx.scale(props.head, props.head);
   ctx.translate(0, -neckY);
-  const customHead = _rbModelPart(ctx, def.id + "-head", -r * 0.55, -r * 1.42, r * 1.1, r * 0.82);
+  // Splash karakterlerindeki büyük kafa/gövde oranına yaklaşırken boyun pivotunu koru.
+  const customHead = _rbModelPart(ctx, def.id + "-head", -r, -r * 1.70, r * 2, r * 1.60);
   if (!customHead) {
     const hy = _rbHead(ctx, def, r, color, accent);
     _rbHeadGear(ctx, def.attachment, r, accent, hy);

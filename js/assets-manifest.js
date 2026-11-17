@@ -1,12 +1,4 @@
-/* assets-manifest.js — ÜRETİLMİŞ DOSYA, elle düzenleme.
- *
- * Kaynak: `assets/manifest.json`. `node tools/art.js index` bu dosyayı yeniden yazar.
- * `tools/art-gate.js` ikisinin ayrışmadığını denetler.
- *
- * Neden ayrı bir JS dosyası: oyun `file://` üzerinden açılıyor ve `fetch()` orada
- * engelli, yani manifest.json çalışma anında okunamıyor. Yüklenecek yolların
- * senkron bir kopyası gerekiyor; bu dosya o kopyadır (klasik script, global const).
- */
+/* Generated asset index. Source: assets/manifest.json. */
 const ASSET_INDEX = {
   "atlases/parts": "assets/atlases/parts.webp",
   "atlases/projectiles": "assets/atlases/projectiles.webp",
@@ -166,6 +158,40 @@ const ASSET_INDEX = {
   "robots/yarasa": "assets/robots/yarasa.webp",
   "robots/yeti": "assets/robots/yeti.webp",
   "robots/zurafa": "assets/robots/zurafa.webp",
+  "splashes/armadillo": "assets/splashes/armadillo.webp",
+  "splashes/aslan": "assets/splashes/aslan.webp",
+  "splashes/ayi": "assets/splashes/ayi.webp",
+  "splashes/bukalemun": "assets/splashes/bukalemun.webp",
+  "splashes/dino": "assets/splashes/dino.webp",
+  "splashes/ejderha": "assets/splashes/ejderha.webp",
+  "splashes/gergedan": "assets/splashes/gergedan.webp",
+  "splashes/hamster": "assets/splashes/hamster.webp",
+  "splashes/kanguru": "assets/splashes/kanguru.webp",
+  "splashes/kaplan": "assets/splashes/kaplan.webp",
+  "splashes/kedi": "assets/splashes/kedi.webp",
+  "splashes/kirpi": "assets/splashes/kirpi.webp",
+  "splashes/koala": "assets/splashes/koala.webp",
+  "splashes/kokarca": "assets/splashes/kokarca.webp",
+  "splashes/kopek": "assets/splashes/kopek.webp",
+  "splashes/kunduz": "assets/splashes/kunduz.webp",
+  "splashes/kurtadam": "assets/splashes/kurtadam.webp",
+  "splashes/kus": "assets/splashes/kus.webp",
+  "splashes/maymun": "assets/splashes/maymun.webp",
+  "splashes/oklukirpi": "assets/splashes/oklukirpi.webp",
+  "splashes/ordek": "assets/splashes/ordek.webp",
+  "splashes/ornitorenk": "assets/splashes/ornitorenk.webp",
+  "splashes/panda": "assets/splashes/panda.webp",
+  "splashes/penguen": "assets/splashes/penguen.webp",
+  "splashes/rakun": "assets/splashes/rakun.webp",
+  "splashes/sincap": "assets/splashes/sincap.webp",
+  "splashes/sirtlan": "assets/splashes/sirtlan.webp",
+  "splashes/suaygiri": "assets/splashes/suaygiri.webp",
+  "splashes/tavsan": "assets/splashes/tavsan.webp",
+  "splashes/tilki": "assets/splashes/tilki.webp",
+  "splashes/timsah": "assets/splashes/timsah.webp",
+  "splashes/yarasa": "assets/splashes/yarasa.webp",
+  "splashes/yeti": "assets/splashes/yeti.webp",
+  "splashes/zurafa": "assets/splashes/zurafa.webp",
   "tex/cooling-frost": "assets/tex/cooling-frost.webp",
   "tex/copper-plates": "assets/tex/copper-plates.webp",
   "tex/dark-rubber": "assets/tex/dark-rubber.webp",

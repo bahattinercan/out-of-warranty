@@ -59,9 +59,9 @@ class MobileControls {
 
     // Oyun çizim döngüsüne sapan kılavuzunu eklemek için hook
     if (this.game) {
-      const origDraw = this.game.draw.bind(this.game);
-      this.game.draw = () => {
-        origDraw();
+      const origRender = this.game.render.bind(this.game);
+      this.game.render = () => {
+        origRender();
         this.drawGuide(this.game.ctx);
       };
     }

@@ -49,6 +49,37 @@ function defs(robot, part) {
   </defs>`;
 }
 
+function attachmentDetail(robot) {
+  const dark = "#20272d";
+  const accent = robot.accent;
+  if (robot.attachment === "magnet" || robot.attachment === "emp_coil") {
+    return '<path d="M21 40v7q5 7 10 0v-7" fill="none" stroke="url(#' + robot.id + '-body-accent)" stroke-width="3" stroke-linecap="round"/><path d="M19 39v5h5v-5m4 0v5h5v-5" fill="' + accent + '" stroke="' + dark + '" stroke-width="1.5"/>';
+  }
+  if (robot.attachment === "coil" || robot.attachment === "overcoil") {
+    return '<path d="M21 40q-4 3 0 6t0 6m5-12q-4 3 0 6t0 6m5-12q-4 3 0 6t0 6" fill="none" stroke="' + accent + '" stroke-width="2" stroke-linecap="round"/>';
+  }
+  if (["pressure_tank", "coolant_cannon", "coolant_wave", "cryo_ring"].includes(robot.attachment)) {
+    return '<path d="M20 37h6l3 3v9l-3 3h-6z" fill="url(#' + robot.id + '-body-metal)" stroke="' + dark + '" stroke-width="2"/><path d="M21 40h5v3h-5zm0 6h5v3h-5z" fill="' + accent + '"/>';
+  }
+  if (["fan", "vortex_fan"].includes(robot.attachment)) {
+    return '<circle cx="25" cy="44" r="6" fill="url(#' + robot.id + '-body-metal)" stroke="' + dark + '" stroke-width="2"/><path d="M25 39v10m-4-3 8-5m-8 0 8 5" stroke="' + accent + '" stroke-width="2" stroke-linecap="round"/>';
+  }
+  if (["siren", "resonator"].includes(robot.attachment)) {
+    return '<path d="M20 39q6 4 0 8t0 8m4-15q6 4 0 8t0 8" fill="none" stroke="' + accent + '" stroke-width="2" stroke-linecap="round"/>';
+  }
+  if (["welder", "mallet", "hammer", "drill", "clamp", "rotary_arm"].includes(robot.attachment)) {
+    const marks = {
+      welder: "M20 38l7 7-7 7m6-7h6",
+      clamp: "M20 38v14m0-12 8-4m-8 12 8 4",
+      drill: "M19 40h9l4 5-4 5h-9z",
+      rotary_arm: "M20 39l6 5-4 7 7 2",
+    };
+    const mark = marks[robot.attachment] || "M20 39h9v10h-9zM24.5 35v4";
+    return '<path d="' + mark + '" fill="none" stroke="' + accent + '" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>';
+  }
+  return "";
+}
+
 function shellParts(robot, index) {
   const shape = bodyForms[robot.body] || bodyForms.compact;
   const stripeY = 31 + (index % 4) * 3;
@@ -67,6 +98,7 @@ function shellParts(robot, index) {
   } else if (robot.locomotion === "rotors") {
     specialty = '<path d="M27 24h-9v-8h9M83 24h9v-8h-9" fill="none" stroke="#242b31" stroke-width="4"/><path d="M12 14h22M76 14h22" stroke="#a8dfff" stroke-width="2"/>';
   }
+  specialty += attachmentDetail(robot);
   const chest = robot.face === "gauge" || robot.attachment.includes("tank")
     ? '<circle cx="55" cy="44" r="10" fill="#252e34" stroke="#161b1f" stroke-width="3"/><path d="M55 44l5-6" stroke="#ffcf5d" stroke-width="2"/><circle cx="55" cy="44" r="2" fill="#e8ecee"/>'
     : `<path d="M34 ${stripeY}h43v5H34z" fill="${robot.accent}" stroke="#20272d" stroke-width="1.5"/>`;
@@ -111,7 +143,7 @@ function headParts(robot, index) {
       ? '<circle cx="55" cy="40" r="15" fill="url(#' + robot.id + '-head-glass)" stroke="#11171b" stroke-width="4"/><path d="M45 43a11 11 0 0 1 20 0" fill="none" stroke="url(#' + robot.id + '-head-accent)" stroke-width="4"/><path d="M55 40l7-8" stroke="#fff" stroke-width="2"/>'
       : robot.face === "warning_led"
         ? '<path d="M38 34h34v17H38z" fill="#252d32" stroke="#151a1e" stroke-width="3"/><circle cx="46" cy="42" r="4" fill="#ff4545"/><circle cx="57" cy="42" r="4" fill="currentColor"/><circle cx="67" cy="42" r="4" fill="#ff4545"/>'
-        : '<path d="M34 34h42v16H34z" fill="url(#' + robot.id + '-head-glass)" stroke="#11171b" stroke-width="3"/><path d="M40 42h12m7 0h12" stroke="url(#' + robot.id + '-head-accent)" stroke-width="5" stroke-linecap="round"/><circle cx="45" cy="39" r="1.5" fill="#fff"/><circle cx="64" cy="39" r="1.5" fill="#fff"/>';
+        : '<path d="M34 34h42v16H34z" fill="url(#' + robot.id + '-head-glass)" stroke="#11171b" stroke-width="3"/><path d="M45 37v10m19-10v10" stroke="url(#' + robot.id + '-head-accent)" stroke-width="6" stroke-linecap="round"/><path d="M44 37h2m17 0h2" stroke="#fff" stroke-opacity=".8" stroke-width="1.5" stroke-linecap="round"/>';
   const mouth = '<path d="M42 57h26" stroke="#181e23" stroke-width="4" stroke-linecap="round"/><path d="M44 56h21" stroke="#ffffff" stroke-opacity=".38" stroke-width="1"/>';
   const shellHighlight = '<path d="M39 20h33l4 8" fill="none" stroke="#ffffff" stroke-opacity=".34" stroke-width="2" stroke-linecap="round"/><circle cx="35" cy="33" r="2" fill="#d5dde0"/><circle cx="75" cy="33" r="2" fill="#d5dde0"/>';
   return `<path d="M31 29 35 18h40l7 12-4 29H34z" fill="url(#${robot.id}-head-shell)" stroke="#181e23" stroke-width="5" stroke-linejoin="round"/>${headFeatures(robot, index)}<path d="M34 32h42v20H34z" fill="url(#${robot.id}-head-glass)" stroke="#11171b" stroke-width="2.5" stroke-linejoin="round"/>${visor}${mouth}${shellHighlight}<path d="M53 18V11h8" fill="none" stroke="#252d32" stroke-width="3"/><circle cx="63" cy="11" r="3" fill="url(#${robot.id}-head-accent)" stroke="#181e23" stroke-width="2"/>`;

@@ -57,7 +57,8 @@ const fakeGame = {
     jump: function() { this.jumped = true; return true; },
     muzzle: () => ({ x: 215, y: 290 }),
   },
-  draw: function() {},
+  ctx: {},
+  render: function() { this.rendered = true; },
   pointerWorld: (t) => ({ x: t.clientX, y: t.clientY }),
   releaseFire: function() { this.fired = true; },
   cancelCharge: function() { this.cancelled = true; },
@@ -66,6 +67,8 @@ const fakeGame = {
 
 ctrl.init(fakeGame);
 check("Dokunmatik cihazda etkinleşti", ctrl.enabled === true);
+fakeGame.render();
+check("Oyun çizim döngüsü render kancasından geçiyor", fakeGame.rendered === true);
 
 // ── 3) Sapan (Slingshot) Açı ve Güç Matematiği ───────────────────────────────
 // Başlangıç: (300, 300). Geriye çekme: (200, 300) -> sola doğru 100px çekildi

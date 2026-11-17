@@ -40,7 +40,7 @@
           <output id="volume-value" for="volume-slider">100%</output>
         </div>
         <div class="audio-row" id="music-row">
-          <button id="music-mute-btn" type="button" title="Müziği aç" data-i18n-title="hud.music.on" aria-label="Müziği aç" data-i18n-aria="hud.music.on" aria-pressed="true">
+          <button id="music-mute-btn" type="button" title="Müziği kapat" data-i18n-title="hud.music.off" aria-label="Müziği kapat" data-i18n-aria="hud.music.off" aria-pressed="false">
             <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
               <path d="M9 18V5l12-2v13" />
               <circle cx="6" cy="18" r="3" />
@@ -49,8 +49,8 @@
             </svg>
             <span id="music-mute-label" data-i18n="hud.music.label">Müzik</span>
           </button>
-          <input id="music-volume-slider" type="range" min="0" max="100" step="1" value="0" aria-label="Müzik düzeyi" data-i18n-aria="hud.music.volume" />
-          <output id="music-volume-value" for="music-volume-slider">0%</output>
+          <input id="music-volume-slider" type="range" min="0" max="100" step="1" value="58" aria-label="Müzik düzeyi" data-i18n-aria="hud.music.volume" />
+          <output id="music-volume-value" for="music-volume-slider">58%</output>
         </div>
       </div>
 
@@ -135,12 +135,12 @@
                 <div class="settings-row">
                   <label for="st-music-slider" data-i18n="settings.audio.musicVolume">Müzik Seviyesi</label>
                   <div class="settings-control-group">
-                    <input id="st-music-slider" type="range" min="0" max="100" step="1" value="0" aria-label="Müzik seviyesi" data-i18n-aria="settings.audio.musicVolume" />
-                    <output id="st-music-val">0%</output>
+                    <input id="st-music-slider" type="range" min="0" max="100" step="1" value="58" aria-label="Müzik seviyesi" data-i18n-aria="settings.audio.musicVolume" />
+                    <output id="st-music-val">58%</output>
                   </div>
                 </div>
                 <div class="settings-actions-row">
-                  <button id="st-music-mute-btn" type="button" class="settings-btn" data-i18n="settings.audio.musicUnmute">Müziği Aç</button>
+                  <button id="st-music-mute-btn" type="button" class="settings-btn" data-i18n="settings.audio.musicMute">Müziği Kapat</button>
                 </div>
               </div>
             </div>

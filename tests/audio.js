@@ -91,7 +91,7 @@ test("tüm efektler geçerli parametrelerle planlanır ve kaynaklar tamamlanınc
   const t = setup();
   for (const w of t.WEAPONS) { t.SFX.shoot(w); t.SFX.explosion(w.radius); }
   for (const k of ["heal", "shield", "damageReduce", "nextShot", "jump", "glide", "dash", "dig", "melee", "radial", "quake", "spit"]) t.SFX.skill(k);
-  for (const f of ["jump", "hit", "eliminate", "weaponSwitch", "partMount", "uiClick", "turn", "win"]) t.SFX[f]();
+  for (const f of ["jump", "hit", "eliminate", "weaponSwitch", "partMount", "uiClick", "turn", "win", "lose", "draw"]) t.SFX[f]();
   t.SFX.windChange(-2, 3.5);
   t.SFX.windChange(3, -1.5);
   assert.equal(t.contexts.length, 1);
@@ -209,21 +209,22 @@ test("kaydedilmiş sıfır/sessizlik, geçersiz değerler ve seviye sınırları
 
 test("ses kaydırıcısının tuşları yürüme/atış başlatmaz; M kısayolu çalışır", () => {
   const t = setup(); const handlers = {};
-  t.sandbox.window.addEventListener = (name, fn) => { handlers[name] = fn; };
+  t.sandbox.window.addEventListener = (name, fn) => { (handlers[name] ||= []).push(fn); };
   t.sandbox.document = { getElementById: () => null };
   const g = Object.create(t.Game.prototype);
   g.canvas = { addEventListener() {} }; g.input = { left: false, right: false };
   g.state = "AIMING"; g.turn = 0; g.players = [{ control: "human" }]; g.updateMuteButton = () => {};
   let shots = 0; g.startCharge = g.releaseFire = () => shots++;
   g.bindInput();
+  const dispatch = (name, e) => (handlers[name] || []).forEach(fn => fn(e));
   const event = key => ({ key, code: key === " " ? "Space" : key, target: { closest: () => true }, preventDefault() {} });
   for (const key of ["ArrowLeft", "ArrowRight", " ", "1", "q", "w"]) {
-    handlers.keydown(event(key)); handlers.keyup(event(key));
+    dispatch("keydown", event(key)); dispatch("keyup", event(key));
   }
   assert.equal(shots, 0); assert(!g.input.left && !g.input.right);
-  handlers.keydown(event("m")); assert(t.SFX.isMuted());
+  dispatch("keydown", event("m")); assert(t.SFX.isMuted());
   const human = event("ArrowRight"); human.target.closest = () => null;
-  handlers.keydown(human); assert(g.input.right);
+  dispatch("keydown", human); assert(g.input.right);
 });
 
 test("HUD ses yüzdesi ve erişilebilir sessiz durumu birlikte güncellenir", () => {
@@ -259,18 +260,29 @@ for (const kind of ["yetenek", "zehir", "ateş"]) {
   });
 }
 
-test("müzik başlangıçta kapalı gelir ve gameplay sesinden ayrıdır", () => {
+test("yeni profilde müzik dengeli seviyede açık başlar ve gameplay sesinden ayrıdır", () => {
   const t = setup();
-  assert.equal(t.SFX.isMusicMuted(), true, "müzik başlangıçta kapalı olmalı");
+  assert.equal(t.SFX.isMusicMuted(), false, "yeni profilde müzik açık olmalı");
+  assert.equal(t.SFX.getMusicVolume(), 0.58);
   assert.equal(t.SFX.isMuted(), false, "gameplay sesi açık olmalı");
   t.SFX.musicSync("MODE_SELECT");
-  assert.equal(t.SFX.musicInfo().running, false, "kapalıyken müzik zamanlanmaz");
+  assert.equal(t.SFX.musicInfo().theme, "menu");
+  assert.equal(t.SFX.musicInfo().running, true, "menü müziği otomatik başlamalı");
   t.SFX.jump();
-  assert.ok(t.sources.length > 0, "oyun efektleri müzik kapalıyken de çalar");
+  assert.ok(t.sources.length > 0, "oyun efektleri müzikle birlikte çalar");
+});
+
+test("kayıtlı müzik sessizliği ve ses seviyesi yeni varsayılanı geçersiz kılar", () => {
+  const t = setup({ musicMuted: true, musicVolume: 0.37 });
+  assert.equal(t.SFX.isMusicMuted(), true);
+  assert.equal(t.SFX.getMusicVolume(), 0.37);
+  t.SFX.musicSync("MODE_SELECT");
+  assert.equal(t.SFX.musicInfo().running, false, "tercih edilen sessizlik korunmalı");
 });
 
 test("oyun sesi ve müzik sesi birbirinden bağımsız ayarlanır ve kaydedilir", () => {
   const t = setup();
+  t.SFX.setMusicMuted(true);
   t.SFX.toggleMusicMute(); // müziği aç
   assert.equal(t.SFX.isMusicMuted(), false);
   assert.equal(t.storage.nwo_music_muted, "0");
@@ -318,6 +330,23 @@ test("müzik: sessizde notaları keser, ses açılınca devam eder", async () =>
   await new Promise((resolve) => setTimeout(resolve, 260));
   assert.ok(t.sources.length > afterMute, "müzik açılınca kaldığı yerden devam eder");
   t.SFX.musicSync("GAMEOVER"); // test sonunda temizle
+});
+
+test("müzik notaları tamamlanınca node bağlantıları temizlenir", () => {
+  const t = setup({ musicMuted: false });
+  t.SFX.musicSync("MODE_SELECT");
+  const musicVoices = t.sources.slice();
+  assert(musicVoices.length > 0);
+  for (const source of musicVoices) source.onended?.();
+  assert(musicVoices.every(source => source.disconnected), "nota node'ları onended sonrasında ayrılmalı");
+  t.SFX.musicSync("GAMEOVER");
+});
+
+test("yoğun SFX akışı eşzamanlı kaynak sayısını sınırlar", () => {
+  const t = setup();
+  for (let i = 0; i < 100; i++) t.SFX.uiClick();
+  const active = t.sources.filter(source => !source.disconnected);
+  assert(active.length <= 40, "aktif efekt sayısı sınır içinde kalmalı");
 });
 (async () => {
   let failed = 0;
