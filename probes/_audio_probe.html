@@ -1,0 +1,548 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<base href="../">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Ses dinleme ve ölçüm sondası</title>
+  <style>
+    :root { color-scheme: dark; }
+    body { margin: 0; padding: 18px 20px 40px; background: #14100f; color: #e8e1d8;
+      font: 14px/1.5 "Segoe UI", system-ui, sans-serif; }
+    h1 { font-size: 18px; margin: 0 0 4px; letter-spacing: .02em; }
+    p.lead { margin: 0 0 16px; color: #a89c8e; max-width: 78ch; }
+    .scenes { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
+    button { font: inherit; padding: 7px 12px; border-radius: 7px; cursor: pointer;
+      border: 1px solid #4a4038; background: #241d19; color: #f0e8de; }
+    button:hover { background: #2f261f; }
+    button.active { border-color: #d98b3a; background: #3a2a1c; }
+    button.ghost { border-style: dashed; }
+    .controls { display: flex; flex-wrap: wrap; gap: 18px; align-items: center;
+      padding: 12px 14px; margin-bottom: 14px; border: 1px solid #3a322b; border-radius: 9px; background: #1b1614; }
+    label { display: flex; gap: 8px; align-items: center; }
+    input[type=range] { width: 140px; }
+    .meters { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-bottom: 14px; }
+    .meter { padding: 9px 11px; border: 1px solid #3a322b; border-radius: 8px; background: #1b1614; }
+    .meter b { display: block; font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: #93867a; }
+    .meter span { font-size: 19px; font-variant-numeric: tabular-nums; }
+    .meter small { color: #8c8073; }
+    .status { min-height: 20px; color: #cbbfae; margin-bottom: 10px; }
+    .status.warn { color: #ffb347; }
+    pre { margin: 0; padding: 12px; background: #100d0c; border: 1px solid #302a24; border-radius: 8px;
+      max-height: 340px; overflow: auto; font-size: 12px; color: #b7ab9c; }
+    .legend { color: #8c8073; font-size: 12px; margin-bottom: 14px; }
+    .legend b { color: #cbbfae; }
+  </style>
+</head>
+<body>
+  <h1>Ses dinleme ve ölçüm sondası</h1>
+  <p class="lead">
+    Gerçek <code>js/audio.js</code> motorunu çalar. Sahneler oyunun temsilî anlarını taklit eder;
+    ölçümler <code>SFX.graph()</code> çıkışına bağlanan analizörden gelir (master sonrası, yani
+    kulaklığa giden miks). Kulaklık ve hoparlörde ayrı ayrı dinle; ölçüm sayıları öznel yargının
+    yerine geçmez.
+  </p>
+
+  <div class="scenes" id="scenes"></div>
+
+  <div class="controls">
+    <button id="stop" class="ghost" type="button">Durdur</button>
+    <label>Ses <input id="sfx-vol" type="range" min="0" max="100" step="1" /> <output id="sfx-out"></output></label>
+    <label>Müzik <input id="music-vol" type="range" min="0" max="100" step="1" /> <output id="music-out"></output></label>
+    <label><input id="mono" type="checkbox" /> Mono simülasyonu (pan kapalı)</label>
+    <button id="copy" type="button">Ölçümü kopyala</button>
+  </div>
+
+  <div class="meters">
+    <div class="meter"><b>Tepe</b><span id="m-peak">—</span><small id="m-peak-sub">dBFS</small></div>
+    <div class="meter"><b>RMS</b><span id="m-rms">—</span><small>dBFS</small></div>
+    <div class="meter"><b>Sol / Sağ</b><span id="m-balance">—</span><small>dB fark</small></div>
+    <div class="meter"><b>Tını merkezi</b><span id="m-centroid">—</span><small>Hz</small></div>
+    <div class="meter"><b>Canlı ses</b><span id="m-voices">0</span><small id="m-priorities">kritik 0 · eylem 0</small></div>
+    <div class="meter"><b>Kırpılma</b><span id="m-clip">0</span><small>örnek &gt; 0.999</small></div>
+  </div>
+
+  <div class="status" id="status">Sahne seçilmedi.</div>
+  <div class="legend">
+    <b>Beklenen:</b> ani seviye sıçraması, klik/pop, uzun kuyruk, tekdüze bas ve kritik sesin
+    kaybolması yok. Kenar patlamaları stereo'da yana, mono simülasyonunda merkeze düşmeli.
+  </div>
+  <pre id="log"></pre>
+
+<script src="js/progression.js"></script>
+<script src="js/weapons.js"></script>
+<script src="js/audio.js"></script>
+<script>
+/* Ses dinleme/ölçüm sondası — bağımlılıksız, oyun dosyalarını olduğu gibi kullanır.
+ * İki mod:
+ *   - Gezinti: düğmelerle sahne çal, ölçümleri canlı izle.
+ *   - Ölçüm: ?measure=1 → temsilî senaryoları sırayla koşar, `window.__measureResult`
+ *     hazır olunca raporu döker. probes/_audio_measure.js bunu headless Chrome'da toplar.
+ */
+(() => {
+  const WEAPON_LIST = (typeof WEAPONS !== "undefined" ? WEAPONS : []);
+  const WORLD_WIDTH = 960;
+  const logEl = document.getElementById("log");
+  const statusEl = document.getElementById("status");
+  const measureMode = new URLSearchParams(location.search).has("measure");
+
+  function log(text) {
+    logEl.textContent += (logEl.textContent ? "\n" : "") + text;
+    logEl.scrollTop = logEl.scrollHeight;
+  }
+  function setStatus(text, warn) {
+    statusEl.textContent = text;
+    statusEl.classList.toggle("warn", !!warn);
+  }
+  const db = (value) => (value > 0 ? 20 * Math.log10(value) : -Infinity);
+  const round = (value, digits = 1) => (Number.isFinite(value) ? Number(value.toFixed(digits)) : null);
+  const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+  // ── Analizör tap'i: kulağa giden miks (SFX + müzik) ────────────────────
+  // `master` SFX'i, `musicGain` müziği doğrudan destination'a bağlar; ölçüm için
+  // ikisini de açıkça 2 kanallı bir monitör düğümünde topluyoruz. Kanalları
+  // explicit yapmak şart: pan uygulanmayan (merkez) sesler mono kalır, splitter
+  // tek başına sağ kanalı boş gösterir (yanlış "tam sol" okuması). Monitör
+  // destination'a BAĞLANMAZ; AnalyserNode otomatik çektiği için graf çalışır.
+  let tap = null;
+  function ensureTap() {
+    if (tap) return tap;
+    SFX.spatialInfo(); // bağlamı tembel kur
+    const graph = SFX.graph();
+    const ctx = graph.context;
+    if (!ctx || !graph.master) return null;
+    const monitor = ctx.createGain();
+    monitor.channelCount = 2;
+    monitor.channelCountMode = "explicit";
+    monitor.channelInterpretation = "speakers";
+    const splitter = ctx.createChannelSplitter(2);
+    const left = ctx.createAnalyser();
+    const right = ctx.createAnalyser();
+    left.fftSize = 2048;
+    right.fftSize = 2048;
+    graph.master.connect(monitor);
+    if (graph.musicGain) graph.musicGain.connect(monitor);
+    monitor.connect(splitter);
+    splitter.connect(left, 0);
+    splitter.connect(right, 1);
+    tap = { ctx, left, right, time: new Float32Array(left.fftSize), freq: new Float32Array(left.frequencyBinCount) };
+    return tap;
+  }
+
+  const meter = { peak: 0, peakL: 0, peakR: 0, sumL: 0, sumR: 0, frames: 0, centroidSum: 0, centroidFrames: 0, clip: 0, maxVoices: 0, priorities: { critical: 0, action: 0, feedback: 0, ui: 0 } };
+  function resetMeter() {
+    Object.assign(meter, { peak: 0, peakL: 0, peakR: 0, sumL: 0, sumR: 0, frames: 0, centroidSum: 0, centroidFrames: 0, clip: 0, maxVoices: 0 });
+    meter.priorities = { critical: 0, action: 0, feedback: 0, ui: 0 };
+  }
+
+  function sampleMeter() {
+    const view = ensureTap();
+    if (!view) return;
+    const { left, right, time, freq } = view;
+    // Tepe HER İKİ kanaldan alınır: yalnız solu okumak sağa panlanmış sesi
+    // "çok kısık" gösterir (yaşandı: x=920 patlaması -45 dBFS okundu).
+    left.getFloatTimeDomainData(time);
+    let peakL = 0, sumL = 0;
+    for (let i = 0; i < time.length; i++) {
+      const value = time[i], abs = Math.abs(value);
+      if (abs > peakL) peakL = abs;
+      if (abs >= 0.999) meter.clip++;
+      sumL += value * value;
+    }
+    right.getFloatTimeDomainData(time);
+    let peakR = 0, sumR = 0;
+    for (let i = 0; i < time.length; i++) {
+      const abs = Math.abs(time[i]);
+      if (abs > peakR) peakR = abs;
+      if (abs >= 0.999) meter.clip++;
+      sumR += time[i] * time[i];
+    }
+    meter.peakL = Math.max(meter.peakL, peakL);
+    meter.peakR = Math.max(meter.peakR, peakR);
+    meter.peak = Math.max(meter.peak, peakL, peakR);
+    meter.sumL += sumL;
+    meter.sumR += sumR;
+    meter.frames += time.length;
+
+    left.getFloatFrequencyData(freq);
+    const binHz = view.ctx.sampleRate / 2 / freq.length;
+    let weight = 0, weighted = 0;
+    for (let i = 1; i < freq.length; i++) {
+      const magnitude = Math.pow(10, freq[i] / 20);
+      weight += magnitude;
+      weighted += magnitude * i * binHz;
+    }
+    if (weight > 1e-6) { meter.centroidSum += weighted / weight; meter.centroidFrames++; }
+
+    const info = SFX.graph();
+    meter.maxVoices = Math.max(meter.maxVoices, info.active);
+    for (const key of Object.keys(meter.priorities)) meter.priorities[key] = Math.max(meter.priorities[key], info.priorities[key]);
+  }
+
+  function snapshot() {
+    const rmsL = meter.frames ? Math.sqrt(meter.sumL / meter.frames) : 0;
+    const rmsR = meter.frames ? Math.sqrt(meter.sumR / meter.frames) : 0;
+    return {
+      peakDb: round(db(meter.peak)),
+      peakLDb: round(db(meter.peakL)),
+      peakRDb: round(db(meter.peakR)),
+      rmsDb: round(db(Math.sqrt((meter.sumL + meter.sumR) / (2 * meter.frames || 1)))),
+      balanceDb: round(db(rmsR) - db(rmsL)),
+      centroidHz: meter.centroidFrames ? round(meter.centroidSum / meter.centroidFrames, 0) : null,
+      clip: meter.clip,
+      maxVoices: meter.maxVoices,
+      maxCritical: meter.priorities.critical,
+      maxAction: meter.priorities.action,
+      rmsL: round(rmsL, 4),
+      rmsR: round(rmsR, 4),
+    };
+  }
+
+  // ── Canlı ölçüm paneli ────────────────────────────────────────────────────
+  const ui = {
+    peak: document.getElementById("m-peak"), rms: document.getElementById("m-rms"),
+    balance: document.getElementById("m-balance"), centroid: document.getElementById("m-centroid"),
+    voices: document.getElementById("m-voices"), priorities: document.getElementById("m-priorities"),
+    clip: document.getElementById("m-clip"),
+  };
+  let panelTimer = null;
+  function startPanel() {
+    if (panelTimer) return;
+    panelTimer = setInterval(() => {
+      sampleMeter();
+      const snap = snapshot();
+      ui.peak.textContent = snap.peakDb == null ? "—" : snap.peakDb.toFixed(1);
+      ui.rms.textContent = snap.rmsDb == null ? "—" : snap.rmsDb.toFixed(1);
+      ui.balance.textContent = snap.balanceDb == null ? "—" : (snap.balanceDb > 0 ? "+" : "") + snap.balanceDb.toFixed(1);
+      ui.centroid.textContent = snap.centroidHz == null ? "—" : String(snap.centroidHz);
+      ui.voices.textContent = String(meter.maxVoices);
+      ui.priorities.textContent = `kritik ${meter.priorities.critical} · eylem ${meter.priorities.action}`;
+      ui.clip.textContent = String(meter.clip);
+    }, 40);
+  }
+  function stopPanel() { if (panelTimer) { clearInterval(panelTimer); panelTimer = null; } }
+
+  // ── Sahne çalıcı ──────────────────────────────────────────────────────────
+  let current = null;
+  function stopScene() {
+    if (!current) return;
+    current.stopped = true;
+    for (const id of current.timers) { clearTimeout(id); clearInterval(id); }
+    current.timers = [];
+    if (current.settle) current.settle();
+    current = null;
+    document.querySelectorAll("#scenes button").forEach((button) => button.classList.remove("active"));
+  }
+
+  // Sahne içi zamanlama: sahne durdurulduysa hiçbir adım çalışmaz.
+  function later(state, ms, fn) {
+    const id = setTimeout(() => { if (!state.stopped) fn(); }, ms);
+    state.timers.push(id);
+  }
+  function loop(state, ms, fn) {
+    const id = setInterval(() => { if (!state.stopped) fn(); }, ms);
+    state.timers.push(id);
+  }
+
+  // Silah listesi: sahne boyunca her silah bir kez ateşlenir + patlar.
+  function runWeapons(state) {
+    let index = 0;
+    const step = () => {
+      if (state.stopped) return;
+      const spec = WEAPON_LIST[index % WEAPON_LIST.length];
+      index++;
+      const x = 60 + ((index * 137) % (WORLD_WIDTH - 120));
+      state.lastLabel = spec.id;
+      setStatus(`Silah ${index}/${WEAPON_LIST.length}: ${spec.id} (x=${Math.round(x)})`);
+      SFX.shoot(spec, { x, width: WORLD_WIDTH });
+      later(state, 380, () => SFX.explosion(spec.radius || 40, spec, { x, width: WORLD_WIDTH }));
+      if (index < WEAPON_LIST.length * 3) later(state, 1000, step);
+    };
+    step();
+  }
+
+  const SCENES = {
+    menu: {
+      title: "Menü bekleme",
+      hint: "Müzik + seyrek arayüz; 2 dakika açık kalma",
+      measureMs: 12000,
+      run(state) {
+        SFX.musicSync("MODE_SELECT");
+        setStatus("Menü bekleme: müzik + seyrek tıklama/silah/parça/rüzgâr.");
+        loop(state, 5000, () => SFX.uiClick());
+        loop(state, 11000, () => SFX.weaponSwitch());
+        loop(state, 17000, () => SFX.partMount());
+        loop(state, 23000, () => SFX.windChange(-2, 2.5));
+        loop(state, 29000, () => SFX.windChange(2.5, -1.5));
+      },
+    },
+    weapons: {
+      title: "Silah çeşitleri",
+      hint: "Her silah bir kez ateş + patlama",
+      measureMs: 4000,
+      run(state) {
+        SFX.musicSync("MODE_SELECT");
+        runWeapons(state);
+      },
+    },
+    dense: {
+      title: "Yoğun patlama",
+      hint: "Eşzamanlı 14 patlama + isabetler",
+      measureMs: 3200,
+      run(state) {
+        SFX.musicSync("AIMING");
+        setStatus("Yoğun patlama: 14 patlama 70 ms arayla, içinde 3 isabet + 1 ölüm.");
+        const radii = [40, 55, 68, 80, 52, 96, 44, 72, 60, 108, 46, 88, 64, 76];
+        radii.forEach((radius, index) => {
+          const x = 40 + ((index * 211) % (WORLD_WIDTH - 80));
+          later(state, index * 70, () => SFX.explosion(radius, { damage: 20 }, { x, width: WORLD_WIDTH }));
+        });
+        later(state, 120, () => SFX.hit());
+        later(state, 200, () => SFX.hit());
+        later(state, 300, () => SFX.hit());
+        later(state, 420, () => SFX.eliminate());
+        later(state, 600, () => SFX.turn());
+      },
+    },
+    hit: {
+      title: "İsabet / ölüm",
+      hint: "Savaş müziği altında isabet ve eliminasyon",
+      measureMs: 3400,
+      run(state) {
+        SFX.musicSync("AIMING");
+        setStatus("İsabet/ölüm: müzik altında hit, hit, eliminate, turn.");
+        later(state, 200, () => SFX.hit());
+        later(state, 900, () => SFX.hit());
+        later(state, 1600, () => SFX.eliminate());
+        later(state, 2400, () => SFX.turn());
+      },
+    },
+    sudden: {
+      title: "Ani ölüm",
+      hint: "Alarm + geri sayım tiki + uzak patlamalar",
+      measureMs: 4200,
+      run(state) {
+        SFX.musicSync("AIMING");
+        setStatus("Ani ölüm: alarm, kritik geri sayım tikleri, aralarda patlama.");
+        SFX.alarm();
+        for (let i = 0; i < 8; i++) later(state, 700 + i * 400, () => SFX.timerTick(true));
+        later(state, 900, () => SFX.explosion(90, { damage: 30 }, { x: 120, width: WORLD_WIDTH }));
+        later(state, 2100, () => SFX.explosion(70, { damage: 20 }, { x: 820, width: WORLD_WIDTH }));
+      },
+    },
+    spatial: {
+      title: "Konum (sol/orta/sağ)",
+      hint: "Aynı patlama soldan, ortadan, sağdan",
+      measureMs: 3600,
+      run(state) {
+        SFX.musicSync("GAMEOVER");
+        setStatus("Konum: sol → orta → sağ patlama. Mono simülasyonunda üçü de merkeze düşmeli.");
+        [[40, 300], [WORLD_WIDTH / 2, 1300], [WORLD_WIDTH - 40, 2300]].forEach(([x, delay]) => {
+          later(state, delay, () => {
+            SFX.explosion(80, { damage: 20 }, { x, width: WORLD_WIDTH });
+            log(`konum x=${Math.round(x)} → pan ${JSON.stringify(SFX.graph().spatial)}`);
+          });
+        });
+      },
+    },
+    result: {
+      title: "Maç sonucu",
+      hint: "Zafer / yenilgi / beraberlik jingle'ı",
+      measureMs: 4200,
+      run(state) {
+        SFX.musicSync("GAMEOVER");
+        setStatus("Maç sonucu: zafer, yenilgi, beraberlik.");
+        later(state, 100, () => SFX.win());
+        later(state, 1400, () => SFX.lose());
+        later(state, 2600, () => SFX.draw());
+      },
+    },
+  };
+
+  function startScene(key) {
+    const scene = SCENES[key];
+    if (!scene) return null;
+    stopScene();
+    ensureTap();
+    startPanel();
+    resetMeter();
+    const state = { key, timers: [], stopped: false };
+    current = state;
+    document.querySelectorAll("#scenes button").forEach((button) => {
+      button.classList.toggle("active", button.dataset.scene === key);
+    });
+    if (!measureMode) SFX.setVolume(SFX.getVolume() || 0.7);
+    log(`▶ ${scene.title}`);
+    scene.run(state);
+    return state;
+  }
+
+  // ── Ölçüm koşusu ──────────────────────────────────────────────────────────
+  async function measureSingle(run, ms) {
+    resetMeter();
+    run();
+    await sleep(ms);
+    return snapshot();
+  }
+
+  async function runMeasure() {
+    const prefs = { sfx: SFX.getVolume(), sfxMuted: SFX.isMuted(), music: SFX.getMusicVolume(), musicMuted: SFX.isMusicMuted() };
+    if (prefs.sfxMuted) SFX.toggleMute();
+    if (prefs.musicMuted) SFX.toggleMusicMute();
+    ensureTap();
+    startPanel();
+    const result = { startedAt: new Date().toISOString(), spatial: SFX.spatialInfo(), scenes: {}, weapons: [], spatialEvents: [], gates: {} };
+    try {
+      for (const [key, scene] of Object.entries(SCENES)) {
+        if (key === "weapons" || key === "spatial") continue; // özel ölçüm
+        startScene(key);
+        const state = current;
+        await sleep(scene.measureMs);
+        stopScene();
+        await sleep(160);
+        result.scenes[key] = snapshot();
+        log(`ölçüm ${key}: tepe ${result.scenes[key].peakDb} dBFS · RMS ${result.scenes[key].rmsDb} dBFS · kırpılma ${result.scenes[key].clip}`);
+        if (state && state.stopped === false) state.stopped = true;
+        await sleep(120);
+      }
+
+      // Yalnız müzik: maskeleme payı için referans.
+      SFX.musicSync("AIMING");
+      result.scenes.musicOnly = await measureSingle(() => {}, 2200);
+      SFX.musicSync("GAMEOVER");
+      await sleep(200);
+
+      // Silah kimlikleri: her silah tek başına ateş + patlama.
+      for (const spec of WEAPON_LIST) {
+        resetMeter();
+        SFX.shoot(spec, { x: WORLD_WIDTH / 2, width: WORLD_WIDTH });
+        await sleep(420);
+        SFX.explosion(spec.radius || 40, spec, { x: WORLD_WIDTH / 2, width: WORLD_WIDTH });
+        await sleep(320);
+        const snap = snapshot();
+        result.weapons.push({ id: spec.id, radius: spec.radius || 40, peakDb: snap.peakDb, centroidHz: snap.centroidHz });
+        await sleep(120);
+      }
+
+      // Konum: her patlama ayrı ölçülür; denge = sağ RMS - sol RMS.
+      for (const x of [40, WORLD_WIDTH / 2, WORLD_WIDTH - 40]) {
+        resetMeter();
+        SFX.explosion(80, { damage: 20 }, { x, width: WORLD_WIDTH });
+        await sleep(900);
+        const snap = snapshot();
+        const total = snap.rmsL + snap.rmsR;
+        result.spatialEvents.push({ x, peakDb: snap.peakDb, peakLDb: snap.peakLDb, peakRDb: snap.peakRDb,
+          balanceDb: snap.balanceDb,
+          panRatio: total > 0 ? round((snap.rmsR - snap.rmsL) / total, 3) : 0 });
+        await sleep(150);
+      }
+
+      // Mono/mobil güvenliği: pan derinliği 0 iken (mono çıkış, mobil sığ miks)
+      // üç konum da merkeze düşmeli. Gerçek motor üzerinde ölçülür.
+      result.monoSpatial = [];
+      SFX.setSpatialDepth(0);
+      for (const x of [40, WORLD_WIDTH / 2, WORLD_WIDTH - 40]) {
+        resetMeter();
+        SFX.explosion(80, { damage: 20 }, { x, width: WORLD_WIDTH });
+        await sleep(900);
+        const snap = snapshot();
+        const total = snap.rmsL + snap.rmsR;
+        result.monoSpatial.push({ x, peakDb: snap.peakDb,
+          panRatio: total > 0 ? round((snap.rmsR - snap.rmsL) / total, 3) : 0 });
+        await sleep(150);
+      }
+      SFX.setSpatialDepth(null);
+    } finally {
+      stopScene();
+      SFX.musicSync("GAMEOVER");
+      // Kullanıcı tercihini sondanın değiştirmesine izin verme.
+      SFX.setVolume(prefs.sfx);
+      if (prefs.sfxMuted && !SFX.isMuted()) SFX.toggleMute();
+      SFX.setMusicVolume(prefs.music);
+      if (prefs.musicMuted && !SFX.isMusicMuted()) SFX.toggleMusicMute();
+      stopPanel();
+    }
+
+    const values = (key) => Object.values(result.scenes).map((scene) => scene[key]).filter((value) => value != null);
+    const maxPeak = Math.max(...values("peakDb"));
+    const minPeak = Math.min(...values("peakDb"));
+    const clip = values("clip").reduce((sum, value) => sum + value, 0);
+    const edges = result.spatialEvents.filter((event) => event.x !== WORLD_WIDTH / 2);
+    const center = result.spatialEvents.find((event) => event.x === WORLD_WIDTH / 2);
+    const centroids = result.weapons.map((weapon) => weapon.centroidHz).filter(Boolean);
+    const densePeak = result.scenes.dense?.peakDb;
+    const singleExplosionPeak = result.spatialEvents[0]?.peakDb;
+    const musicRms = result.scenes.musicOnly?.rmsDb;
+    const musicPeak = result.scenes.musicOnly?.peakDb;
+    const hitPeak = result.scenes.hit?.peakDb;
+    result.gates = {
+      clipFree: clip === 0,
+      peakCeiling: maxPeak != null && maxPeak <= -1,
+      audible: minPeak != null && minPeak >= -45,
+      denseHeadroom: densePeak != null && singleExplosionPeak != null ? round(densePeak - singleExplosionPeak, 1) : null,
+      spatialEdges: edges.every((event) => Math.abs(event.panRatio) >= 0.5),
+      spatialCenter: center ? Math.abs(center.panRatio) <= 0.15 : null,
+      monoSafe: result.monoSpatial.length > 0 && result.monoSpatial.every((event) => Math.abs(event.panRatio) <= 0.05),
+      maskingMarginDb: hitPeak != null && musicRms != null ? round(hitPeak - musicRms, 1) : null,
+      hitOverMusicPeakDb: hitPeak != null && musicPeak != null ? round(hitPeak - musicPeak, 1) : null,
+      weaponCentroidSpread: centroids.length ? round(Math.max(...centroids) / Math.min(...centroids), 2) : null,
+    };
+    result.finishedAt = new Date().toISOString();
+    log("ölçüm tamam: " + JSON.stringify(result.gates));
+    window.__measureResult = result;
+    return result;
+  }
+  window.__audioProbe = { runMeasure, SCENES, snapshot, startScene, stopScene };
+
+  // ── Gezinti bağlantıları ──────────────────────────────────────────────────
+  const scenesEl = document.getElementById("scenes");
+  for (const [key, scene] of Object.entries(SCENES)) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.dataset.scene = key;
+    button.textContent = `${scene.title} — ${scene.hint}`;
+    button.addEventListener("click", () => startScene(key));
+    scenesEl.appendChild(button);
+  }
+  document.getElementById("stop").addEventListener("click", () => {
+    stopScene();
+    SFX.musicSync("GAMEOVER");
+    setStatus("Durduruldu.");
+  });
+
+  const sfxVol = document.getElementById("sfx-vol");
+  const musicVol = document.getElementById("music-vol");
+  const sfxOut = document.getElementById("sfx-out");
+  const musicOut = document.getElementById("music-out");
+  function syncSliders() {
+    sfxVol.value = String(Math.round(SFX.getVolume() * 100));
+    sfxOut.textContent = `${sfxVol.value}%${SFX.isMuted() ? " (sessiz)" : ""}`;
+    musicVol.value = String(Math.round(SFX.getMusicVolume() * 100));
+    musicOut.textContent = `${musicVol.value}%${SFX.isMusicMuted() ? " (kapalı)" : ""}`;
+  }
+  sfxVol.addEventListener("input", () => { SFX.setVolume(Number(sfxVol.value) / 100); sfxOut.textContent = `${sfxVol.value}%`; });
+  musicVol.addEventListener("input", () => { SFX.setMusicVolume(Number(musicVol.value) / 100); musicOut.textContent = `${musicVol.value}%`; });
+  document.getElementById("mono").addEventListener("change", (event) => {
+    SFX.setSpatialDepth(event.target.checked ? 0 : null);
+    setStatus(event.target.checked ? "Mono simülasyonu: pan kapalı, tüm sesler merkezde." : `Otomatik konum: pan derinliği ${SFX.spatialInfo().depth}.`);
+  });
+  document.getElementById("copy").addEventListener("click", () => {
+    const text = JSON.stringify({ spatial: SFX.spatialInfo(), snapshot: snapshot() }, null, 2);
+    navigator.clipboard?.writeText(text).then(() => setStatus("Ölçüm panoya kopyalandı."), () => log(text));
+  });
+
+  ensureTap();
+  syncSliders();
+  startPanel();
+  setStatus(measureMode ? "Ölçüm modu: senaryolar sırayla koşuyor…" : "Hazır. Bir sahne seç (kulaklık ve hoparlörde ayrı dinle).");
+
+  if (measureMode) {
+    // Ölçüm koşusu otomatik başlar; runner `window.__measureResult` bekler.
+    setTimeout(() => { runMeasure().catch((error) => { window.__measureError = String(error && error.stack || error); log("HATA: " + error); }); }, 300);
+  } else {
+    window.addEventListener("pagehide", () => { stopScene(); SFX.musicSync("GAMEOVER"); });
+  }
+})();
+</script>
+</body>
+</html>

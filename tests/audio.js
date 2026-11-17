@@ -10,17 +10,18 @@ const source = ["i18n", "version", "portal", "diagnostics", "audio", "characters
   "\n;globalThis.api = { SFX, Entity, Game, WEAPONS };";
 
 function setup(options = {}) {
-  const sources = [], contexts = [], warnings = [];
+  const sources = [], contexts = [], warnings = [], automation = [];
   const storage = { nwo_muted: options.muted ? "1" : "0" };
   if (options.volume !== undefined) storage.nwo_volume = options.volume;
   if (options.musicMuted !== undefined) storage.nwo_music_muted = options.musicMuted ? "1" : "0";
   if (options.musicVolume !== undefined) storage.nwo_music_volume = String(options.musicVolume);
   let resolveResume, rejectResume;
+  const panners = [];
   const param = () => ({ value: 0,
-    setValueAtTime(v, t) { assert(Number.isFinite(v) && Number.isFinite(t)); this.value = v; },
-    exponentialRampToValueAtTime(v, t) { assert(v > 0 && Number.isFinite(v) && Number.isFinite(t)); },
+    setValueAtTime(v, t) { assert(Number.isFinite(v) && Number.isFinite(t)); this.value = v; automation.push(["set", v, t]); },
+    exponentialRampToValueAtTime(v, t) { assert(v > 0 && Number.isFinite(v) && Number.isFinite(t)); automation.push(["ramp", v, t]); },
   });
-  const node = () => ({ gain: param(), frequency: param(), Q: param(),
+  const node = () => ({ gain: param(), frequency: param(), Q: param(), pan: param(),
     connect() { return this; }, disconnect() { this.disconnected = true; },
   });
   function sound() {
@@ -35,7 +36,10 @@ function setup(options = {}) {
     constructor() {
       if (options.failConstructor) throw new Error("Ses aygıtı kullanılamıyor");
       this.state = options.suspended ? "suspended" : "running";
-      this.currentTime = 10; this.sampleRate = 48000; this.destination = {};
+      this.currentTime = 10; this.sampleRate = 48000; this.destination = {
+        channelCount: options.monoOutput ? 1 : 2,
+        maxChannelCount: options.monoOutput ? 1 : 2,
+      };
       this.resumeCalls = 0; contexts.push(this);
     }
     createGain() {
@@ -45,6 +49,7 @@ function setup(options = {}) {
     createOscillator() { return sound(); }
     createBufferSource() { return sound(); }
     createBiquadFilter() { return node(); }
+    createStereoPanner() { const n = node(); panners.push(n); return n; }
     createBuffer(c, n) { return { getChannelData: () => new Float32Array(n) }; }
     suspend() { this.state = "suspended"; return Promise.resolve(); }
     resume() {
@@ -57,6 +62,8 @@ function setup(options = {}) {
     }
     close() { this.state = "closed"; return Promise.resolve(); }
   }
+  // Mono hoparlör/tek kanal simülasyonu ve panner desteklemeyen tarayıcı:
+  if (options.noPanner) delete AudioContext.prototype.createStereoPanner;
   const sandbox = {
     console: { warn: (...args) => warnings.push(args) },
     localStorage: {
@@ -76,9 +83,12 @@ function setup(options = {}) {
   sandbox.clearInterval = clearInterval;
   sandbox.setTimeout = setTimeout;
   sandbox.clearTimeout = clearTimeout;
-  if (!options.noWindow) sandbox.window = options.noAudio ? {} : { AudioContext };
+  if (!options.noWindow) sandbox.window = options.noAudio ? {} : {
+    AudioContext,
+    matchMedia: (query) => ({ matches: !!options.coarsePointer && query === "(pointer: coarse)" }),
+  };
   vm.runInNewContext(source, sandbox);
-  return { ...sandbox.api, sources, contexts, storage, warnings, sandbox,
+  return { ...sandbox.api, sources, contexts, storage, warnings, automation, sandbox, panners,
     resolveResume: () => resolveResume(), rejectResume: () => rejectResume(Error("İzin yok")),
   };
 }
@@ -95,12 +105,27 @@ test("tüm efektler geçerli parametrelerle planlanır ve kaynaklar tamamlanınc
   t.SFX.windChange(-2, 3.5);
   t.SFX.windChange(3, -1.5);
   assert.equal(t.contexts.length, 1);
-  assert(t.sources.length > 100);
-  for (const s of t.sources) {
-    assert(s.stops[0] > s.startTime);
+  const active = t.sources.filter(source => !source.disconnected);
+  assert(active.length <= 40, "eşzamanlı efekt bütçesi aşılmamalı");
+  assert(active.length >= 36, "kritik rezerv korunurken ses akışı dolu kalmalı");
+  for (const s of t.sources) assert(s.stops.length > 0, "her kaynak ya biter ya bütçe için bırakılır");
+  for (const s of active) {
+    assert(s.stops[0] > s.startTime, "aktif ses planlanan bitişinden önce durdurulmamalı");
     s.onended?.();
     assert(s.disconnected, "Biten ses kaynağı ayrılmalı");
   }
+  assert(t.sources.some(s => s.disconnected && s.stops.at(-1) === 0), "bütçe aşımında kaynak hemen bırakılmalı");
+});
+
+test("silah sesleri spec davranışlarına göre ayrışır ve gürültü tıklamasız başlar", () => {
+  const t = setup();
+  t.SFX.shoot({ id: "custom-borer", radius: 30, drill: true });
+  assert(t.sources.some(source => source.type === "sawtooth"), "matkap spec'i mekanik osilatörü seçmeli");
+  assert(t.automation.some(event => event[0] === "set" && event[1] === 0.0001), "gürültü sıfıra yakın seviyeden başlamalı");
+  assert(t.automation.some(event => event[0] === "ramp" && event[1] === 0.15), "gürültü kısa atakla hedef seviyeye çıkmalı");
+  const utility = setup();
+  utility.SFX.shoot({ id: "custom-tool", hook: true });
+  assert(utility.sources.some(source => source.type === "sine"), "kanca spec'i hafif elektronik tını kullanmalı");
 });
 
 test("sessize almak çalan ve ileriye planlanan efektleri iptal eder", () => {
@@ -138,8 +163,10 @@ test("bekleyen resume tekilleştirilir; sessize alınan eski çağrılar sonrada
 test("resume reddi yakalanır; sonraki etkileşimde yeniden denenebilir", async () => {
   const t = setup({ suspended: true }); t.SFX.uiClick();
   t.rejectResume(); await flush();
+  t.contexts[0].currentTime += 0.05;
   t.SFX.uiClick(); assert.equal(t.contexts[0].resumeCalls, 2);
   t.resolveResume(); await flush();
+  t.contexts[0].currentTime += 0.05;
   t.SFX.uiClick(); assert.equal(t.sources.length, 1);
 });
 
@@ -348,6 +375,147 @@ test("yoğun SFX akışı eşzamanlı kaynak sayısını sınırlar", () => {
   const active = t.sources.filter(source => !source.disconnected);
   assert(active.length <= 40, "aktif efekt sayısı sınır içinde kalmalı");
 });
+test("konumsal ses: sol/orta/sağ pan, ölü bant ve konumsuz merkez", () => {
+  const t = setup();
+  const spec = t.WEAPONS[0];
+  // Her atış iki panner üretir (ton + gürültü); sıra: atış başına 2.
+  t.SFX.shoot(spec, { x: 0, width: 960 });
+  t.SFX.shoot(spec, { x: 480, width: 960 }); // tam merkez → panner bile kurulmaz
+  t.SFX.shoot(spec, { x: 960, width: 960 });
+  assert.equal(t.panners.length, 4, "yalnız yanlardaki atışlar pan düğümü kurmalı");
+  assert(t.panners[0].pan.value < -0.99, "sol kenar tam sola panlanmalı");
+  assert(t.panners[2].pan.value > 0.99, "sağ kenar tam sağa panlanmalı");
+  const dead = setup();
+  dead.SFX.shoot(spec, { x: 470, width: 960 }); // merkeze çok yakın → ölü bant
+  assert.equal(dead.panners.length, 0, "merkez çevresinde pan titrememeli");
+  const none = setup();
+  none.SFX.shoot(spec);
+  assert.equal(none.panners.length, 0, "konum yoksa panner kurulmaz");
+  const bad = setup();
+  bad.SFX.shoot(spec, { x: 500, width: 0 }); // geçersiz genişlik → merkez
+  assert.equal(bad.panners.length, 0, "eksik ölçü merkez miks demektir");
+});
+
+test("mono çıkış ve mobilde merkez/sığ miks güvenli", () => {
+  const mono = setup({ monoOutput: true });
+  assert.equal(mono.SFX.spatialInfo().depth, 0, "mono çıkışta pan derinliği sıfır");
+  assert.equal(mono.SFX.spatialInfo().mono, true);
+  mono.SFX.shoot(mono.WEAPONS[0], { x: 0, width: 960 });
+  assert(mono.sources.length > 0, "mono çıkışta ses çalmayı sürdürmeli");
+  assert(mono.panners.every(panner => panner.pan.value === 0), "mono çıkışta pan uygulanmaz");
+
+  const mobile = setup({ coarsePointer: true });
+  assert.equal(mobile.SFX.spatialInfo().mobile, true);
+  assert(Math.abs(mobile.SFX.spatialInfo().depth - 0.55) < 1e-9, "mobilde sığ panorama");
+  mobile.SFX.shoot(mobile.WEAPONS[0], { x: 960, width: 960 });
+  assert(Math.abs(mobile.panners[0].pan.value - 0.55) < 1e-6, "mobilde kenar bile tam tek kulağa kaçmaz");
+
+  const plain = setup({ noPanner: true });
+  assert.equal(plain.SFX.spatialInfo().panner, false, "panner yoksa bunu bildirmeli");
+  plain.SFX.shoot(plain.WEAPONS[0], { x: 0, width: 960 });
+  assert.equal(plain.panners.length, 0);
+  assert(plain.sources.length > 0, "panner desteklenmese de merkez miks çalar");
+
+  const fixed = setup();
+  assert.equal(fixed.SFX.setSpatialDepth(0.5), 0.5, "sonda derinliği sabitleyebilmeli");
+  assert.equal(fixed.SFX.setSpatialDepth(null), 1, "null otomatik karar geri getirir");
+});
+
+test("patlama ve oyun olayları konum bağlamını sese taşır", () => {
+  const t = setup();
+  t.SFX.explosion(90, { damage: 40 }, { x: 0, width: 960 });
+  assert(t.panners[0].pan.value < -0.99, "patlama sahnenin solundan duyulmalı");
+
+  // Oyun tarafı: misafir patlaması ve Bomba Yağmuru koordinat geçirir.
+  const g = Object.create(t.Game.prototype);
+  g.W = 960; g.explosions = []; g.triggerScreenShake = () => {}; g.onlineGuest = true;
+  const explosions = [];
+  t.SFX.explosion = (radius, spec, spatial) => explosions.push({ radius, spatial });
+  g.explode(480, 120, { radius: 40, damage: 10 });
+  assert.equal(explosions.length, 1);
+  assert.equal(explosions[0].spatial.x, 480);
+  assert.equal(explosions[0].spatial.width, 960);
+
+  const airdrop = Object.create(t.Game.prototype);
+  airdrop.W = 960; airdrop.projectiles = []; airdrop.input = { mouseX: 300 };
+  const shots = [];
+  t.SFX.shoot = (spec, spatial) => shots.push(spatial);
+  airdrop.fireAirdrop({}, { airdropCount: 2, airdropSpread: 10 }, 0.5);
+  assert.equal(shots.length, 1);
+  assert.equal(shots[0].x, 300, "ateş sesi hedef sütunundan gelmeli");
+  assert.equal(shots[0].width, 960);
+});
+
+test("deterministik tını varyasyonu: aynı tohum aynı sonucu verir", () => {
+  const a = setup(); a.SFX.shoot(a.WEAPONS[0], { seed: 4242 });
+  const b = setup(); b.SFX.shoot(b.WEAPONS[0], { seed: 4242 });
+  assert.deepEqual(a.automation, b.automation, "aynı tohum aynı zamanlama ve tınıyı üretmeli");
+
+  const c = setup(); c.SFX.shoot(c.WEAPONS[0], { seed: 777 });
+  assert.notDeepEqual(c.automation, a.automation, "farklı tohum duyulur biçimde farklı olmalı");
+
+  // Seviye değişmez: yalnız frekans/süre/filtre gezinir. Kazanç çarpanları ≤1,
+  // frekanslar >1 olduğundan ramp listesini bu eşikle ayırıyoruz.
+  const peaks = (t) => t.automation
+    .filter(event => event[0] === "ramp" && event[1] <= 1)
+    .map(event => event[1]);
+  assert.deepEqual(peaks(c), peaks(a), "varyasyon kazanç/tepe seviyesini değiştirmemeli");
+
+  // Ardışık olaylar sayaçla ilerler: birebir kopya değil.
+  const d = setup(); d.SFX.shoot(d.WEAPONS[0]); d.SFX.shoot(d.WEAPONS[0]);
+  const half = Math.floor(d.automation.length / 2);
+  assert.notDeepEqual(d.automation.slice(0, half), d.automation.slice(half), "ardışık atışlar aynı tınıyı tekrarlamamalı");
+
+  const probe = setup();
+  for (let seed = 0; seed < 200; seed++) {
+    const shape = probe.SFX.variantInfo(seed);
+    for (const key of ["freq", "dur", "cutoff"]) {
+      assert(shape[key] >= 0.96 - 1e-9 && shape[key] <= 1.04 + 1e-9, `${key} ±%4 aralığında kalmalı`);
+    }
+  }
+  assert.deepEqual(probe.SFX.variantInfo(11), probe.SFX.variantInfo(11));
+  assert.notDeepEqual(probe.SFX.variantInfo(11), probe.SFX.variantInfo(12));
+});
+
+test("ses bütçesi: kritik ses korunur, düşük öncelikli akış elenir", () => {
+  const t = setup();
+  const active = () => t.sources.filter(source => !source.disconnected).length;
+  for (let i = 0; i < 36; i++) t.SFX.weaponSwitch(); // tek katman, ikincil geri bildirim
+  assert.equal(active(), 36);
+  t.SFX.uiClick();
+  assert.equal(active(), 36, "rezerv doluyken arayüz sesi eklenmez");
+  t.SFX.hit();
+  assert.equal(active(), 38, "isabet sesi kritik rezervden yer bulmalı");
+
+  for (let i = 0; i < 3; i++) { t.contexts[0].currentTime += 0.05; t.SFX.hit(); }
+  assert.equal(active(), 40, "bütçe sabit kalmalı");
+  assert(t.sources.some(source => source.disconnected), "bütçe dolunca düşük öncelikli ses bırakılmalı");
+  const info = t.SFX.graph();
+  assert.equal(info.priorities.feedback, 32, "kurbanlar ikincil geri bildirimden seçilmeli");
+  assert.equal(info.priorities.critical, 8, "kritik sesler korunmalı");
+  assert.equal(info.active, 40);
+});
+
+test("düşük öncelikli ses daha önemli sesi düşürmez; kritik selde en eski gider", () => {
+  const t = setup();
+  for (let i = 0; i < 36; i++) t.SFX.weaponSwitch();
+  for (let i = 0; i < 2; i++) { t.contexts[0].currentTime += 0.05; t.SFX.hit(); }
+  assert.equal(t.SFX.graph().active, 40);
+  const dropped = () => t.sources.filter(source => source.disconnected).length;
+  const before = dropped();
+  t.SFX.weaponSwitch();
+  assert.equal(dropped(), before, "özel rezerv doluyken ikincil ses yeni kurban yaratmamalı");
+  assert.equal(t.SFX.graph().priorities.critical, 4, "kritik sesler dokunulmadan kalmalı");
+
+  // Yalnızca kritik sesler varken bütçe dolarsa en eski kritik bırakılır.
+  const flood = setup();
+  for (let i = 0; i < 20; i++) flood.SFX.turn(); // 2 katman × 20 = 40
+  assert.equal(flood.SFX.graph().priorities.critical, 40);
+  flood.SFX.eliminate();
+  assert.equal(flood.SFX.graph().active, 40, "sınır yine 40'ta kalır");
+  assert.equal(flood.SFX.graph().priorities.critical, 40, "yeni kritik bilgi duyulur");
+});
+
 (async () => {
   let failed = 0;
   for (const { name, run } of tests) {

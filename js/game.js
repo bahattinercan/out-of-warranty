@@ -3990,7 +3990,7 @@ class Game {
       this.projectiles.push(new Projectile(m.x, m.y, vx, vy, spec));
     }
 
-    SFX.shoot(spec);
+    SFX.shoot(spec, { x: m.x, width: this.W });
     a.shotWeapon = spec;
     a.weaponRecoil = weaponRig(spec).recoil;
     a.lastShot = { aim: a.aim, power };
@@ -4042,7 +4042,7 @@ class Game {
     if (this.onlineGuest) {
       const r = Math.max(1, Math.round(spec.radius));
       this.explosions.push(new Explosion(x, y, r));
-      SFX.explosion(r, spec);
+      SFX.explosion(r, spec, { x, width: this.W });
       this.triggerScreenShake(Math.min(1.0, r / 45 * 0.55));
       return;
     }
@@ -4053,7 +4053,7 @@ class Game {
 
     this.terrain.destroy(x, y, radius);
     this.explosions.push(new Explosion(x, y, radius));
-    SFX.explosion(radius, spec);
+    SFX.explosion(radius, spec, { x, width: this.W });
     this.triggerScreenShake(Math.min(1.0, radius / 45 * 0.55));
 
     let dmgMult = this._shooterDamageMult(shooter);
@@ -4221,7 +4221,7 @@ class Game {
       const sp = speed * (1 + (Math.random() * 2 - 1) * jitter);
       this.projectiles.push(new Projectile(m.x, m.y, Math.cos(ang) * sp, Math.sin(ang) * sp, spec));
     }
-    SFX.shoot(spec);
+    SFX.shoot(spec, { x: m.x, width: this.W });
     this.state = "PROJECTILE";
   }
 
@@ -5988,7 +5988,7 @@ class Game {
       const vy = 2 + Math.random() * 1.5;            // aşağı doğru başlangıç hızı
       this.projectiles.push(new Projectile(px, -24 - Math.random() * 40, vx, vy, spec));
     }
-    SFX.shoot(spec);
+    SFX.shoot(spec, { x: tx, width: this.W });
     a.lastShot = { aim: a.aim, power };
     this.lastShot = {
       by: a.name, color: a.color, weapon: spec.name, icon: spec.icon,

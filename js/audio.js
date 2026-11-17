@@ -10,8 +10,13 @@
  * isteği tutar; bağlam hazır değilken eski efektleri kuyruğa biriktirmez.
  *
  * Genel API (global `SFX`):
- *   SFX.shoot(spec)      — silah ateşi (spec'e göre tını)
- *   SFX.explosion(radius)— patlama (yarıçapa göre boyut/derinlik)
+ *   SFX.shoot(spec, pos) — silah ateşi (spec'e göre tını)
+ *   SFX.explosion(radius, spec, pos) — patlama (yarıçapa göre boyut/derinlik)
+ *
+ * `pos` isteğe bağlı konum/ölçüm bağlamıdır: `{ x, width, pan?, seed? }`.
+ * `x` dünya pikseli, `width` dünya genişliğidir; yatay stereo pan bu orandan
+ * türetilir (mono çıkışta ve mobilde merkez/sığ miks — bkz. spatialInfo()).
+ * `seed` verilirse tını varyasyonu deterministik olur (aynı tohum → aynı ses).
  *   SFX.jump()           — zıplama
  *   SFX.teleport()       — ışınlanma (Işınlanma Topu varış)
  *   SFX.hook()           — kanca tutunma/atma (Kanca)
@@ -33,10 +38,16 @@
  *   SFX.setMusicVolume(0..1)— müzik seviyesini ayarla ve kaydet
  *   SFX.getMusicVolume() — seçili müzik seviyesi
  *   SFX.isMusicMuted()   — müzik kapalı mı
+ *   SFX.spatialInfo()    — pan derinliği/çıkış kanalı kararı (tanı)
+ *   SFX.setSpatialDepth(d) — pan derinliğini geçici olarak sabitle (null → otomatik)
+ *   SFX.variantInfo(seed)— tohumun ürettiği tını çarpanları (tanı/test)
+ *   SFX.graph()          — ses grafiği + ses sayacı (sonda ölçümü)
  */
 const SFX = (() => {
   let ctx = null;
   let master = null;    // Oyun sesleri (SFX) kazancı
+  let gameplayBus = null;
+  let uiBus = null;
   let musicGain = null; // Arka plan müziği kazancı
   let noiseBuf = null;
   let muted = false;
@@ -51,7 +62,136 @@ const SFX = (() => {
   let disabled = false;
   let resuming = null;
   const sources = new Map(); // kaynak → bağlantıları temizleyen işlev
+  const voiceMeta = new Map();
   const musicVoiceGains = new Map();
+
+  // ── Olay öncelikleri ve kaynak bütçesi ───────────────────────────────────
+  // 4 kritik tekil bilgi (isabet, ölüm, ani ölüm alarmı, sıra, maç sonucu)
+  // 3 oyuncu eylemi (ateş, patlama, yetenek, hareket)
+  // 2 ikincil geri bildirim (zıplama, rüzgâr, silah/parça değişimi, tık)
+  // 1 arayüz ayrıntısı (menü tıklaması)
+  const PRIORITY = { CRITICAL: 4, ACTION: 3, FEEDBACK: 2, UI: 1 };
+  const SFX_BUDGET = 40;      // eşzamanlı efekt kaynağı üst sınırı (müzik hariç)
+  const CRITICAL_RESERVE = 4; // kritik olaylara her zaman ayrılan yuva (36 + 4)
+
+  // Pan derinliği: 1 tam stereo, mobilde sığ (tek kulaklıkta/speaker'da ses
+  // kaybolmasın), mono çıkışta 0 (merkez). Sonda/test `setSpatialDepth` ile
+  // bunu geçici olarak geçersiz kılabilir.
+  const PAN_DEAD_ZONE = 0.08;
+  let spatialDepthOverride = null;
+
+  function countSfx() {
+    let count = 0;
+    for (const source of sources.keys()) if (!musicSources.has(source)) count++;
+    return count;
+  }
+
+  function isMonoOutput() {
+    const dest = ctx && ctx.destination;
+    if (!dest) return false;
+    if (Number.isFinite(dest.maxChannelCount) && dest.maxChannelCount <= 1) return true;
+    return Number.isFinite(dest.channelCount) && dest.channelCount <= 1 && !Number.isFinite(dest.maxChannelCount);
+  }
+
+  function isCoarsePointer() {
+    try {
+      if (typeof window === "undefined" || typeof window.matchMedia !== "function") return false;
+      return !!window.matchMedia("(pointer: coarse)").matches;
+    } catch (error) { return false; }
+  }
+
+  function spatialInfo() {
+    // Çıkış kanalı sayısı bağlamdan okunur; henüz kurulmadıysa tembel kurulumu tetikle.
+    if (!ctx && !disabled && !muted) ensure();
+    const panner = !!(ctx && typeof ctx.createStereoPanner === "function");
+    if (spatialDepthOverride != null) {
+      return { depth: spatialDepthOverride, mono: spatialDepthOverride === 0, mobile: isCoarsePointer(), auto: false, panner };
+    }
+    const mobile = isCoarsePointer();
+    if (isMonoOutput()) return { depth: 0, mono: true, mobile, auto: true, panner };
+    return { depth: mobile ? 0.55 : 1, mono: false, mobile, auto: true, panner };
+  }
+
+  function clampPan(value) { return Math.max(-1, Math.min(1, value)); }
+
+  // Dünya x konumundan yatay pan: merkezde ölü bant, kenara doğru yumuşak
+  // açılım. Koordinat yoksa/eksikse merkez güvenli varsayılandır.
+  function panFor(spatial) {
+    if (!spatial) return 0;
+    const depth = spatialInfo().depth;
+    if (depth === 0) return 0;
+    if (Number.isFinite(spatial.pan)) return clampPan(spatial.pan * depth);
+    let pos = null;
+    if (Number.isFinite(spatial.pos)) pos = spatial.pos;
+    else if (Number.isFinite(spatial.x) && Number.isFinite(spatial.width) && spatial.width > 0) pos = spatial.x / spatial.width;
+    if (pos == null) return 0;
+    const value = clampPan(pos * 2 - 1);
+    const magnitude = Math.abs(value);
+    if (magnitude <= PAN_DEAD_ZONE) return 0;
+    const shaped = (magnitude - PAN_DEAD_ZONE) / (1 - PAN_DEAD_ZONE);
+    return clampPan(Math.sign(value) * shaped * depth);
+  }
+
+  // ── Deterministik tını varyasyonu ────────────────────────────────────────
+  // Aynı tohum her zaman aynı çarpanları üretir (test edilebilir); ardışık
+  // olaylar sayaçla farklı tohum alır ki tekrar eden atışlar birebir kopya
+  // olmasın. Varyasyon yalnız frekans/süre/filtre ekseninde ±%4 gezinir;
+  // kazanç sabittir, böylece ses seviyesi ve kritik olayın tanınırlığı değişmez.
+  const VARIATION = 0.04;
+  let seedSequence = 0;
+
+  function hashString(text) {
+    let h = 2166136261;
+    for (let i = 0; i < text.length; i++) { h ^= text.charCodeAt(i); h = Math.imul(h, 16777619); }
+    return h >>> 0;
+  }
+
+  function mixSeed(seed) {
+    let x = (seed >>> 0) || 1;
+    x ^= x >>> 16; x = Math.imul(x, 2246822507);
+    x ^= x >>> 13; x = Math.imul(x, 3266489909);
+    x ^= x >>> 16;
+    return x >>> 0;
+  }
+
+  function variantOf(seed) {
+    const unit = (salt) => mixSeed((seed >>> 0) ^ hashString(salt)) / 4294967296;
+    const spread = (value) => 1 + (value * 2 - 1) * VARIATION;
+    return { freq: spread(unit("freq")), dur: spread(unit("dur")), cutoff: spread(unit("cutoff")) };
+  }
+
+  // Olay bağlamı: öncelik, pan ve tohum. tone/noise katmanları bunu opts ile alır.
+  function voice(key, priority, spatial) {
+    const explicit = spatial && Number.isFinite(spatial.seed) ? (spatial.seed >>> 0) : null;
+    const seed = explicit != null
+      ? mixSeed(explicit ^ hashString(key))
+      : mixSeed(hashString(key) ^ Math.imul(++seedSequence, 2654435761));
+    return { priority, pan: panFor(spatial), variant: variantOf(seed) };
+  }
+
+  function stopVoice(source) {
+    const cleanup = sources.get(source);
+    try { source.stop(); } catch (e) { /* kaynak bitmiş olabilir */ }
+    if (cleanup) cleanup();
+  }
+
+  // Bütçe aşımı: en düşük öncelikli ses bırakılır (aynı öncelikte en eski gider)
+  // ki yeni bilgi duyulsun. Hiçbir zaman yeni olaydan DAHA önemli bir ses
+  // düşürülmez; düşük öncelikli akış kritik sesi susturamaz.
+  function trimBudget(priority) {
+    let active = countSfx();
+    while (active > SFX_BUDGET) {
+      let victim = null, victimPriority = Infinity;
+      for (const source of sources.keys()) {
+        if (musicSources.has(source)) continue;
+        const value = (voiceMeta.get(source) || {}).priority || PRIORITY.UI;
+        if (value < victimPriority) { victimPriority = value; victim = source; }
+      }
+      if (!victim || victimPriority > priority) break;
+      stopVoice(victim);
+      active--;
+    }
+  }
 
   // Tercihleri yükle — file:// üzerinde localStorage çoğu tarayıcıda çalışır
   try { muted = localStorage.getItem("nwo_muted") === "1"; } catch (e) { /* yoksay */ }
@@ -138,6 +278,7 @@ const SFX = (() => {
   function track(source, nodes) {
     const cleanup = () => {
       sources.delete(source);
+      voiceMeta.delete(source);
       musicVoiceGains.delete(source);
       source.onended = null;
       for (const node of nodes) {
@@ -188,6 +329,8 @@ const SFX = (() => {
         master = ctx.createGain();
         master.gain.value = (muted || volume === 0) ? 0 : 0.42 * volume;
         master.connect(ctx.destination);
+        gameplayBus = ctx.createGain(); gameplayBus.connect(master);
+        uiBus = ctx.createGain(); uiBus.connect(master);
 
         // Music gain: müzik kanalı için bağımsız kazanç
         musicGain = ctx.createGain();
@@ -355,20 +498,31 @@ const SFX = (() => {
     musicTick();
   }
 
-  function play(build) {
+  function play(build, opts = {}) {
     if (muted || volume === 0 || disabled) return;
     if (!ensure()) return;
-    let activeSfx = 0;
-    for (const source of sources.keys()) if (!musicSources.has(source)) activeSfx++;
-    if (activeSfx >= 40) {
-      for (const [source, cleanup] of sources) {
-        if (musicSources.has(source)) continue;
-        try { source.stop(); } catch (e) { /* zaten bitmiş olabilir */ }
-        cleanup();
-        break;
-      }
-    }
-    try { build(); } catch (error) { disable(error); }
+    const priority = opts.priority || PRIORITY.FEEDBACK;
+    const activeSfx = countSfx();
+    // Rezerv: kritik olaylar son 4 yuvayı da kullanabilir; düşük öncelikli
+    // akış 36'da durur ki kalabalık anda isabet/ölüm sesi yeri bulsun.
+    if (priority < PRIORITY.CRITICAL && activeSfx >= SFX_BUDGET - CRITICAL_RESERVE) return;
+    try { build(priority); } catch (error) { disable(error); }
+    trimBudget(priority);
+  }
+
+  const eventTimes = new Map();
+  function eventAllowed(key, interval) {
+    const now = ctx ? ctx.currentTime : 0;
+    const previous = eventTimes.get(key);
+    if (previous != null && now - previous < interval) return false;
+    eventTimes.set(key, now);
+    return true;
+  }
+
+  function outputFor(opts) {
+    if (opts && opts.bus === "ui" && uiBus) return uiBus;
+    if (gameplayBus) return gameplayBus;
+    return master;
   }
 
   // Tek seferlik gürültü (noise) tamponu — patlama/whoosh için
@@ -386,125 +540,150 @@ const SFX = (() => {
 
   // Zarflanmış osilatör tonu (gerekirse frekans kayması ile).
   function tone(opts) {
-    play(() => {
+    play((priority) => {
       const now = ctx.currentTime;
       const t0 = now + (opts.delay || 0);
-      const dur = opts.dur != null ? opts.dur : 0.18;
+      const shape = opts.variant || null;
+      const dur = (opts.dur != null ? opts.dur : 0.18) * (shape ? shape.dur : 1);
       const osc = ctx.createOscillator();
       const g = ctx.createGain();
       osc.type = opts.type || "sine";
-      osc.frequency.setValueAtTime(opts.freq, t0);
+      osc.frequency.setValueAtTime(opts.freq * (shape ? shape.freq : 1), t0);
       if (opts.freqEnd != null) {
-        osc.frequency.exponentialRampToValueAtTime(Math.max(1, opts.freqEnd), t0 + dur);
+        osc.frequency.exponentialRampToValueAtTime(Math.max(1, opts.freqEnd * (shape ? shape.freq : 1)), t0 + dur);
       }
       const peak = opts.gain != null ? opts.gain : 0.3;
       const atk = opts.attack != null ? opts.attack : 0.006;
       g.gain.setValueAtTime(0.0001, t0);
       g.gain.exponentialRampToValueAtTime(peak, t0 + atk);
       g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
-      osc.connect(g).connect(master);
-      track(osc, [osc, g]);
+      // Merkez (pan 0) panner kurmaz: mono/merkez varsayılanı ek düğüm istemez.
+      const panner = opts.pan != null && opts.pan !== 0 && ctx.createStereoPanner ? ctx.createStereoPanner() : null;
+      if (panner) { panner.pan.value = Math.max(-1, Math.min(1, opts.pan)); g.connect(panner).connect(outputFor(opts)); }
+      else g.connect(outputFor(opts));
+      osc.connect(g);
+      track(osc, panner ? [osc, g, panner] : [osc, g]); voiceMeta.set(osc, { priority });
       osc.start(t0);
       osc.stop(t0 + dur + 0.02);
-    });
+    }, opts);
   }
 
   // Zarflanmış + filtrelenmiş gürültü patlaması.
   function noise(opts) {
-    play(() => {
+    play((priority) => {
       const now = ctx.currentTime;
       const t0 = now + (opts.delay || 0);
-      const dur = opts.dur != null ? opts.dur : 0.25;
+      const shape = opts.variant || null;
+      const cutoff = shape ? shape.cutoff : 1;
+      const dur = (opts.dur != null ? opts.dur : 0.25) * (shape ? shape.dur : 1);
+      const attack = Math.min(opts.attack != null ? opts.attack : 0.004, dur * 0.35);
       const src = ctx.createBufferSource();
       src.buffer = noiseBuffer();
       const filt = ctx.createBiquadFilter();
       filt.type = opts.filter || "lowpass";
-      filt.frequency.setValueAtTime(opts.freq != null ? opts.freq : 1000, t0);
+      filt.frequency.setValueAtTime((opts.freq != null ? opts.freq : 1000) * cutoff, t0);
       if (opts.freqEnd != null) {
-        filt.frequency.exponentialRampToValueAtTime(Math.max(40, opts.freqEnd), t0 + dur);
+        filt.frequency.exponentialRampToValueAtTime(Math.max(40, opts.freqEnd * cutoff), t0 + dur);
       }
       if (opts.Q != null) filt.Q.value = opts.Q;
       const g = ctx.createGain();
       const peak = opts.gain != null ? opts.gain : 0.3;
-      g.gain.setValueAtTime(peak, t0);
+      g.gain.setValueAtTime(0.0001, t0);
+      g.gain.exponentialRampToValueAtTime(peak, t0 + attack);
       g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
-      src.connect(filt).connect(g).connect(master);
-      track(src, [src, filt, g]);
+      const panner = opts.pan != null && opts.pan !== 0 && ctx.createStereoPanner ? ctx.createStereoPanner() : null;
+      if (panner) { panner.pan.value = Math.max(-1, Math.min(1, opts.pan)); g.connect(panner).connect(outputFor(opts)); }
+      else g.connect(outputFor(opts));
+      src.connect(filt).connect(g);
+      track(src, panner ? [src, filt, g, panner] : [src, filt, g]); voiceMeta.set(src, { priority });
       src.start(t0);
       src.stop(t0 + dur + 0.02);
-    });
+    }, opts);
   }
 
   // ── Yüksek seviyeli efektler ───────────────────────────────────────────────
 
   return {
     // Silah ateşi: kısa namlu "pat"ı + hava itişi. Ağır silahlar (büyük yarıçap)
-    // daha pesten/uzun çalar; hızlı silahlar daha tiz/keskin.
-    shoot(spec) {
-      const radius = spec && spec.radius ? spec.radius : 40;
+    // daha pesten/uzun çalar; hızlı silahlar daha tiz/keskin. `spatial` verilirse
+    // (ateş eden robotun namlu x'i) ses sahnenin o tarafından duyulur.
+    shoot(spec, spatial) {
+      const v = voice("shoot", PRIORITY.ACTION, spatial);
+      const data = spec && typeof spec === "object" ? spec : {};
+      const radius = data.radius || 40;
       const heavy = Math.max(0, Math.min(1, (radius - 30) / 70)); // 0 hafif → 1 ağır
-      const id = spec && typeof spec === "object" ? spec.id : "";
-      if (id === "sniper") {
-        noise({ filter: "highpass", freq: 3200, freqEnd: 1200, dur: 0.075, gain: 0.21 });
-        tone({ type: "sine", freq: 780, freqEnd: 170, dur: 0.11, gain: 0.12, attack: 0.001 });
-      } else if (id === "shotgun") {
-        noise({ filter: "highpass", freq: 2500, freqEnd: 700, dur: 0.12, gain: 0.2 });
-        tone({ type: "square", freq: 190, freqEnd: 65, dur: 0.13, gain: 0.2, attack: 0.001 });
-      } else if (id === "drill") {
-        noise({ filter: "bandpass", freq: 950, freqEnd: 2400, dur: 0.2, gain: 0.18, Q: 1.6 });
-        tone({ type: "sawtooth", freq: 145, freqEnd: 310, dur: 0.14, gain: 0.12 });
-      } else if (["grenade", "grenadetrio", "sticky", "rubber", "rubbertrio", "mine"].includes(id)) {
-        tone({ type: "triangle", freq: 165, freqEnd: 82, dur: 0.17, gain: 0.22, attack: 0.002 });
-        noise({ filter: "lowpass", freq: 520, freqEnd: 180, dur: 0.09, gain: 0.12 });
+      const id = data.id || (typeof spec === "string" ? spec : "");
+      if (data.teleport || data.hook || id === "teleportball" || id === "hook") {
+        tone({ ...v, type: "sine", freq: 340, freqEnd: 900, dur: 0.12, gain: 0.14, attack: 0.002 });
+        noise({ ...v, filter: "highpass", freq: 2600, freqEnd: 1400, dur: 0.08, gain: 0.07 });
+      } else if (data.drill || id === "drill") {
+        noise({ ...v, filter: "bandpass", freq: 850, freqEnd: 2100, dur: 0.16, gain: 0.15, Q: 1.8 });
+        tone({ ...v, type: "sawtooth", freq: 130, freqEnd: 260, dur: 0.13, gain: 0.1 });
+      } else if (data.directHitDamage || id === "sniper") {
+        noise({ ...v, filter: "highpass", freq: 3200, freqEnd: 1200, dur: 0.075, gain: 0.21 });
+        tone({ ...v, type: "sine", freq: 780, freqEnd: 170, dur: 0.11, gain: 0.12, attack: 0.001 });
+      } else if (data.pellets && !(data.look && data.look.tail === "flame")) {
+        noise({ ...v, filter: "highpass", freq: 2500, freqEnd: 700, dur: 0.12, gain: 0.2 });
+        tone({ ...v, type: "square", freq: 190, freqEnd: 65, dur: 0.13, gain: 0.2, attack: 0.001 });
+      } else if (data.bounce || data.sticky || data.mine || data.cluster || data.fuse || ["grenade", "grenadetrio", "sticky", "rubber", "rubbertrio", "mine"].includes(id)) {
+        tone({ ...v, type: "triangle", freq: 165, freqEnd: 82, dur: 0.17, gain: 0.22, attack: 0.002 });
+        noise({ ...v, filter: "lowpass", freq: 520, freqEnd: 180, dur: 0.09, gain: 0.12 });
       } else {
-        tone({ type: "sawtooth", freq: 250 - heavy * 100, freqEnd: 68 - heavy * 24,
+        tone({ ...v, type: "sawtooth", freq: 250 - heavy * 100, freqEnd: 68 - heavy * 24,
                dur: 0.13 + heavy * 0.08, gain: 0.19, attack: 0.003 });
-        noise({ filter: "highpass", freq: 1500 - heavy * 700, freqEnd: 400, dur: 0.1 + heavy * 0.05, gain: 0.12 });
+        noise({ ...v, filter: "highpass", freq: 1500 - heavy * 700, freqEnd: 400, dur: 0.1 + heavy * 0.05, gain: 0.12 });
       }
     },
 
     // Patlama: pes "boom" (gürültü + alçalan ton). Yarıçap büyüdükçe daha derin/uzun.
-    explosion(radius, spec) {
+    explosion(radius, spec, spatial) {
+      const v = voice("explosion", PRIORITY.ACTION, spatial);
       const r = radius || 40;
       const big = Math.max(0, Math.min(1, (r - 30) / 90));
       const dur = 0.3 + big * 0.45;
       const id = spec && spec.id;
-      const isFire = id === "napalm" || id === "fireball";
-      const isMetal = id === "drill" || id === "sniper";
-      noise({ filter: isFire ? "bandpass" : "lowpass", freq: isFire ? 1100 : 720 + big * 500,
-        freqEnd: isFire ? 2600 : 55, dur: isFire ? dur * 0.7 : dur,
-        gain: isFire ? 0.18 : 0.29, Q: isFire ? 0.8 : 1 });
-      tone({ type: isMetal ? "triangle" : "sine", freq: 138 - big * 72, freqEnd: 34,
-        dur: dur * 0.9, gain: 0.22, attack: 0.004 });
-      if (big > 0.35) noise({ filter: "lowpass", freq: 180, freqEnd: 48, delay: 0.035, dur: dur * 0.8, gain: 0.12 });
+      const isFire = !!(spec && (spec.napalm || spec.look && spec.look.tail === "flame") || id === "napalm" || id === "fireball");
+      const isMetal = !!(spec && (spec.drill || spec.directHitDamage) || id === "drill" || id === "sniper");
+      const isCluster = !!(spec && spec.cluster);
+      noise({ ...v, filter: isFire ? "bandpass" : isMetal ? "highpass" : "lowpass",
+        freq: isFire ? 1000 : isMetal ? 2400 : 620 + big * 420,
+        freqEnd: isFire ? 2300 : isMetal ? 700 : 60, dur: isFire ? dur * 0.72 : dur,
+        gain: isFire ? 0.16 : isMetal ? 0.14 : 0.25, Q: isFire ? 0.8 : 1 });
+      tone({ ...v, type: isMetal ? "triangle" : "sine", freq: (isMetal ? 210 : 138) - big * (isMetal ? 70 : 72), freqEnd: isMetal ? 68 : 34,
+        dur: dur * (isFire ? 0.7 : 0.9), gain: isFire ? 0.13 : 0.19, attack: 0.004 });
+      if (big > 0.35 || isCluster) noise({ ...v, filter: "lowpass", freq: isCluster ? 300 : 180, freqEnd: 48,
+        delay: 0.035, dur: dur * (isCluster ? 0.55 : 0.8), gain: isCluster ? 0.08 : 0.1 });
     },
 
     // Zıplama: kısa yukarı kayan "boing".
     jump() {
-      tone({ type: "sine", freq: 260, freqEnd: 540, dur: 0.16, gain: 0.22, attack: 0.004 });
+      tone({ ...voice("jump", PRIORITY.FEEDBACK), type: "sine", freq: 260, freqEnd: 540, dur: 0.16, gain: 0.22, attack: 0.004 });
     },
 
     // Işınlanma: hızla yükselen iki tonlu "zap" + hışırtı
     teleport() {
-      tone({ type: "sine", freq: 220, freqEnd: 880, dur: 0.18, gain: 0.2, attack: 0.003 });
-      tone({ type: "triangle", freq: 660, freqEnd: 1320, dur: 0.14, gain: 0.12, delay: 0.06 });
-      noise({ filter: "highpass", freq: 2200, dur: 0.12, gain: 0.1 });
+      const v = voice("teleport", PRIORITY.ACTION);
+      tone({ ...v, type: "sine", freq: 220, freqEnd: 880, dur: 0.18, gain: 0.2, attack: 0.003 });
+      tone({ ...v, type: "triangle", freq: 660, freqEnd: 1320, dur: 0.14, gain: 0.12, delay: 0.06 });
+      noise({ ...v, filter: "highpass", freq: 2200, dur: 0.12, gain: 0.1 });
     },
 
     // Kanca: fırlatma "tık"ı + metalik tutunma çınlaması
     hook() {
-      tone({ type: "square", freq: 520, freqEnd: 180, dur: 0.1, gain: 0.16 });
-      noise({ filter: "highpass", freq: 1500, dur: 0.08, gain: 0.12 });
-      tone({ type: "triangle", freq: 1180, freqEnd: 900, dur: 0.14, gain: 0.14, delay: 0.06 });
+      const v = voice("hook", PRIORITY.ACTION);
+      tone({ ...v, type: "square", freq: 520, freqEnd: 180, dur: 0.1, gain: 0.16 });
+      noise({ ...v, filter: "highpass", freq: 1500, dur: 0.08, gain: 0.12 });
+      tone({ ...v, type: "triangle", freq: 1180, freqEnd: 900, dur: 0.14, gain: 0.14, delay: 0.06 });
     },
 
     // Karakter yeteneği — türüne göre ayrı karakter.
     skill(kind, id) {
+      const v = voice("skill:" + kind, PRIORITY.ACTION);
       const identity = String(id || kind);
       let signature = 0;
       for (let i = 0; i < identity.length; i++) signature = (signature * 31 + identity.charCodeAt(i)) % 13;
       const shift = (signature - 6) * 9;
-      const skillTone = (opts) => tone({ ...opts, freq: opts.freq + shift,
+      const skillTone = (opts) => tone({ ...v, ...opts, freq: opts.freq + shift,
         ...(opts.freqEnd == null ? {} : { freqEnd: opts.freqEnd + shift }) });
       switch (kind) {
         case "heal":
@@ -519,62 +698,67 @@ const SFX = (() => {
           break;
         case "nextShot":
           skillTone({ type: "sawtooth", freq: 110, freqEnd: 440, dur: 0.25, gain: 0.14 });
-          noise({ filter: "bandpass", freq: 450, freqEnd: 1300, dur: 0.16, gain: 0.08, delay: 0.08, Q: 2 });
+          noise({ ...v, filter: "bandpass", freq: 450, freqEnd: 1300, dur: 0.16, gain: 0.08, delay: 0.08, Q: 2 });
           break;
         case "jump":
         case "glide":
           skillTone({ type: "sine", freq: 180, freqEnd: 620, dur: 0.22, gain: 0.16 });
-          noise({ filter: "highpass", freq: 1800, freqEnd: 600, dur: 0.13, gain: 0.08 });
+          noise({ ...v, filter: "highpass", freq: 1800, freqEnd: 600, dur: 0.13, gain: 0.08 });
           break;
         case "dash":
-          noise({ filter: "bandpass", freq: 350, freqEnd: 2400, dur: 0.2, gain: 0.18, Q: 1.5 });
+          noise({ ...v, filter: "bandpass", freq: 350, freqEnd: 2400, dur: 0.2, gain: 0.18, Q: 1.5 });
           break;
         case "dig":
-          noise({ filter: "lowpass", freq: 900, freqEnd: 100, dur: 0.32, gain: 0.21 });
+          noise({ ...v, filter: "lowpass", freq: 900, freqEnd: 100, dur: 0.32, gain: 0.21 });
           skillTone({ type: "sawtooth", freq: 72, freqEnd: 48, dur: 0.28, gain: 0.12 });
           break;
         case "melee":
-          noise({ filter: "highpass", freq: 1900, freqEnd: 800, dur: 0.07, gain: 0.16 });
+          noise({ ...v, filter: "highpass", freq: 1900, freqEnd: 800, dur: 0.07, gain: 0.16 });
           skillTone({ type: "square", freq: 135, freqEnd: 48, dur: 0.16, gain: 0.19 });
           break;
         case "radial":
         case "quake":
           skillTone({ type: "sine", freq: 92, freqEnd: 36, dur: 0.42, gain: 0.2 });
-          noise({ filter: "lowpass", freq: 520, freqEnd: 72, dur: 0.35, gain: 0.16 });
+          noise({ ...v, filter: "lowpass", freq: 520, freqEnd: 72, dur: 0.35, gain: 0.16 });
           break;
         default: // spit vb. ateş sesiyle zaten çalıyor; yine de hafif bir vurgu
           skillTone({ type: "triangle", freq: 390, freqEnd: 650, dur: 0.14, gain: 0.12 });
       }
     },
 
-    // İsabet/hasar — kısa "thwack".
+    // İsabet/hasar — kısa "thwack". Kritik bilgi: her zaman merkezde çalar.
     hit() {
-      tone({ type: "square", freq: 180, freqEnd: 60, dur: 0.09, gain: 0.18, attack: 0.002 });
-      noise({ filter: "bandpass", freq: 1400, dur: 0.05, gain: 0.14, Q: 1 });
+      if (!eventAllowed("hit", 0.045)) return;
+      const v = voice("hit", PRIORITY.CRITICAL);
+      tone({ ...v, type: "square", freq: 180, freqEnd: 60, dur: 0.09, gain: 0.18, attack: 0.002 });
+      noise({ ...v, filter: "bandpass", freq: 1400, dur: 0.05, gain: 0.14, Q: 1 });
     },
 
     // Bir oyuncu elendi — alçalan üzgün motif.
     eliminate() {
-      tone({ type: "sawtooth", freq: 440, freqEnd: 110, dur: 0.5, gain: 0.22 });
-      tone({ type: "sine", freq: 220, freqEnd: 70, dur: 0.5, gain: 0.16, delay: 0.05 });
+      const v = voice("eliminate", PRIORITY.CRITICAL);
+      tone({ ...v, type: "sawtooth", freq: 440, freqEnd: 110, dur: 0.5, gain: 0.22 });
+      tone({ ...v, type: "sine", freq: 220, freqEnd: 70, dur: 0.5, gain: 0.16, delay: 0.05 });
     },
 
     // Silah değiştir — minik tık.
     weaponSwitch() {
-      tone({ type: "square", freq: 660, dur: 0.05, gain: 0.1, attack: 0.002 });
+      tone({ ...voice("weapon-switch", PRIORITY.FEEDBACK), type: "square", freq: 660, dur: 0.05, gain: 0.1, attack: 0.002 });
     },
 
     // Menü tıklaması.
     uiClick() {
-      tone({ type: "triangle", freq: 880, freqEnd: 1100, dur: 0.06, gain: 0.13, attack: 0.002 });
+      if (!eventAllowed("ui-click", 0.035)) return;
+      tone({ ...voice("ui-click", PRIORITY.UI), type: "triangle", freq: 880, freqEnd: 1100, dur: 0.06, gain: 0.13, attack: 0.002, bus: "ui" });
     },
 
     // Parça montajı — metal klik + kısa yay "tık-klik"i. Silah değiştirme
     // tıkından ayrıdır: takma/sökme eyleminin duyulur imzası olsun.
     partMount() {
-      tone({ type: "square", freq: 520, dur: 0.04, gain: 0.11, attack: 0.002 });
-      tone({ type: "square", freq: 300, freqEnd: 240, dur: 0.07, gain: 0.12, attack: 0.002, delay: 0.045 });
-      tone({ type: "triangle", freq: 1200, freqEnd: 1500, dur: 0.05, gain: 0.06, attack: 0.003, delay: 0.055 });
+      const v = voice("part-mount", PRIORITY.FEEDBACK);
+      tone({ ...v, type: "square", freq: 520, dur: 0.04, gain: 0.11, attack: 0.002 });
+      tone({ ...v, type: "square", freq: 300, freqEnd: 240, dur: 0.07, gain: 0.12, attack: 0.002, delay: 0.045 });
+      tone({ ...v, type: "triangle", freq: 1200, freqEnd: 1500, dur: 0.05, gain: 0.06, attack: 0.003, delay: 0.055 });
     },
 
     // Durum → müzik teması eşlemesi. Her kare render'dan çağrılır; tema
@@ -609,30 +793,34 @@ const SFX = (() => {
 
     // Sıra yeni oyuncuya geçti — iki nota yükselen kısa jingle.
     turn() {
-      tone({ type: "triangle", freq: 523, dur: 0.1, gain: 0.14 });
-      tone({ type: "triangle", freq: 784, dur: 0.14, gain: 0.16, delay: 0.09 });
+      const v = voice("turn", PRIORITY.CRITICAL);
+      tone({ ...v, type: "triangle", freq: 523, dur: 0.1, gain: 0.14 });
+      tone({ ...v, type: "triangle", freq: 784, dur: 0.14, gain: 0.16, delay: 0.09 });
     },
 
     // Geri sayım son 5 saniye tıkı. urgent ise daha tiz ve keskin.
     timerTick(urgent) {
+      const v = voice(urgent ? "timer-urgent" : "timer", urgent ? PRIORITY.CRITICAL : PRIORITY.FEEDBACK);
       if (urgent) {
-        tone({ type: "square", freq: 880, dur: 0.04, gain: 0.12, attack: 0.002 });
+        tone({ ...v, type: "square", freq: 880, dur: 0.04, gain: 0.12, attack: 0.002 });
       } else {
-        tone({ type: "sine", freq: 580, dur: 0.035, gain: 0.08, attack: 0.002 });
+        tone({ ...v, type: "sine", freq: 580, dur: 0.035, gain: 0.08, attack: 0.002 });
       }
     },
 
     // İkmal sandığı alma sesi — yükselen parlak arpej.
     pickup() {
-      tone({ type: "sine", freq: 587, dur: 0.09, gain: 0.14 });
-      tone({ type: "sine", freq: 880, dur: 0.12, gain: 0.16, delay: 0.06 });
-      tone({ type: "triangle", freq: 1174, dur: 0.16, gain: 0.14, delay: 0.12 });
+      const v = voice("pickup", PRIORITY.ACTION);
+      tone({ ...v, type: "sine", freq: 587, dur: 0.09, gain: 0.14 });
+      tone({ ...v, type: "sine", freq: 880, dur: 0.12, gain: 0.16, delay: 0.06 });
+      tone({ ...v, type: "triangle", freq: 1174, dur: 0.16, gain: 0.14, delay: 0.12 });
     },
 
     // Ani ölüm alarm sireni.
     alarm() {
-      tone({ type: "sawtooth", freq: 360, freqEnd: 220, dur: 0.32, gain: 0.22 });
-      tone({ type: "sawtooth", freq: 360, freqEnd: 220, dur: 0.32, gain: 0.22, delay: 0.36 });
+      const v = voice("alarm", PRIORITY.CRITICAL);
+      tone({ ...v, type: "sawtooth", freq: 360, freqEnd: 220, dur: 0.32, gain: 0.22 });
+      tone({ ...v, type: "sawtooth", freq: 360, freqEnd: 220, dur: 0.32, gain: 0.22, delay: 0.36 });
     },
 
     // Rüzgâr değişimi: filtrelenmiş hava uğultusu yeni şiddetle büyür. Sağa dönüş
@@ -642,40 +830,75 @@ const SFX = (() => {
       const strength = Math.min(1, Math.abs(value) / 4);
       const right = value >= 0;
       const base = 380 + strength * 320;
-      noise({ filter: "bandpass", freq: 520 + strength * 900,
+      const v = voice("wind", PRIORITY.FEEDBACK);
+      noise({ ...v, filter: "bandpass", freq: 520 + strength * 900,
               freqEnd: 1500 + strength * 1800, dur: 0.34 + strength * 0.24,
               gain: 0.13 + strength * 0.13, Q: 0.7 });
-      tone({ type: "sine", freq: right ? base : base * 1.55,
+      tone({ ...v, type: "sine", freq: right ? base : base * 1.55,
              freqEnd: right ? base * 1.55 : base, dur: 0.28 + strength * 0.12,
              gain: 0.1 + strength * 0.06, attack: 0.015 });
 
       // Yön tersine döndüyse ikinci kısa uyarı notası değişimi özellikle vurgular.
       if (Number.isFinite(previous) && previous * value < 0) {
-        tone({ type: "triangle", freq: right ? 620 : 930,
+        tone({ ...v, type: "triangle", freq: right ? 620 : 930,
                freqEnd: right ? 930 : 620, dur: 0.2, gain: 0.12, delay: 0.16 });
       }
     },
 
     // Zafer — neşeli arpej.
     win() {
+      const v = voice("win", PRIORITY.CRITICAL);
       const notes = [523, 659, 784, 1047];
       notes.forEach((f, i) =>
-        tone({ type: "square", freq: f, dur: 0.22, gain: 0.18, delay: i * 0.12 }));
-      tone({ type: "triangle", freq: 1568, dur: 0.4, gain: 0.16, delay: 0.48 });
+        tone({ ...v, type: "square", freq: f, dur: 0.22, gain: 0.18, delay: i * 0.12 }));
+      tone({ ...v, type: "triangle", freq: 1568, dur: 0.4, gain: 0.16, delay: 0.48 });
     },
 
     // Yenilgi — kısa, alçalan mekanik kapanış.
     lose() {
-      tone({ type: "triangle", freq: 330, freqEnd: 196, dur: 0.32, gain: 0.14 });
-      tone({ type: "sine", freq: 82, freqEnd: 42, dur: 0.48, gain: 0.18, delay: 0.08 });
-      noise({ filter: "lowpass", freq: 420, freqEnd: 90, dur: 0.35, gain: 0.09, delay: 0.1 });
+      const v = voice("lose", PRIORITY.CRITICAL);
+      tone({ ...v, type: "triangle", freq: 330, freqEnd: 196, dur: 0.32, gain: 0.14 });
+      tone({ ...v, type: "sine", freq: 82, freqEnd: 42, dur: 0.48, gain: 0.18, delay: 0.08 });
+      noise({ ...v, filter: "lowpass", freq: 420, freqEnd: 90, dur: 0.35, gain: 0.09, delay: 0.1 });
     },
 
     // Beraberlik — iki kısa, çözümsüz metalik nota.
     draw() {
-      tone({ type: "triangle", freq: 294, dur: 0.2, gain: 0.12 });
-      tone({ type: "triangle", freq: 311, dur: 0.28, gain: 0.1, delay: 0.22 });
-      tone({ type: "sine", freq: 78, dur: 0.3, gain: 0.1, delay: 0.22 });
+      const v = voice("draw", PRIORITY.CRITICAL);
+      tone({ ...v, type: "triangle", freq: 294, dur: 0.2, gain: 0.12 });
+      tone({ ...v, type: "triangle", freq: 311, dur: 0.28, gain: 0.1, delay: 0.22 });
+      tone({ ...v, type: "sine", freq: 78, dur: 0.3, gain: 0.1, delay: 0.22 });
+    },
+
+    // ── Teşhis/sonda ─────────────────────────────────────────────────────
+    // Pan derinliği kararı: mono çıkış 0 (merkez), mobil 0.55, stereo 1.
+    spatialInfo,
+
+    // Sıfır/`null` → otomatik karar; sayı → pan derinliğini sabitle (0 = mono).
+    setSpatialDepth(depth) {
+      if (depth == null) spatialDepthOverride = null;
+      else if (Number.isFinite(depth)) spatialDepthOverride = Math.max(0, Math.min(1, depth));
+      return spatialInfo().depth;
+    },
+
+    // Tohumun ürettiği tını çarpanları (test/sonda: aynı tohum → aynı sonuç).
+    variantInfo(seed) {
+      return variantOf(Number.isFinite(seed) ? seed : 0);
+    },
+
+    // Ses grafiği ve canlı ses sayacı (sonda ölçümü; oyun kodu kullanmaz).
+    graph() {
+      const priorities = { critical: 0, action: 0, feedback: 0, ui: 0 };
+      for (const source of sources.keys()) {
+        if (musicSources.has(source)) continue;
+        const value = (voiceMeta.get(source) || {}).priority || PRIORITY.UI;
+        if (value >= PRIORITY.CRITICAL) priorities.critical++;
+        else if (value === PRIORITY.ACTION) priorities.action++;
+        else if (value === PRIORITY.FEEDBACK) priorities.feedback++;
+        else priorities.ui++;
+      }
+      return { context: ctx, master, gameplayBus, uiBus, musicGain,
+        active: countSfx(), music: musicSources.size, priorities, spatial: spatialInfo() };
     },
 
     isMuted() { return muted || volume === 0; },
