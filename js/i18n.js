@@ -62,7 +62,7 @@ const I18N = {
     "settings.about.heading": "Version & Licenses",
     "settings.about.version": "Version",
     "settings.about.channel": "Channel",
-    "settings.about.copyright": "(c) 2026 Baris Bahattin Ercan - All rights reserved. Source code, art and audio are proprietary; the full text is in the LICENSE file in the release package.",
+    "settings.about.copyright": "© 2026 Baris Bahattin Ercan - All rights reserved. Source code, art and audio are proprietary; the full text is in the LICENSE file in the release package.",
     "settings.about.thirdPartyHeading": "Third-party software and content",
     "settings.about.ofl": "SIL Open Font License 1.1",
     "settings.about.mit": "MIT",
