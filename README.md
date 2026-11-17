@@ -158,32 +158,41 @@ All 34 robots are built on a shared, data-driven modular humanoid Canvas skeleto
 
 Every model is shown by its player-facing model code and role.
 
+| | | | |
+| :---: | :---: | :---: | :---: |
 | <img src="assets/portraits/kurtadam.webp" alt="SİREN-6" width="120"><br>**SİREN-6**<br>Alarm | <img src="assets/portraits/zurafa.webp" alt="ASİT-6" width="120"><br>**ASİT-6**<br>Arıtma | <img src="assets/portraits/kokarca.webp" alt="SIZ-7" width="120"><br>**SIZ-7**<br>Atık | <img src="assets/portraits/rakun.webp" alt="DÖNER-5" width="120"><br>**DÖNER-5**<br>Ayırma |
-| :---: | :---: | :---: | :---: |
 
+| | | | |
+| :---: | :---: | :---: | :---: |
 | <img src="assets/portraits/kopek.webp" alt="FIX-8" width="120"><br>**FIX-8**<br>Bakım | <img src="assets/portraits/bukalemun.webp" alt="HAYALET-4" width="120"><br>**HAYALET-4**<br>Denetim | <img src="assets/portraits/ejderha.webp" alt="FIRIN-3" width="120"><br>**FIRIN-3**<br>Döküm | <img src="assets/portraits/aslan.webp" alt="EMP-80" width="120"><br>**EMP-80**<br>Enerji |
-| :---: | :---: | :---: | :---: |
 
+| | | | |
+| :---: | :---: | :---: | :---: |
 | <img src="assets/portraits/hamster.webp" alt="ZIRH-2" width="120"><br>**ZIRH-2**<br>Güvenlik | <img src="assets/portraits/kus.webp" alt="FAN-5" width="120"><br>**FAN-5**<br>Havalandırma | <img src="assets/portraits/yarasa.webp" alt="VIZIR" width="120"><br>**VIZIR**<br>Havalandırma | <img src="assets/portraits/koala.webp" alt="TOK-2" width="120"><br>**TOK-2**<br>Kalibrasyon |
-| :---: | :---: | :---: | :---: |
 
+| | | | |
+| :---: | :---: | :---: | :---: |
 | <img src="assets/portraits/ordek.webp" alt="PUNTA-1" width="120"><br>**PUNTA-1**<br>Kaynak | <img src="assets/portraits/armadillo.webp" alt="MAT-6" width="120"><br>**MAT-6**<br>Kazı | <img src="assets/portraits/kaplan.webp" alt="KES-9" width="120"><br>**KES-9**<br>Kesim | <img src="assets/portraits/tavsan.webp" alt="ZIP" width="120"><br>**ZIP**<br>Keşif |
-| :---: | :---: | :---: | :---: |
 
+| | | | |
+| :---: | :---: | :---: | :---: |
 | <img src="assets/portraits/gergedan.webp" alt="TEK-8" width="120"><br>**TEK-8**<br>Kurye | <img src="assets/portraits/oklukirpi.webp" alt="PERÇİN-3" width="120"><br>**PERÇİN-3**<br>Montaj | <img src="assets/portraits/sincap.webp" alt="CİV-1" width="120"><br>**CİV-1**<br>Parça Ayırma | <img src="assets/portraits/kunduz.webp" alt="VUR-5" width="120"><br>**VUR-5**<br>Perçinleme |
-| :---: | :---: | :---: | :---: |
 
+| | | | |
+| :---: | :---: | :---: | :---: |
 | <img src="assets/portraits/dino.webp" alt="ŞOK-9" width="120"><br>**ŞOK-9**<br>Pres | <img src="assets/portraits/maymun.webp" alt="KANCA-4" width="120"><br>**KANCA-4**<br>Raf Bakımı | <img src="assets/portraits/kirpi.webp" alt="BİLYE-3" width="120"><br>**BİLYE-3**<br>Rulman | <img src="assets/portraits/kedi.webp" alt="MIK-0" width="120"><br>**MIK-0**<br>Savunma |
-| :---: | :---: | :---: | :---: |
 
+| | | | |
+| :---: | :---: | :---: | :---: |
 | <img src="assets/portraits/ornitorenk.webp" alt="DALGA-2" width="120"><br>**DALGA-2**<br>Soğutma | <img src="assets/portraits/yeti.webp" alt="KRİYO-7" width="120"><br>**KRİYO-7**<br>Soğutma | <img src="assets/portraits/penguen.webp" alt="SOĞUT-2" width="120"><br>**SOĞUT-2**<br>Soğutma | <img src="assets/portraits/timsah.webp" alt="SAP-3" width="120"><br>**SAP-3**<br>Taşıma |
-| :---: | :---: | :---: | :---: |
 
+| | | | |
+| :---: | :---: | :---: | :---: |
 | <img src="assets/portraits/sirtlan.webp" alt="REZ-7" width="120"><br>**REZ-7**<br>Titreşim | <img src="assets/portraits/tilki.webp" alt="ÇİFT-6" width="120"><br>**ÇİFT-6**<br>Topçu | <img src="assets/portraits/suaygiri.webp" alt="KEPÇE-8" width="120"><br>**KEPÇE-8**<br>Yükleme | <img src="assets/portraits/panda.webp" alt="PRES-4" width="120"><br>**PRES-4**<br>Yükleme |
-| :---: | :---: | :---: | :---: |
 
-| <img src="assets/portraits/kanguru.webp" alt="ZIP-X" width="120"><br>**ZIP-X**<br>Yüksek Raf | <img src="assets/portraits/ayi.webp" alt="BOM-12" width="120"><br>**BOM-12**<br>Yıkım |
+| | |
 | :---: | :---: |
+| <img src="assets/portraits/kanguru.webp" alt="ZIP-X" width="120"><br>**ZIP-X**<br>Yüksek Raf | <img src="assets/portraits/ayi.webp" alt="BOM-12" width="120"><br>**BOM-12**<br>Yıkım |
 
 
 ---
@@ -257,9 +266,9 @@ node tools/build.js --dry
 
 # Build release zip (outputs dist/out-of-warranty-v0.6.0.zip)
 node tools/build.js
-`
+```
 
-The release package must include THIRD-PARTY-NOTICES.md and onts/LICENSE-*.txt; publish the privacy document at a hosted URL for portal or Steam submissions.``
+The release package must include THIRD-PARTY-NOTICES.md and fonts/LICENSE-*.txt; publish the privacy document at a hosted URL for portal or Steam submissions.
 
 ---
 
@@ -274,9 +283,6 @@ The game and repository are proprietary, all rights reserved, as described in th
 - Diagnostics are copied to the clipboard only when requested; the game sends no diagnostics.
 - Read [Privacy & Data (Turkish)](./docs/gizlilik-ve-veri.md) for storage keys, deletion steps and publication notes.
 
-## License
-
-All rights reserved. Developed as an independent tactical artillery game. See [third-party notices](./THIRD-PARTY-NOTICES.md) and the [`docs/`](./docs) directory for technical documentation.
 
 ---
 
