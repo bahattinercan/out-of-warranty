@@ -11,14 +11,15 @@
  *  4. Sürüm tek kaynaktan: `js/version.js` semver; yayın metni aynı sürümü yazar.
  *  5. ZIP gerçekten yazılıyor ve okunabiliyor: merkezi dizin sayısı manifest ile
  *     aynı, `index.html` bayt bayt aynı, CRC'ler tutuyor.
- *  6. Boyut kapıları: Poki < 8 MB, itch.io < 50 MB.
+ *  6. Lisans kapisi: paket belgeleri ve font lisanslari eksiksiz.
+ *  7. Boyut kapilari: Poki < 8 MB, itch.io < 50 MB.
  */
 const fs = require("fs");
 const os = require("os");
 const path = require("path");
 const B = require("../tools/build.js");
 
-const ROOT = path.resolve(__dirname, "..");
+const ROOT = path.resolve(process.env.OOW_RELEASE_ROOT || path.join(__dirname, ".."));
 
 let pass = 0, fail = 0;
 const failures = [];
@@ -36,8 +37,8 @@ for (const required of ["index.html", "css/style.css", "js/game.js", "js/i18n.js
   "js/diagnostics.js", "js/version.js", "js/main.js", "js/net/protocol.js", "js/online-lobby.js"]) {
   check("pakette var: " + required, has(required));
 }
-check("fontlar pakette", files.filter((f) => f.startsWith("fonts/")).length === 8,
-  String(files.filter((f) => f.startsWith("fonts/")).length));
+check("fontlar pakette", files.filter((f) => f.startsWith("fonts/") && f.endsWith(".woff2")).length === 8,
+  String(files.filter((f) => f.startsWith("fonts/") && f.endsWith(".woff2")).length));
 
 const leaked = files.filter((f) =>
   f.startsWith("_") || f.startsWith("tests/") || f.startsWith("docs/") ||
@@ -134,6 +135,33 @@ check("yayın metni aynı sürümü yazıyor", itchDoc.indexOf(ver.version) >= 0
 const projDoc = fs.readFileSync(path.join(ROOT, "CLAUDE.md"), "utf8");
 check("CLAUDE.md sürümü yazıyor", projDoc.indexOf(ver.version) >= 0, ver.version);
 
+// ── 4b) Lisans belgeleri ─────────────────────────────────────────────
+const licenseNotice = fs.existsSync(path.join(ROOT, "THIRD-PARTY-NOTICES.md"))
+  ? fs.readFileSync(path.join(ROOT, "THIRD-PARTY-NOTICES.md"), "utf8") : "";
+const licenseText = fs.existsSync(path.join(ROOT, "LICENSE"))
+  ? fs.readFileSync(path.join(ROOT, "LICENSE"), "utf8") : "";
+check("pakette var: LICENSE", has("LICENSE"));
+check("pakette var: THIRD-PARTY-NOTICES.md", has("THIRD-PARTY-NOTICES.md"));
+check("LICENSE hak saklidir ifadesi iceriyor", licenseText.includes("All rights reserved"));
+check("ucuncu taraf bildirimi SIL OFL, PeerJS ve MIT iceriyor",
+  ["SIL Open Font License", "PeerJS", "MIT"].every((term) => licenseNotice.includes(term)));
+const fontLicenses = ["fonts/LICENSE-ChakraPetch.txt", "fonts/LICENSE-RussoOne.txt"];
+for (const fontLicense of fontLicenses) {
+  check("font lisansi pakette: " + fontLicense, has(fontLicense));
+  const text = fs.existsSync(path.join(ROOT, fontLicense))
+    ? fs.readFileSync(path.join(ROOT, fontLicense), "utf8") : "";
+  check("font lisansi OFL 1.1 iceriyor: " + fontLicense,
+    text.includes("SIL OPEN FONT LICENSE Version 1.1"));
+}
+const fontFamilies = [
+  { family: "ChakraPetch", licenses: ["fonts/LICENSE-ChakraPetch.txt"] },
+  { family: "RussoOne", licenses: ["fonts/LICENSE-RussoOne.txt"] },
+];
+for (const { family, licenses } of fontFamilies) {
+  const shipped = files.some((f) => f.startsWith("fonts/") && f.endsWith(".woff2") && f.includes(family));
+  check("woff2 ailesinin lisansi pakette: " + family, !shipped || licenses.some(has));
+}
+
 // ── 5) ZIP gerçekten yazılıyor ve okunabiliyor ────────────────────────────
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "oow-build-"));
 let built = null;
@@ -167,7 +195,7 @@ try {
   fs.rmSync(tmp, { recursive: true, force: true });
 }
 
-// ── 6) Boyut kapıları ─────────────────────────────────────────────────────
+// ── 7) Boyut kapilariıları ─────────────────────────────────────────────────────
 const kb = (built ? built.totalBytes : 0) / 1024;
 check("paket Poki sınırının altında (< 8 MB)", kb < 8 * 1024, `${kb.toFixed(1)} KB`);
 check("paket itch.io sınırının altında (< 50 MB)", kb < 50 * 1024, `${kb.toFixed(1)} KB`);

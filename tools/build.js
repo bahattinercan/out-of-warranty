@@ -13,7 +13,7 @@
  *
  * Yayın kuralı: pakette YALNIZ oyun çalışır dosyaları olur. `_*.html` sondaları,
  * `tests/`, `docs/`, `tools/`, `screenshots/` ve `.git` DIŞARIDA kalır; bu kural
- * `tests/release.js` ile kilitlidir.
+ * `tests/release.js` ile kilitlidir. Lisans belgeleri paket kökünde yer alır.
  */
 "use strict";
 
@@ -22,7 +22,7 @@ const path = require("path");
 
 const ROOT = path.resolve(__dirname, "..");
 // Paket kökü: index.html + bu klasörlerin tamamı.
-const PACKAGE_FILES = ["index.html"];
+const PACKAGE_FILES = ["index.html", "LICENSE", "THIRD-PARTY-NOTICES.md"];
 const PACKAGE_DIRS = ["css", "js", "fonts", "assets"];
 // Paket dışı bırakılması ZORUNLU desenler (release testi de aynı listeyi kullanır).
 const EXCLUDED_PREFIXES = ["_", "tests/", "docs/", "tools/", "probes/", "screenshots/", ".git/", "css/_",
