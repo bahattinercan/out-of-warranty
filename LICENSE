@@ -1,0 +1,54 @@
+Out of Warranty / Garanti Dışı — Proprietary License
+====================================================
+
+Copyright (c) 2026 Barış Bahattin Ercan. All rights reserved.
+
+This repository and the game it builds ("the Software", published as
+"Out of Warranty" / "Garanti Dışı") are proprietary. They are not open
+source. No license, express or implied, is granted except as written below.
+
+1. OWNERSHIP
+   All source code, game design, artwork, audio, text, names, logos and
+   build tooling in this repository are the exclusive property of the
+   copyright holder. Public availability of this repository (for example
+   on GitHub) does not place the work in the public domain and does not
+   grant any right to use it beyond clause 2.
+
+2. WHAT YOU MAY DO
+   a. Play the Software through a channel the copyright holder publishes
+      (itch.io, Steam, a web portal, or a local copy you obtained from
+      those channels).
+   b. Quote short excerpts (screenshots, a few lines of code) for
+      commentary, review, bug reports or educational discussion, with
+      attribution and a link to this repository.
+
+3. WHAT YOU MAY NOT DO WITHOUT PRIOR WRITTEN PERMISSION
+   a. Copy, clone, publish, sublicense, sell, rent or redistribute the
+      Software, in whole or in substantial part, including "asset-flipped"
+      or re-skinned derivatives.
+   b. Use the Software or any of its parts (code, artwork, audio, names,
+      robot model codes, map themes) in another product, commercial or
+      not, including AI training corpora, template packs or asset stores.
+   c. Remove or alter copyright, license or attribution notices.
+
+4. THIRD-PARTY COMPONENTS
+   Some bundled or runtime-loaded components are licensed by their own
+   authors under their own terms (SIL Open Font License 1.1 fonts, the MIT
+   licensed PeerJS library, portal SDKs). Those components are NOT covered
+   by this license; their notices and full license texts are in
+   THIRD-PARTY-NOTICES.md and the fonts/ directory. Where this license and
+   a third-party license conflict, the third-party license governs that
+   component.
+
+5. NO WARRANTY
+   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+   OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+   MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+   IN NO EVENT SHALL THE COPYRIGHT HOLDER BE LIABLE FOR ANY CLAIM, DAMAGES
+   OR OTHER LIABILITY ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+   SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+6. CONTACT
+   Licensing and permission requests: open an issue at
+   https://github.com/bahattinercan/out-of-warranty or contact the
+   copyright holder through the repository profile.
