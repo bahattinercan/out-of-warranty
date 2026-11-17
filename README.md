@@ -21,6 +21,12 @@
 
 ---
 
+**Language / Dil:** [English](#about-the-game) · [Türkçe](#türkçe)
+
+## Contents
+
+[About](#about-the-game) · [Quick start](#quick-start) · [Features](#key-features) · [Controls](#controls) · [Arenas](#industrial-arenas) · [Weapons](#arsenal--weapon-specs) · [Robot roster](#robot-roster-34) · [Architecture](#codebase-architecture) · [Tests](#testing--verification) · [Distribution](#distribution--packaging) · [Licenses](#licenses--third-party-notices) · [Privacy](#privacy--data)
+
 ## 📖 About the Game
 
 **Out of Warranty** is a modern browser-based tactical artillery game inspired by the spirit of classic titles like *Wild Ones* and *Worms*, re-imagined with a gritty industrial robotic aesthetic.
@@ -97,6 +103,12 @@ Matches take place across 6 hand-crafted industrial arenas with unique tactical 
 | **Frost Fracture** | A deadly, bottomless chasm separating two opposing cliff edges |
 | **Flooded Laboratory** | Enclosed boundary walls with destructible interior bulkhead barriers |
 
+### Arena Art
+
+| Foundry · far | Foundry · mid | Cooling · far | Cooling · mid |
+|:---:|:---:|:---:|:---:|
+| <img src="assets/bg/foundry-far.webp" alt="Foundry distant background" width="180"> | <img src="assets/bg/foundry-mid.webp" alt="Foundry middle background" width="180"> | <img src="assets/bg/cooling-far.webp" alt="Cooling distant background" width="180"> | <img src="assets/bg/cooling-mid.webp" alt="Cooling middle background" width="180"> |
+
 ---
 
 ## 💣 Arsenal & Weapon Specs
@@ -141,6 +153,38 @@ All 34 robots are built on a shared, data-driven modular humanoid Canvas skeleto
 - **PRES-4 (Cargo):** *Press Slam* — Deploys a crushing hydraulic press to obliterate adjacent foes.
 - **MAT-6 (Excavation):** *Depth Auger* — Bores directly through solid ground to create fortified underground trenches.
 - **FIRIN-3 (Smelter):** *Slag Sphere* — Hurls molten slag that covers the terrain in lingering heat.
+
+### Robot Roster (34)
+
+Every model is shown by its player-facing model code and role.
+
+| <img src="assets/portraits/kurtadam.webp" alt="SİREN-6" width="120"><br>**SİREN-6**<br>Alarm | <img src="assets/portraits/zurafa.webp" alt="ASİT-6" width="120"><br>**ASİT-6**<br>Arıtma | <img src="assets/portraits/kokarca.webp" alt="SIZ-7" width="120"><br>**SIZ-7**<br>Atık | <img src="assets/portraits/rakun.webp" alt="DÖNER-5" width="120"><br>**DÖNER-5**<br>Ayırma |
+| :---: | :---: | :---: | :---: |
+
+| <img src="assets/portraits/kopek.webp" alt="FIX-8" width="120"><br>**FIX-8**<br>Bakım | <img src="assets/portraits/bukalemun.webp" alt="HAYALET-4" width="120"><br>**HAYALET-4**<br>Denetim | <img src="assets/portraits/ejderha.webp" alt="FIRIN-3" width="120"><br>**FIRIN-3**<br>Döküm | <img src="assets/portraits/aslan.webp" alt="EMP-80" width="120"><br>**EMP-80**<br>Enerji |
+| :---: | :---: | :---: | :---: |
+
+| <img src="assets/portraits/hamster.webp" alt="ZIRH-2" width="120"><br>**ZIRH-2**<br>Güvenlik | <img src="assets/portraits/kus.webp" alt="FAN-5" width="120"><br>**FAN-5**<br>Havalandırma | <img src="assets/portraits/yarasa.webp" alt="VIZIR" width="120"><br>**VIZIR**<br>Havalandırma | <img src="assets/portraits/koala.webp" alt="TOK-2" width="120"><br>**TOK-2**<br>Kalibrasyon |
+| :---: | :---: | :---: | :---: |
+
+| <img src="assets/portraits/ordek.webp" alt="PUNTA-1" width="120"><br>**PUNTA-1**<br>Kaynak | <img src="assets/portraits/armadillo.webp" alt="MAT-6" width="120"><br>**MAT-6**<br>Kazı | <img src="assets/portraits/kaplan.webp" alt="KES-9" width="120"><br>**KES-9**<br>Kesim | <img src="assets/portraits/tavsan.webp" alt="ZIP" width="120"><br>**ZIP**<br>Keşif |
+| :---: | :---: | :---: | :---: |
+
+| <img src="assets/portraits/gergedan.webp" alt="TEK-8" width="120"><br>**TEK-8**<br>Kurye | <img src="assets/portraits/oklukirpi.webp" alt="PERÇİN-3" width="120"><br>**PERÇİN-3**<br>Montaj | <img src="assets/portraits/sincap.webp" alt="CİV-1" width="120"><br>**CİV-1**<br>Parça Ayırma | <img src="assets/portraits/kunduz.webp" alt="VUR-5" width="120"><br>**VUR-5**<br>Perçinleme |
+| :---: | :---: | :---: | :---: |
+
+| <img src="assets/portraits/dino.webp" alt="ŞOK-9" width="120"><br>**ŞOK-9**<br>Pres | <img src="assets/portraits/maymun.webp" alt="KANCA-4" width="120"><br>**KANCA-4**<br>Raf Bakımı | <img src="assets/portraits/kirpi.webp" alt="BİLYE-3" width="120"><br>**BİLYE-3**<br>Rulman | <img src="assets/portraits/kedi.webp" alt="MIK-0" width="120"><br>**MIK-0**<br>Savunma |
+| :---: | :---: | :---: | :---: |
+
+| <img src="assets/portraits/ornitorenk.webp" alt="DALGA-2" width="120"><br>**DALGA-2**<br>Soğutma | <img src="assets/portraits/yeti.webp" alt="KRİYO-7" width="120"><br>**KRİYO-7**<br>Soğutma | <img src="assets/portraits/penguen.webp" alt="SOĞUT-2" width="120"><br>**SOĞUT-2**<br>Soğutma | <img src="assets/portraits/timsah.webp" alt="SAP-3" width="120"><br>**SAP-3**<br>Taşıma |
+| :---: | :---: | :---: | :---: |
+
+| <img src="assets/portraits/sirtlan.webp" alt="REZ-7" width="120"><br>**REZ-7**<br>Titreşim | <img src="assets/portraits/tilki.webp" alt="ÇİFT-6" width="120"><br>**ÇİFT-6**<br>Topçu | <img src="assets/portraits/suaygiri.webp" alt="KEPÇE-8" width="120"><br>**KEPÇE-8**<br>Yükleme | <img src="assets/portraits/panda.webp" alt="PRES-4" width="120"><br>**PRES-4**<br>Yükleme |
+| :---: | :---: | :---: | :---: |
+
+| <img src="assets/portraits/kanguru.webp" alt="ZIP-X" width="120"><br>**ZIP-X**<br>Yüksek Raf | <img src="assets/portraits/ayi.webp" alt="BOM-12" width="120"><br>**BOM-12**<br>Yıkım |
+| :---: | :---: |
+
 
 ---
 
@@ -213,11 +257,87 @@ node tools/build.js --dry
 
 # Build release zip (outputs dist/out-of-warranty-v0.6.0.zip)
 node tools/build.js
-```
+`
+
+The release package must include THIRD-PARTY-NOTICES.md and onts/LICENSE-*.txt; publish the privacy document at a hosted URL for portal or Steam submissions.``
 
 ---
 
-## 📜 License
+## Licenses & Third-Party Notices
 
-All rights reserved. Developed as an independent tactical artillery game.  
-For technical design documentation and development roadmaps, see the [`docs/`](./docs) directory.
+The game and repository are proprietary, all rights reserved, as described in the root `LICENSE`; no broader permission is implied. Chakra Petch and Russo One are distributed under the SIL Open Font License (OFL). PeerJS 1.5.4 is MIT licensed and is loaded only for online signalling. CrazyGames and Poki SDKs are loaded only when their matching portal query parameter is present. Artwork in the game includes generated assets, then processed for use in the game; the provenance notes are in `THIRD-PARTY-NOTICES.md`. Include `THIRD-PARTY-NOTICES.md` and `fonts/LICENSE-*.txt` in release packages.
+
+## Privacy & Data
+
+- Settings, locale and the player profile are stored in browser local storage.
+- Online lobby uses PeerJS signalling; portal SDKs load only for CrazyGames or Poki builds.
+- Diagnostics are copied to the clipboard only when requested; the game sends no diagnostics.
+- Read [Privacy & Data (Turkish)](./docs/gizlilik-ve-veri.md) for storage keys, deletion steps and publication notes.
+
+## License
+
+All rights reserved. Developed as an independent tactical artillery game. See [third-party notices](./THIRD-PARTY-NOTICES.md) and the [`docs/`](./docs) directory for technical documentation.
+
+---
+
+# Türkçe
+
+## Garanti Dışı Hakkında
+
+**Out of Warranty (Garanti Dışı)**; terk edilmiş bir megafabrikada yedek parçalar için savaşan servis robotlarını konu alan, tarayıcıda çalışan 2B sıra tabanlı taktik topçu oyunudur. Tamamen yıkılabilir araziler, rüzgâr fiziği, 34 oynanabilir robot, atölye ilerlemesi ve WebRTC eşler arası çok oyunculu oyun sunar.
+
+## Hızlı Başlangıç
+
+Kurulum veya derleme gerekmez. `index.html` dosyasını doğrudan açarak başlayın (manuel ilk açılış testi).
+
+## Özellikler
+
+- Yıkılabilir arazi, değişken rüzgâr ve altı endüstriyel arena.
+- 34 robot, etkin sınıf yetenekleri, 20 silah ve 24 giyilebilir parça.
+- Yerel sıcak koltuk çok oyunculu oyun, dört zorluk seviyeli yapay zekâ ve WebRTC çevrimiçi oyun.
+- Kodla üretilen Web Audio sesleri; İngilizce ve Türkçe arayüz.
+
+## Kontroller
+
+| Tuş | İşlev |
+|:---:|---|
+| <kbd>A</kbd>/<kbd>D</kbd> veya oklar | Hareket |
+| <kbd>W</kbd> veya yukarı ok | Zıplama |
+| Fare | Nişan alma; sol tıkla güç doldurup bırakınca ateş |
+| Sağ tık veya <kbd>Esc</kbd> | Atışı iptal etme |
+| <kbd>1</kbd>–<kbd>9</kbd> / tekerlek | Silah seçme |
+| <kbd>Q</kbd> | Robot yeteneği |
+| <kbd>M</kbd> / <kbd>F</kbd> | Sesi kapatma / tam ekran |
+
+## Arenalar
+
+Foundry, Night Crane Yard, Overgrown Reactor, Lunar Debris Yard, Frost Fracture ve Flooded Laboratory arenalarının taktik özellikleri ve görselleri [Arenas bölümünde](#industrial-arenas) gösterilmiştir.
+
+## Silahlar ve Robot Başvurusu
+
+Bazooka sınırsız mühimmatlıdır; diğer mühimmat ve aygıtlar maç içinde sınırlıdır. Hasar ve mühimmat tablosu için [Arsenal & Weapon Specs](#arsenal--weapon-specs) bölümüne, 34 model kodu ve rol için [robot galerisine](#robot-roster-34) bakın.
+
+## Mimari
+
+Oyun saf JavaScript, HTML Canvas ve Web Audio ile çalışır; derleme adımı yoktur. `js/` oyun sistemlerini, `assets/` görselleri, `tests/` denetimleri, `tools/` dağıtım araçlarını içerir.
+
+## Testler
+
+Depoda Node.js tabanlı birim ve bütünleşme testleri bulunur. Çalıştırma yönergeleri [Testing & Verification](#testing--verification) bölümündedir.
+
+## Dağıtım
+
+Portal paketi `node tools/build.js` ile hazırlanır. İlk açılışı doğrulamak için `index.html` dosyasını doğrudan açın. Paket içeriği ve boyut denetimi için [Distribution & Packaging](#distribution--packaging) bölümüne bakın.
+
+## Lisanslar
+
+Oyun ve kaynaklar tüm hakları saklı, tescilli lisans altındadır. Chakra Petch ve Russo One OFL; PeerJS MIT lisanslıdır. CrazyGames ve Poki SDK’ları yalnız ilgili portal bağlamında yüklenir. Ayrıntılar ve paketle birlikte dağıtılacak bildirimler için [Licenses & Third-Party Notices](#licenses--third-party-notices) ile `THIRD-PARTY-NOTICES.md` dosyasına bakın.
+
+## Gizlilik
+
+Yerel kayıt, çevrimiçi sinyalleşme, portal SDK’ları ve tanılama hakkında ayrıntılar: [Gizlilik ve Veri](./docs/gizlilik-ve-veri.md).
+
+## Depo Yapısı
+
+`docs/` içinde teknik belgeler ile `gizlilik-ve-veri.md` gizlilik açıklaması; kökte `LICENSE` ve `THIRD-PARTY-NOTICES.md`; `fonts/` içinde font lisansları bulunur.
+
