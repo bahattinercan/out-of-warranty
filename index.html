@@ -110,6 +110,7 @@
             <button class="settings-tab" data-tab="gameplay" role="tab" aria-selected="false" data-i18n="settings.tab.gameplay">Oynanış</button>
             <button class="settings-tab" data-tab="controls" role="tab" aria-selected="false" data-i18n="settings.tab.controls">Kontroller</button>
             <button class="settings-tab" data-tab="profile" role="tab" aria-selected="false" data-i18n="settings.tab.profile">Profil &amp; Veri</button>
+            <button class="settings-tab" data-tab="about" role="tab" aria-selected="false" data-i18n="settings.tab.about">Kunye</button>
           </div>
 
           <div class="settings-body">
@@ -339,6 +340,31 @@
                   </div>
                   <button id="st-reset-profile-btn" type="button" class="settings-btn danger" data-i18n="settings.profile.resetBtn">Tüm İlerlemeyi Sıfırla</button>
                 </div>
+              </div>
+            </div>
+
+            <!-- 6. KUNYE PANELI -->
+            <div class="settings-panel" id="tab-about" role="tabpanel">
+              <div class="settings-group about-content">
+                <h3 data-i18n="settings.about.heading">Surum ve Lisanslar</h3>
+                <div class="settings-row about-build">
+                  <div class="summary-item"><span data-i18n="settings.about.version">Surum</span><strong id="st-about-version" class="about-mono"></strong></div>
+                  <div class="summary-item"><span data-i18n="settings.about.channel">Kanal</span><strong id="st-about-channel" class="about-mono"></strong></div>
+                </div>
+                <p class="st-desc about-copy" data-i18n="settings.about.copyright">(c) 2026 Baris Bahattin Ercan - Tum haklari saklidir. Kaynak kodu, gorseller ve sesler ozel mulkiyettir; tam metin dagitim paketindeki LICENSE dosyasindadir.</p>
+                <h3 data-i18n="settings.about.thirdPartyHeading">Ucuncu taraf yazilim ve icerik</h3>
+                <ul class="about-list">
+                  <li><span>Chakra Petch</span> - <span data-i18n="settings.about.ofl">SIL Open Font License 1.1</span> - (c) 2018 The Chakra Petch Project Authors</li>
+                  <li><span>Russo One</span> - <span data-i18n="settings.about.ofl">SIL Open Font License 1.1</span> - (c) 2011-2012 Jovanny Lemonad</li>
+                  <li><span>PeerJS 1.5.4</span> - <span data-i18n="settings.about.mit">MIT</span> - (c) 2015 Michelle Bu and Eric Zhang</li>
+                  <li><span>CrazyGames / Poki SDK</span> - <span data-i18n="settings.about.portalTerms">Yalnizca bu portallarda yuklenir ve portal kosullarina tabidir.</span></li>
+                </ul>
+                <p class="st-desc about-copy" data-i18n="settings.about.thirdPartyNotice">Tam lisans metinleri dagitim paketindeki THIRD-PARTY-NOTICES.md ve fonts/LICENSE-*.txt dosyalarindadir.</p>
+                <h3 data-i18n="settings.about.assetsHeading">Varliklarin kaynagi</h3>
+                <p class="st-desc about-copy" data-i18n="settings.about.assets">Robot ve arayuz cizimleri prosedurel kodla (js/robots.js, js/maps.js, js/terrain.js, js/skill-fx.js) uretilir. Arka planlar, portreler ve parca simgeleri uretken gorsel modelleriyle olusturulup tools/art-prep.py ile islendi. Tum sesler Web Audio API ile calisma aninda sentezlenir; harici ses dosyasi yoktur.</p>
+                <h3 data-i18n="settings.about.privacyHeading">Gizlilik ve veriler</h3>
+                <p class="st-desc about-copy" data-i18n="settings.about.privacy">Ilerleme/profil, ayarlar ve dil tercihi yalnizca bu tarayicida (localStorage) saklanir; hesap, sunucu veya telemetri yoktur. Cevrimici maclarda PeerJS yalnizca sinyal icin kullanilir, mac trafigi oyuncular arasinda dogrudan aktarilir. Teshis raporu yalnizca oyuncu kopyalarsa cihazdan cikar.</p>
+                <p class="st-desc about-copy" data-i18n="settings.about.erase">Verileri Ayarlar &gt; Profil &amp; Veri &gt; Tum Ilerlemeyi Sifirla secenegiyle veya site verilerini temizleyerek silebilirsiniz.</p>
               </div>
             </div>
           </div>

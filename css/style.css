@@ -1631,6 +1631,55 @@ kbd.accent {
   color: #8fa6bd;
 }
 
+.about-content {
+  gap: 8px;
+}
+
+.about-content h3:not(:first-child) {
+  margin-top: 6px;
+}
+
+.about-build {
+  justify-content: flex-start;
+  gap: 24px;
+  min-height: 0;
+  padding: 8px 12px;
+}
+
+.about-build .summary-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.about-build .summary-item span {
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.about-build .summary-item strong.about-mono,
+.about-list {
+  font-family: monospace;
+}
+
+.about-copy,
+.about-list {
+  padding: 0 4px;
+}
+
+.about-copy {
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.about-list {
+  margin: 0;
+  padding-left: 24px;
+  color: var(--text-muted);
+  font-size: 11px;
+  line-height: 1.55;
+}
+
 .settings-btn-inline {
   display: flex;
   align-items: center;

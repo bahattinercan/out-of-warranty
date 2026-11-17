@@ -108,6 +108,11 @@ const GameSettings = (() => {
   }
 
   function syncUI() {
+    const aboutVersion = document.getElementById("st-about-version");
+    const aboutChannel = document.getElementById("st-about-channel");
+    if (aboutVersion) aboutVersion.textContent = typeof GAME_VERSION !== "undefined" ? GAME_VERSION : "?";
+    if (aboutChannel) aboutChannel.textContent = typeof GAME_CHANNEL !== "undefined" ? GAME_CHANNEL : "?";
+
     const sfxVol = typeof SFX !== "undefined" ? Math.round(SFX.getVolume() * 100) : 100;
     const sfxMuted = typeof SFX !== "undefined" ? SFX.isMuted() : false;
     const musVol = typeof SFX !== "undefined" ? Math.round(SFX.getMusicVolume() * 100) : 0;
