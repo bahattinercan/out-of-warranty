@@ -1,4 +1,4 @@
-﻿# Yayına Hazırlık Denetimi
+# Yayına Hazırlık Denetimi
 
 ## Amaç ve kapsam
 

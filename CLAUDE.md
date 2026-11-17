@@ -38,6 +38,7 @@ node tests/net-reconnect.js # kopma → bot devralma → aynı koltuğa dönüş
 node tests/portal.js       # portal köprüsü: sağlayıcı seçimi + CG/Poki SDK sözleşmesi (F5)
 node tests/reward-ad.js    # ödüllü reklam: maç sonu Hurdayı 2× (F5)
 node tests/release.js      # yayın paketi: kapsam, script sırası, ZIP, boyut kapıları (F6)
+node tests/encoding.js     # kodlama kapısı: UTF-8 geçerliliği, BOM ve mojibake denetimi
 ```
 
 ```bash

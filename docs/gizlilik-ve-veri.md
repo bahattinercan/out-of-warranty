@@ -1,33 +1,33 @@
-﻿# Gizlilik ve Veri
+# Gizlilik ve Veri
 
-Out of Warranty hesabÄ± veya sunucu profili oluÅŸturmaz. Oyun ilerlemesi ve tercihler, oyunu kullandÄ±ÄŸÄ±nÄ±z tarayÄ±cÄ±da saklanÄ±r.
+Out of Warranty hesabı veya sunucu profili oluşturmaz. Oyun ilerlemesi ve tercihler, oyunu kullandığınız tarayıcıda saklanır.
 
 ## Cihazda saklananlar
 
-TarayÄ±cÄ± `localStorage` alanÄ±nda aÅŸaÄŸÄ±daki kayÄ±tlar tutulur:
+Tarayıcı `localStorage` alanında aşağıdaki kayıtlar tutulur:
 
 - `nwo_settings`: grafik ve oyun tercihleri.
-- `nwo_locale`: seÃ§ilen arayÃ¼z dili.
-- Profil kaydÄ±: ilerleme, envanter ve satÄ±n alÄ±mlar; profil modÃ¼lÃ¼nÃ¼n yerel kayÄ±t anahtarÄ± altÄ±nda.
+- `nwo_locale`: seçilen arayüz dili.
+- Profil kaydı: ilerleme, envanter ve satın alımlar; profil modülünün yerel kayıt anahtarı altında.
 - Ses tercihleri: `nwo_muted` ve `nwo_volume`.
 
-Bu veriler tarayÄ±cÄ± profiline baÄŸlÄ±dÄ±r; baÅŸka cihazlarla eÅŸitlenmez.
+Bu veriler tarayıcı profiline bağlıdır; başka cihazlarla eşitlenmez.
 
-## Cihazdan Ã§Ä±kan veriler
+## Cihazdan çıkan veriler
 
-- Ã‡evrimiÃ§i lobiye girildiÄŸinde PeerJS 1.5.4, sinyalleÅŸme iÃ§in `unpkg.com` Ã¼zerinden yÃ¼klenir. Oda baÄŸlantÄ± bilgileri eÅŸleÅŸmeyi kurmak iÃ§in PeerJS altyapÄ±sÄ±ndan geÃ§ebilir; oyun trafiÄŸi eÅŸler arasÄ±nda WebRTC ile aktarÄ±lÄ±r.
-- Oyun `?portal=crazygames` veya `?portal=poki` parametresiyle aÃ§Ä±ldÄ±ÄŸÄ±nda ilgili platform SDKâ€™sÄ± yÃ¼klenir. SDK, platformun oyun/Ã¶dÃ¼l/reklam hizmetleri iÃ§in Ã§alÄ±ÅŸÄ±r.
-- Bu iki Ã¶zellik dÄ±ÅŸÄ±nda oyun veri gÃ¶ndermez. ÃœÃ§Ã¼ncÃ¼ taraf fontu veya baÅŸka CDN kullanÄ±lmaz.
+- Çevrimiçi lobiye girildiğinde PeerJS 1.5.4, sinyalleşme için `unpkg.com` üzerinden yüklenir. Oda bağlantı bilgileri eşleşmeyi kurmak için PeerJS altyapısından geçebilir; oyun trafiği eşler arasında WebRTC ile aktarılır.
+- Oyun `?portal=crazygames` veya `?portal=poki` parametresiyle açıldığında ilgili platform SDK’sı yüklenir. SDK, platformun oyun/ödül/reklam hizmetleri için çalışır.
+- Bu iki özellik dışında oyun veri göndermez. Üçüncü taraf fontu veya başka CDN kullanılmaz.
 
 ## Toplanmayanlar
 
-Oyun hesabÄ±, analiz, telemetri veya otomatik tanÄ±lama raporu toplamaz. TanÄ±lama raporu yalnÄ±zca oyuncu istediÄŸinde hazÄ±rlanÄ±r ve panoya kopyalanÄ±r; aÄŸ Ã¼zerinden gÃ¶nderilmez.
+Oyun hesabı, analiz, telemetri veya otomatik tanılama raporu toplamaz. Tanılama raporu yalnızca oyuncu istediğinde hazırlanır ve panoya kopyalanır; ağ üzerinden gönderilmez.
 
 ## Veriyi silme
 
-Oyundaki **Ayarlar > Profil & Veri > TÃ¼m Ä°lerlemeyi SÄ±fÄ±rla** seÃ§eneÄŸiyle yerel ilerlemeyi silebilirsiniz. TarayÄ±cÄ± ayarlarÄ±ndan bu siteye ait verileri temizlemek de kayÄ±tlarÄ± kaldÄ±rÄ±r.
+Oyundaki **Ayarlar > Profil & Veri > Tüm İlerlemeyi Sıfırla** seçeneğiyle yerel ilerlemeyi silebilirsiniz. Tarayıcı ayarlarından bu siteye ait verileri temizlemek de kayıtları kaldırır.
 
-## Portal ve Steam yayÄ±nÄ±
+## Portal ve Steam yayını
 
-Portal veya Steam yayÄ±nÄ± iÃ§in bu belgenin herkese aÃ§Ä±k, barÄ±ndÄ±rÄ±lan bir gizlilik URLâ€™si olarak sunulmasÄ± gerekir. Reklam gÃ¶steren SDKâ€™lar kullanÄ±lÄ±yorsa maÄŸaza/portal sayfasÄ±nda ve geÃ§erli platform formlarÄ±nda ilgili reklam SDKâ€™sÄ± kullanÄ±mÄ± aÃ§Ä±klanmalÄ±dÄ±r.
+Portal veya Steam yayını için bu belgenin herkese açık, barındırılan bir gizlilik URL’si olarak sunulması gerekir. Reklam gösteren SDK’lar kullanılıyorsa mağaza/portal sayfasında ve geçerli platform formlarında ilgili reklam SDK’sı kullanımı açıklanmalıdır.
 
