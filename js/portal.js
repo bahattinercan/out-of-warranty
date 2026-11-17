@@ -170,6 +170,7 @@ class Portal {
   async _initPoki() {
     this._record("poki.init");
     await this.win.PokiSDK.init();
+    // Poki SDK v2 mute veya ayar değişikliği sunmaz; ses durumu varsaymayız.
     // Poki'de reklam kararı SDK'ya aittir; istek her zaman yapılabilir.
     this.adsEnabled = true;
     this.active = true;

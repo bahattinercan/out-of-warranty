@@ -100,6 +100,9 @@ check("hazır SDK globali otomatik algılanır", (() => {
 // ── 2) Portal YOKKEN sessiz no-op (oyun file:// çalışmaya devam eder) ──────
 const none = makePortal({}, "");
 check("portal yokken init ok:false döner", (async () => true)() && true);   // init asenkron: aşağıda sınanır
+let noneSettingsCalls = 0;
+none.onSettingsChange(() => { noneSettingsCalls++; });
+check("portal yokken mute false ve ayar callback'i çalışmaz", none.muted() === false && noneSettingsCalls === 0);
 let threw = false;
 let safe = true;
 try {
@@ -118,7 +121,7 @@ try {
     r5.ok === false && r6.ok === false && r7.ok === false &&
     r8 === null && r9 === null && !!cbRes && cbRes.ok === false && cbRes.reason === "NO_PORTAL";
 } catch (e) { threw = true; }
-check("portal yokken tüm metodlar güvenli no-op", safe && !threw);
+check("portal yokken tüm metodlar güvenli no-op", safe && !threw && none.muted() === false && noneSettingsCalls === 0);
 check("portal yokken isActive/adsAvailable false", none.isActive() === false && none.adsAvailable() === false);
 none.init().then((res) => {
   check("portal yokken init NO_PROVIDER döner", res.ok === false && res.reason === "NO_PROVIDER");
@@ -139,10 +142,13 @@ function step2() {
     check("portal aktif", portal.isActive() === true);
 
     let settingsSeen = null;
-    portal.onSettingsChange((s) => { settingsSeen = s; });
+    let settingsCalls = 0;
+    portal.onSettingsChange((s) => { settingsSeen = s; settingsCalls++; });
+    check("CG ayar dinleyicisi init öncesi çağrılmaz", settingsCalls === 0);
+    check("CG init muteAudio true PORTAL.muted true yapar", portal.muted() === true);
     cg.sdk.game.settings = { muteAudio: false, disableChat: true };
     cg.sdk.game._settingsCb();
-    check("ayar değişikliği dinleyiciye gider", !!settingsSeen && settingsSeen.muteAudio === false && settingsSeen.disableChat === true);
+    check("CG ayar değişikliği callback'i bir kez çağırır", settingsCalls === 1 && !!settingsSeen && settingsSeen.muteAudio === false && settingsSeen.disableChat === true);
     check("ses ayarı güncellendi", portal.muted() === false);
 
     let joined = null;
@@ -223,8 +229,13 @@ function step3() {
 function step4() {
   const poki = fakePoki({});
   const portal = makePortal(poki.win, "?portal=poki", () => 0);
+  let settingsCalls = 0;
+  portal.onSettingsChange(() => { settingsCalls++; });
+  check("Poki ayar callback'i init öncesi çağrılmaz", settingsCalls === 0);
   portal.init().then((res) => {
     check("Poki init başarılı", res.ok === true && res.provider === "poki");
+    check("Poki init muteAudio sağlamaz ve PORTAL.muted false kalır", portal.muted() === false);
+    check("Poki settings API olmadan ayar callback'i çağrılmaz", settingsCalls === 0);
     portal.loadingStop();
     portal.gameplayStart();
     portal.gameplayStop();
