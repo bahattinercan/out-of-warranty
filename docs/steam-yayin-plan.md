@@ -1,5 +1,8 @@
 # Steam Yayın Planı (Dökümhane-9)
 
+> **Güncel Durum (17 Kasım 2026 — Kullanıcı Kararı ile Askıya Alındı / Parked):**
+> Steam sürümü bu yayın turunda kullanıcı kararıyla askıya alınmıştır (parked). Öncelik itch.io kapalı testi ve ardından web portalları (CrazyGames ve Poki) yayınıdır (portal öncelikli strateji). Bu turda masaüstü sarmalama (wrapper / Electron / NW.js), Steamworks başarımları / bulut kayıt ve Steamworks yönetimsel adımları (partner hesabı, $100 Steam Direct ücreti, mağaza sayfası vb.) başlatılmayacaktır. Bu belge mimari ve teknik referans olarak korunmaktadır; yeniden ele alma tetikleyicisi web portalları onaylandıktan sonra veya mağaza pazarlama varlıkları hazır olduğundadır.
+
 Tarih: 24 Eylül 2026
 Durum: Plan aşaması — hiçbir adım uygulanmadı. Onay/karar bekleyenler `[?]`, öneriler `[öneri]` ile işaretli.
 
