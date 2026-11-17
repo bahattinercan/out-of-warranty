@@ -72,13 +72,13 @@ Out of Warranty deposundaki mevcut build'in yayın hazırlığı değerlendirild
 
 ### P1 — yayın öncesi
 
-- **Paket üretimi ve platform yükleme henüz yapılmamış:** Kuru çalışma ZIP üretmez (`tools/build.js:237-239`); itch kapalı test hazırlık listesindeki gerçek dağıtım ZIP'inin üretimi ve itch.io paneline yüklenmesi/ayarlar adımları (`docs/itch-yayin-metni.md:90-96`) açık durumdadır.
+- **itch.io panel yüklemesi/ayarları bekliyor:** Gerçek ZIP üretimi ve çevrimdışı açılış doğrulaması tamamlandı; panel yüklemesi ile ayar adımları (`docs/itch-yayin-metni.md:90-96`) açık. Kanıt: `docs/kapali-test-raporu.md` içindeki 17 Kasım 2026 tarihli ZIP ve çevrimdışı açılış bölümü.
 - **Poki mute bridge doğrulanmalı:** Poki SDK ortamında mute davranışının oyun sesini kestiğine dair kanıt paralel bir görevde kanıtlanmaktadır (`js/portal.js:160-174`).
 - **Kanal/sürüm kararı:** Paket mevcut haliyle `0.6.0` ve `kapali-test` kanalında kalacaktır (`js/version.js:10-11`); bu turda sürüm artırımı yapılmayacaktır.
 
 ### P2 — sonra
 
-- **İtch.io çevrimdışı (offline) yerel oyun doğrulaması:** Portal ve harici bağlantı olmaksızın yerel maç akışının sorunsuz çalıştığı gerçek ortamda teyit edilmelidir (`js/portal.js:5-6`, `docs/itch-yayin-metni.md:43-47`).
+- itch.io ZIP’inden çevrimdışı açılış ve menü etkileşimi doğrulandı; kanıt `docs/kapali-test-raporu.md` içindeki 17 Kasım 2026 tarihli bölümde.
 - **Steam mağaza varlıkları ve teknik entegrasyon:** Steam süreci askıya alındığından mağaza varlıklarının teknik uygunluğu ve yüklenmesi portal aşaması sonrasına bırakılmıştır (`docs/steam-yayin-plan.md`).
 
 ### Kapanan maddeler
@@ -103,14 +103,14 @@ Bu oturumda kullanıcı tarafından alınan dört karar ve gerekçeleri:
 2. Gizlilik belgesini herkese açık HTTPS URL'sinde barındır; GitHub Pages ayarını etkinleştir (Dosyalar hazır, Pages aktivasyonu bekleniyor).
 3. Lisans belgelerini repo değişiklik akışında izlenen hale getir (Tamamlandı: commit `437e27d`).
 4. Doküman kodlama denetimini sağlama al ve kırık dosya referanslarını çöz (Tamamlandı: commit `ab32838` ve `952450c`).
-5. itch.io kapalı testi için gerçek dağıtım ZIP'ini üret (`node tools/build.js`), ZIP kökünü ve dışlanan dosyaları kontrol et; gerçek çevrimdışı yerel maçı doğrula.
+5. itch.io kapalı testi için gerçek dağıtım ZIP'ini üret, ZIP içeriğini denetle ve çevrimdışı açılışı doğrula (**Tamamlandı: ZIP üretimi ve kontroller `docs/kapali-test-raporu.md` içindeki 17 Kasım 2026 tarihli bölümde; itch.io paneline yükleme/ayarlar açık**).
 6. Poki mute davranışını paralel görevde kanıtla; platform test ve onaylarını tamamla.
 7. Steam için wrapper, başarımlar, kayıt/Cloud ve mağaza adımlarını portal onayları sonrasına ertele (askıya alındı).
 8. Seçilen her hedef için kapı zincirini tekrar çalıştırıp platform bazlı teslimi gerçekleştir.
 
 ## GO/NO-GO verdict per channel
 
-- **itch.io — GO (yalnız kapalı test):** Paket üreteci (`tools/build.js`), sayfa metni (`docs/itch-yayin-metni.md`) ve sürüm damgası (`0.6.0 / kapali-test`) hazır; tüm doğrulama kapıları yeşil ve paket 7,914.9 KB ile bütçenin çok altında. Yükleme öncesi kalan iki adım: (1) Gerçek dağıtım ZIP'inin üretilip itch.io paneline yüklenmesi ve (2) çevrimdışı yerel maç akışının doğrulanması.
+- **itch.io — GO (yalnız kapalı test):** Paket üreteci (`tools/build.js`), sayfa metni (`docs/itch-yayin-metni.md`), sürüm damgası (`0.6.0 / kapali-test`) ve gerçek ZIP hazır; arşiv 8.137.551 bayt / 248 dosya ve çevrimdışı açılış doğrulandı. ZIP üretimi ve offline kanıtı `docs/kapali-test-raporu.md` içindeki 17 Kasım 2026 tarihli bölümde; kalan adım ZIP’i itch.io paneline yükleyip ayarları tamamlamak.
 - **CrazyGames — KOŞULLU NO-GO (Conditional NO-GO):** SDK v3, oyun durumu sinyalleri, mute/fullscreen ve ödüllü reklam entegrasyonu kodda tam; paket 8 MiB sınırının 277.1 KB altında. Kalan kesin koşullar: (1) GitHub Pages etkinleştirilip gizlilik politikasının canlı HTTPS adresinde yayınlanması ve (2) CrazyGames portal build'inin yüklenip platform onayının alınması.
 - **Poki — KOŞULLU NO-GO (Conditional NO-GO):** Poki v2 SDK init, gameplayStart/Stop, ödüllü reklam ve paket boyutu gereksinimleri karşılandı. Kalan kesin koşullar: (1) GitHub Pages üzerinden gizlilik URL'sinin canlıya alınması, (2) paralel görevdeki Poki mute bridge kanıtının tamamlanması ve (3) Poki paneline build yüklenip onay sürecinin tamamlanması.
 - **Steam — ASKIDA / UYGULANMIYOR (Parked / N/A):** Bu turda kullanıcı kararıyla askıya alınmıştır; itch.io kapalı testi ve web portalı adımları tamamlanana kadar bu sürüm döngüsünün kapsamı dışındadır.
