@@ -30,6 +30,8 @@ const AI_DIFFICULTY = {
     multipleTargets: false,
     lethalSelf: 1.0,
     useSkills: false,
+    weaponElevations: 3,
+    weaponPowerSteps: 2,
   },
   normal: {
     searchSeconds: 3,
@@ -50,6 +52,8 @@ const AI_DIFFICULTY = {
     multipleTargets: false,
     lethalSelf: 1.0,
     useSkills: false,
+    weaponElevations: 4,
+    weaponPowerSteps: 3,
   },
   hard: {
     searchSeconds: 5,
@@ -70,6 +74,8 @@ const AI_DIFFICULTY = {
     multipleTargets: true,
     lethalSelf: 0.8,
     useSkills: true,
+    weaponElevations: 5,
+    weaponPowerSteps: 3,
   },
   expert: {
     searchSeconds: 8,
@@ -90,6 +96,8 @@ const AI_DIFFICULTY = {
     multipleTargets: true,
     lethalSelf: 0.7,
     useSkills: true,
+    weaponElevations: 5,
+    weaponPowerSteps: 4,
   },
 };
 
@@ -354,12 +362,12 @@ function aiCoarseCandidates(game, shooterIdx, spec) {
 // Zorluğa göre hangi silahları kullanacağını belirle.
 function aiWeaponLevels(game) {
   const diff = aiGetDifficulty(game);
-  // Kolay: sadece Bazuka
+  // Kolay: Bazuka + El Bombası + Pompalı; kaba seçim taraması.
   // Orta: Bazuka + El Bombası + Pompalı
   // Zor: Bazuka + El Bombası + Pompalı + Keskin Nişancı + Misket + 3'lü Roket
   // Ustalık: tüm silahlar
   const levels = {
-    easy: ["bazooka"],
+    easy: ["bazooka", "grenade", "shotgun"],
     normal: ["bazooka", "grenade", "shotgun"],
     hard: ["bazooka", "grenade", "shotgun", "sniper", "cluster", "triple"],
     expert: ["bazooka", "grenade", "shotgun", "sniper", "cluster", "triple", "sticky", "rubber", "rubbertrio", "grenadetrio", "megacluster", "nuke", "barrage", "mirv", "airstrike", "drill", "mine", "napalm"],
@@ -370,42 +378,46 @@ function aiWeaponLevels(game) {
 // Silah seçimi — mevcut duruma en uygun silahı döndür.
 function aiSelectWeapon(game, shooterIdx) {
   const shooter = game.players[shooterIdx];
-  const target = game.players.find((p, i) => i !== shooterIdx && p.alive);
-  const available = aiWeaponLevels(game);
-  const ammo = shooter.ammo;
-  const dist = target ? Math.abs(target.x - shooter.x) : 0;
-  let best = "bazooka"; // varsayılan
+  const params = aiParams(game);
+  const ammo = shooter.ammo || {};
+  const targets = game.players.filter((p, i) => i !== shooterIdx && p.alive);
+  const target = targets[0];
+  const allowed = new Set(aiWeaponLevels(game));
+  // Game.fire applies these effects outside the single-projectile simulator.
+  const unsupported = new Set(["airstrike", "mine", "teleportball", "hook"]);
+  const specs = WEAPONS.filter((spec) => allowed.has(spec.id) && !unsupported.has(spec.id) &&
+    (ammo[spec.id] === Infinity || (Number.isFinite(ammo[spec.id]) && ammo[spec.id] > 0)));
+  if (!specs.length) return WEAPONS[0];
+
+  const elevations = params.weaponElevations || 4;
+  const powers = params.weaponPowerSteps || 3;
+  const preferredRight = !target || target.x >= shooter.x;
+  let bestSpec = null;
   let bestScore = -Infinity;
-  for (const id of available) {
-    if (ammo[id] === Infinity || (ammo[id] > 0 && ammo[id] !== undefined)) {
-      const spec = WEAPONS.find((w) => w.id === id);
-      if (!spec) continue;
-      let score = 0;
-      // Mesafe bazlı tercih
-      if (spec.id === "sniper" && dist < 300) score += 5;
-      if (spec.id === "shotgun" && dist > 150) score -= 5;
-      if (spec.id === "bazooka" && dist > 400) score -= 3;
-      // Nükleer tek mermilik ve zorluk hasar ölçeğiyle tek atışta maçı
-      // çevirebilir; bu yüzden varsayılan tercih değil, yalnız hedefi
-      // bitirebilecek kadar zayıfsa (veya kalkanlıysa) öne geçer.
-      if (spec.id === "nuke") {
-        const outMult = (shooter.dmgMult || 1) * (shooter.aiDamageMult || 1);
-        const lethal = target && !target.blockShield &&
-          target.hp <= spec.damage * outMult * 0.75;
-        score += lethal ? 6 : -2;
+  for (const spec of specs) {
+    let bestShot = -Infinity;
+    for (let dirPass = 0; dirPass < 2; dirPass++) {
+      const right = dirPass === 0 ? preferredRight : !preferredRight;
+      for (let ai = 0; ai < elevations; ai++) {
+        const elevation = 0.12 + ai * (1.28 / Math.max(1, elevations - 1));
+        const angle = right ? -elevation : -Math.PI + elevation;
+        for (let pi = 0; pi < powers; pi++) {
+          const power = 0.25 + pi * (0.75 / Math.max(1, powers - 1));
+          const shot = aiSimulateShot(game, shooterIdx, angle, power, spec);
+          if (!shot.safe || !Number.isFinite(shot.score)) continue;
+          let score = shot.score;
+          if (target && !target.blockShield && shot.enemyDamage >= target.hp) score += target.hp + 10;
+          if (spec.pellets > 1) score *= Math.min(1.45, 1 + (spec.pellets - 1) * 0.12);
+          if (spec.cluster) score *= 1.12;
+          if (ammo[spec.id] !== Infinity && ammo[spec.id] === 1 && !shot.enemyDamage) score -= 2;
+          if (spec.id === "nuke" && target && !target.blockShield && target.hp > spec.damage * (shooter.dmgMult || 1) * (shooter.aiDamageMult || 1) * 0.75) score -= 35;
+          if (score > bestShot) bestShot = score;
+        }
       }
-      // Hedef kalkanlıysa yüksek hasarlı silahları tercih et
-      if (target && target.blockShield) {
-        if (spec.id === "sniper" || spec.id === "nuke") score += 8;
-        if (spec.id === "shotgun") score -= 2;
-      }
-      // Mühimmat azalıyorsa düşük mermili silahları tercih et
-      if (ammo[id] !== Infinity && ammo[id] <= 1) score -= 1;
-      // Skor
-      if (score > bestScore) { bestScore = score; best = id; }
     }
+    if (bestShot > bestScore) { bestScore = bestShot; bestSpec = spec; }
   }
-  return WEAPONS.find((w) => w.id === best) || WEAPONS[0];
+  return bestSpec || specs.find((spec) => spec.id === "bazooka") || specs[0];
 }
 
 // ── Yetenek seçimi ──────────────────────────────────────────────────────────
@@ -821,7 +833,7 @@ class BotController {
     let chosen = base;
     const baseError = (this.random() * 2 - 1) * p.baseError;
     for (const factor of p.refineFactors) {
-      const trial = aiSimulateShot(game, this.shooterIdx, base.angle + baseError * factor, base.power);
+      const trial = aiSimulateShot(game, this.shooterIdx, base.angle + baseError * factor, base.power, this.currentSpec);
       if (trial.safe && isFinite(trial.score)) { chosen = trial; break; }
     }
     this.choice = chosen;

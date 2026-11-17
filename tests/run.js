@@ -1538,9 +1538,9 @@ group("Zorluğa göre bot hasar ölçeği");
   // Nükleer, zorluk hasar ölçeğiyle tek atışta maçı çevirebildiği için
   // varsayılan tercih olmamalı; yalnız finisher/kalkan kırıcı olarak seçilir.
   {
-    function weaponGame(hp, shield) {
+    function weaponGame(hp, shield, targetX = 700) {
       const shooter = makeEntity(M.CHARACTERS[0], 200, 420);
-      const target = makeEntity(M.CHARACTERS[1], 700, 420);
+      const target = makeEntity(M.CHARACTERS[1], targetX, 420);
       shooter.control = "bot"; target.control = "human";
       for (const e of [shooter, target]) {
         e.ammo = {};
@@ -1548,14 +1548,26 @@ group("Zorluğa göre bot hasar ölçeği");
       }
       target.hp = hp;
       target.blockShield = !!shield;
-      return { players: [shooter, target], turn: 0, bot: { difficulty: "expert" } };
+      return { players: [shooter, target], terrain: makeFlatTerrain(), wind: 0, turn: 0, bot: { difficulty: "expert" } };
     }
     check("tam canlı hedefte Ustalık nükleeri harcamaz",
       M.aiSelectWeapon(weaponGame(100, false), 0).id !== "nuke");
-    check("hedefi bitirebilecekse nükleeri seçer",
-      M.aiSelectWeapon(weaponGame(45, false), 0).id === "nuke");
-    check("kalkanlı hedefte yüksek hasarlı silah seçilir (nükleer/keskin nişancı)",
-      ["nuke", "sniper"].includes(M.aiSelectWeapon(weaponGame(100, true), 0).id));
+    const finisher = M.aiSelectWeapon(weaponGame(45, false), 0);
+    check("düşük canlı hedef için doğrudan bitirici silah seçilir",
+      ["bazooka", "nuke"].includes(finisher.id), finisher.id);
+    const shieldGame = weaponGame(100, true);
+    const shieldPick = M.aiSelectWeapon(shieldGame, 0);
+    check("kalkanlı hedefte simülasyonla değerlendirilen saldırı silahı seçilir",
+      ["nuke", "sniper", "shotgun"].includes(shieldPick.id), shieldPick.id);
+    shieldGame.players[0].ammo.shotgun = 0;
+    check("mühimmatsız silah aday havuzuna alınmaz",
+      M.aiSelectWeapon(shieldGame, 0).id !== "shotgun");
+    check("aynı durum aynı silah kararını verir",
+      M.aiSelectWeapon(shieldGame, 0).id === M.aiSelectWeapon(shieldGame, 0).id);
+    const nearPick = M.aiSelectWeapon(weaponGame(100, false, 300), 0).id;
+    const farPick = M.aiSelectWeapon(weaponGame(100, false, 800), 0).id;
+    check("yakın ve uzak hedefler farklı silah değerlendirmesi doğurur",
+      nearPick !== farPick, `${nearPick}/${farPick}`);
   }
 }
 
