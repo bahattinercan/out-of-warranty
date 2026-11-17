@@ -446,7 +446,7 @@ yuvarlama ile 0'a düşse bile ıska sayılmaz).
 
 ## Sonraki aşamaya bırakılanlar
 
-- Botun Bazuka dışı silah kullanması (AI_PLAN.md'de sonraki aşama).
-- Botun yetenek kullanması (AI_PLAN.md'de sonraki aşama).
+- Botun Bazuka dışı silah kullanması (docs/AI_PLAN.md'de sonraki aşama).
+- Botun yetenek kullanması (docs/AI_PLAN.md'de sonraki aşama).
 - Maç içinde zorluk değiştirme.
 - Botun oyuncu davranışından öğrenmesi (adaptif zorluk).

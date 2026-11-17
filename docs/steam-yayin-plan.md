@@ -188,7 +188,7 @@ _*.html, _*.js   (dev probe sayfaları)
 tests/
 docs/
 screenshots/
-README.md, CLAUDE.md, AI_PLAN.md
+README.md, CLAUDE.md, docs/AI_PLAN.md
 .git/
 ```
 
