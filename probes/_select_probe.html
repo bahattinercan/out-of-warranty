@@ -64,10 +64,15 @@
       return g;
     }
 
-    makeFake(0).renderMapSelect(document.getElementById("c1").getContext("2d"));
-    makeFake(1).renderMapSelect(document.getElementById("c2").getContext("2d"));
-    makeFake().renderCountSelect(document.getElementById("c3").getContext("2d"));
-    makeFake().renderDifficultySelect(document.getElementById("c4").getContext("2d"));
+    function paintSelections() {
+      makeFake(0).renderMapSelect(document.getElementById("c1").getContext("2d"));
+      makeFake(1).renderMapSelect(document.getElementById("c2").getContext("2d"));
+      makeFake().renderCountSelect(document.getElementById("c3").getContext("2d"));
+      makeFake().renderDifficultySelect(document.getElementById("c4").getContext("2d"));
+    }
+    paintSelections();
+    // Repaint after file:// images finish loading so screenshot probes show key art.
+    setTimeout(paintSelections, 500);
   </script>
 </body>
 </html>

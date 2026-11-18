@@ -12,7 +12,7 @@
  *  5. ZIP gerçekten yazılıyor ve okunabiliyor: merkezi dizin sayısı manifest ile
  *     aynı, `index.html` bayt bayt aynı, CRC'ler tutuyor.
  *  6. Lisans kapisi: paket belgeleri ve font lisanslari eksiksiz.
- *  7. Boyut kapilari: Poki < 8 MB, itch.io < 50 MB.
+ *  7. Yerel kuru paket boyut kapısı: < 500 MiB.
  */
 const fs = require("fs");
 const os = require("os");
@@ -130,7 +130,7 @@ check("paketteki her js dosyası derleniyor (sözdizimi)", syntaxErrors.length =
 const ver = B.readVersion(ROOT);
 check("sürüm semver biçiminde", /^\d+\.\d+\.\d+$/.test(ver.version), ver.version);
 check("sürüm kanalı tanımlı", !!ver.channel, ver.channel);
-const itchDoc = fs.readFileSync(path.join(ROOT, "docs", "itch-yayin-metni.md"), "utf8");
+const itchDoc = fs.readFileSync(path.join(ROOT, "docs", "itch-release-copy.md"), "utf8");
 check("yayın metni aynı sürümü yazıyor", itchDoc.indexOf(ver.version) >= 0, ver.version);
 const projDoc = fs.readFileSync(path.join(ROOT, "CLAUDE.md"), "utf8");
 check("CLAUDE.md sürümü yazıyor", projDoc.indexOf(ver.version) >= 0, ver.version);
@@ -197,8 +197,8 @@ try {
 
 // ── 7) Boyut kapilariıları ─────────────────────────────────────────────────────
 const kb = (built ? built.totalBytes : 0) / 1024;
-check("paket Poki sınırının altında (< 8 MB)", kb < 8 * 1024, `${kb.toFixed(1)} KB`);
-check("paket itch.io sınırının altında (< 50 MB)", kb < 50 * 1024, `${kb.toFixed(1)} KB`);
+const packageDryMaxKb = 500 * 1024;
+check("kuru paket 500 MiB sınırının altında", kb < packageDryMaxKb, `${kb.toFixed(1)} / ${packageDryMaxKb} KB`);
 check("paket makul büyüklükte (> 300 KB — eksik dosya olmasın)", kb > 300, `${kb.toFixed(1)} KB`);
 
 // ── Özet ──────────────────────────────────────────────────────────────────

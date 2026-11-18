@@ -137,13 +137,13 @@ vm.runInContext(
 const CAT = catSandbox.__CAT;
 check("katalog çeviri alanı üretildi", CAT.entries.length >= 40, `${CAT.entries.length} alan`);
 // Kayıtlı kataloglar (DATA_CATALOGS): silah 60 + parça 48 + robot 102 +
-// servis 10 + harita 12 + bölge adı 6 = 238. Bölge adı bölgeye göre
+// servis 10 + harita 30 + bölge adı 7 = 257. Bölge adı bölgeye göre
 // anahtarlanır (aynı bölgeyi paylaşan haritalar tek anahtar üretir), bu yüzden
 // benzersiz anahtar sayısı bakılır. Parçalarda `hint` alanı yok — katalog
 // yapılandırması yalnız GERÇEKTEN var olan alanları listelemeli, yoksa
 // kullanılmayan sözlük anahtarları zorunlu hâle gelir.
 const uniqueCatKeys = new Set(CAT.entries.map((e) => e.key));
-check("tüm katalog alanları çeviri kapsamında", uniqueCatKeys.size === 238, `${uniqueCatKeys.size} alan`);
+check("tüm katalog alanları çeviri kapsamında", uniqueCatKeys.size === 257, `${uniqueCatKeys.size} alan`);
 const missingCat = CAT.entries.filter((e) => CAT.I18N.en[e.key] === undefined).map((e) => e.key);
 check("her katalog alanı `en` sözlüğünde var", missingCat.length === 0, missingCat.slice(0, 6).join(", "));
 for (const pre of CAT.prefixes) {
@@ -212,6 +212,17 @@ for (const id of tabIds) {
 for (const lang of I.LANG_REQUIRED) {
   const dict = I.I18N[lang] || {};
   const gap = [...usedKeys].filter((k) => dict[k] === undefined);
+  const sourceKeys = Object.keys(I.I18N.en).sort();
+  const localeKeys = Object.keys(dict).sort();
+  check(`required locale key set matches en: ${lang}`, sourceKeys.join("\n") === localeKeys.join("\n"));
+  const placeholderPattern = /\{\w+\}/g;
+  const placeholderMismatches = sourceKeys.filter((key) => {
+    const source = (I.I18N.en[key].match(placeholderPattern) || []).sort().join("|");
+    const translated = (String(dict[key]).match(placeholderPattern) || []).sort().join("|");
+    return source !== translated;
+  });
+  check(`required locale preserves placeholders: ${lang}`, placeholderMismatches.length === 0,
+    placeholderMismatches.slice(0, 8).join(", "));
   check(`zorunlu dil tam çevrilmiş: ${lang}`, gap.length === 0, gap.slice(0, 8).join(", "));
 }
 

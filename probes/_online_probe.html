@@ -144,6 +144,16 @@
     l6._fail("ROOM_NOT_FOUND");
     paint("c6", (ctx) => l6.render(ctx));
 
+    // Tek seferlik probe çiziminden sonra file:// görselleri yüklenmiş olarak yenile.
+    setTimeout(() => {
+      paint("c1", (ctx) => l1.render(ctx));
+      paint("c2", (ctx) => l2.render(ctx));
+      paint("c3", (ctx) => host.render(ctx));
+      paint("c4", (ctx) => sixGuests[0].render(ctx));
+      paint("c5", (ctx) => Game.prototype.renderOnlineLoading.call(g5, ctx));
+      paint("c6", (ctx) => l6.render(ctx));
+    }, 700);
+
     console.log("PROBE OK · rol/kod/oda(host)/oda(misafir)/yükleme/hata çizildi");
   </script>
 </body>

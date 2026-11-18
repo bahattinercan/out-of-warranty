@@ -3,26 +3,32 @@
   "prompt": "Widescreen 16:9 premium key art illustration for a Turkish industrial robot arena game: four original colorful maintenance combat robots facing off across a dramatic scrapyard factory arena, one amber robot with mint lights in foreground, one violet robot and one heavy rust-brown machine, distant teal cranes, gantries and smokestacks at dusk, cinematic composition with clear open dark sky area in the upper third for title placement, confident readable silhouettes, polished hand-painted digital 2D game illustration, crisp outlines, refined cel shading, rich teal steel and amber accents, no text, no logos, no watermark, full bleed.",
   "master": "key-art-master.png",
   "derivatives": [
-    {
-      "file": "key-art.webp",
-      "size": [
-        1920,
-        1080
-      ]
-    },
-    {
-      "file": "store-capsule.webp",
-      "size": [
-        460,
-        215
-      ]
-    },
-    {
-      "file": "itch-cover.webp",
-      "size": [
-        630,
-        500
-      ]
-    }
-  ]
+    { "file": "key-art.webp", "size": [1920, 1080] },
+    { "file": "store-capsule.webp", "size": [460, 215] },
+    { "file": "itch-cover.webp", "size": [630, 500] }
+  ],
+  "key-art-arena.png": {
+    "source": "image_gen.imagegen",
+    "size": "1536x1024",
+    "steps": 0,
+    "prompt": "Cinematic scrapyard robot tournament arena at dusk, with an ochre tracked combat robot facing a silver teal agile robot across a hazard-striped circular platform, cheering robot crowd, sparks, amber and teal stadium lighting, painterly sci-fi game key art, no text, letters, logos, UI or frame."
+  },
+  "key-art-service-workshop.png": {
+    "source": "image_gen.imagegen",
+    "size": "1536x1024",
+    "steps": 0,
+    "prompt": "Industrial robot workshop, compact yellow maintenance robot undergoing calibration at a cluttered workbench with teal diagnostic holograms, amber lamps, painterly game key art, no text."
+  },
+  "key-art-service-market.png": {
+    "source": "image_gen.imagegen",
+    "size": "1536x1024",
+    "steps": 0,
+    "prompt": "Sci-fi ammunition market, colorful artillery shells on a rugged vendor counter with a friendly robot merchant, amber lights and teal factory glow, painterly game key art, no text."
+  },
+  "key-art-service-tutorial.png": {
+    "source": "image_gen.imagegen",
+    "size": "1536x1024",
+    "steps": 0,
+    "prompt": "Two small junkyard robots demonstrate a playful artillery duel with a clear curved projectile path, warm amber and teal dusk, painterly game key art, no text."
+  }
 }

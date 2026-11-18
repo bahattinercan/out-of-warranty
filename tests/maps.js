@@ -9,7 +9,7 @@ const JS_DIR = path.join(__dirname, "..", "js");
 const bundle = ["characters.js", "maps.js", "terrain.js"]
   .map((f) => fs.readFileSync(path.join(JS_DIR, f), "utf8"))
   .join("\n;\n") +
-  "\n;globalThis.__MAP_TEST = { MAPS, CHARACTERS, MAP_LAYOUT_SPECS, mapLayoutProfile, getMapSpawnPads, getMapPropPlacements: typeof getMapPropPlacements === \"function\" ? getMapPropPlacements : null, Terrain, drawMapPreview: typeof drawMapPreview === \"function\" ? drawMapPreview : null };";
+  "\n;globalThis.__MAP_TEST = { MAPS, CHARACTERS, MAP_LAYOUT_SPECS, mapLayoutProfile, getMapSpawnPads, applyMapTurnMechanics, getMapPropPlacements: typeof getMapPropPlacements === \"function\" ? getMapPropPlacements : null, Terrain, drawMapPreview: typeof drawMapPreview === \"function\" ? drawMapPreview : null };";
 const sandbox = { Math, Float32Array, Uint8Array, Array, Object, Set, Map, console, _csRoundRect: () => {} };
 sandbox.globalThis = sandbox;
 vm.createContext(sandbox);
@@ -23,14 +23,56 @@ function check(name, condition, detail) {
   else { fail++; failures.push(`${name}${detail ? ` — ${detail}` : ""}`); }
 }
 
-check("altı bağımsız haritanın tamamında özel yerleşim var",
-  M.MAPS.length === 6 && M.MAPS.every((m) => m.layout && !m.forChar));
+check("bağımsız haritaların tamamında özel yerleşim var",
+  M.MAPS.length === 14 && M.MAPS.every((m) => m.layout && !m.forChar));
 check("harita kimlikleri robotlardan bağımsız ve benzersiz",
-  new Set(M.MAPS.map((m) => m.id)).size === 6 && M.MAPS.every((m) => !M.CHARACTERS.some((c) => c.id === m.id)));
+  new Set(M.MAPS.map((m) => m.id)).size === 14 && M.MAPS.every((m) => !M.CHARACTERS.some((c) => c.id === m.id)));
 check("harita adları ve taktik notları birbirinden farklı",
-  new Set(M.MAPS.map((m) => m.label)).size === 6 && M.MAPS.every((m) => m.hint));
-check("altı haritanın her biri farklı bir resimli arka plan kullanır",
-  new Set(M.MAPS.map((m) => m.zoneId)).size === 6 && M.MAPS.every((m) => m.scene));
+  new Set(M.MAPS.map((m) => m.label)).size === 14 && M.MAPS.every((m) => m.hint));
+check("haritalar görsel sahne kimlikleriyle kaydedilir",
+  new Set(M.MAPS.map((m) => m.scene)).size === 14 && M.MAPS.every((m) => m.scene));
+check("fırın dışındaki haritalar PNG arka, ön ve oynanabilir yüzey katmanı kullanır",
+  M.MAPS.filter((m) => m.id !== "furnace").every((m) =>
+    m.backdropArt === `gameplay/${m.id.replaceAll("_", "-")}-background` &&
+    m.foregroundArt === `gameplay/${m.id.replaceAll("_", "-")}-foreground` &&
+    m.surfaceArt === `gameplay/${m.id.replaceAll("_", "-")}-surface`));
+
+const conveyorMap = M.MAPS.find((m) => m.id === "conveyor_port");
+check("Konveyör Limanı iki zıt yönlü bandı ve yeterli itiş mesafesini tanımlar",
+  !!conveyorMap && conveyorMap.conveyors.length === 2 && conveyorMap.conveyors[0].direction === 1 && conveyorMap.conveyors[1].direction === -1 && conveyorMap.conveyorShift === 12);
+check("Konveyör Limanı başlangıç noktalarını hareketli bantların dışında tutar",
+  !!conveyorMap && M.getMapSpawnPads(conveyorMap, 6).every((pad) =>
+    !conveyorMap.conveyors.some((belt) => pad.x >= belt.start && pad.x <= belt.end)));
+if (conveyorMap) {
+  const terrain = { w: 960, h: 540, isSolid: () => false, surfaceBelow: () => 350 };
+  const onLeftBelt = { x: 400, y: 350, r: 12, alive: true, onGround: true, vx: 1, vy: 2 };
+  const onRightBelt = { x: 560, y: 350, r: 12, alive: true, onGround: true, vx: -1, vy: 1 };
+  const safe = { x: 240, y: 350, r: 12, alive: true, onGround: true };
+  const airborne = { x: 400, y: 330, r: 12, alive: true, onGround: false };
+  const dead = { x: 400, y: 350, r: 12, alive: false, onGround: true };
+  const moved = M.applyMapTurnMechanics(conveyorMap, [onLeftBelt, onRightBelt, safe, airborne, dead], terrain);
+  check("bantlar yere basan robotları merkeze taşır ve düşey hareketi dengeler",
+    moved.length === 2 && onLeftBelt.x === 412 && onRightBelt.x === 548 && onLeftBelt.vx === 0 && onRightBelt.vy === 0);
+  check("bantlar havadaki, ölü veya güvenli iskeledeki robotlara dokunmaz",
+    safe.x === 240 && airborne.x === 400 && dead.x === 400);
+  const blocked = { x: 400, y: 350, r: 12, alive: true, onGround: true };
+  M.applyMapTurnMechanics(conveyorMap, [blocked], { ...terrain, isSolid: () => true });
+  check("bant güvenli olmayan katı engelin içinden robotu taşımaz", blocked.x === 400);
+}
+const steamMap = M.MAPS.find((m) => m.id === "steamworks");
+check("Buhar Bacaları iki sırayla çalışan güvenli tahliye jeti tanımlar",
+  !!steamMap && steamMap.steamVents.length === 2 && steamMap.steamVents.every((vent) => vent.lift > 0 && vent.radius > 0));
+if (steamMap) {
+  const terrain = { w: 960, h: 540, isSolid: () => false, surfaceBelow: () => 350 };
+  const left = { x: 355, y: 350, r: 12, alive: true, onGround: true, vy: 0 };
+  const right = { x: 605, y: 350, r: 12, alive: true, onGround: true, vy: 0 };
+  const moved0 = M.applyMapTurnMechanics(steamMap, [left, right], terrain, 0);
+  check("ilk tahliye jeti yakındaki robotu hasar vermeden havaya alır",
+    moved0.length === 1 && left.vy < 0 && !left.onGround && right.onGround);
+  const moved1 = M.applyMapTurnMechanics(steamMap, [left, right], terrain, 1);
+  check("sonraki tur karşı bacayı etkinleştirir",
+    moved1.length === 1 && right.vy < 0 && !right.onGround);
+}
 
 check("dekor yerleşimi saf test edilebilir bir üretici sunar",
   typeof M.getMapPropPlacements === "function");
@@ -71,8 +113,17 @@ for (const map of M.MAPS) {
   }
 }
 
-check("altı ana yüzey silüeti birbirinden farklıdır", signatures.size === 6,
+check("on dört ana yüzey silüeti birbirinden farklıdır", signatures.size === 14,
   `benzersiz=${signatures.size}`);
+const basinMap = M.MAPS.find((m) => m.id === "settling_basin");
+check("KEPÇE-8 iki havza arasında alçak savak ve altı güvenli doğuş noktası taşır",
+  !!basinMap && basinMap.layout.s.length === 6 && basinMap.layout.s.every((x) => x < .48 || x > .54) &&
+  basinMap.layout.p.some(([x, y]) => x === .48 && y === .685) && basinMap.layout.p.some(([x, y]) => x === .54 && y === .685));
+check("TOK-2 üç ayrı kalibrasyon tezgâhı taşır", M.MAPS.find((m) => m.id === "calibration_benches").layout.p.filter(([, y], i, p) => y < .70 && (i === 0 || p[i - 1][1] >= .70)).length === 3);
+check("VUR-5 iki yamaçtan tek güvenli havzaya iner", M.MAPS.find((m) => m.id === "filter_terraces").layout.p.some(([, y]) => y >= .75));
+check("PUNTA-1 köprü ve merkez dikmesini katı arazi maskesine ekler", M.MAPS.find((m) => m.id === "weld_gantries").layout.solids.length === 2);
+check("SIZ-7 merkez platformu ve iki sığ siper tanımlar", M.MAPS.find((m) => m.id === "old_filter_bay").layout.p.some(([, y]) => y === .65));
+check("EMP-80 yüksek merkezi platform ve yan yaklaşım rotaları taşır", M.MAPS.find((m) => m.id === "substation_yard").layout.p.some(([, y]) => y === .519));
 check("Ay Moloz Sahası üç ek platform taşır",
   M.MAPS.find((m) => m.id === "moon_scrapyard").layout.solids.length === 3);
 check("Buz Kırığı fiziksel olarak dipsiz bir uçurum taşır",

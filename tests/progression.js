@@ -15,7 +15,7 @@ const FILES = ["i18n.js", "characters.js", "progression.js", "profile.js", "part
 const bundle =
   FILES.map((f) => fs.readFileSync(path.join(JS_DIR, f), "utf8")).join("\n;\n") +
   "\n;globalThis.__P = { CHARACTERS, SERVICE_LEVELS, MAX_SERVICE_XP, MAX_TIER, START_SCRAP, BRANCHES, BRANCH_LABELS, TIER_COSTS, TIER_LEVEL_GATES, REWARD_BASE, DIFFICULTY_MULTIPLIER, levelForXp, xpForLevel, nextLevelXp, levelUpMessage, calculateMatchReward, resolveRobotBuild, upgradeEffectText, robotUpgradeSummary, totalTiers, sanitizeUpgrades, nextUpgradeStep, toSafeInt, defaultProfile, defaultRobotProgress, normalizeProfile, loadProfile, saveProfile, getRobotProgress, grantMatchReward, purchaseUpgrade, PROFILE_KEY, CLAIMED_MATCH_LIMIT, createSessionId, " +
-  "PROFILE_SCHEMA_VERSION, DEFAULT_UNLOCKED_ROBOTS, ACCOUNT_LEVELS, ROBOT_PRICES, levelForAccountXp, xpForAccountLevel, nextAccountLevelXp, accountLevelUpBonus, accountLevelTitle, robotPriceSpec, isRobotUnlocked, canUnlockRobot, unlockRobot };";
+  "PROFILE_SCHEMA_VERSION, MAX_ARENA_STAGE, DEFAULT_UNLOCKED_ROBOTS, ACCOUNT_LEVELS, ROBOT_PRICES, levelForAccountXp, xpForAccountLevel, nextAccountLevelXp, accountLevelUpBonus, accountLevelTitle, robotPriceSpec, isRobotUnlocked, canUnlockRobot, unlockRobot };";
 
 const sandbox = { Math, Date, console, JSON, Set, Map, Array, Object, Number, String, isFinite, parseInt };
 sandbox.globalThis = sandbox;
@@ -262,7 +262,14 @@ group("Profil şeması ve doğrulama");
 {
   const fresh = P.defaultProfile();
   check("yeni profil 200 Hurda ile başlar", fresh.scrap === 200);
-  check("yeni profil şema sürümü taşır", fresh.version === P.PROFILE_SCHEMA_VERSION && P.PROFILE_SCHEMA_VERSION === 7);
+  check("yeni profil şema sürümü taşır", fresh.version === P.PROFILE_SCHEMA_VERSION && P.PROFILE_SCHEMA_VERSION === 8);
+  check("yeni profil ilk arena bölümünü açar", fresh.arenaUnlockedStage === 1);
+  check("arena bölüm sayısı robot kadrosundan türetilir", P.MAX_ARENA_STAGE === P.CHARACTERS.length - 1);
+  const arenaProgress = P.normalizeProfile({ version: 7, arenaUnlockedStage: 5 });
+  check("v7 profili arena ilerlemesiyle v8'e göçer", arenaProgress.version === 8 && arenaProgress.arenaUnlockedStage === 5);
+  check("arena bölüm ilerlemesi 1..son bölüm aralığına kırpılır",
+    P.normalizeProfile({ version: 8, arenaUnlockedStage: 999 }).arenaUnlockedStage === P.MAX_ARENA_STAGE &&
+    P.normalizeProfile({ version: 8, arenaUnlockedStage: -4 }).arenaUnlockedStage === 1);
   check("yeni profil varsayılan 2 robotla başlar", fresh.unlockedRobots.length === 2 && fresh.unlockedRobots.includes("kopek") && fresh.unlockedRobots.includes("tavsan"));
   check("varsayılan profil round-trip", JSON.stringify(P.normalizeProfile(fresh)) === JSON.stringify(fresh));
 

@@ -1,13 +1,13 @@
 #!/usr/bin/env node
 /* art-gate.js — sanat varlıklarının kapıları (bağımlılıksız).
  *
- * Plan: docs/art-uretim-plani-ai3090.md §6 (varlık sözleşmesi) ve §7.5 (boyut bütçesi).
+ * Plan: docs/art-production-plan-ai3090.md §6 (varlık sözleşmesi) ve §7.5 (boyut bütçesi).
  *
  * Ne sınanır:
  *  1. Manifest şeması: zorunlu alanlar dolu, id tekil, dosya adı id ile uyumlu,
  *     prompt ve üretim izi kayıtlı (seed'li model çıktısı veya kaynak aracı/türetilmiş kaynak).
- *  2. Dosya gerçekten var, WebP ve kayıtlı boyut/ölçüyle tutarlı.
- *  3. Grup bütçeleri ve paket üst sınırı (Poki 8 MB).
+ *  2. Dosya gerçekten var, PNG/WebP imzası uzantıyla ve kayıtlı boyutla tutarlı.
+ *  3. Grup bütçeleri ve yerel paket üst sınırı (500 MiB).
  *  4. `js/assets-manifest.js` manifest ile aynı (ayrışırsa oyun sessizce 404 alır).
  *  5. Tip kapıları: doku dikişi, alfa kapsamı, arka planın opak olması.
  *  6. Kapsam raporu: kaç bölge/katman hazır (Faz B ilerlemesi) — uyarı, hata değil.
@@ -32,10 +32,11 @@ const BUDGET = [
   { prefix: "splashes/", maxKb: 2560, perAsset: 100, label: "karakter splash (34)" },
   { prefix: "robots/", maxKb: 3072, perAsset: 100, label: "robot sprite (34)" },
   { prefix: "robot-models/", maxKb: 512, perAsset: 24, label: "robot model parts (68 SVG)" },
+  { prefix: "robot-parts/", maxKb: 2048, perAsset: 100, label: "modular robot key art parts" },
   { prefix: "atlases/", maxKb: 2048, perAsset: 512, label: "görsel atlasları" },
   { prefix: "weapons/", maxKb: 256, perAsset: 120, label: "silah sprite'ları" },
 ];
-const PACKAGE_MAX_KB = 8 * 1024; // Poki kapısı (tests/release.js ile aynı)
+const PACKAGE_MAX_KB = 500 * 1024; // Yerel kuru paket kapısı (tests/release.js ile aynı)
 const ZONES = ["scrapyard", "assembly", "warehouse", "cooling", "paint", "loading", "waste", "sandblast", "foundry"];
 
 let pass = 0;
@@ -64,9 +65,11 @@ for (const a of assets) {
   check(`${tag}: id tekil`, !ids.has(a.id));
   ids.add(a.id);
   const modelPart = a.id.startsWith("robot-models/");
+  const rasterFormat = path.extname(a.file || "").slice(1).toLowerCase();
   const expectedFile = modelPart
     ? `assets/robot-models/${a.id.slice("robot-models/".length).replace(/-(body|head)$/, "/$1")}.svg`
-    : `assets/${a.id}.webp`;
+    : `assets/${a.id}.${rasterFormat}`;
+  if (!modelPart) check(`${tag}: raster biçimi destekleniyor`, rasterFormat === "webp" || rasterFormat === "png", rasterFormat);
   check(`${tag}: dosya adı id ile uyumlu`, a.file === expectedFile, a.file);
   check(`${tag}: prompt kayıtlı`, typeof a.prompt === "string" && a.prompt.length > 40);
   check(`${tag}: üretim izi kayıtlı`, (Number.isInteger(a.seed) && a.seed > 0) ||
@@ -90,6 +93,8 @@ for (const a of assets) {
   totalKb += kb;
   if (a.id.startsWith("robot-models/")) {
     check(`${a.id}: SVG kökü`, buf.toString("utf8").startsWith("<svg "));
+  } else if (path.extname(a.file).toLowerCase() === ".png") {
+    check(`${a.id}: PNG imzası`, buf.length >= 8 && buf.slice(0, 8).equals(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10])));
   } else {
     check(`${a.id}: WebP imzası`, buf.slice(0, 4).toString("ascii") === "RIFF" && buf.slice(8, 12).toString("ascii") === "WEBP");
   }
@@ -132,7 +137,7 @@ for (const b of BUDGET) {
   const sum = group.reduce((s, a) => s + (a.kb || 0), 0);
   check(`${b.label} bütçesi (≤ ${b.maxKb} KB)`, sum <= b.maxKb, `${sum.toFixed(0)} KB / ${group.length} varlık`);
 }
-check("paket üst sınırı (Poki < 8 MB)", totalKb < PACKAGE_MAX_KB, `${totalKb.toFixed(0)} KB sanat`);
+check("yerel paket üst sınırı (< 500 MiB)", totalKb < PACKAGE_MAX_KB, `${totalKb.toFixed(0)} KB sanat`);
 
 // ── 4) Manifest ↔ çalışma anı indeksi ─────────────────────────────────────
 const indexJs = fs.existsSync(INDEX_JS) ? fs.readFileSync(INDEX_JS, "utf8") : "";
@@ -163,3 +168,4 @@ if (fail) {
   for (const f of failures) console.log("  • " + f);
   process.exitCode = 1;
 }
+

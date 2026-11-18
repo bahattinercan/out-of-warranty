@@ -11,7 +11,8 @@
 
 // ── Sabitler ────────────────────────────────────────────────────────────────
 
-const PROFILE_SCHEMA_VERSION = 7; // profile.js ile ortak kayıt şeması sürümü (v3: +ammo, v4: ortak ammo deposu, v5: +parçalar/loadout, v6: yuva başına 2 parça, v7: +hesap seviyesi/xp ve unlockedRobots)
+const PROFILE_SCHEMA_VERSION = 8; // profile.js ile ortak kayıt şeması sürümü (+v8 arena bölüm ilerlemesi)
+const MAX_ARENA_STAGE = Math.max(1, (typeof CHARACTERS === "undefined" ? 34 : CHARACTERS.length) - 1);
 
 const DEFAULT_UNLOCKED_ROBOTS = ["kopek", "tavsan"]; // Başlangıçta ücretsiz açık 2 robot (FIX-8 ve ZIP)
 

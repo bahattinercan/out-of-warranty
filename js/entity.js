@@ -359,6 +359,7 @@ class Entity {
     const drewRobot = typeof drawRobot === "function" && drawRobot(ctx, {
       cx, cy, r: this.r, facing: this.facing, aim: this.aim, charDef: this.charDef,
       weapon: this.heldWeaponSpec, recoil: this.weaponRecoil,
+      frontArmOnly: true,
       playerTint: this.playerTint, timeMs,
       healthRatio: this.maxHp > 0 ? this.hp / this.maxHp : 1,
       hitFlash: Math.min(1, this.visualHitTimer / 8),

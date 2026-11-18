@@ -1,54 +1,48 @@
-# Robot modelleri ve tutuş sistemi
+# Robot Models and Weapon Gripping Rig
 
-Oyun modelleri katmanlıdır: 34 robotun her biri için üretilmiş gövde ve kafa SVG'leri, hareketli kollar, eller, alt takım ve takılı donanım bir araya gelir. Tek parça robot ve silah resimleri hareketli model olarak kullanılmaz. [34 robotluk konsept paftası](../art/robot-roster-concept.png) sanat yönünü belirler. Gövde SVG'si atış elinin önüne geçmez; namlu, iki tutamak ve dirsek pozu oyun iskeletinden gelir.
+Game models are layered: for each of the 34 robots, generated chassis and head SVGs, animated arms, hands, running gear (locomotion), and equipped parts come together. Monolithic raster sprites are not used for animated models. The [34-robot concept board](../art/robot-roster-concept.png) sets the art direction. The body SVG never covers the firing hand; muzzle points, dual grip handles, and elbow inverse kinematics derive directly from the game's procedural rig skeleton.
 
-`tools/robot-models.js`, `js/characters.js` içindeki her robotun şasi, hareket biçimi, yüz ve renk bilgisinden ayrı gövde/kafa SVG varlıkları üretir. Çıktılar `assets/robot-models/<id>/` altında, çalışma anı yolları `assets/manifest.json` ve `js/assets-manifest.js` içinde tutulur. Yenilemek için `npm run models:robots` çalıştırılır. SVG yüklenene kadar mevcut Canvas çizimi yedek olarak kullanılır.
+`tools/robot-models.js` produces separate chassis/head SVG assets from character data in `js/characters.js` (chassis type, locomotion, facial features, and palette). Outputs are stored under `assets/robot-models/<id>/`, with runtime paths indexed in `assets/manifest.json` and `js/assets-manifest.js`. Rebuilding is triggered via `npm run models:robots`. Until SVGs are loaded, procedural Canvas rendering serves as an immediate fallback.
 
-## Görsel kalite kuralları
+## Visual Quality Standards
 
-- Her şasi ayrı ana siluete; hayvan kimliği kulak, boynuz, gaga, burun ya da diken gibi seçilebilir baş biçimine dönüşür. Yüz detayı küçülse de okunması için göz/vizör geniş ve kontrastlı tutulur.
-- Gövde düz boya yerine koyu taban, renkli ana plaka, üst kenar ışığı, metal yüzey, perçin ve omuz yuvası katmanlarına ayrılır. Omuz yuvaları hareketli kolun bağlandığı noktaya hizalanır.
-- `viewBox` ve Canvas çizim dikdörtgenleri sabit kalır; böylece asset değişse de silah eli, namlu ve animasyon pivotları oynamaz. SVG’nin `viewBox` tanımı ölçek dönüşümünü sağlar; doğrusal gradyanlar tekrar kullanılabilir `defs` öğeleri olarak tutulur.
-- Küçük savaş ölçeğinde silueti boğacağı için ağır SVG filtreleri kullanılmaz; çizgi, dolgu, gradyan ve az sayıda büyük yüzey farkı tercih edilir. Harici SVG görselleri Canvas `drawImage()` ile uyumludur.
+- Each chassis maps to a distinct silhouette; animal origins translate into recognizable head attachments (ears, horns, beaks, snouts, or quills). Eyes and visors feature high contrast and exaggerated scale to remain readable at combat distances.
+- Chassis surfaces feature layered depth: dark baseplate, colored main armor plate, top edge specular highlight, metallic textures, rivets, and shoulder sockets. Shoulder sockets align precisely with arm joint pivots.
+- The `viewBox` and Canvas bounding boxes remain invariant across renders, ensuring weapon grip positions, muzzle coordinates, and animation pivots never shift when assets change. SVGs define consistent coordinate spaces; linear gradients live in reusable `defs`.
+- Heavy SVG blur/drop-shadow filters are avoided to keep silhouette boundaries sharp at combat resolution; clean strokes, solid fills, gradients, and contrasting facets are preferred. External SVGs are fully compatible with Canvas `drawImage()`.
 
-Bu kararlar SVG `viewBox` ve boyama davranışı ile Canvas `drawImage()` desteğine ilişkin güncel MDN belgeleriyle uyumludur: [viewBox](https://developer.mozilla.org/en-US/docs/Web/SVG/Reference/Attribute/viewBox), [linearGradient](https://developer.mozilla.org/en-US/docs/Web/SVG/Reference/Element/linearGradient), [SVG as an image](https://developer.mozilla.org/en-US/docs/Web/SVG/Guides/SVG_as_an_image), [Canvas drawImage](https://developer.mozilla.org/en-US/docs/Web/API/CanvasRenderingContext2D/drawImage).
+These standards align with MDN specifications for [viewBox](https://developer.mozilla.org/en-US/docs/Web/SVG/Reference/Attribute/viewBox), [linearGradient](https://developer.mozilla.org/en-US/docs/Web/SVG/Reference/Element/linearGradient), [SVG as an image](https://developer.mozilla.org/en-US/docs/Web/SVG/Guides/SVG_as_an_image), and [Canvas drawImage](https://developer.mozilla.org/en-US/docs/Web/API/CanvasRenderingContext2D/drawImage).
 
-## Uygulanan yapı
+## Rig Architecture
 
-- `robotWeaponPose`: silah ekseni, iki tutamak, iki kol ve namlu çıkışını robotun yerel koordinatlarında hesaplar.
-- `_rbProportions`: 34 modelin şasi, gövde ve alt takımına göre omuz genişliğini, başı ve bacak uzunluğunu belirler.
-- `robotArmPose`: sabit uzunlukta iki uzvun dirsek konumunu çözer. Erişilemeyen tutuş hata verir; kol uzatılarak gizlenmez.
-- `weaponRig`: 20 silahı fırlatıcı, tüfek, pompalı, bomba atıcı ve yardımcı araç tutuşlarına eşler. Silah ailesinin tutamakları ve geri tepme miktarı ayrı veridir.
-- `robotMuzzlePoint`: çizimle aynı pozdan dünya koordinatında namlu çıkışını verir. Balistik değerler değişmez.
-- `Entity.heldWeaponSpec`: son mühimmat harcandığında geri tepme tamamlanana kadar kullanılan silahı korur.
+- `robotWeaponPose`: Computes weapon axis, two grip points, two arm positions, and muzzle output in the robot's local coordinate space.
+- `_rbProportions`: Evaluates shoulder width, head scale, and leg length based on chassis, body, and locomotion specs across all 34 models.
+- `robotArmPose`: Solves elbow positions for two fixed-length limbs using inverse kinematics. Unreachable grips trigger assertion errors rather than unnatural limb stretching.
+- `weaponRig`: Maps 20 weapons into grip archetype families (launchers, rifles, shotguns, grenade launchers, utility tools). Each archetype specifies grip offsets and recoil profiles.
+- `robotMuzzlePoint`: Calculates world-space muzzle release coordinates from the exact rendered pose. Ballistic logic remains completely identical.
+- `Entity.heldWeaponSpec`: Retains the fired weapon spec until recoil finishes, even when the last round of ammunition is spent.
 
-Eller silahın üzerine çizilir. Baş yüzün okunması için üst katmanda kalır. Elde taşınan iş aleti silah tutarken kaldırılır; boşta duruşta görünür. Takılı parçalar ve mevcut yetenek efektleri eklemli modelle birlikte çizilir.
+Hands are drawn over weapon grips. Heads render on top to keep eyes and visors readable. Held utility tools are stowed when a weapon is drawn. Equipped parts and active skill effects render in lockstep with the articulated skeleton.
 
-Yürüme, alt takım hareketi, havada duruş ve iniş mevcut hareket verisini kullanır. Nişan sırasında gövdenin bağımsız sallanması kapalıdır; eller, silah ve mermi çıkışı ayrılmaz. Atış geri tepmesi kolları ve silahı birlikte hareket ettirir; fizik konumuna uygulanmaz.
+Locomotion animations (walking, treads, hover, jump/landing) utilize current entity kinematic states. Torso idle sway is locked during aiming so hands, weapon, and muzzle remain rock-solid. Firing recoil kicks arms and weapons without displacing entity physics coordinates.
 
-HUD portresi, karakter seçimi ve atölye aynı `drawRobot` modelini kullanır. Portre önbelleği korunur.
+HUD portraits, character select cards, and the workshop preview all share the same `drawRobot` pipeline with cached portrait surfaces.
 
-## Kabul ve kontrol
+## Acceptance Criteria
 
-1. Görsel yükleme tamamlandığında iki kavrama eli de çizilir.
-2. 34 model, 20 silah, iki yön, yedi açı ve üç geri tepme değerinde kol uzunlukları sabittir.
-3. Canvas dönüşümlerinden ölçülen eller tutamaklarla, namlu halkası mermi başlangıcıyla 0,01 piksel toleransta eşleşir. Yürüme sinyali ve geri tepme kontrol kapsamındadır.
-4. Son mühimmat atışında mermi eski silahın namlusundan çıkar; geri tepme bitince varsayılan silah gösterilir.
-5. `_robot_rig_probe.html` SAP-3, KEPÇE-8 ve BOM-12 için altı açıyı, iki yönü, hareketleri ve bütün kadroyu gösterir. `index.html` gerçek maç, menü ve atölye kontrolü için kullanılır.
-6. `node tests/robot-rig.js` ve Git Bash üzerinden `bash ~/.pi/agent/bin/verify.sh` çalıştırılır. Yeni bağımlılık eklenmez; `file://` desteği korunur.
+1. Both gripping hands render cleanly upon visual asset loading.
+2. Arm lengths remain constant across all 34 models, 20 weapons, 2 facing directions, 7 aim angles, and 3 recoil states.
+3. Hand positions align with grip coordinates, and muzzle rings match projectile spawn positions within a 0.01px tolerance under Canvas matrix transforms.
+4. On the final round of ammo, projectiles emit from the depleted weapon's muzzle before switching back to the default weapon once recoil settles.
+5. `_robot_rig_probe.html` validates 6 aim angles, both facings, locomotion states, and roster cards for SAP-3, KEPÇE-8, and BOM-12. `index.html` verifies live combat, menus, and workshop.
+6. `node tests/robot-rig.js` runs clean without introducing external dependencies, preserving `file://` compatibility.
 
-## Görsel iyileştirme paketi
+## Visual Polish Extension
 
-Kadro genelindeki sunum ikinci aşamada şu kurallarla genişletilir:
+Visuals are enhanced across the roster under the following conventions:
 
-- Yürüme ve atıl durum animasyonları robotun alt takımına göre hız ve salınım kullanır; nişan sırasında namlu/mermi geometrisini oynatmaz.
-- Silah aileleri iki elin dirsek yönünü ve bilek açısını ayrı belirler. Her el mevcut silah tutamağına bağlı kalır.
-- Hasar izleri can oranından, kısa darbe parlaması hasar olayından, mavi kalkan parlaması engellenen hasardan gelir. Bu değerler yalnızca görsel durumdur.
-- Yetenek kullanımı kısa bir poz ve yetenek türüne ait renkli imza üretir. Savaş fiziği, hasar ve çevrimiçi eşitleme alanları değişmez.
-- `_robot_rig_probe.html` tüm 34 robot için seçici, iki yön ve altı nişan açısı, hareket seçimi, hasar/kalkan/yetenek durumu ve yuva başına takılı parça önizlemesi sunar. Kadro küçük görselleri tıklanarak seçilebilir.
-
-Doğrulama, 34 robotun her biri için yetenek pozu/hasar görsellerini ve tüm silah tutuş ailelerinin bilek açılarını kapsar. Çevrimiçi durum serileştirmesi değişmez; görsel sayaçlar ağ snapshot'ına eklenmez.
-
-## Geri dönüş
-
-Bu çalışma için `js/robots.js`, `js/weapons.js`, `js/entity.js`, `js/game.js` ve `package.json` değişiklikleri birlikte geri alınmalıdır. Bu dosyalarda önceden bulunan değişiklikler ayrıca korunmalıdır; dosyaları topluca HEAD sürümüne döndürmek uygun değildir. Referans görseller silinmediğinden sanat kaynağı kaybolmaz.
+- Walk cycles and idle loops adapt speed and oscillation to chassis locomotion types without perturbing aim or muzzle vectors.
+- Weapon archetypes define distinct elbow bends and wrist rotations for both hands.
+- Damage weathering scales with remaining HP percentage; damage impacts produce brief flashes, and absorbed damage displays cyan shield auras. These effects are purely cosmetic.
+- Skill activations trigger brief characteristic poses and colored particle signatures without affecting gameplay physics or netcode sync.
+- `_robot_rig_probe.html` provides interactive controls for all 34 robots, facing flips, 6 aim angles, status effects (damage/shield/skill), and equipped part previews.

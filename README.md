@@ -15,7 +15,7 @@
   <a href="https://webrtc.org/"><img src="https://img.shields.io/badge/Multiplayer-WebRTC%20P2P-339933?style=flat&logo=webrtc&logoColor=white" alt="WebRTC" /></a>
   <img src="https://img.shields.io/badge/Dependencies-Zero%20(No%20Build)-brightgreen?style=flat" alt="Zero Dependencies" />
   <img src="https://img.shields.io/badge/Tests-1400%2B%20Passing-success?style=flat" alt="Tests Passing" />
-  <img src="https://img.shields.io/badge/i18n-English%20%7C%20Turkish-blue?style=flat" alt="i18n Support" />
+  <img src="https://img.shields.io/badge/i18n-6%20Languages-blue?style=flat" alt="Six-language support" />
   <img src="https://img.shields.io/badge/Version-v0.6.0-orange?style=flat" alt="Version v0.6.0" />
 </p>
 
@@ -67,7 +67,7 @@ Simply open `index.html` in any modern web browser (Chrome, Firefox, Edge, Safar
 - 🌐 **WebRTC P2P Online Multiplayer:** Serverless, direct peer-to-peer 2–6 player rooms with host-authoritative physics, reconnect tolerance, and room code sharing.
 - 👥 **Local Hot-Seat & Smart AI:** Local couch multiplayer for 2–6 players on a single keyboard, or single-player vs. ballistic-calculating AI bots across 4 difficulty tiers.
 - 🔊 **Procedural Web Audio Engine:** Zero external audio assets to download. All gunshots, ricochets, explosions, and mechanical hums are synthesized directly in code using the Web Audio API.
-- 🌍 **Full Bilingual Support (i18n):** Native Turkish and English translations with zero runtime layout breaks.
+- 🌍 **Six-Language Support (i18n):** Turkish, English, Simplified Chinese, Russian, Spanish, and Brazilian Portuguese.
 - 📦 **Portal Ready:** Built-in SDK bridge for platforms like itch.io, CrazyGames, and Poki.
 
 ---
@@ -92,7 +92,7 @@ Simply open `index.html` in any modern web browser (Chrome, Firefox, Edge, Safar
 
 ## 🗺️ Industrial Arenas
 
-Matches take place across 6 hand-crafted industrial arenas with unique tactical layouts:
+Matches take place across 14 hand-crafted industrial arenas with unique tactical layouts:
 
 | Arena | Tactical Environment & Dynamics |
 |---|---|
@@ -102,12 +102,52 @@ Matches take place across 6 hand-crafted industrial arenas with unique tactical 
 | **Lunar Debris Yard** | Low-gravity feel with floating scrap platforms and an uninterrupted lower route |
 | **Frost Fracture** | A deadly, bottomless chasm separating two opposing cliff edges |
 | **Flooded Laboratory** | Enclosed boundary walls with destructible interior bulkhead barriers |
+| **Conveyor Port** | Opposing cargo belts carry grounded robots toward the center once per turn; raised side docks provide an alternate firing route |
+| **Steamworks** | Paired pressure vents alternate each turn, launching nearby grounded robots into the air |
+| **KEPÇE-8 · Settling Basin** | A low central weir splits two broad dry basins, blocking flat shots while leaving mortar arcs open |
+| **TOK-2 · Calibration Benches** | Three low workbenches create short cover pockets and moving decisions between platforms |
+| **VUR-5 · Filter Terraces** | Two stepped slopes descend to a shared basin where knockback can dislodge high-ground holders |
+| **PUNTA-1 · Weld Gantries** | An elevated bridge speeds traversal while a thin central pylon interrupts direct firing lines |
+| **SIZ-7 · Old Filter Bay** | Two shallow side alcoves trade flat-shot cover for mortar exposure beneath a central deck |
+| **EMP-80 · Substation Yard** | A high center pedestal grants sightlines but exposes its holder to both flanks |
 
 ### Arena Art
 
 | Foundry · far | Foundry · mid | Cooling · far | Cooling · mid |
 |:---:|:---:|:---:|:---:|
 | <img src="assets/bg/foundry-far.webp" alt="Foundry distant background" width="180"> | <img src="assets/bg/foundry-mid.webp" alt="Foundry middle background" width="180"> | <img src="assets/bg/cooling-far.webp" alt="Cooling distant background" width="180"> | <img src="assets/bg/cooling-mid.webp" alt="Cooling middle background" width="180"> |
+
+### Key Art
+
+| Foundry · FIRIN-3, MAT-6, KES-9 | Cooling Plant · SOĞUT-2, KRİYO-7, DALGA-2 |
+|:---:|:---:|
+| <img src="assets/menu/key-art-foundry.webp" alt="FIRIN-3, MAT-6 and KES-9 in a glowing foundry" width="480"> | <img src="assets/menu/key-art-cooling-plant.webp" alt="SOĞUT-2, KRİYO-7 and DALGA-2 in a frozen cooling plant" width="480"> |
+
+| Paint Atelier · ÇİFT-6, HAYALET-4, KANCA-4 | Loading Yard · PRES-4, TEK-8, ZIP-X |
+|:---:|:---:|
+| <img src="assets/menu/key-art-paint-atelier.webp" alt="ÇİFT-6, HAYALET-4 and KANCA-4 in a colorful paint atelier" width="480"> | <img src="assets/menu/key-art-loading-yard.webp" alt="PRES-4, TEK-8 and ZIP-X in a sunset loading yard" width="480"> |
+
+### Menu Screen Art
+
+| Robot Count | Character Select |
+|:---:|:---:|
+| <img src="assets/menu/key-art-menu-bot-count.webp" alt="Robots waiting in factory deployment bays" width="480"> | <img src="assets/menu/key-art-menu-character-select.webp" alt="Service robots in a maintenance hangar" width="480"> |
+
+| Map Select | Workshop |
+|:---:|:---:|
+| <img src="assets/menu/key-art-menu-map-select.webp" alt="Foundry, crane yard and cooling plant seen from a control bridge" width="480"> | <img src="assets/menu/key-art-menu-workshop.webp" alt="Repair robots working at a factory workbench" width="480"> |
+
+| Ammo Market | Tutorial |
+|:---:|:---:|
+| <img src="assets/menu/key-art-menu-ammo-market.webp" alt="Service robots at an industrial ammunition depot" width="480"> | <img src="assets/menu/key-art-menu-tutorial.webp" alt="A robot practicing a shot in the factory training range" width="480"> |
+
+| Online Role Select | Join by Code |
+|:---:|:---:|
+| <img src="assets/menu/key-art-menu-online-role.webp" alt="Two robots linked through a glowing factory relay" width="480"> | <img src="assets/menu/key-art-menu-online-code.webp" alt="Robot operator at a factory communications booth" width="480"> |
+
+| Online Room | Online Loading |
+|:---:|:---:|
+| <img src="assets/menu/key-art-loading-yard.webp" alt="Robots waiting in the factory loading yard" width="480"> | <img src="assets/menu/key-art-menu-online-loading.webp" alt="Robot waiting for synchronization in a factory tunnel" width="480"> |
 
 ---
 
@@ -281,7 +321,7 @@ The game and repository are proprietary, all rights reserved, as described in th
 - Settings, locale and the player profile are stored in browser local storage.
 - Online lobby uses PeerJS signalling; portal SDKs load only for CrazyGames or Poki builds.
 - Diagnostics are copied to the clipboard only when requested; the game sends no diagnostics.
-- Read [Privacy & Data (Turkish)](./docs/gizlilik-ve-veri.md) (policy publication address: https://bahattinercan.github.io/out-of-warranty/gizlilik-ve-veri.html; the same text is available in English at https://bahattinercan.github.io/out-of-warranty/privacy-en.html) for storage keys, deletion steps and publication notes.
+- Read [Privacy & Data (Turkish)](./docs/privacy-and-data.md) (policy publication address: https://bahattinercan.github.io/out-of-warranty/gizlilik-ve-veri.html; the same text is available in English at https://bahattinercan.github.io/out-of-warranty/privacy-en.html) for storage keys, deletion steps and publication notes.
 
 
 ---
@@ -298,7 +338,7 @@ Kurulum veya derleme gerekmez. `index.html` dosyasını doğrudan açarak başla
 
 ## Özellikler
 
-- Yıkılabilir arazi, değişken rüzgâr ve altı endüstriyel arena.
+- Yıkılabilir arazi, değişken rüzgâr ve sekiz endüstriyel arena.
 - 34 robot, etkin sınıf yetenekleri, 20 silah ve 24 giyilebilir parça.
 - Yerel sıcak koltuk çok oyunculu oyun, dört zorluk seviyeli yapay zekâ ve WebRTC çevrimiçi oyun.
 - Kodla üretilen Web Audio sesleri; İngilizce ve Türkçe arayüz.
@@ -341,9 +381,9 @@ Oyun ve kaynaklar tüm hakları saklı, tescilli lisans altındadır. Chakra Pet
 
 ## Gizlilik
 
-Yerel kayıt, çevrimiçi sinyalleşme, portal SDK’ları ve tanılama hakkında ayrıntılar: [Gizlilik ve Veri](./docs/gizlilik-ve-veri.md).
+Yerel kayıt, çevrimiçi sinyalleşme, portal SDK’ları ve tanılama hakkında ayrıntılar: [Gizlilik ve Veri](./docs/privacy-and-data.md).
 
 ## Depo Yapısı
 
-`docs/` içinde teknik belgeler ile `gizlilik-ve-veri.md` gizlilik açıklaması; kökte `LICENSE` ve `THIRD-PARTY-NOTICES.md`; `fonts/` içinde font lisansları bulunur.
+`docs/` içinde teknik belgeler ile `privacy-and-data.md` gizlilik açıklaması; kökte `LICENSE` ve `THIRD-PARTY-NOTICES.md`; `fonts/` içinde font lisansları bulunur.
 

@@ -19,12 +19,12 @@ const FILES = ["i18n.js", "version.js", "portal.js", "diagnostics.js", "audio.js
 const bundle =
   FILES.map((f) => fs.readFileSync(path.join(JS_DIR, f), "utf8")).join("\n;\n") +
   "\n;globalThis.__M = { CHARACTERS, MAPS, BIOMES, FACTORY_ZONES, PROP_DRAWERS, WEAPONS, SKILL_PROJECTILES, PROJECTILE_SHAPES, SHARED_SHAPES, PROJ_SUBSTEP, PROJ_MAX_SUBSTEPS, useSkill, drawCharExtras, drawRobot, robotMuzzlePoint, robotTopOffset, _rbProportions, RB_GUN_PIVOT_X, RB_GUN_PIVOT_Y, RB_GUN_MUZZLE, RB_VISUAL_SCALE, Entity, Projectile, Explosion, GRAVITY, Game, Terrain, BotController, AI_LIMITS, aiWorldKey, aiSimulateShot, aiCoarseCandidates, aiPathIsSafe, aiRandom, AI_DIFFICULTY, aiDamageMultiplier, aiAssignDamageScale, aiSelectWeapon, skillConsumesShot, SKILL_SHOT_KINDS, AI_SKILL_REPLACE_SCORE, " +
-  "SKILL_FX_SHAPES, SKILL_FX_KIND_DEFAULT, SKILL_FX_EXTENT, spawnSkillFx, updateSkillFx, drawSkillFx, drawSkillFxIcon, drawSkillAura, SkillFx, " +
-  "SERVICE_LEVELS, MAX_SERVICE_XP, MAX_TIER, START_SCRAP, BRANCHES, BRANCH_LABELS, TIER_COSTS, TIER_LEVEL_GATES, REWARD_BASE, DIFFICULTY_MULTIPLIER, levelForXp, xpForLevel, nextLevelXp, levelUpMessage, calculateMatchReward, resolveRobotBuild, upgradeEffectText, robotUpgradeSummary, totalTiers, sanitizeUpgrades, nextUpgradeStep, toSafeInt, defaultProfile, defaultRobotProgress, normalizeProfile, loadProfile, saveProfile, getRobotProgress, grantMatchReward, purchaseUpgrade, PROFILE_KEY, createSessionId, " +
+  "SKILL_FX_SHAPES, SKILL_FX_KIND_DEFAULT, SKILL_FX_EXTENT, spawnSkillFx, updateSkillFx, drawSkillFx, drawSkillFxIcon, drawSkillAura, SkillFx, arenaOpponentRoster, " +
+  "SERVICE_LEVELS, MAX_SERVICE_XP, MAX_TIER, MAX_ARENA_STAGE, START_SCRAP, BRANCHES, BRANCH_LABELS, TIER_COSTS, TIER_LEVEL_GATES, REWARD_BASE, DIFFICULTY_MULTIPLIER, levelForXp, xpForLevel, nextLevelXp, levelUpMessage, calculateMatchReward, resolveRobotBuild, upgradeEffectText, robotUpgradeSummary, totalTiers, sanitizeUpgrades, nextUpgradeStep, toSafeInt, defaultProfile, defaultRobotProgress, normalizeProfile, loadProfile, saveProfile, getRobotProgress, grantMatchReward, purchaseUpgrade, PROFILE_KEY, createSessionId, " +
   "DEFAULT_UNLOCKED_ROBOTS, ACCOUNT_LEVELS, ROBOT_PRICES, levelForAccountXp, xpForAccountLevel, nextAccountLevelXp, accountLevelUpBonus, accountLevelTitle, robotPriceSpec, isRobotUnlocked, canUnlockRobot, unlockRobot, " +
   "AMMO_DEPOT_CAP, AMMO_BULK_QTY, AMMO_BULK_QTY_BIG, AMMO_PRICES, ammoPriceFor, ammoBasePrice, weaponPowerScore, weaponStats, sellableWeapons, sanitizeAmmoDepot, getAmmoDepot, setAmmoDepot, mergeDepots, ammoDepotTotal, buyAmmo, mergeAmmoWithDepot, battleLoad, unspentDepot, settleDepot, weaponById, weaponBattleMax, isSellableWeapon, initialAmmo, " +
   "PARTS, PART_SLOTS, SLOT_LABELS, partById, sanitizeParts, sanitizeLoadoutShape, getOwnedParts, isPartOwned, buildPartsSummary, buyPart, equipPart, drawPartIcon, PART_ICON_SHAPES, partEffectText, PART_KNOCKBACK_MIN, _drawPartDots, PARTS_PER_SLOT, loadoutPartIds, AUDIO_SAFE, _rbPartAccessories, _rbPartSpecs, _RB_PART_SECONDARY, MARKET_TABS, " +
-  "isSinglePlayerProgressionMode };";
+  "isSinglePlayerProgressionMode, _wrapCanvasText };";
 
 const sandbox = { Math, Date, console, JSON, Set, Map, Array, Object };
 sandbox.globalThis = sandbox;
@@ -446,7 +446,7 @@ for (const ch of chars) {
 // ── Silüet oran grameri (2026-11-10) ───────────────────────────────────────
 // Ölçüm geçmişi: 34 robotun 561 çiftinin 426'sı IoU ≥ 0.60 çıkıyordu ve bir
 // çift birebir aynıydı (VIZIR ↔ FAN-5 = 1.000) — kadro "aynı iskeletin renk
-// varyantı" gibi okunuyordu. Ayrıntı: docs/robot-theme/02_KARAKTER_SISTEMI.md
+// varyantı" gibi okunuyordu. Ayrıntı: docs/robot-theme/02_CHARACTER_SYSTEM.md
 // §3.1. Node'da piksel ölçemiyoruz; ölçülebilir olan KÖK NEDEN denetleniyor:
 // aynı (chassis, body, locomotion) üçlüsü aynı oranları üretir → iki robot
 // kaçınılmaz olarak aynı silüet olur. Piksel bekçisi tarayıcıda:
@@ -473,8 +473,9 @@ group("Robot silüeti — oran grameri ve namlu sözleşmesi");
     check(`${ch.label}: oranlar sınır içinde`,
       Object.keys(LIMITS).every((k) => p[k] >= LIMITS[k][0] && p[k] <= LIMITS[k][1]),
       `head=${p.head.toFixed(2)} torsoX=${p.torsoX.toFixed(2)} legs=${p.legs.toFixed(2)} stance=${p.stance.toFixed(2)}`);
+    const lift = ch.id === "kopek" ? 0.55 : 0;
     check(`${ch.label}: üst gövde kayması bacak ölçeğiyle tutarlı`,
-      Math.abs(p.upperDy - 0.96 * (1 - p.legs)) < 1e-9, `upperDy=${p.upperDy}`);
+      Math.abs(p.upperDy - (0.96 * (1 - p.legs) - lift)) < 1e-9, `upperDy=${p.upperDy}`);
     const top = M.robotTopOffset(ch);
     check(`${ch.label}: HP çubuğu ofseti makul aralıkta`,
       Number.isFinite(top) && top < -1.2 && top > -2.6, `top=${top.toFixed(3)}r`);
@@ -794,9 +795,9 @@ group("Yürüyüş geometrisi ve kayma (çizim komutlarından)");
   check("anlık kayma gövde hızını aşmaz (ayak+ gövde birlikte sürüklenmez)", worst < 2.2 + 1e-9,
     `en kötü ${worst.toFixed(3)} px/kare (gövde 2.20)`);
 }
-check("34 robot için altı bağımsız arena kullanılabilir", M.MAPS.length === 6 && chars.length === 34, `maps=${M.MAPS.length}`);
-check("dokuz fabrika bölgesi tanımlı", Object.keys(M.FACTORY_ZONES).length === 9, `zones=${Object.keys(M.FACTORY_ZONES).length}`);
-check("altı haritanın mekân kimlikleri farklı", new Set(M.MAPS.map((m) => m.id)).size === 6 && M.MAPS.every((m) => m.scene));
+check("34 robot için 14 bağımsız arena kullanılabilir", M.MAPS.length === 14 && chars.length === 34, `maps=${M.MAPS.length}`);
+check("on bir fabrika bölgesi tanımlı", Object.keys(M.FACTORY_ZONES).length === 11, `zones=${Object.keys(M.FACTORY_ZONES).length}`);
+check("14 haritanın mekân kimlikleri farklı", new Set(M.MAPS.map((m) => m.id)).size === 14 && M.MAPS.every((m) => m.scene));
 check("altı haritanın prop çizimleri kayıtlı", M.MAPS.every((m) => m.props.every((p) => typeof M.PROP_DRAWERS[p.type] === "function")));
 for (const [key, zone] of Object.entries(M.FACTORY_ZONES)) {
   check(`${key}: bölge kimliği/etiketi/kodu var`, !!zone.zoneId && !!zone.zoneLabel && !!zone.zoneCode);
@@ -1027,9 +1028,10 @@ group("Mermi çarpışma doğruluğu — tünelleme, süpürme ve sekme");
   //    ortasındaki hedefi yakalar (eski nokta testi ıskalıyordu).
   const tg = makeAiGame(180, 720);
   const mr = tg.players[0].r;
-  const muzzleX = M.robotMuzzlePoint(180, 420 - mr, mr, 1, -0.02).x;
+  const muzzle = M.robotMuzzlePoint(180, 420 - mr, mr, 1, -0.02, tg.players[0].charDef);
   const step = sniper.baseSpeed + sniper.speedMul; // tam güç
-  tg.players[1].x = muzzleX + step * 5.5;
+  tg.players[1].x = muzzle.x + step * 5.5;
+  tg.players[1].y = muzzle.y + tg.players[1].r;
   const through = M.aiSimulateShot(tg, 0, -0.02, 1, sniper);
   check("bot benzetimi: hızlı nişancı iki adım arasındaki hedefi yakalar",
     !!through && through.enemyDamage > 0,
@@ -1611,6 +1613,125 @@ group("Mod seçimi ve bot turu entegrasyonu");
   menu.bots = [];
   menu.beginMode("computer");
   check("bilgisayar modu zorluk seçimine geçer", menu.state === "DIFFICULTY_SELECT");
+  menu.beginMode("arena");
+  check("arena modu zorluk seçimine geçer", menu.mode === "arena" && menu.state === "DIFFICULTY_SELECT");
+  menu._diffRects = [{ x: 0, y: 0, w: 20, h: 20, diff: "hard" }];
+  menu.hitBackButton = () => false;
+  menu.handleDifficultySelectClick(10, 10);
+  check("arena zorluk seçiminden tek robot seçimine geçer",
+    menu.state === "CHAR_SELECT" && menu.playerCount === 1 && menu.difficulty === "hard");
+  const arenaRobotPick = Object.create(M.Game.prototype);
+  Object.assign(arenaRobotPick, {
+    state: "CHAR_SELECT", mode: "arena", playerCount: 1, charSelectPhase: 0,
+    selectedChars: [null], playerControls: ["human"], profile: M.defaultProfile(),
+    _cardRects: [{ x: 0, y: 0, w: 20, h: 20, ch: M.CHARACTERS[0] }],
+    input: { mouseX: -1, mouseY: -1 }, updateHud() {}, hitBackButton: () => false,
+  });
+  M.Game.prototype.handleCharSelectClick.call(arenaRobotPick, 10, 10);
+  check("arena robotu seçince maç yerine bölüm seçimi açılır",
+    arenaRobotPick.state === "ARENA_STAGE_SELECT" && arenaRobotPick.arenaPlayerRobotId === M.CHARACTERS[0].id);
+  const arenaRoster = M.arenaOpponentRoster(M.CHARACTERS[2].id);
+  check("arena rakip sırası katalog sırasını korur ve seçilen robotu dışarıda bırakır",
+    arenaRoster.length === M.CHARACTERS.length - 1 && !arenaRoster.includes(M.CHARACTERS[2].id) &&
+    arenaRoster[0] === M.CHARACTERS[0].id && arenaRoster[1] === M.CHARACTERS[1].id);
+  const arenaSetup = Object.create(M.Game.prototype);
+  Object.assign(arenaSetup, {
+    sessionId: "arena-test", matchId: 0, difficulty: "normal", profile: M.defaultProfile(),
+    startGame() { this.started = true; },
+  });
+  arenaSetup.beginArenaRun(M.CHARACTERS[2], 1);
+  check("arena ilk maçı seçilen robotu katalogdaki ilk uygun rakiple eşleştirir",
+    arenaSetup.started && arenaSetup.selectedChars[0] === M.CHARACTERS[2] &&
+    arenaSetup.selectedChars[1] === M.CHARACTERS[0] &&
+    arenaSetup.playerControls.join(",") === "human,bot" && arenaSetup.arenaRun.defeated === 0);
+  arenaSetup.profile.arenaUnlockedStage = 5;
+  arenaSetup.started = false;
+  arenaSetup.beginArenaRun(M.CHARACTERS[2], 5);
+  check("arena beşinci bölüm seçimi doğru rakipten başlar", arenaSetup.started &&
+    arenaSetup.arenaRun.startStage === 5 && arenaSetup.arenaRun.defeated === 4 &&
+    arenaSetup.selectedChars[1].id === arenaSetup.arenaRun.opponents[4]);
+  arenaSetup.started = false;
+  arenaSetup.beginArenaRun(M.CHARACTERS[2], 6);
+  check("kilitli arena bölümü programatik seçimde de beşinci bölüme kırpılır",
+    arenaSetup.arenaRun.startStage === 5 && arenaSetup.arenaRun.defeated === 4);
+  const stagePicker = Object.create(M.Game.prototype);
+  Object.assign(stagePicker, {
+    state: "ARENA_STAGE_SELECT", arenaPlayerRobotId: M.CHARACTERS[2].id,
+    profile: { arenaUnlockedStage: 5 }, selectedStage: null, updateHud() {}, hitBackButton: () => false,
+    beginArenaRun(_robot, stage) { this.selectedStage = stage; },
+    _arenaStageRects: [
+      { x: 0, y: 0, w: 20, h: 20, stage: 5, unlocked: true },
+      { x: 30, y: 0, w: 20, h: 20, stage: 6, unlocked: false },
+    ],
+  });
+  M.Game.prototype.handleArenaStageSelectClick.call(stagePicker, 10, 10);
+  const selectedOpenStage = stagePicker.selectedStage === 5;
+  stagePicker.selectedStage = null;
+  M.Game.prototype.handleArenaStageSelectClick.call(stagePicker, 40, 10);
+  check("bölüm ekranı açık beşinci bölümü başlatır, kilitli altıncıyı reddeder",
+    selectedOpenStage && stagePicker.selectedStage === null);
+  const stageScreen = Object.create(M.Game.prototype);
+  Object.assign(stageScreen, {
+    W: 960, H: 540, renderTimeMs: 0, input: { mouseX: -1, mouseY: -1 },
+    profile: { arenaUnlockedStage: 5 }, arenaPlayerRobotId: M.CHARACTERS[2].id,
+    drawBackButton() {},
+  });
+  M.Game.prototype.renderArenaStageSelect.call(stageScreen, mockCtx());
+  const stageOverviewOk = stageScreen._arenaStageRects.length === M.MAX_ARENA_STAGE &&
+    stageScreen._arenaStageRects.filter((rect) => rect.unlocked).length === 5 &&
+    stageScreen._arenaStageRects.every((rect) => rect.x >= 0 && rect.x + rect.w <= stageScreen.W) &&
+    stageScreen._arenaDetailStage === 5;
+  const firstStageRect = stageScreen._arenaStageRects[0];
+  stageScreen.input.mouseX = firstStageRect.x + firstStageRect.w / 2;
+  stageScreen.input.mouseY = firstStageRect.y + firstStageRect.h / 2;
+  M.Game.prototype.renderArenaStageSelect.call(stageScreen, mockCtx());
+  check("bölüm ekranı kartları ve seçili rakip detaylarını gösterir",
+    stageOverviewOk && stageScreen._arenaDetailStage === 1);
+  const previousSaveProfile = sandbox.saveProfile;
+  let persistedArenaStage = 0;
+  sandbox.saveProfile = (profile) => { persistedArenaStage = M.normalizeProfile(profile).arenaUnlockedStage; return true; };
+  const arenaUnlocker = Object.create(M.Game.prototype);
+  arenaUnlocker.profile = M.normalizeProfile({ version: 8, arenaUnlockedStage: 5 });
+  const unlockedSix = M.Game.prototype.unlockArenaStage.call(arenaUnlocker, 6);
+  const duplicateSix = M.Game.prototype.unlockArenaStage.call(arenaUnlocker, 6);
+  sandbox.saveProfile = previousSaveProfile;
+  check("bölüm galibiyeti yeni bölümü profile bir kez kaydeder",
+    unlockedSix && !duplicateSix && persistedArenaStage === 6 && arenaUnlocker.profile.arenaUnlockedStage === 6);
+  const prevArenaDocument = sandbox.document;
+  const arenaEls = {
+    "overlay-title": { textContent: "" }, "overlay-sub": { textContent: "" },
+    "overlay-reward": { textContent: "", classList: { add() {}, remove() {} } },
+    "overlay": { classList: { remove() {} } }, "restart-btn": { textContent: "", classList: { toggle() {} } },
+    "menu-btn": { textContent: "" }, "workshop-btn": { textContent: "" },
+    "reward-ad-btn": { textContent: "", classList: { toggle() {} } },
+  };
+  sandbox.document = { getElementById: (id) => arenaEls[id] || null };
+  const arenaFinish = Object.create(M.Game.prototype);
+  Object.assign(arenaFinish, {
+    mode: "arena", arenaRun: { opponents: [M.CHARACTERS[0].id, M.CHARACTERS[1].id], defeated: 0, status: "active" },
+    players: [{}, { name: M.CHARACTERS[0].label }], matchProgress: { opponentCount: 1 },
+    rewards: [], unlocked: [],
+    grantMatchReward(result) { this.rewards.push(result); return null; },
+    unlockArenaStage(stage) { this.unlocked.push(stage); },
+    portalGameplay() {}, updateHud() {},
+  });
+  M.Game.prototype.finishArenaRound.call(arenaFinish, "win");
+  const continuedWithoutPayout = arenaFinish.arenaRun.defeated === 1 && arenaFinish.arenaRun.status === "active" &&
+    arenaFinish.rewards.length === 0 && arenaEls["restart-btn"].textContent === "Sıradaki rakip";
+  arenaFinish.players[1].name = M.CHARACTERS[1].label;
+  M.Game.prototype.finishArenaRound.call(arenaFinish, "win");
+  check("arena ara galibiyeti ödülsüz devam eder, son galibiyet tek seri ödülü verir",
+    continuedWithoutPayout && arenaFinish.arenaRun.status === "complete" &&
+    arenaFinish.rewards.join(",") === "win" && arenaFinish.matchProgress.opponentCount === 2 &&
+    arenaFinish.unlocked.join(",") === "2");
+  arenaFinish.arenaRun = { opponents: [M.CHARACTERS[0].id], defeated: 0, status: "active" };
+  arenaFinish.rewards = [];
+  arenaFinish.players[1].name = M.CHARACTERS[0].label;
+  M.Game.prototype.finishArenaRound.call(arenaFinish, "loss");
+  check("arena yenilgisi seriyi bitirip tek kayıp ödülü verir",
+    arenaFinish.arenaRun.status === "lost" && arenaFinish.rewards.join(",") === "loss");
+  sandbox.document = prevArenaDocument;
+  menu.beginMode("computer");
   const banner = { textContent: "", style: {} };
   const hud = { classList: { toggle() {} } };
   sandbox.document = { getElementById: (id) => id === "turn-banner" ? banner : id === "hud" ? hud : null };
@@ -1634,8 +1755,11 @@ group("Mod seçimi ve bot turu entegrasyonu");
   let weaponPanelHidden = true;
   const weaponPanel = { classList: { toggle: (_name, force) => { weaponPanelHidden = !!force; } } };
   const hudPlayer = { weapon: 0, ammo: Object.fromEntries(M.WEAPONS.map((w) => [w.id, w.ammo == null ? Infinity : w.ammo])) };
-  const weaponHudGame = { players:[hudPlayer], active:hudPlayer, turn:0, _weaponKey:null };
-  const menuStates = ["MODE_SELECT", "WORKSHOP", "MARKET", "TUTORIAL", "MAP_SELECT"];
+  const weaponHudGame = {
+    players:[hudPlayer], active:hudPlayer, turn:0, _weaponKey:null,
+    updateWeaponDescription: M.Game.prototype.updateWeaponDescription,
+  };
+  const menuStates = ["MODE_SELECT", "WORKSHOP", "MARKET", "TUTORIAL", "MAP_SELECT", "ARENA_STAGE_SELECT"];
   sandbox.document = { getElementById: (id) => id === "weapon-panel" ? weaponPanel : null };
   let allMenusHideWeapons = true;
   for (const state of menuStates) {
@@ -1652,6 +1776,26 @@ group("Mod seçimi ve bot turu entegrasyonu");
     if (weaponPanelHidden) combatStatesShowWeapons = false;
   }
   check("silah paneli üç savaş durumunda görünür", combatStatesShowWeapons);
+
+  {
+    const prevDoc = sandbox.document;
+    let weaponDescHtml = "";
+    const weaponDesc = {
+      set innerHTML(value) { weaponDescHtml = value; },
+      querySelector() { return null; },
+    };
+    const previewPlayer = {
+      weapon: 0,
+      weaponSpec: M.WEAPONS[0],
+      ammo: Object.fromEntries(M.WEAPONS.map((w) => [w.id, w.ammo == null ? Infinity : w.ammo])),
+      ammoDepot: {},
+    };
+    sandbox.document = { getElementById: (id) => id === "weapon-desc" ? weaponDesc : null };
+    M.Game.prototype.updateWeaponDescription.call({ _weaponPreviewIndex: 1 }, previewPlayer);
+    check("silaha odaklanınca seçmeden ayrıntısı önizlenir",
+      weaponDescHtml.includes(M.WEAPONS[1].name) && previewPlayer.weapon === 0);
+    sandbox.document = prevDoc;
+  }
 
   // HUD da aynı kurala uyar: menüler büyük başlık çizer, açık kalan
   // sıra/rüzgâr şeridi o başlığı kapatıyordu.
@@ -2183,6 +2327,23 @@ group("Atölye parça takma");
   let msOk = true;
   try { M.Game.prototype.renderMapSelect.call(ms, ctx2); } catch (e) { msOk = false; console.error(e); }
   check("harita seçimi (MAP_SELECT) tüm önizleme ve kartlarla hatasız çizilir", msOk);
+  const ventPreview = Object.create(M.Game.prototype);
+  ventPreview.terrain = { theme: M.MAPS.find((map) => map.id === "steamworks"), surfaceBelow: () => 350 };
+  ventPreview.W = 960; ventPreview.H = 540; ventPreview.turnId = 0; ventPreview.renderTimeMs = 0;
+  let ventDrawOk = true;
+  try { M.Game.prototype.drawMapMechanics.call(ventPreview, ctx2); } catch (e) { ventDrawOk = false; console.error(e); }
+  check("aktif buhar bacası görsel göstergesi hatasız çizilir", ventDrawOk);
+  ms.state = "MAP_SELECT";
+  ms.mapPage = 0;
+  M.Game.prototype.changeMapPage.call(ms, 1);
+  check("harita seçiminde ileri tuşu sonraki sayfayı açar", ms.mapPage === 1);
+  M.Game.prototype.changeMapPage.call(ms, -1);
+  check("harita seçiminde geri tuşu önceki sayfayı açar", ms.mapPage === 0);
+  M.Game.prototype.changeMapPage.call(ms, -1);
+  check("harita sayfalaması ilk sayfanın gerisine geçmez", ms.mapPage === 0);
+  M.Game.prototype.changeMapPage.call(ms, 1);
+  M.Game.prototype.changeMapPage.call(ms, 1);
+  check("harita sayfalaması son sayfanın ötesine geçmez", ms.mapPage === Math.ceil(M.MAPS.length / 6) - 1);
 
   // ── Aksesuar çizimi: parça verilince zenginleşir, verilmeyince birebir korunur ──
   const robotDef = M.CHARACTERS[0];
@@ -2851,6 +3012,11 @@ group("Yeni Oynanış Mekanikleri");
 // ── Özet ────────────────────────────────────────────────────────────────
 console.log(`\n${"─".repeat(48)}`);
 console.log(`Toplam: ${pass + fail}  •  ✓ Geçti: ${pass}  •  ✗ Kaldı: ${fail}`);
+group("localized canvas text wrapping");
+const narrowCtx = { measureText: (text) => ({ width: Array.from(text).length * 10 }) };
+const cjkLines = M._wrapCanvasText(narrowCtx, "对抗自动化单位", 40);
+check("CJK text wraps inside its canvas width", cjkLines.length > 1 && cjkLines.every((line) => narrowCtx.measureText(line).width <= 40), cjkLines.join(" / "));
+
 if (fail > 0) {
   console.log("\nBaşarısız testler:");
   for (const f of failures) console.log("  • " + f);

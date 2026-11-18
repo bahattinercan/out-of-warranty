@@ -3,7 +3,7 @@
 <head>
 <base href="../">
   <meta charset="UTF-8" />
-  <title>Ana menü — beş kart yerleşimi</title>
+  <title>Ana menü — key art ve altı kart yerleşimi</title>
   <style>
     body { margin: 0; background: #05080c; }
     canvas { position: fixed; left: 0; display: block; }
@@ -56,17 +56,22 @@
       });
       return g;
     }
-    // Yeni kart yerleşiminde (gap 14, bh 132, y=H/2-38) hover ATÖLYE kartında:
-    // kart içi merkez ~ (startX + 3.5*(bw+gap), H/2-38+60). 700 px'de sığdırma kontrolü.
+    // 960 px görünümde yerel mod kartında hover; 700 px görünümde taşma kontrolü.
     // Dil varyantı: #en (veya ?locale=en) ile İngilizce menü çizilir; EN metin
     // uzunluğu kartlara sığıyor mu diye headless ekran alınır (F2 doğrulaması).
     const params = new URLSearchParams(location.search);
     const wantEn = location.hash.indexOf("en") >= 0 || params.get("locale") === "en";
     if (wantEn) setLocale("en", { persist: false });
     const wide = makeFake(960, 540, [558, 292]);
-    wide.renderModeSelect(document.getElementById("wide").getContext("2d"));
     const narrow = makeFake(700, 540, [-1, -1]);
-    narrow.renderModeSelect(document.getElementById("narrow").getContext("2d"));
+    function paintMenus() {
+      wide.renderModeSelect(document.getElementById("wide").getContext("2d"));
+      narrow.renderModeSelect(document.getElementById("narrow").getContext("2d"));
+    }
+    paintMenus();
+    // assetImage starts asynchronous file:// image loads on the first draw.
+    // Repaint after they settle so a headless screenshot shows the real assets.
+    setTimeout(paintMenus, 500);
   </script>
 </body>
 </html>

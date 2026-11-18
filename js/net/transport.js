@@ -1,6 +1,6 @@
 /* Çevrimiçi taşıma katmanı (F3c) — protokol/oturum çekirdeğinden bağımsız.
  *
- * Arayüz çok küçüktür ve bilinçli olarak dar tutulur (docs/web-lansman-plani.md
+ * Arayüz çok küçüktür ve bilinçli olarak dar tutulur (docs/web-launch-plan.md
  * §4: "oyun kodu taşımadan bağımsız kalsın"): bir uç mesaj gönderir, karşı uç
  * mesaj alır. Protokol, tekilleştirme ve sıra denetimi bu katmanın işi DEĞİL
  * (bkz. js/net/protocol.js, js/net/session.js).

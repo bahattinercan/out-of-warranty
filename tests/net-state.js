@@ -1,7 +1,7 @@
 /* Durum eşitleme testleri (F3b) — saf Node, bağımlılıksız.
  * Çalıştır: node tests/net-state.js
  *
- * Sözleşme (docs/multiplayer-plan.md §7 ve docs/web-lansman-plani.md §4):
+ * Sözleşme (docs/multiplayer-plan.md §7 ve docs/web-launch-plan.md §4):
  *   - Snapshot gidiş-dönüşü kayıpsız: capture → JSON → apply → capture aynı
  *     hash'i vermeli (misafir hostun durumunu birebir taşır).
  *   - Arazi: ilk maske RLE ile kayıpsız taşınır; sonraki değişiklikler

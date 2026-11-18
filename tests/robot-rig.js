@@ -4,7 +4,7 @@ const fs = require("fs");
 const path = require("path");
 const vm = require("vm");
 
-const sandbox = { console, assetImage: id => ({ id }) };
+const sandbox = { console, assetImage: id => ({ id, naturalWidth: 371, naturalHeight: 419 }) };
 vm.createContext(sandbox);
 vm.runInContext(["i18n", "characters", "robots", "weapons", "entity"]
   .map(name => fs.readFileSync(path.join(__dirname, "../js", name + ".js"), "utf8")).join("\n;\n") +
@@ -61,13 +61,51 @@ for (const charDef of CHARACTERS) {
   hands = [];
   const ctx = context();
   sandbox.drawRobot(ctx, { charDef, r: charDef.r, aim: -0.6, facing: 1 });
-  assert.ok(ctx.images.includes("robot-models/" + charDef.id + "-body"), charDef.label + ": özel gövde SVG'si kullanılmalı");
-  assert.ok(ctx.images.includes("robot-models/" + charDef.id + "-head"), charDef.label + ": özel kafa SVG'si kullanılmalı");
-  const headDraw = ctx.imageDraws.find(draw => draw.id === "robot-models/" + charDef.id + "-head");
-  assert.equal(headDraw.args[2], charDef.r * 1.1 * 2, charDef.label + ": splash oranına uygun büyük kafa kullanılmalı");
+  if (charDef.id === "kopek") {
+    assert.ok(ctx.images.includes("robot-parts/fix8-parts-atlas"), charDef.label + ": tek FIX-8 atlas dosyası kullanılmalı");
+    assert.ok(ctx.imageDraws.filter(draw => draw.id === "robot-parts/fix8-parts-atlas").length >= 8,
+      charDef.label + ": atlasın gövde, uzuv ve teker parçaları çizilmeli");
+  } else if (["kedi", "ayi", "tilki", "tavsan", "rakun", "yarasa"].includes(charDef.id)) {
+    const expected = {
+      kedi: ["head", "body", "pelvis", "arm-upper", "arm-lower", "arm-back-upper", "arm-back-lower", "leg-upper", "leg-lower"],
+      ayi: ["head", "body", "pelvis", "arm-upper", "arm-lower", "arm-back-upper", "arm-back-lower", "track-near", "track-far"],
+      tilki: ["head", "body", "pelvis", "arm-upper", "arm-lower", "arm-back-upper", "arm-back-lower", "leg-upper", "leg-lower", "foot-near", "foot-far"],
+      tavsan: ["head", "body", "pelvis", "arm-upper", "arm-lower", "arm-back-upper", "arm-back-lower", "leg-upper", "leg-lower", "foot-near", "foot-far"],
+      rakun: ["head", "body", "pelvis", "arm-upper", "arm-lower", "arm-back-upper", "arm-back-lower", "ball-near", "ball-far"],
+      yarasa: ["head", "body", "pelvis", "arm-upper", "arm-lower", "arm-back-upper", "arm-back-lower", "rotor-near", "rotor-far"],
+    }[charDef.id];
+    for (const part of expected) {
+      assert.ok(ctx.images.includes("robot-parts/" + charDef.id + "-art-" + part),
+        charDef.label + ": pilot key art parçası kullanılmalı (" + part + ")");
+    }
+    assert.ok(ctx.imageDraws.some(draw => draw.id === "robot-parts/" + charDef.id + "-art-head"),
+      charDef.label + ": pilot kafa görseli çizilmeli");
+  } else {
+    assert.ok(ctx.images.includes("robot-models/" + charDef.id + "-body"), charDef.label + ": özel gövde SVG'si kullanılmalı");
+    assert.ok(ctx.images.includes("robot-models/" + charDef.id + "-head"), charDef.label + ": özel kafa SVG'si kullanılmalı");
+    const headDraw = ctx.imageDraws.find(draw => draw.id === "robot-models/" + charDef.id + "-head");
+    assert.equal(headDraw.args[2], charDef.r * 1.1 * 2, charDef.label + ": splash oranına uygun büyük kafa kullanılmalı");
+  }
   assert.equal(hands.filter(hand => hand.grip).length, 2,
     charDef.label + ": görseller yüklüyken iki el de silahı tutmalı");
 }
+
+const originalArm = sandbox._rbArm;
+for (const facing of [1, -1]) {
+  let armCalls = 0;
+  let screenShoulderX = 0;
+  sandbox._rbArm = (ctx, sx, sy, ...args) => {
+    armCalls++;
+    screenShoulderX = ctx.point(sx, sy).x;
+    return originalArm(ctx, sx, sy, ...args);
+  };
+  hands = [];
+  sandbox.drawRobot(context(), { charDef: CHARACTERS[0], r: CHARACTERS[0].r, aim: -0.6, facing, frontArmOnly: true });
+  assert.equal(armCalls, 1, "oyun içi görünümde yalnızca öndeki kol çizilmeli");
+  assert.equal(hands.length, 1, "oyun içi görünümde yalnızca öndeki el çizilmeli");
+  assert.equal(Math.sign(screenShoulderX), facing, "görünen kol karakterin baktığı tarafta olmalı");
+}
+sandbox._rbArm = originalArm;
 
 const modelFiles = fs.readdirSync(path.join(__dirname, "../assets/robot-models"));
 assert.equal(modelFiles.length, CHARACTERS.length, "her robotun parça klasörü olmalı");

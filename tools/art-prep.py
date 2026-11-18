@@ -10,7 +10,7 @@ paletinden bağımsızdır. Elle düzeltmek yerine her varlık aynı boru hattı
 Neden kantizasyon: `js/maps.js > FACTORY_ZONES` paleti oyunun tek renk kaynağıdır.
 Menü önizlemesi ile savaş farklı renkte görünürse oyuncu haritayı tanımaz; 5 renge
 indirgemek bunu deterministik biçimde garanti eder
-(docs/art-uretim-plani-ai3090.md §3).
+(docs/art-production-plan-ai3090.md §3).
 
 Bağımlılık: Pillow + numpy (geliştirme makinesinde var; `tools/` yayın paketine
 girmediği için oyunu etkilemez).
@@ -258,6 +258,7 @@ def main() -> int:
     ap.add_argument("--value", type=float, default=1.0)
     ap.add_argument("--band", type=float, default=0.0, help=">0 ise nesne alta yaslanır (bant oranı)")
     ap.add_argument("--q", type=int, default=82)
+    ap.add_argument("--format", choices=["webp", "png"], default="webp")
     ap.add_argument("--sharpen", type=float, default=0.6)
     ap.add_argument("--tile", action="store_true")
     ap.add_argument("--simplify", type=int, default=0, help="medyan filtre boyu (tek sayı, 0=kapalı)")
@@ -342,8 +343,10 @@ def main() -> int:
         fixed = work.convert("RGBA")
         fixed.putalpha(alpha_ch)
     os.makedirs(os.path.dirname(os.path.abspath(a.out)), exist_ok=True)
-    save_kw = {"quality": a.q, "method": 6}
-    fixed.save(a.out, "WEBP", **save_kw)
+    if a.format == "png":
+        fixed.save(a.out, "PNG", compress_level=6)
+    else:
+        fixed.save(a.out, "WEBP", quality=a.q, method=6)
 
     stats = {
         "out": a.out.replace("\\", "/"),
@@ -352,6 +355,7 @@ def main() -> int:
         "kb": round(os.path.getsize(a.out) / 1024, 1),
         "alpha": alpha_mode,
         "q": a.q,
+        "format": a.format,
     }
     if palette:
         # `srcMeanDrift`: kantizasyondan ÖNCEKİ sapma — AI'ın bölge paletine ne kadar

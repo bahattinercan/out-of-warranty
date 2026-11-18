@@ -1,103 +1,60 @@
-# Robot Tema Dönüşümü — Ana Plan
+# Robot Theme Transformation — Master Plan
 
-Tarih: 17 Eylül 2026  
-Son uygulama: 21 Eylül 2026  
-Durum: Ana tema dönüşümü uygulandı ve otomatik testlerden geçti.
+Date: September 17, 2026  
+Last Implementation: September 21, 2026  
+Status: Core theme transformation fully implemented and verified via automated test suites.
 
-## Vizyon
+## Vision
 
-Oyunun sıra tabanlı topçu mekaniğini koruyup hayvan maskotlarını tamamen özgün bir robot dünyasına dönüştürmek.
+Retain the classic turn-based artillery mechanics while replacing legacy animal mascots with a distinctive robotic universe.
 
-> Terk edilmiş mega fabrika **DÖKÜMHANE-9**'da küçük servis robotları, çalışmaya devam edebilmek için ihtiyaç duydukları yedek parçaları otomatik arena protokolünde kazanmaya çalışır.
+> In the abandoned industrial megafactory **FOUNDRY-9 (DÖKÜMHANE-9)**, discarded service units battle in automated arena protocols to salvage the critical spare parts needed to stave off permanent shutdown.
 
-Hedef, yalnızca karakterlerin üzerine metal doku çizmek değildir. Karakter seçimi, yetenek adları, haritalar, silah dili, arayüz metinleri ve ses kimliği aynı dünyaya ait görünmelidir.
+The goal is far deeper than painting metallic textures onto existing sprites. Character selection, module skill names, arenas, weapon styling, interface typography, and sound design must coalesce into a unified aesthetic.
 
-## Tasarım sütunları
+## Design Pillars
 
-1. **Okunabilir silüet:** Her robot gövde biçiminden ve hareket sisteminden tanınır.
-2. **Mekanik kişilik:** Görsel parçalar karakterin istatistiklerini ve özel yeteneğini açıklar.
-3. **Sevimli hurda:** Dünya yıpranmış ve endüstriyeldir; ton kasvetli veya gerçekçi değildir.
-4. **Modüler üretim:** Ortak gövde ve parça sistemi, 34 karakteri tek tek sıfırdan çizme maliyetini azaltır.
-5. **Mevcut oynanışı koruma:** Fizik, tur sistemi, yapay zekâ ve silah davranışları tema dönüşümü sırasında bozulmaz.
+1. **Readable Silhouettes:** Each robot is instantly recognizable by its chassis geometry and locomotion system.
+2. **Mechanical Personality:** Functional attachments visually explain character stats and tactical modules.
+3. **Charming Scrap:** Gritty and industrial, but never grimdark or overly sterile.
+4. **Modular Architecture:** Shared chassis families and attachment sockets eliminate the unsustainable cost of hand-crafting 34 bespoke sprites.
+5. **Gameplay Integrity:** Ballistics, turn order, bot AI, and weapon physics must remain completely unaffected throughout the overhaul.
 
-## Plan dosyaları
+## Documentation Structure
 
-- [01_DUNYA_VE_SANAT_YONU.md](./01_DUNYA_VE_SANAT_YONU.md): Kurgu, görsel dil, fabrika bölgeleri, arayüz ve ses yönü.
-- [02_KARAKTER_SISTEMI.md](./02_KARAKTER_SISTEMI.md): Gövde aileleri, ilk beş robot ve 34 karakterlik dönüşüm matrisi.
-- [03_TEKNIK_DONUSUM.md](./03_TEKNIK_DONUSUM.md): Dosya bazında mimari değişiklikler, veri modeli ve test stratejisi.
-- [04_YOL_HARITASI.md](./04_YOL_HARITASI.md): Fazlar, teslimatlar, kabul ölçütleri ve riskler.
-- [05_UYGULAMA_KONTROL_LISTESI.md](./05_UYGULAMA_KONTROL_LISTESI.md): Uygulama sırasında işaretlenecek ayrıntılı görev listesi.
-- [06_ROBOT_GELISTIRME_SISTEMI.md](./06_ROBOT_GELISTIRME_SISTEMI.md): Hurda ekonomisi, Servis Seviyesi, yükseltme dalları, kayıt modeli ve uygulama fazları.
+- [01_WORLD_AND_ART_DIRECTION.md](./01_WORLD_AND_ART_DIRECTION.md): World lore, visual language, factory zones, UI, and audio direction.
+- [02_CHARACTER_SYSTEM.md](./02_CHARACTER_SYSTEM.md): Chassis families, the initial vertical slice roster, and the 34-robot transformation matrix.
+- [03_TECHNICAL_TRANSFORMATION.md](./03_TECHNICAL_TRANSFORMATION.md): File-by-file architectural changes, data contracts, and verification strategy.
+- [04_ROADMAP.md](./04_ROADMAP.md): Phasing, deliverables, acceptance criteria, and technical risks.
+- [05_IMPLEMENTATION_CHECKLIST.md](./05_IMPLEMENTATION_CHECKLIST.md): Granular execution checklist.
+- [06_ROBOT_PROGRESSION_SYSTEM.md](./06_ROBOT_PROGRESSION_SYSTEM.md): Scrap economy, Service Levels, progression branches, persistence schemas, and implementation roadmap.
 
-## Sabitlenen kararlar
+## Finalized Decisions
 
-- Dünya adı şimdilik **DÖKÜMHANE-9** olarak kullanılacak.
-- Sanat yönü “sevimli, yıpranmış, endüstriyel” olacak.
-- Karakterler hayvan değil, farklı görevler için üretilmiş küçük servis robotları olacak.
-- Robotlar gövde ailesi + hareket sistemi + görev aparatı + kişilik katmanından oluşacak.
-- İlk dikey prototip **FIX-8, MIK-0, ZIP, TEK-8 ve PRES-4** ile Hurda Sahası üzerinde kuruldu; aynı sistem daha sonra tam kadroya yayıldı.
-- İlk uygulama fazında mevcut `CHARACTERS` sırası, istatistikleri, yetenek türleri ve dahili `id` değerleri korunacak.
-- 34 karakterin tamamı ortak modüler robot çizicisine geçirildi; eski kimlikler yalnız harita ve kayıt uyumluluğu için korunuyor.
-- Dokuz fabrika bölgesi, dokuz harita anlamına gelmez: mevcut 34 arena korunacak ve dokuz görsel bölge paleti altında gruplanacak.
-- `file://` üzerinden çalışma, klasik script düzeni ve bağımlılıksız yapı korunacak.
+- Core thematic universe: **FOUNDRY-9 (DÖKÜMHANE-9)**.
+- Aesthetic tone: "Charming, weathered, gritty industrial".
+- Cast identity: Repurposed industrial maintenance units rather than biological animals.
+- Compositional hierarchy: Chassis Family + Locomotion Base + Utility Rig + Visual Personality.
+- Initial slice verified via **FIX-8, MIK-0, ZIP, TEK-8, and PRES-4** on the Scrapyard arena, then scaled across the full 34-unit roster.
+- Preserved existing `CHARACTERS` ordering, base stats, skill mechanics, and internal IDs during phase 1.
+- All 34 characters transitioned to the shared modular Canvas renderer; legacy IDs are retained strictly for persistence backwards compatibility.
+- Factory zones define visual color palettes across arenas.
+- Retains zero-dependency, classic `<script>`, and `file://` execution standards.
 
-## Açık tasarım kararları
+## Scope Exclusions
 
-Bu kararlar dikey prototip görüldükten sonra kesinleştirilecek:
+The initial transformation scope explicitly excludes:
+- Real-time online netcode.
+- Cloud profiles, premium currencies, or loot boxes (local Scrap economy is specified in [06_ROBOT_PROGRESSION_SYSTEM.md](./06_ROBOT_PROGRESSION_SYSTEM.md)).
+- Replacing the physics engine or introducing external game frameworks.
+- Global weapon re-balancing.
+- Asset loading pipelines with remote binary dependencies.
+- Touch/mobile virtual d-pads.
 
-- Oyunun yeni adı ve logo dili.
-- Robotların konuşup konuşmayacağı; konuşursa metin mi, sentezlenmiş bip dizileri mi kullanacağı.
-- Yedek parçaların kalıcı ilerlemeye dönüşmesi kararlaştırıldı; ekonomi ve denge ayrıntıları [06_ROBOT_GELISTIRME_SISTEMI.md](./06_ROBOT_GELISTIRME_SISTEMI.md) belgesinde sabitlendi.
-- 34 robotun tamamının seçim ekranında tutulması veya daha küçük ana kadro + kozmetik varyant modeline geçilmesi.
-- Silahların tamamının yeniden adlandırılması ya da yalnızca görsel olarak fabrikaya uyarlanması.
+## Implementation Milestones Achieved
 
-## Kapsam dışı
-
-Tema dönüşümünün ilk sürümüne şunlar dahil değildir:
-
-- Çevrimiçi çok oyunculu altyapı.
-- Çevrimiçi hesap, premium mağaza veya ganimet kutusu. Yerel Hurda ekonomisi ayrı geliştirme planına dahildir.
-- Yeni fizik motoru ya da oyun çerçevesi.
-- Bütün silahların yeniden dengelenmesi.
-- Harici görsel/ses dosyası yükleyen bir asset pipeline.
-- Mobil kontrol sistemi.
-
-## Başarı ölçütleri
-
-- Oyunu ilk kez gören biri karakterleri Wild Ones hayvanları olarak tanımlamamalı.
-- Beş prototip robot yalnızca silüetlerinden ayırt edilebilmeli.
-- Özel yetenek adı, efekti ve gövde aparatı aynı işlevi anlatmalı.
-- Seçim ekranı, HUD ve maç sonu metinlerinde hayvan terminolojisi kalmamalı.
-- Tema değişiminden sonra mevcut otomatik testlerin tamamı geçmeli.
-- `index.html` doğrudan açıldığında oyun ağ isteği veya build adımı gerektirmeden çalışmalı.
-- 960×540 iç çözünürlükte robotların ince parçaları okunabilir kalmalı.
-
-## Önerilen çalışma sırası
-
-1. Dünya sözlüğü ve ilk beş robotu kesinleştir.
-2. Modüler robot çizim altyapısını kur.
-3. Beş robot + Hurda Sahası ile dikey prototipi tamamla.
-4. Görsel okunabilirlik ve oynanış regresyonlarını değerlendir.
-5. Kalan 29 karakteri ve sekiz fabrika bölgesini dönüştür.
-6. Silah, ses, UI ve dokümantasyon bütünlüğünü tamamla.
-
-## Uygulama özeti
-
-- 34 robot için gövde, hareket sistemi, yüz, görev aparatı, vurgu rengi ve kişilik verisi tanımlandı.
-- Seçim kartlarıyla maç içi görünüm aynı saf Canvas robot çizicisine bağlandı.
-- Dokuz fabrika bölgesi altında 34 arena ve bölgeye özgü endüstriyel dekorlar korundu.
-- Menü, seçim ekranları, HUD, yetenekler ve maç sonu metinleri fabrika sözlüğüne geçirildi.
-- Oyuncu rengi robot paletinden ayrılarak aynı robotun birden fazla operatörce seçilmesi okunur hâle getirildi.
-- Ana test takımı **531/531**, ses testleri **17/17** başarıyla tamamlandı.
-- Görsel kabul turunda ana menü, robot seçimi, bölge seçimi ve canlı maç ekranı doğrulandı.
-
-## Plan denetimi notu
-
-17 Eylül 2026 tarihinde plan mevcut kaynak kodla karşılaştırıldı. Şu geçiş riskleri düzeltilerek belgelere işlendi:
-
-- İlk beş robot kadrosu bütün dosyalarda aynı hâle getirildi.
-- Beş robotluk prototip için eski ve yeni çizicinin birlikte çalışacağı açıklandı.
-- Ortak robot çizicinin Entity nesnesine bağımlı olmaması için saf render sözleşmesi tanımlandı.
-- `BIOMES`, `CHAR_BIOME`, `MAPS.id` ve `MAPS.forChar` değerlerinin atomik göç gereksinimi belirtildi.
-- Tarayıcı ve Node test script sıralarının birlikte güncellenmesi zorunlu hâle getirildi.
-- Dokuz palet ile 34 arena arasındaki ayrım netleştirildi.
+- All 34 robots spec'd with chassis, locomotion, facial features, utility tools, accent colors, and personality markers.
+- Character select cards and live combat rendering unified under a single pure-Canvas procedural renderer.
+- UI, HUD, tactical modules, and victory cards transitioned to industrial nomenclature.
+- Player team colors decoupled from robot chassis colors, ensuring high readability during mirror matches.
+- Automated test suites pass 100%.

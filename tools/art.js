@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /* art.js — AI sanat üretim hattının orkestrasyonu (bağımlılıksız).
  *
- * Plan: docs/art-uretim-plani-ai3090.md — Faz A.
+ * Plan: docs/art-production-plan-ai3090.md — Faz A.
  * Boru hattı: gen (ai3090'da Z-Image) → pick (art-prep.py ile hazırla) → index
  * (js/assets-manifest.js üret) → check (art-gate.js).
  *
@@ -186,6 +186,8 @@ function cmdPick(args) {
   const sat = argOf(args, "--sat") || String(dflt.sat);
   const value = argOf(args, "--value") || String(dflt.value || 1);
   const q = argOf(args, "--q") || String(dflt.q);
+  const format = argOf(args, "--format") || "webp";
+  if (format !== "webp" && format !== "png") die("pick: --format webp veya png olmalı");
   const simplify = argOf(args, "--simplify") || String(dflt.simplify || 0);
   const haze = argOf(args, "--haze") || String(dflt.haze || 0);
   const tile = args.includes("--tile") || dflt.tile;
@@ -206,11 +208,15 @@ function cmdPick(args) {
     if (kind === "far" && !floor && !args.includes("--no-floor")) floor = mixHex(z.dirt, z.sky[z.sky.length - 1] || "#ffffff", 0.18);
   }
 
-  const outRel = `assets/${id}.webp`;
+  const outRel = `assets/${id}.${format}`;
   const pyArgs = [path.join(ROOT, "tools", "art-prep.py"),
     "--in", src, "--out", path.join(ROOT, outRel), "--size", size,
-    "--alpha", alpha, "--sat", sat, "--q", q,
+    "--alpha", alpha, "--sat", sat, "--q", q, "--format", format,
   ];
+  const chroma = argOf(args, "--chroma");
+  const tolerance = argOf(args, "--tol");
+  if (chroma) pyArgs.push("--chroma", chroma);
+  if (tolerance) pyArgs.push("--tol", tolerance);
   pyArgs.push("--value", value);
   if (kind === "robots") pyArgs.push("--fit", "contain");
   pyArgs.push("--band", String(dflt.band || 0));
@@ -237,6 +243,7 @@ function cmdPick(args) {
   const entry = {
     id,
     file: outRel,
+    format,
     w: stats.w,
     h: stats.h,
     alpha: !!stats.alpha,
@@ -348,7 +355,7 @@ switch (cmd) {
     console.log(`art — sanat üretim hattı
 
   node tools/art.js gen  --zone <bölge> --layer far|mid|tex|ui --prompt "sahne" [--n 6] [--size 1920x1080] [--base 140000]
-  node tools/art.js pick --id bg/<bölge>-far --src art/build/.../cand-02-seed140034.png [--palette "#.."] [--tile]
+  node tools/art.js pick --id bg/<bölge>-far --src art/build/.../cand-02-seed140034.png [--palette "#.."] [--tile] [--format webp|png]
   node tools/art.js index      assets/manifest.json → js/assets-manifest.js
   node tools/art.js list       manifest özeti + boyut
   node tools/art.js check      tools/art-gate.js kapıları`);

@@ -56,6 +56,8 @@ function defaultProfile() {
     accountXp: 0,
     // Sahip olunan (kilidi açılmış) robot id'leri (v7)
     unlockedRobots: DEFAULT_UNLOCKED_ROBOTS.slice(),
+    // Arena'da ulaşılan en ileri bölüm (v8)
+    arenaUnlockedStage: 1,
     // Ortak cephane deposu (id -> adet): Cephane Pazarı'ndan alınır ve tüm
     // robotlar tarafından paylaşılır. Şema v4 ile robot kayıtlarından köke taşındı.
     ammo: {},
@@ -181,6 +183,12 @@ function migrateProfile(raw) {
     data.version = 7;
     version = 7;
   }
+  if (version < 8) {
+    // v7 → v8: arena bölümleri eklenir; eski profiller ilk bölümden başlar.
+    data.arenaUnlockedStage = toSafeInt(data.arenaUnlockedStage, 1);
+    data.version = 8;
+    version = 8;
+  }
   return data;
 }
 
@@ -219,6 +227,7 @@ function normalizeProfile(raw) {
     scrap: migrated.scrap == null ? START_SCRAP : toSafeInt(migrated.scrap),
     accountXp: Math.min(MAX_ACCOUNT_XP, toSafeInt(migrated.accountXp)),
     unlockedRobots,
+    arenaUnlockedStage: clampNumber(toSafeInt(migrated.arenaUnlockedStage, 1), 1, MAX_ARENA_STAGE),
     // Ortak depo market.js'te doğrulanır: bilinmeyen/sınırsız silah kayıtları
     // atılır, adetler üst sınıra çekilir.
     ammo: sanitizeAmmoDepot(migrated.ammo),

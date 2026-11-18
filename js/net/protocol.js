@@ -4,7 +4,7 @@
  * gönderebileceğini ve hostun komutları nasıl doğrulayıp tekilleştirdiğini
  * TEK yerde tanımlamak. Taşıma (WebRTC/PeerJS) bu dosyayı bilmez; taşıma
  * F3c'de `js/net/transport.js` altında ince bir katman olarak eklenir
- * (bkz. docs/web-lansman-plani.md §4 ve docs/multiplayer-plan.md §6).
+ * (bkz. docs/web-launch-plan.md §4 ve docs/multiplayer-plan.md §6).
  *
  * Neden ayrı: ağ hatası, sırasız paket, yinelenen komut ve kopma senaryoları
  * tarayıcı olmadan Node'da sınanabilmelidir (tests/net.js). Bu yüzden burada

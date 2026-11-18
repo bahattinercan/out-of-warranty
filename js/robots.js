@@ -209,7 +209,36 @@ function robotArmPose(sx, sy, hx, hy, upperLength, lowerLength, bend) {
   };
 }
 
-function _rbArm(ctx, sx, sy, hx, hy, bend, w, color, pose) {
+const _RB_ART_ROBOT_IDS = new Set(["kopek", "kedi", "ayi", "tilki", "tavsan", "rakun", "yarasa"]);
+const _RB_FIX8_ATLAS = {
+  head: [0, 0, 300, 300], body: [300, 0, 300, 300],
+  "arm-upper": [600, 0, 300, 300], "arm-lower": [0, 300, 300, 300],
+  pelvis: [300, 300, 300, 300], "leg-upper": [600, 300, 300, 300],
+  "leg-lower": [0, 600, 300, 300], "wheel-near": [300, 600, 300, 300],
+  "wheel-far": [600, 600, 300, 300],
+};
+
+function _rbArtPart(robotId, part) {
+  if (typeof assetImage !== "function") return null;
+  if (robotId === "kopek") {
+    const rect = _RB_FIX8_ATLAS[part];
+    const image = rect && assetImage("robot-parts/fix8-parts-atlas");
+    return image ? { image, rect } : null;
+  }
+  if (robotId === "kedi" && part === "wheel-foot") {
+    const image = assetImage("robot-parts/kedi-art-wheel-foot");
+    return image ? { image, rect: [0, 0, image.naturalWidth, image.naturalHeight] } : null;
+  }
+  const image = assetImage("robot-parts/" + robotId + "-art-" + part);
+  return image ? { image, rect: [0, 0, image.naturalWidth, image.naturalHeight] } : null;
+}
+
+function _rbDrawArt(ctx, art, ...args) {
+  if (!art) return;
+  ctx.drawImage(art.image, ...art.rect, ...args);
+}
+
+function _rbArm(ctx, sx, sy, hx, hy, bend, w, color, pose, robotId) {
   const arm = pose || robotArmPose(sx, sy, hx, hy, w * 3.8, w * 4.0, bend);
   const ex = arm.elbow.x, ey = arm.elbow.y;
   const outline = _rbShade(color, -0.58);
@@ -230,6 +259,32 @@ function _rbArm(ctx, sx, sy, hx, hy, bend, w, color, pose) {
     ctx.restore();
   };
 
+  if (_RB_ART_ROBOT_IDS.has(robotId) && typeof assetImage === "function") {
+    const armKind = sx < 0 ? "arm-back" : "arm";
+    const upper = robotId === "kopek" ? _rbArtPart(robotId, "arm-upper")
+      : _rbArtPart(robotId, armKind + "-upper") || _rbArtPart(robotId, "arm-upper");
+    const lower = robotId === "kopek" ? _rbArtPart(robotId, "arm-lower")
+      : _rbArtPart(robotId, armKind + "-lower") || _rbArtPart(robotId, "arm-lower");
+    if (upper && lower) {
+      const drawSegment = (image, x1, y1, x2, y2) => {
+        const dx = x2 - x1, dy = y2 - y1;
+        const length = Math.hypot(dx, dy);
+        if (length < 0.001) return;
+        ctx.save();
+        ctx.translate((x1 + x2) / 2, (y1 + y2) / 2);
+        ctx.rotate(Math.atan2(dy, dx) - Math.PI / 2);
+        _rbDrawArt(ctx, image, -w * 1.18, -length * 0.56, w * 2.36, length * 1.12);
+        ctx.restore();
+      };
+      drawSegment(upper, sx, sy, ex, ey);
+      drawSegment(lower, ex, ey, hx, hy);
+      _rbJoint(ctx, sx, sy, w * 0.53, _rbShade(color, -0.20));
+      _rbJoint(ctx, ex, ey, w * 0.46, color);
+      _rbJoint(ctx, hx, hy, w * 0.32, _rbShade(color, -0.08));
+      return { ex, ey };
+    }
+  }
+
   // İki kaplamalı uzuv ve belirgin mafsallar, eli ve silah tutuşunu değiştirmez.
   _rbLimb(ctx, sx, sy, ex, ey, w * 0.9, color);
   _rbLimb(ctx, ex, ey, hx, hy, w * 0.82, _rbShade(color, -0.10));
@@ -247,13 +302,55 @@ function _rbJoint(ctx, x, y, rad, color) {
   ctx.strokeStyle = _rbShade(color, -0.5); ctx.lineWidth = Math.max(1, rad * 0.34); ctx.stroke();
 }
 
+function _rbPelvis(ctx, def, r, color, accent) {
+  const outline = _rbShade(color, -0.56);
+  ctx.save();
+  _rbRoundRect(ctx, -r * 0.49, r * 0.06, r * 0.98, r * 0.20, r * 0.07);
+  ctx.fillStyle = _rbShade(color, -0.28); ctx.fill();
+  ctx.strokeStyle = outline; ctx.lineWidth = Math.max(1.3, r * 0.09); ctx.stroke();
+
+  ctx.beginPath();
+  ctx.moveTo(-r * 0.42, r * 0.18);
+  ctx.lineTo(r * 0.42, r * 0.18);
+  ctx.lineTo(r * 0.47, r * 0.37);
+  ctx.lineTo(r * 0.32, r * 0.61);
+  ctx.lineTo(r * 0.16, r * 0.67);
+  ctx.lineTo(-r * 0.16, r * 0.67);
+  ctx.lineTo(-r * 0.32, r * 0.61);
+  ctx.lineTo(-r * 0.47, r * 0.37);
+  ctx.closePath();
+  ctx.fillStyle = _rbShade(color, -0.08); ctx.fill();
+  ctx.strokeStyle = outline; ctx.lineWidth = Math.max(1.3, r * 0.085); ctx.stroke();
+  if (_RB_ART_ROBOT_IDS.has(def.id) && typeof assetImage === "function") {
+    const pelvisArt = _rbArtPart(def.id, "pelvis");
+    if (pelvisArt) _rbDrawArt(ctx, pelvisArt, -r * 0.46, r * 0.17, r * 0.92, r * 0.58);
+  } else {
+    _rbLine(ctx, -r * 0.18, r * 0.30, r * 0.18, r * 0.30, accent, Math.max(1.2, r * 0.07));
+  }
+  const hipOffset = def.id === "kopek" ? 0.42 : 0.36;
+  _rbJoint(ctx, -r * hipOffset, r * 0.39, r * 0.14, _rbShade(color, -0.18));
+  _rbJoint(ctx, r * hipOffset, r * 0.39, r * 0.14, _rbShade(color, -0.18));
+  ctx.restore();
+}
+
 // ── Bacaklar ve ayaklar ────────────────────────────────────────────────────
 
 // Ayak `y` = bilek çizgisi (+0.82r); her tür kendi tabanını ~+1.0r'ye oturtur.
 // `seed` aynı hareket sistemini kullanan robotlarda detay çeşitliliği verir.
-function _rbFoot(ctx, locomotion, x, y, r, color, accent, seed, gait) {
+function _rbFoot(ctx, locomotion, x, y, r, color, accent, seed, gait, robotId, side) {
   const outline = _rbShade(color, -0.5);
   const roll = (gait && gait.roll) || 0;
+  if (robotId === "kopek" && locomotion === "wheels" && typeof assetImage === "function") {
+    const wheel = _rbArtPart("kopek", "wheel-" + (side > 0 ? "near" : "far"));
+    if (wheel) {
+      ctx.save();
+      ctx.translate(x, y - r * 0.16);
+      ctx.rotate(roll);
+      _rbDrawArt(ctx, wheel, -r * 0.27, -r * 0.36, r * 0.54, r * 0.72);
+      ctx.restore();
+      return;
+    }
+  }
   if (locomotion === "tracks") {
     // Palet: alçak bant, üç makara ve arka çamurluk
     _rbRoundRect(ctx, x - r * 0.24, y - r * 0.11, r * 0.74, r * 0.29, r * 0.10);
@@ -345,14 +442,48 @@ function _rbBoot(ctx, x, y, r, color, accent, outline, seed) {
 // Bacak çifti. `gait` = { walking, air, phase, roll, vy, timeMs }.
 // Yürüyüşte bacaklar zıt fazda sallanır ve ayak bilekten yuvarlanır
 // (topuk → taban → burun), boşta ağırlık kayması, havada ayak uzaması olur.
-function _rbLegs(ctx, locomotion, r, color, accent, gait, seed) {
+function _rbLegs(ctx, locomotion, r, color, accent, gait, seed, robotId) {
   const g = gait || {};
   const air = g.air === true;
   const roll = g.roll || 0;
+  const robotLegArt = (robotId === "kopek" || robotId === "kedi" || robotId === "tilki" || robotId === "tavsan")
+    && _rbArtPart(robotId, "leg-upper") && _rbArtPart(robotId, "leg-lower");
+  const legPoses = [];
 
-  if (locomotion === "wheel") {
+  if (robotId === "rakun" && locomotion === "ball" && typeof assetImage === "function") {
+    const far = assetImage("robot-parts/rakun-art-ball-far"), near = assetImage("robot-parts/rakun-art-ball-near");
+    if (far && near) {
+      ctx.save(); ctx.translate(0, r * 0.72); ctx.rotate(roll);
+      ctx.globalAlpha = 0.78; ctx.drawImage(far, -r * 0.53, -r * 0.34, r * 0.62, r * 0.70);
+      ctx.globalAlpha = 1; ctx.drawImage(near, -r * 0.09, -r * 0.34, r * 0.62, r * 0.70);
+      ctx.restore();
+      return;
+    }
+  }
+
+  if (robotId === "yarasa" && locomotion === "rotors" && typeof assetImage === "function") {
+    const far = assetImage("robot-parts/yarasa-art-rotor-far"), near = assetImage("robot-parts/yarasa-art-rotor-near");
+    if (far && near) {
+      ctx.save(); ctx.globalAlpha = 0.78;
+      ctx.drawImage(far, -r * 0.64, r * 0.42, r * 0.62, r * 0.62);
+      ctx.globalAlpha = 1; ctx.drawImage(near, r * 0.02, r * 0.42, r * 0.62, r * 0.62);
+      ctx.restore();
+      return;
+    }
+  }
+
+  if (locomotion === "wheel" && robotId !== "kedi") {
     // Tek geniş teker (mono kasa): iki çatal bacak merkeze iner, teker DÖNER.
     const wy = air ? r * 0.50 : r * 0.62;
+    if (robotId === "kedi" && typeof assetImage === "function") {
+      const wheel = _rbArtPart("kedi", "wheel-foot");
+      if (wheel) {
+        for (const side of [-1, 1]) _rbLimb(ctx, side * r * 0.20, r * 0.04, side * r * 0.13, wy - r * 0.16, r * 0.21, side > 0 ? color : _rbShade(color, -0.24));
+        ctx.save(); ctx.translate(0, wy); ctx.rotate(roll);
+        _rbDrawArt(ctx, wheel, -r * 0.39, -r * 0.43, r * 0.78, r * 0.86); ctx.restore();
+        return;
+      }
+    }
     for (const side of [-1, 1]) {
       const legColor = side > 0 ? color : _rbShade(color, -0.24);
       _rbRoundRect(ctx, side * r * 0.20 - r * 0.11, r * 0.00, r * 0.22, r * 0.26, r * 0.08);
@@ -381,6 +512,16 @@ function _rbLegs(ctx, locomotion, r, color, accent, gait, seed) {
     const rolling = gait && gait.air ? r * 0.68 : r * 0.82;
     const width = r * (gait && gait.air ? 1.08 : 1.42);
     const height = r * 0.40;
+    if (robotId === "ayi" && typeof assetImage === "function") {
+      const far = assetImage("robot-parts/ayi-art-track-far"), near = assetImage("robot-parts/ayi-art-track-near");
+      if (far && near) {
+        ctx.save(); ctx.globalAlpha = 0.78;
+        ctx.drawImage(far, -r * 0.70, r * 0.38, r * 0.72, r * 0.62);
+        ctx.globalAlpha = 1; ctx.drawImage(near, -r * 0.02, r * 0.38, r * 0.72, r * 0.62);
+        ctx.restore();
+        return;
+      }
+    }
     _rbRoundRect(ctx, -width / 2, rolling - height / 2, width, height, height / 2);
     ctx.fillStyle = "#20262b"; ctx.fill();
     ctx.strokeStyle = "#090c0e"; ctx.lineWidth = Math.max(1.4, r * 0.09); ctx.stroke();
@@ -424,7 +565,8 @@ function _rbLegs(ctx, locomotion, r, color, accent, gait, seed) {
       stride = -tap * 0.10;
       rot = tap * (0.10 + bos * 0.12) - 0.02;
     }
-    const hipX = side * r * 0.20, hipY = r * 0.04;
+    const hipX = side * r * (robotId === "kopek" ? 0.42 : robotLegArt ? 0.36 : 0.20);
+    const hipY = r * (robotId === "kopek" || robotLegArt ? 0.41 : 0.04);
     // Ayak salınımı (2 × 0.56r = 15.7px) adım uzunluğundan (1.3r = 18.2px at
     // r=14) biraz kısadır: ayak yere basılıyken geriye kayması gövdenin
     // ilerlemesini büyük ölçüde karşılar, adım başına ~2.5px (%14) kayma payı
@@ -432,24 +574,31 @@ function _rbLegs(ctx, locomotion, r, color, accent, gait, seed) {
     // kare başına en fazla ~1.6px'e çıkar (gövde hızı 2.2px/karenin altında —
     // hiçbir zaman ayakla gövde birlikte aynı yöne kaymaz).
     const kneeX = hipX + stride * r * 0.36 + r * 0.05;
-    const kneeY = r * 0.46 - lift * r * 0.17;
-    const footX = hipX + stride * r * 0.56;
+    const kneeY = r * (robotId === "kopek" ? 0.35 : robotLegArt ? 0.55 : 0.46) - lift * r * 0.17;
+    const footX = (robotId === "kopek" ? side * r * 0.32 : hipX) + stride * r * 0.56;
     const footY = r * 0.82 - lift * r * 0.24;
+    if (robotLegArt) legPoses.push({ side, hipX, hipY, kneeX, kneeY, footX, footY });
     // uyluk
-    _rbLimb(ctx, hipX, hipY, kneeX, kneeY, r * 0.25, legColor);
+    if (!robotLegArt) _rbLimb(ctx, hipX, hipY, kneeX, kneeY, r * 0.25, legColor);
     // uyluk plakası (açık ton): düz uzuv yerine hacim verir
-    _rbRoundRect(ctx, hipX - r * 0.15, hipY + r * 0.02, r * 0.30, r * 0.26, r * 0.09);
-    ctx.fillStyle = _rbShade(legColor, 0.16); ctx.fill();
-    ctx.strokeStyle = _rbShade(legColor, -0.45); ctx.lineWidth = Math.max(1, r * 0.06); ctx.stroke();
+    if (!robotLegArt) {
+      _rbRoundRect(ctx, hipX - r * 0.15, hipY + r * 0.02, r * 0.30, r * 0.26, r * 0.09);
+      ctx.fillStyle = _rbShade(legColor, 0.16); ctx.fill();
+      ctx.strokeStyle = _rbShade(legColor, -0.45); ctx.lineWidth = Math.max(1, r * 0.06); ctx.stroke();
+    }
     // baldır (yaylı ailede helezon)
-    if (locomotion === "spring") {
+    if (robotLegArt) {
+      // The separated key-art shin is drawn after the waist plate to keep the leg visible.
+    } else if (locomotion === "spring") {
       _rbCoil(ctx, kneeX, kneeY, footX, footY - r * 0.06, r * 0.20, _rbShade(accent, -0.30), 4);
     } else {
       _rbLimb(ctx, kneeX, kneeY, footX, footY, r * 0.21, legColor);
     }
     // dizlik: aksan merkezli mafsal
-    _rbDot(ctx, kneeX, kneeY, r * 0.14, _rbShade(legColor, -0.06), _rbShade(legColor, -0.5));
-    _rbDot(ctx, kneeX, kneeY, r * 0.055, accent, _rbShade(legColor, -0.5));
+    if (!robotLegArt) {
+      _rbDot(ctx, kneeX, kneeY, r * 0.14, _rbShade(legColor, -0.06), _rbShade(legColor, -0.5));
+      _rbDot(ctx, kneeX, kneeY, r * 0.055, accent, _rbShade(legColor, -0.5));
+    }
     // İtiş anında topuk arkasında kısa toz izi (yalnız yürürken, çok soluk)
     if (g.walking && !air && stride < -0.55) {
       const a = Math.min(1, (Math.abs(stride) - 0.55) / 0.45);
@@ -462,7 +611,41 @@ function _rbLegs(ctx, locomotion, r, color, accent, gait, seed) {
     ctx.translate(footX, footY);
     ctx.rotate(rot);
     ctx.translate(-footX, -footY);
-    _rbFoot(ctx, locomotion, footX, footY, r, legColor, accent, seed, g);
+    if (!(robotLegArt && (robotId === "kedi" || robotId === "tilki" || robotId === "tavsan"))) {
+      _rbFoot(ctx, locomotion, footX, footY, r, legColor, accent, seed, g, robotId, side);
+    }
+    ctx.restore();
+  }
+  return robotLegArt ? legPoses : null;
+}
+
+function _rbDrawLegSegment(ctx, image, x1, y1, x2, y2, width) {
+  const dx = x2 - x1, dy = y2 - y1;
+  const length = Math.hypot(dx, dy);
+  if (length < 0.001) return;
+  ctx.save();
+  ctx.translate((x1 + x2) / 2, (y1 + y2) / 2);
+  ctx.rotate(Math.atan2(dy, dx) - Math.PI / 2);
+  _rbDrawArt(ctx, image, -width / 2, -length * 0.56, width, length * 1.12);
+  ctx.restore();
+}
+
+function _rbDrawRobotLegArt(ctx, poses, r, upperDy, robotId) {
+  if (!Array.isArray(poses) || !poses.length || typeof assetImage !== "function") return;
+  const upper = _rbArtPart(robotId, "leg-upper");
+  const lower = _rbArtPart(robotId, "leg-lower");
+  if (!upper || !lower) return;
+  for (const pose of poses) {
+    ctx.save();
+    if (pose.side < 0) ctx.globalAlpha = 0.78;
+    const hipY = pose.hipY + upperDy;
+    const ankleY = pose.footY - (robotId === "kopek" ? r * 0.16 : 0);
+    _rbDrawLegSegment(ctx, upper, pose.hipX, hipY, pose.kneeX, pose.kneeY, r * 0.23);
+    _rbDrawLegSegment(ctx, lower, pose.kneeX, pose.kneeY, pose.footX, ankleY, r * 0.19);
+    if (robotId === "tilki" || robotId === "tavsan") {
+      const foot = _rbArtPart(robotId, "foot-" + (pose.side > 0 ? "near" : "far"));
+      if (foot) _rbDrawArt(ctx, foot, pose.footX - r * 0.27, ankleY - r * 0.08, r * 0.55, r * 0.28);
+    }
     ctx.restore();
   }
 }
@@ -924,6 +1107,23 @@ function _rbHead(ctx, def, r, color, accent) {
 }
 
 function _rbModelPart(ctx, id, x, y, w, h) {
+  const match = id.match(/^([a-z0-9]+)-(body|head)$/);
+  if (match && _RB_ART_ROBOT_IDS.has(match[1])) {
+    const part = match[2];
+    const image = _rbArtPart(match[1], part);
+    if (image && image.image.naturalWidth > 0 && image.image.naturalHeight > 0) {
+      const [,, sourceW, sourceH] = image.rect;
+      if (part === "head") {
+        const drawW = Math.min(w, h * sourceW / sourceH) * 0.80;
+        const drawH = h * 0.80;
+        _rbDrawArt(ctx, image, x + (w - drawW) / 2, y, drawW, drawH);
+      } else {
+        const drawW = w * 0.80;
+        _rbDrawArt(ctx, image, x + (w - drawW) / 2, y, drawW, h);
+      }
+      return true;
+    }
+  }
   if (typeof assetImage !== "function") return false;
   const image = assetImage("robot-models/" + id);
   if (!image) return false;
@@ -1161,7 +1361,7 @@ function _rbProportions(def) {
   }
   // Üst gövdenin dikey kayması (r oranı): kalça `0.04r`den `1 - 0.96·legs`e
   // gider; torso/kask/kol/namlu bu kadar kaydırılır ki ayaklar yerde kalsın.
-  out.upperDy = 0.96 * (1 - out.legs);
+  out.upperDy = 0.96 * (1 - out.legs) - (key === "kopek" ? 0.55 : 0);
   _rbPropCache.set(key, out);
   return out;
 }
@@ -1640,7 +1840,7 @@ function drawRobot(ctx, options) {
   // 4) Arka kol (derinlik için koyu; namluyu alttan destekler)
   // Omuz noktaları gövde genişliğiyle ölçeklenir; eller namluya bağlı kalır.
   const scaledArm = arm => ({ elbow: { x: arm.elbow.x * r, y: arm.elbow.y * r } });
-  _rbArm(ctx, shBX * torsoX, shBY, handB.x, handB.y, -r * 0.16, r * 0.19, _rbShade(color, -0.16), pose && scaledArm(pose.backArm));
+  if (!o.frontArmOnly) _rbArm(ctx, shBX * torsoX, shBY, handB.x, handB.y, -r * 0.16, r * 0.19, _rbShade(color, -0.16), pose && scaledArm(pose.backArm), def.id);
   ctx.restore();
   // 5) Bacaklar: YER TEMASINA göre ölçeklenir (ayak yere basılı kalır, kalça
   //    yukarı/aşağı kayar). Üst gövde aynı kaymayı `upperDy` ile alır.
@@ -1648,7 +1848,7 @@ function drawRobot(ctx, options) {
   ctx.translate(0, r);
   ctx.scale(props.stance, props.legs);
   ctx.translate(0, -r);
-  _rbLegs(ctx, def.locomotion, r, color, accent, gait, seedFoot);
+  const kopekLegPoses = _rbLegs(ctx, def.locomotion, r, color, accent, gait, seedFoot, def.id);
   ctx.restore();
   // Gövde + kask + namlu + ön kol: bacak kaymasını izler.
   ctx.save();
@@ -1669,6 +1869,15 @@ function drawRobot(ctx, options) {
     _rbDesignInsignia(ctx, def.id, r, color, accent, _rbShade(color, -0.55));
   }
   ctx.restore();
+  _rbPelvis(ctx, def, r, color, accent);
+  if (kopekLegPoses) {
+    ctx.save();
+    ctx.translate(0, r);
+    ctx.scale(props.stance, props.legs);
+    ctx.translate(0, -r);
+      _rbDrawRobotLegArt(ctx, kopekLegPoses, r, upperDy, def.id);
+    ctx.restore();
+  }
   // 6) Namlu + ön kol + el — KASKIN ARKASINDA.
   //    Nişan yukarı döndüğünde namlu omuz pivotundan yukarı uzanıyor ve
   //    kasktan sonra çizildiği için yüzün üstüne biniyordu (yaşandı
@@ -1681,9 +1890,9 @@ function drawRobot(ctx, options) {
   //    Gövde ve omuzlar bu bloktan ÖNCE çizildiği için namlu hâlâ gövdenin
   //    önünde, yalnız kaskın arkasında kalır.
   if (holding) _rbLauncher(ctx, localAim, r, accent, gunX, gunY, o.weapon);
-  _rbHand(ctx, handB.x, handB.y, handAngleB, handSize, _rbShade(color, -0.16), holding);
+  if (!o.frontArmOnly) _rbHand(ctx, handB.x, handB.y, handAngleB, handSize, _rbShade(color, -0.16), holding);
   // 7) Ön kol + el (namluyu kavrar) ve elde taşınan alet
-  _rbArm(ctx, shFX * torsoX, shFY, handF.x, handF.y, r * 0.20, r * 0.21, color, pose && scaledArm(pose.frontArm));
+  _rbArm(ctx, shFX * torsoX, shFY, handF.x, handF.y, r * 0.20, r * 0.21, color, pose && scaledArm(pose.frontArm), def.id);
   _rbHand(ctx, handF.x, handF.y, handAngleF, handSize, color, holding);
   if (_RB_WRIST_TOOLS.has(def.attachment) && !holding) {
     _rbWristTool(ctx, def.attachment, handF.x, handF.y, handAngleF, r, accent, color);

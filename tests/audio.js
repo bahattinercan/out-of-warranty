@@ -10,7 +10,7 @@ const source = ["i18n", "version", "portal", "diagnostics", "audio", "characters
   "\n;globalThis.api = { SFX, Entity, Game, WEAPONS };";
 
 function setup(options = {}) {
-  const sources = [], contexts = [], warnings = [], automation = [];
+  const sources = [], contexts = [], warnings = [], automation = [], audioElements = [], waveShapers = [];
   const storage = { nwo_muted: options.muted ? "1" : "0" };
   if (options.volume !== undefined) storage.nwo_volume = options.volume;
   if (options.musicMuted !== undefined) storage.nwo_music_muted = options.musicMuted ? "1" : "0";
@@ -49,6 +49,7 @@ function setup(options = {}) {
     createOscillator() { return sound(); }
     createBufferSource() { return sound(); }
     createBiquadFilter() { return node(); }
+    createWaveShaper() { const n = node(); waveShapers.push(n); return n; }
     createStereoPanner() { const n = node(); panners.push(n); return n; }
     createBuffer(c, n) { return { getChannelData: () => new Float32Array(n) }; }
     suspend() { this.state = "suspended"; return Promise.resolve(); }
@@ -71,6 +72,16 @@ function setup(options = {}) {
       setItem(k, v) { if (options.blockStorage) throw Error("Engelli"); storage[k] = v; },
     },
   };
+  if (options.fileAudio) {
+    sandbox.Audio = class MockAudio {
+      constructor(src) {
+        this.src = src; this.paused = true; this.ended = false; this.currentTime = 0;
+        this.volume = 1; this.loop = false; this.preload = ""; audioElements.push(this);
+      }
+      play() { this.paused = false; return Promise.resolve(); }
+      pause() { this.paused = true; }
+    };
+  }
   // Müzik scheduler'ı vm içinden setInterval kullanır; Node zamanlayıcıları
   // sandbox'a açıkça verilir (vm bağlamı global'ları miras almaz). Müzik
   // zamanlayıcısı unref edilir: bir test hata verip GAMEOVER ile temizlik
@@ -88,7 +99,7 @@ function setup(options = {}) {
     matchMedia: (query) => ({ matches: !!options.coarsePointer && query === "(pointer: coarse)" }),
   };
   vm.runInNewContext(source, sandbox);
-  return { ...sandbox.api, sources, contexts, storage, warnings, automation, sandbox, panners,
+  return { ...sandbox.api, sources, contexts, storage, warnings, automation, sandbox, panners, audioElements, waveShapers,
     resolveResume: () => resolveResume(), rejectResume: () => rejectResume(Error("İzin yok")),
   };
 }
@@ -514,6 +525,98 @@ test("düşük öncelikli ses daha önemli sesi düşürmez; kritik selde en esk
   flood.SFX.eliminate();
   assert.equal(flood.SFX.graph().active, 40, "sınır yine 40'ta kalır");
   assert.equal(flood.SFX.graph().priorities.critical, 40, "yeni kritik bilgi duyulur");
+});
+
+test("her ses efekti ailesi dÃ¶rt karÄ±ÅŸÄ±k varyantÄ± tekrar etmeden Ã§alar", () => {
+  const families = [
+    ["shoot:standard", s => s.SFX.shoot({ id: "basic" })],
+    ["shoot:teleport", s => s.SFX.shoot({ id: "teleportball" })],
+    ["shoot:drill", s => s.SFX.shoot({ id: "drill" })],
+    ["shoot:sniper", s => s.SFX.shoot({ id: "sniper", directHitDamage: true })],
+    ["shoot:pellet", s => s.SFX.shoot({ id: "shotgun", pellets: 5 })],
+    ["shoot:bounce", s => s.SFX.shoot({ id: "grenade", bounce: true })],
+    ["explosion:standard", s => s.SFX.explosion(40, {})],
+    ["explosion:fire", s => s.SFX.explosion(40, { id: "fireball" })],
+    ["explosion:metal", s => s.SFX.explosion(40, { id: "sniper", directHitDamage: true })],
+    ["explosion:cluster", s => s.SFX.explosion(40, { cluster: true })],
+    ...["jump", "teleport", "hook", "hit", "eliminate", "weaponSwitch", "uiClick", "partMount", "turn", "pickup", "alarm", "win", "lose", "draw"]
+      .map(name => [name, s => s.SFX[name]()]),
+    ["timer", s => s.SFX.timerTick(false)], ["timer-urgent", s => s.SFX.timerTick(true)],
+    ["wind", s => s.SFX.windChange(-1, 2)],
+    ...["heal", "shield", "damageReduce", "nextShot", "jump", "glide", "dash", "dig", "melee", "radial", "quake", "spit"]
+      .map(kind => ["skill:" + kind, s => s.SFX.skill(kind)]),
+  ];
+  for (const [name, play] of families) {
+    const t = setup();
+    const seen = [];
+    for (let i = 0; i < 4; i++) {
+      if (t.contexts[0]) t.contexts[0].currentTime += 0.2;
+      const before = t.sources.length;
+      play(t);
+      const variation = t.sources.slice(before).find(source => source.effectVariation != null)?.effectVariation;
+      assert(Number.isInteger(variation), `${name}: kaynakta varyant kimliği bulunmalı`);
+      seen.push(variation);
+    }
+    assert.equal(new Set(seen).size, 4, `${name}: ilk turda dört farklı varyant çalmalı`);
+    const before = t.sources.length;
+    play(t);
+    const next = t.sources.slice(before).find(source => source.effectVariation != null)?.effectVariation;
+    assert.notEqual(next, seen[3], `${name}: yeni tur aynı varyantla başlamamalı`);
+  }
+});
+
+test("arena-rock themes and result stings are generated in Web Audio", () => {
+  const t = setup({ fileAudio: true });
+  t.SFX.musicSync("MODE_SELECT");
+  assert.equal(t.audioElements.length, 0, "music must not open external audio files");
+  const menuSources = t.sources.slice();
+  assert(menuSources.some(source => source.type === "triangle"), "menu uses a clean lead voice");
+  assert.equal(t.SFX.musicInfo().bpm, 88, "menu is slower than combat");
+  assert.equal(t.waveShapers.length, 0, "menu guitars stay clean");
+  assert(menuSources.some(source => source.type === "sine"), "menu has synthesized kick drum");
+  assert(menuSources.length >= 5, "menu schedules melody, bass, chords and drums");
+  t.SFX.musicSync("AIMING");
+  const battleSources = t.sources.slice(menuSources.length);
+  assert(t.waveShapers.some(node => node.curve?.length === 256 && node.oversample === "2x"), "battle guitar uses a soft drive curve");
+  assert.equal(t.SFX.musicInfo().bpm, 126, "battle has a separate faster tempo");
+  assert(menuSources.some(source => source.stops.length > 1), "theme change stops old notes");
+  assert(battleSources.length > menuSources.length, "battle arrangement has denser layers");
+  t.SFX.setMusicVolume(0);
+  assert(battleSources.some(source => source.stops.length > 1), "mute stops scheduled music notes");
+  const mutedCount = t.sources.length;
+  t.SFX.setMusicVolume(0.5);
+  assert.equal(t.SFX.musicInfo().theme, "battle", "unmute preserves the current theme");
+  assert(t.sources.length > mutedCount, "unmute resumes the coded theme");
+  t.SFX.playResult("win");
+  const resultSources = t.sources.slice(mutedCount);
+  assert(resultSources.some(source => source.type === "sawtooth"), "victory plays a guitar-like sting");
+  assert.equal(t.SFX.musicInfo().theme, null, "result cue stops the background scheduler");
+  assert.equal(t.audioElements.length, 0, "result cue uses no external file");
+  t.SFX.musicSync("GAMEOVER");
+  assert(resultSources.some(source => source.stops.length > 1), "GAMEOVER cleans up result notes");
+  t.SFX.musicSync("MODE_SELECT");
+  assert.equal(t.SFX.musicInfo().theme, "menu");
+});
+
+test("menu and battle each shuffle four variations without adjacent repeats", () => {
+  for (const [theme, other] of [["MODE_SELECT", "AIMING"], ["AIMING", "MODE_SELECT"]]) {
+    const t = setup();
+    const choices = [];
+    t.SFX.musicSync(theme);
+    assert.equal(t.SFX.musicInfo().variationCount, 4);
+    choices.push(t.SFX.musicInfo().variation);
+    for (let i = 1; i < 4; i++) {
+      t.SFX.musicSync(other);
+      t.SFX.musicSync(theme);
+      choices.push(t.SFX.musicInfo().variation);
+    }
+    assert.equal(new Set(choices).size, 4, `${theme}: all four arrangements play before the bag repeats`);
+    const last = choices[choices.length - 1];
+    t.SFX.musicSync(other);
+    t.SFX.musicSync(theme);
+    assert.notEqual(t.SFX.musicInfo().variation, last, `${theme}: reshuffle avoids an immediate repeat`);
+    t.SFX.musicSync("GAMEOVER");
+  }
 });
 
 (async () => {

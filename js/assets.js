@@ -5,7 +5,7 @@
  * `new Image()` + göreli dosya yolu çalışıyor. Görseller asenkron geldiği için
  * HİÇBİR çizici "resim var" varsaymaz: `assetImage()` hazır değilse `null` döner
  * ve çağıran taraf mevcut prosedürel çizime düşer. Bu kural olmadan ilk karede
- * boş gökyüzü/beyaz kutu görünür (docs/art-uretim-plani-ai3090.md §7.1).
+ * boş gökyüzü/beyaz kutu görünür (docs/art-production-plan-ai3090.md §7.1).
  *
  * Yollar `ASSET_INDEX` içinde: manifest.json'un çalışma anındaki kopyası
  * (`js/assets-manifest.js`, üretilmiş dosya). Canvas taint: dosya tabanlı görsel

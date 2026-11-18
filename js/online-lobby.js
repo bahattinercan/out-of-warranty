@@ -32,7 +32,7 @@ const ONLINE_ICE_SERVERS = [
 /* Ücretsiz TURN yedeği (Metered Open Relay): simetrik NAT ya da kurumsal
  * güvenlik duvarı arkasında doğrudan bağlantı kurulamazsa trafiği aktarır.
  * Anahtar gerektirdiği için kod yayına hazır ama boş bırakıldı; doldurulduğunda
- * yalnız bu satır değişir (docs/web-lansman-plani.md §4). Boşken yalnız STUN
+ * yalnız bu satır değişir (docs/web-launch-plan.md §4). Boşken yalnız STUN
  * denenir — bağlanamayan oyuncuya "oda bulunamadı" değil zaman aşımı denir. */
 const ONLINE_TURN_SERVERS = [];   // ör. { urls: "turn:relay.metered.ca:80", username: "...", credential: "..." }
 
@@ -763,7 +763,10 @@ class OnlineLobby {
     const L = this._layout();
     this._rects = [];
     if (typeof drawClouds === "function") drawClouds(ctx, L.W, "rgba(190,215,240,0.14)");
-    _msBackdrop(ctx, L.W, L.H);
+    const backdrop = this.step === "role" ? "menu/key-art-menu-online-role"
+      : this.step === "code" ? "menu/key-art-menu-online-code"
+        : "menu/key-art-loading-yard";
+    _msKeyArtBackdrop(ctx, L.W, L.H, backdrop, this.game.renderTimeMs || 0);
     this._renderCyberBackdrop(ctx, L);
     this._renderHeader(ctx, L);
 
@@ -914,9 +917,16 @@ class OnlineLobby {
       const blockW = colW + 24 + rw;
       const x0 = Math.round(L.cx - blockW / 2);
       // Dikey ortalama: koltuk panelinin GERÇEK yüksekliğine göre.
-      const top = Math.max(L.top + 12, Math.round((L.H - seatsH) / 2) - 12);
+      // Başlık ile oda içeriği arasındaki boşluğu azaltıp alt durum satırını aç.
+      const top = Math.max(L.top + 12, Math.round((L.H - seatsH) / 2) - 60);
       this._renderSeats(ctx, { x: x0, y: top, w: colW, h: seatsH, rowH, cols }, rows);
-      this._renderRoomInfo(ctx, L, x0 + colW + 24 + rw / 2, top, rw, false);
+      const infoX = x0 + colW + 24;
+      // Kod, robot ve harita metinleri key art üzerinde kaybolmasın; aynı
+      // panel zemini bu sütunu tek bir okunur oda konsolu olarak toplar.
+      _csPanel(ctx, infoX, top, rw, Math.min(560, L.H - top - 58), {
+        accent: "#2a3848", fillTop: "#111b27",
+      });
+      this._renderRoomInfo(ctx, L, infoX + rw / 2, top + 12, rw, L.H < 700);
     } else {
       // Dar dünya: koltuklar üstte, kod/düğmeler altta (kompakt).
       const top = Math.max(L.top + 8, 92);
@@ -949,6 +959,7 @@ class OnlineLobby {
         const on = n === seatTotal;
         const disabled = n < claimed;
         _csPanel(ctx, x, rect.y + 8, bw, 18, {
+          variant: "control",
           accent: disabled ? "#2a3848" : on ? "#ffe45e" : "#3b526b", selected: on, disabled,
         });
         ctx.textAlign = "center"; ctx.textBaseline = "middle";
@@ -1017,7 +1028,7 @@ class OnlineLobby {
   /* Oda kodu + davet/hazır/başlat düğmeleri + robot seçici. `compact` (dar
    * yerleşim) kısa aralıklar ve tek satırlık robot seçici kullanır. */
   _renderRoomInfo(ctx, L, cx, y, w, compact) {
-    const bw = Math.min(300, w);
+    const bw = Math.min(400, w);
     const x = cx - bw / 2;
     ctx.textAlign = "center"; ctx.textBaseline = "top";
     ctx.fillStyle = "#9fb6c9"; ctx.font = uiTextFont(11, 700);
@@ -1048,13 +1059,14 @@ class OnlineLobby {
       const pickerY = by + bh * 2 + 26;
       this._renderRobotPicker(ctx, cx, pickerY, undefined, compact, bw);
       const map = this._mapFor();
-      const mapY = pickerY + (compact ? 70 : 82);
+      const mapY = pickerY + (compact ? 88 : 140);
       ctx.textAlign = "center"; ctx.textBaseline = "middle";
       ctx.fillStyle = "#9fb6c9"; ctx.font = uiTextFont(10, 700);
-      this._button(ctx, { x: cx - 112, y: mapY, w: 28, h: 28, action: "mapPrev" }, { title: "‹", small: true, accent: "#4fc3f7" });
-      this._button(ctx, { x: cx + 84, y: mapY, w: 28, h: 28, action: "mapNext" }, { title: "›", small: true, accent: "#4fc3f7" });
+      this._button(ctx, { x: cx - 142, y: mapY, w: 28, h: 28, action: "mapPrev" }, { title: "‹", small: true, accent: "#4fc3f7" });
+      this._button(ctx, { x: cx + 114, y: mapY, w: 28, h: 28, action: "mapNext" }, { title: "›", small: true, accent: "#4fc3f7" });
       ctx.fillStyle = map ? map.accent : "#eef5ff"; ctx.font = uiTitleFont(11);
       ctx.fillText(map ? map.label : "—", cx, mapY + 14);
+      if (map) this._renderMapPreview(ctx, cx, mapY + (compact ? 32 : 34), w, map, compact ? 56 : 96);
       return;
     }
     this._button(ctx, { x, y: by, w: bw, h: bh + 4, action: "ready" }, {
@@ -1065,13 +1077,35 @@ class OnlineLobby {
     const wait = _fitTextLines(ctx, t("online.readyWait", "Oda sahibi başlatınca maç başlar"),
       w, 11, (p) => uiTextFont(p), 1, 9);
     ctx.fillText(wait.lines[0], cx, by + bh + 10);
-    this._renderRobotPicker(ctx, cx, by + bh + (compact ? 24 : 28), undefined, compact, bw);
+    const pickerY = by + bh + (compact ? 24 : 28);
+    this._renderRobotPicker(ctx, cx, pickerY, undefined, compact, bw);
     const state = this.session && this.session.lobbyState;
     const map = MAPS.find((entry) => entry.id === (state && state.mapId)) || MAPS[0];
+    const mapY = pickerY + (compact ? 88 : 140);
     ctx.textAlign = "center"; ctx.textBaseline = "top";
     ctx.fillStyle = "#8fa6bd"; ctx.font = uiTextFont(10);
     const mapTitle = t("online.map.title", "HARİTA");
-    ctx.fillText(mapTitle + ": " + (map ? map.label : "—"), cx, by + bh + (compact ? 68 : 76));
+    ctx.fillText(mapTitle + ": " + (map ? map.label : "—"), cx, mapY);
+    if (map) this._renderMapPreview(ctx, cx, mapY + (compact ? 32 : 22), w, map, compact ? 56 : 96);
+  }
+
+  _renderMapPreview(ctx, cx, y, maxW, map, height) {
+    const previewW = Math.min(400, maxW);
+    const previewH = height || 96;
+    const x = cx - previewW / 2;
+    _csPanel(ctx, x - 3, y - 3, previewW + 6, previewH + 6, { accent: map.accent });
+    const mapArt = map.keyArt && typeof assetImage === "function" ? assetImage(map.keyArt) : null;
+    if (mapArt) {
+      const scale = Math.max(previewW / mapArt.naturalWidth, previewH / mapArt.naturalHeight);
+      const sw = previewW / scale, sh = previewH / scale;
+      ctx.save();
+      ctx.beginPath(); ctx.rect(x, y, previewW, previewH); ctx.clip();
+      ctx.drawImage(mapArt, (mapArt.naturalWidth - sw) / 2, (mapArt.naturalHeight - sh) / 2,
+        sw, sh, x, y, previewW, previewH);
+      ctx.restore();
+    } else {
+      drawMapPreview(ctx, x, y, previewW, previewH, map);
+    }
   }
 
   /* Robot seçici ve Hangar Podu.
@@ -1089,7 +1123,7 @@ class OnlineLobby {
 
     if (compact) {
       const pw = Math.min(290, maxAllowed);
-      const ph = 52;
+      const ph = 70;
       const px = Math.round(cx - pw / 2);
       const mx = this.game.input.mouseX, my = this.game.input.mouseY;
       const podHov = interactive && mx >= px && mx <= px + pw && my >= y && my <= y + ph;
@@ -1100,36 +1134,37 @@ class OnlineLobby {
       });
 
       if (interactive) {
-        this._button(ctx, { x: px + 6, y: y + 10, w: 24, h: 32, action: "robotPrev" }, { title: "‹", small: true, accent: "#4fc3f7" });
-        this._button(ctx, { x: px + 64, y: y + 10, w: 24, h: 32, action: "robotNext" }, { title: "›", small: true, accent: "#4fc3f7" });
+        this._button(ctx, { x: px + 6, y: y + 19, w: 24, h: 32, action: "robotPrev" }, { title: "‹", small: true, accent: "#4fc3f7" });
+        this._button(ctx, { x: px + 64, y: y + 19, w: 24, h: 32, action: "robotNext" }, { title: "›", small: true, accent: "#4fc3f7" });
       }
 
-      // Robot önizleme
-      const rx = px + 47, ry = y + 26;
-      ctx.save();
-      ctx.fillStyle = _hexA(ch.color || "#4fc3f7", 0.18);
-      ctx.beginPath();
-      ctx.ellipse(rx, ry + 12, 16, 5, 0, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.restore();
-
-      drawRobot(ctx, {
-        cx: rx, cy: ry, r: 12, facing: 1, charDef: ch,
-        timeMs: this.game.renderTimeMs || 0,
-        motion: { vx: 0, vy: 0, onGround: true },
-        parts: this.game.profile ? getRobotProgress(this.game.profile, ch.id).loadout : null,
-      });
+      // Seçili robotun splash art'ı; görsel yüklenene kadar çizimli robot yedeği.
+      const rx = px + 47, ry = y + 35;
+      if (!this._drawRobotSplash(ctx, ch, px + 30, y + 9, 52, 4)) {
+        ctx.save();
+        ctx.fillStyle = _hexA(ch.color || "#4fc3f7", 0.18);
+        ctx.beginPath();
+        ctx.ellipse(rx, ry + 12, 16, 5, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+        drawRobot(ctx, {
+          cx: rx, cy: ry, r: 18, facing: 1, charDef: ch,
+          timeMs: this.game.renderTimeMs || 0,
+          motion: { vx: 0, vy: 0, onGround: true },
+          parts: this.game.profile ? getRobotProgress(this.game.profile, ch.id).loadout : null,
+        });
+      }
 
       // İsim + rol
       ctx.textAlign = "left"; ctx.textBaseline = "top";
       ctx.fillStyle = "#eef5ff"; ctx.font = uiTitleFont(12);
-      ctx.fillText(ch.label, px + 94, y + 10);
+      ctx.fillText(ch.label, px + 94, y + 17);
       ctx.fillStyle = ch.color || "#8fa6bd"; ctx.font = uiTextFont(10, 700);
-      ctx.fillText(`[ ${ch.role} ]`, px + 94, y + 28);
+      ctx.fillText(`[ ${ch.role} ]`, px + 94, y + 39);
 
       if (interactive) {
         const btnW = Math.min(76, Math.floor(pw * 0.28));
-        const btnX = px + pw - btnW - 6, btnY = y + 12;
+        const btnX = px + pw - btnW - 6, btnY = y + 21;
         this._button(ctx, { x: btnX, y: btnY, w: btnW, h: 28, action: "robotSelect" }, {
           title: t("online.robot.select", "ROBOT SEÇ"),
           accent: "#ffe45e",
@@ -1141,7 +1176,7 @@ class OnlineLobby {
 
     // Normal mod: Hangar Robot İstasyonu Podu
     const podW = Math.min(460, maxAllowed);
-    const podH = 96;
+    const podH = 126;
     const podX = Math.round(cx - podW / 2);
     const podY = y;
     const mx = this.game.input.mouseX, my = this.game.input.mouseY;
@@ -1156,40 +1191,48 @@ class OnlineLobby {
     const pedX = podX + (isNarrow ? 48 : 66);
     const pedY = podY + 58;
     const pedPulse = Math.sin((this.game.renderTimeMs || 0) * 0.004) * 0.15 + 0.85;
+    const splashArt = typeof assetImage === "function" ? assetImage("splashes/" + ch.id) : null;
 
-    // Holografik podyum / platform
-    ctx.save();
-    ctx.fillStyle = _hexA(ch.color || "#4fc3f7", 0.18 * pedPulse);
-    ctx.beginPath();
-    ctx.ellipse(pedX, pedY + 12, isNarrow ? 24 : 32, 8, 0, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.strokeStyle = _hexA(ch.color || "#4fc3f7", 0.5 * pedPulse);
-    ctx.lineWidth = 1.5;
-    ctx.stroke();
-    ctx.restore();
+    if (!splashArt) {
+      // Holografik podyum yalnızca çizimli robot yedeğinde görünür.
+      ctx.save();
+      ctx.fillStyle = _hexA(ch.color || "#4fc3f7", 0.18 * pedPulse);
+      ctx.beginPath();
+      ctx.ellipse(pedX, pedY + 12, isNarrow ? 24 : 32, 8, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = _hexA(ch.color || "#4fc3f7", 0.5 * pedPulse);
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+      ctx.restore();
+    }
 
     // Hızlı gezinme butonları (robotPrev / robotNext)
     if (interactive) {
       if (isNarrow) {
         this._button(ctx, { x: podX + 6, y: podY + 34, w: 22, h: 30, action: "robotPrev" }, { title: "‹", small: true, accent: "#4fc3f7" });
-        this._button(ctx, { x: podX + 68, y: podY + 34, w: 22, h: 30, action: "robotNext" }, { title: "›", small: true, accent: "#4fc3f7" });
+        this._button(ctx, { x: podX + 82, y: podY + 34, w: 22, h: 30, action: "robotNext" }, { title: "›", small: true, accent: "#4fc3f7" });
       } else {
         this._button(ctx, { x: podX + 8, y: podY + 32, w: 26, h: 32, action: "robotPrev" }, { title: "‹", small: true, accent: "#4fc3f7" });
-        this._button(ctx, { x: podX + 98, y: podY + 32, w: 26, h: 32, action: "robotNext" }, { title: "›", small: true, accent: "#4fc3f7" });
+        this._button(ctx, { x: podX + 116, y: podY + 32, w: 26, h: 32, action: "robotNext" }, { title: "›", small: true, accent: "#4fc3f7" });
       }
     }
 
-    // Robot çizimi (hafif süzülme animasyonu)
+    // Karakter splash art'ı; görsel yüklenene kadar çizimli robot yedeği.
     const bob = Math.sin((this.game.renderTimeMs || 0) * 0.003) * 2;
-    drawRobot(ctx, {
-      cx: pedX, cy: pedY - 6 + bob, r: isNarrow ? 13 : 15, facing: 1, charDef: ch,
-      timeMs: this.game.renderTimeMs || 0,
-      motion: { vx: 0, vy: 0, onGround: true },
-      parts: this.game.profile ? getRobotProgress(this.game.profile, ch.id).loadout : null,
-    });
+    const splashSize = isNarrow ? 58 : 108;
+    const splashX = podX + (isNarrow ? 30 : 34);
+    const splashY = podY + (isNarrow ? 30 : 8);
+    if (!this._drawRobotSplash(ctx, ch, splashX, splashY, splashSize, 5, splashArt)) {
+      drawRobot(ctx, {
+        cx: pedX, cy: pedY - 6 + bob, r: isNarrow ? 13 : 15, facing: 1, charDef: ch,
+        timeMs: this.game.renderTimeMs || 0,
+        motion: { vx: 0, vy: 0, onGround: true },
+        parts: this.game.profile ? getRobotProgress(this.game.profile, ch.id).loadout : null,
+      });
+    }
 
     // Robot Detayları (orta blok)
-    const infoX = podX + (isNarrow ? 98 : 134);
+    const infoX = podX + (isNarrow ? 110 : 150);
     ctx.textAlign = "left"; ctx.textBaseline = "top";
     ctx.fillStyle = "#8fa6bd"; ctx.font = uiTextFont(10, 700);
     ctx.fillText(t("online.robot.title", "ROBOTUN"), infoX, podY + 12);
@@ -1224,6 +1267,21 @@ class OnlineLobby {
         ctx.fillText(t("online.robot.viewAll", "Tüm robotları gör ve seç"), btnX + btnW / 2, btnY + btnH + 6);
       }
     }
+  }
+
+  _drawRobotSplash(ctx, ch, x, y, size, radius, splash) {
+    splash = splash || (typeof assetImage === "function" ? assetImage("splashes/" + ch.id) : null);
+    if (!splash) return false;
+    ctx.save();
+    _csRoundRect(ctx, x, y, size, size, radius);
+    ctx.clip();
+    ctx.drawImage(splash, x, y, size, size);
+    ctx.restore();
+    _csRoundRect(ctx, x, y, size, size, radius);
+    ctx.strokeStyle = _hexA(ch.color || "#4fc3f7", 0.85);
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+    return true;
   }
 
   /* Durum/bildirim şeridi: sol alttaki gezinme düğmesinin SAĞINDA kalan alanda
@@ -1276,6 +1334,7 @@ class OnlineLobby {
     const mx = this.game.input.mouseX, my = this.game.input.mouseY;
     const hovered = !o.disabled && mx >= rect.x && mx <= rect.x + rect.w && my >= rect.y && my <= rect.y + rect.h;
     _csPanel(ctx, rect.x, rect.y, rect.w, rect.h, {
+      variant: "control",
       accent: hovered ? (o.accent || "#ffe45e") : _hexA(o.accent || "#3b526b", 0.6),
       hover: hovered, glow: hovered, disabled: o.disabled,
     });
@@ -1306,7 +1365,7 @@ class OnlineLobby {
       const iconY = rect.y + Math.min(34, Math.round(rect.h * 0.22));
       _msIcon(ctx, o.iconKind || "ağ", rect.x + rect.w / 2, iconY, o.accent || "#4fc3f7", hovered);
       ctx.fillStyle = o.disabled ? "#7f93a6" : "#eef5ff";
-      ctx.font = uiTitleFont(rect.w < 220 ? 17 : 20);
+      ctx.font = uiTextFont(rect.w < 220 ? 16 : 19, 700);
       ctx.fillText(o.title, rect.x + rect.w / 2, rect.y + rect.h / 2 - 12);
       ctx.fillStyle = "#9fb6c9"; ctx.font = uiTextFont(11);
       const sub = _fitTextLines(ctx, o.sub, rect.w - 16, 11, (p) => uiTextFont(p), 2, 9);
@@ -1314,8 +1373,8 @@ class OnlineLobby {
     } else {
       ctx.fillStyle = o.disabled ? "#7f93a6" : "#eef5ff";
       const size = o.small ? 13 : 16;
-      const fit = _fitTextLines(ctx, o.title, rect.w - 14, size, uiTitleFont, 1, 9);
-      ctx.font = uiTitleFont(size);
+      const fit = _fitTextLines(ctx, o.title, rect.w - 14, size, (px) => uiTextFont(px, 700), 1, 9);
+      ctx.font = uiTextFont(fit.px, 700);
       ctx.fillText(fit.lines[0], rect.x + rect.w / 2, rect.y + rect.h / 2 + 1);
     }
     this._rects.push({ x: rect.x, y: rect.y, w: rect.w, h: rect.h, action: rect.action, disabled: !!o.disabled });

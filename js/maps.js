@@ -129,12 +129,26 @@ const FACTORY_ZONES = {
     props: [{ type:"craneHook", w:2 }, { type:"crate", w:2 }, { type:"chain", w:1 }],
     propDensity: 108, backdrop:{ kind:"hills" }, haze:"rgba(225,205,155,0.28)", cloud:"#efe3c0aa",
   },
+  pressure: {
+    zoneId: "pressure", zoneLabel: "Basınç Tesisi", zoneCode: "BT",
+    sky: ["#141b35", "#455b83", "#df8271"], orb: "#ffc36f",
+    dirt: "#302d35", grassDeep: "#354348", grassTop: "#d89b42", surface: "rooftop",
+    props: [{ type:"pipe", w:3 }, { type:"valve", w:2 }, { type:"pressureTank", w:1 }],
+    propDensity: 116, backdrop:{ kind:"skyline" }, haze:"rgba(94,129,156,0.32)",
+  },
   swamp: {
     zoneId: "waste", backdropMid: false, zoneLabel: "Atık Arıtma", zoneCode: "AA",
     sky: ["#536450", "#78856c", "#a9ad8e"], orb: "#d9dda9",
     dirt: "#30362d", grassDeep: "#455b42", grassTop: "#79a14a", surface: "grass",
     props: [{ type:"barrel", w:3 }, { type:"pipe", w:2 }, { type:"valve", w:1 }],
     propDensity: 88, backdrop:{ kind:"hills" }, haze:"rgba(100,125,90,0.35)", cloud:"#8f9c7c99",
+  },
+  settling: {
+    zoneId: "settling", backdropMid: false, zoneLabel: "Çöktürme Havzası", zoneCode: "KH",
+    sky: ["#1c2338", "#4e5573", "#d49168"], orb: "#ffc17c",
+    dirt: "#3d3c3d", grassDeep: "#586366", grassTop: "#cf8d51", surface: "rooftop",
+    props: [{ type:"pipe", w:3 }, { type:"valve", w:2 }, { type:"crate", w:1 }],
+    propDensity: 120, backdrop:{ kind:"skyline" }, haze:"rgba(133,145,151,0.30)",
   },
   desert: {
     zoneId: "sandblast", zoneLabel: "Kumlama Ünitesi", zoneCode: "KU",
@@ -271,16 +285,63 @@ function buildCharacterMaps() {
   });
 }
 
-// Altı bağımsız arena. Geometri aynı profili hem gerçek zeminde hem kartta
+// Bağımsız arenalar. Geometri aynı profili hem gerçek zeminde hem kartta
 // kullanır; ek platformlar arazi maskesinin parçası olarak çizilir.
 const MAPS = [
-  { id:"furnace", label:"Erimiş Döküm Ocağı", hint:"İki yüksek yan rampa, ortadaki dar ve sıcak havzaya bakar.", zoneLabel:"Döküm Ocağı", zoneId:"foundry", sky:["#201923","#603229","#d16d35"], orb:"#ffb65c", dirt:"#382a2b", grassDeep:"#74402f", grassTop:"#f08a43", surface:"ash", props:[{type:"emberRock",w:3},{type:"ladle",w:2},{type:"pipe",w:1}], propDensity:118, backdrop:{kind:"mountains"}, haze:"rgba(166,74,48,0.38)", accent:"#ff9e56", scene:"furnace", layout:{ p:[[0,.55],[.16,.56],[.29,.61],[.39,.72],[.46,.78],[.54,.78],[.61,.71],[.71,.61],[.84,.56],[1,.55]], s:[.08,.16,.25,.75,.84,.92] } },
-  { id:"crane_yard", label:"Gece Vinç Sahası", hint:"Kademeli çatılar ve asılı platformlar; üst rota hızlı ama açıkta.", zoneLabel:"Vinç Sahası", zoneId:"warehouse", sky:["#101729","#202d4a","#667c97"], orb:"#e7e8cf", dirt:"#34363b", grassDeep:"#54555c", grassTop:"#d49b48", surface:"rooftop", props:[{type:"gear",w:2},{type:"crate",w:2},{type:"cable",w:1}], propDensity:125, backdrop:{kind:"skyline"}, haze:"rgba(75,86,116,0.36)", stars:true, accent:"#f0bd62", scene:"crane", layout:{ p:[[0,.70],[.17,.70],[.23,.59],[.36,.59],[.42,.70],[.58,.70],[.64,.57],[.78,.57],[.84,.66],[1,.66]], s:[.08,.16,.25,.75,.84,.92], solids:[{x:.29,y:.43,w:.13,h:.025},{x:.60,y:.39,w:.15,h:.025},{x:.43,y:.52,w:.12,h:.025}] } },
-  { id:"reactor_garden", label:"Kök Salmış Reaktör", hint:"İki üst siperin arasında alçak vadi; yüksek yol ateşe açık.", zoneLabel:"Atık Arıtma", zoneId:"waste", sky:["#193433","#476d59","#c1c281"], orb:"#e7ed9b", dirt:"#3b382c", grassDeep:"#536645", grassTop:"#92a856", surface:"grass", props:[{type:"pine",w:2},{type:"mushroom",w:2},{type:"reeds",w:1}], propDensity:105, backdrop:{kind:"hills"}, haze:"rgba(151,177,125,0.32)", accent:"#a8ca70", scene:"reactor", layout:{ p:[[0,.69],[.16,.69],[.24,.57],[.39,.57],[.45,.68],[.55,.68],[.61,.56],[.76,.56],[.84,.69],[1,.69]], s:[.08,.16,.25,.75,.84,.92], solids:[{x:.27,y:.47,w:.18,h:.038},{x:.55,y:.46,w:.18,h:.038}] } },
-  { id:"moon_scrapyard", label:"Ay Moloz Sahası", hint:"Parçalı platformlarda zıpla; alttaki geniş rota kesintisiz.", zoneLabel:"Hurda Sahası", zoneId:"scrapyard", sky:["#080f25","#1d3152","#6c8199"], orb:"#edf0df", dirt:"#343943", grassDeep:"#565c69", grassTop:"#a5a8a0", surface:"rooftop", props:[{type:"gear",w:3},{type:"plate",w:2},{type:"cable",w:1}], propDensity:130, backdrop:{kind:"mountains"}, haze:"rgba(118,139,173,0.35)", stars:true, accent:"#8fbbe2", scene:"moon", layout:{ p:[[0,.73],[.16,.73],[.22,.64],[.30,.64],[.35,.73],[.65,.73],[.70,.61],[.78,.61],[.84,.70],[1,.70]], s:[.08,.16,.25,.75,.84,.92], solids:[{x:.12,y:.53,w:.18,h:.035},{x:.38,y:.47,w:.15,h:.035},{x:.70,y:.49,w:.18,h:.035}] } },
-  { id:"ice_rift", label:"Buz Kırığı", hint:"Derin yarık iki kıyıyı ayırır; düşen robot maçtan çıkar.", zoneLabel:"Soğutma Tesisi", zoneId:"cooling", sky:["#365b75","#9dc8df","#f0fbff"], orb:"#ffffff", dirt:"#536875", grassDeep:"#8aaeba", grassTop:"#e8f8ff", surface:"snow", props:[{type:"snowPine",w:2},{type:"rock",w:2},{type:"pipe",w:1}], propDensity:115, backdrop:{kind:"mountains"}, haze:"rgba(210,242,255,0.32)", snow:true, accent:"#9ce5ef", scene:"ice", layout:{ p:[[0,.71],[.15,.70],[.26,.66],[.36,.62],[.42,.59],[.58,.59],[.64,.62],[.74,.66],[.85,.70],[1,.71]], s:[.07,.15,.25,.75,.85,.93], cuts:[{x:.43,y:.58,w:.14,h:.42}], cliffs:[{x:.43,y:.58,w:.14}] } },
-  { id:"flooded_lab", label:"Taşkın Laboratuvarı", hint:"Yüksek dış yürüyüş yolu ve yıkılabilir iç duvarlarla kapalı arena.", zoneLabel:"Montaj Hattı", zoneId:"assembly", sky:["#15343b","#397078","#a9d5c8"], orb:"#f1efce", dirt:"#344448", grassDeep:"#4c7772", grassTop:"#81b6a5", surface:"rooftop", props:[{type:"pipe",w:3},{type:"valve",w:2},{type:"crate",w:1}], propDensity:110, backdrop:{kind:"skyline"}, haze:"rgba(119,179,171,0.35)", accent:"#70d4c1", scene:"lab", layout:{ p:[[0,.70],[.16,.70],[.24,.62],[.40,.62],[.46,.70],[.54,.70],[.60,.62],[.76,.62],[.84,.70],[1,.70]], s:[.08,.16,.25,.75,.84,.92], solids:[{x:.04,y:.28,w:.025,h:.42},{x:.96,y:.28,w:.025,h:.42},{x:.29,y:.49,w:.035,h:.20},{x:.675,y:.49,w:.035,h:.20},{x:.42,y:.57,w:.16,h:.025}], cuts:[{x:.465,y:.70,w:.07,h:.30}] } },
+  { id:"furnace", label:"Erimiş Döküm Ocağı", hint:"İki yüksek yan rampa, ortadaki dar ve sıcak havzaya bakar.", zoneLabel:"Döküm Ocağı", zoneId:"foundry", sky:["#201923","#603229","#d16d35"], orb:"#ffb65c", dirt:"#382a2b", grassDeep:"#74402f", grassTop:"#f08a43", surface:"ash", props:[{type:"emberRock",w:3},{type:"ladle",w:2},{type:"pipe",w:1}], propDensity:118, backdrop:{kind:"mountains"}, haze:"rgba(166,74,48,0.38)", accent:"#ff9e56", scene:"furnace", keyArt:"map-key-art/furnace", backdropArt:"gameplay/furnace-background-v3", surfaceArt:"tex/foundry-playable-ground", layout:{ p:[[0,.55],[.16,.56],[.29,.61],[.39,.72],[.46,.78],[.54,.78],[.61,.71],[.71,.61],[.84,.56],[1,.55]], s:[.08,.16,.25,.75,.84,.92] } },
+  { id:"crane_yard", label:"Gece Vinç Sahası", hint:"Kademeli çatılar ve asılı platformlar; üst rota hızlı ama açıkta.", zoneLabel:"Vinç Sahası", zoneId:"warehouse", sky:["#101729","#202d4a","#667c97"], orb:"#e7e8cf", dirt:"#34363b", grassDeep:"#54555c", grassTop:"#d49b48", surface:"rooftop", props:[{type:"gear",w:2},{type:"crate",w:2},{type:"cable",w:1}], propDensity:125, backdrop:{kind:"skyline"}, haze:"rgba(75,86,116,0.36)", stars:true, accent:"#f0bd62", scene:"crane", keyArt:"map-key-art/crane-yard", backdropArt:"gameplay/crane-yard-background", foregroundArt:"gameplay/crane-yard-foreground", surfaceArt:"gameplay/crane-yard-surface", layout:{ p:[[0,.70],[.17,.70],[.23,.59],[.36,.59],[.42,.70],[.58,.70],[.64,.57],[.78,.57],[.84,.66],[1,.66]], s:[.08,.16,.25,.75,.84,.92], solids:[{x:.29,y:.43,w:.13,h:.025},{x:.60,y:.39,w:.15,h:.025},{x:.43,y:.52,w:.12,h:.025}] } },
+  { id:"reactor_garden", label:"Kök Salmış Reaktör", hint:"İki üst siperin arasında alçak vadi; yüksek yol ateşe açık.", zoneLabel:"Atık Arıtma", zoneId:"waste", sky:["#193433","#476d59","#c1c281"], orb:"#e7ed9b", dirt:"#3b382c", grassDeep:"#536645", grassTop:"#92a856", surface:"grass", props:[{type:"pine",w:2},{type:"mushroom",w:2},{type:"reeds",w:1}], propDensity:105, backdrop:{kind:"hills"}, haze:"rgba(151,177,125,0.32)", accent:"#a8ca70", scene:"reactor", keyArt:"map-key-art/reactor-garden", backdropArt:"gameplay/reactor-garden-background", foregroundArt:"gameplay/reactor-garden-foreground", surfaceArt:"gameplay/reactor-garden-surface", layout:{ p:[[0,.69],[.16,.69],[.24,.57],[.39,.57],[.45,.68],[.55,.68],[.61,.56],[.76,.56],[.84,.69],[1,.69]], s:[.08,.16,.25,.75,.84,.92], solids:[{x:.27,y:.47,w:.18,h:.038},{x:.55,y:.46,w:.18,h:.038}] } },
+  { id:"moon_scrapyard", label:"Ay Moloz Sahası", hint:"Parçalı platformlarda zıpla; alttaki geniş rota kesintisiz.", zoneLabel:"Hurda Sahası", zoneId:"scrapyard", sky:["#080f25","#1d3152","#6c8199"], orb:"#edf0df", dirt:"#343943", grassDeep:"#565c69", grassTop:"#a5a8a0", surface:"rooftop", props:[{type:"gear",w:3},{type:"plate",w:2},{type:"cable",w:1}], propDensity:130, backdrop:{kind:"mountains"}, haze:"rgba(118,139,173,0.35)", stars:true, accent:"#8fbbe2", scene:"moon", keyArt:"map-key-art/moon-scrapyard", backdropArt:"gameplay/moon-scrapyard-background", foregroundArt:"gameplay/moon-scrapyard-foreground", surfaceArt:"gameplay/moon-scrapyard-surface", layout:{ p:[[0,.73],[.16,.73],[.22,.64],[.30,.64],[.35,.73],[.65,.73],[.70,.61],[.78,.61],[.84,.70],[1,.70]], s:[.08,.16,.25,.75,.84,.92], solids:[{x:.12,y:.53,w:.18,h:.035},{x:.38,y:.47,w:.15,h:.035},{x:.70,y:.49,w:.18,h:.035}] } },
+  { id:"ice_rift", label:"Buz Kırığı", hint:"Derin yarık iki kıyıyı ayırır; düşen robot maçtan çıkar.", zoneLabel:"Soğutma Tesisi", zoneId:"cooling", sky:["#365b75","#9dc8df","#f0fbff"], orb:"#ffffff", dirt:"#536875", grassDeep:"#8aaeba", grassTop:"#e8f8ff", surface:"snow", props:[{type:"snowPine",w:2},{type:"rock",w:2},{type:"pipe",w:1}], propDensity:115, backdrop:{kind:"mountains"}, haze:"rgba(210,242,255,0.32)", snow:true, accent:"#9ce5ef", scene:"ice", keyArt:"map-key-art/ice-rift", backdropArt:"gameplay/ice-rift-background", foregroundArt:"gameplay/ice-rift-foreground", surfaceArt:"gameplay/ice-rift-surface", layout:{ p:[[0,.71],[.15,.70],[.26,.66],[.36,.62],[.42,.59],[.58,.59],[.64,.62],[.74,.66],[.85,.70],[1,.71]], s:[.07,.15,.25,.75,.85,.93], cuts:[{x:.43,y:.58,w:.14,h:.42}], cliffs:[{x:.43,y:.58,w:.14}] } },
+  { id:"flooded_lab", label:"Taşkın Laboratuvarı", hint:"Yüksek dış yürüyüş yolu ve yıkılabilir iç duvarlarla kapalı arena.", zoneLabel:"Montaj Hattı", zoneId:"assembly", sky:["#15343b","#397078","#a9d5c8"], orb:"#f1efce", dirt:"#344448", grassDeep:"#4c7772", grassTop:"#81b6a5", surface:"rooftop", props:[{type:"pipe",w:3},{type:"valve",w:2},{type:"crate",w:1}], propDensity:110, backdrop:{kind:"skyline"}, haze:"rgba(119,179,171,0.35)", accent:"#70d4c1", scene:"lab", keyArt:"map-key-art/flooded-lab", backdropArt:"gameplay/flooded-lab-background", foregroundArt:"gameplay/flooded-lab-foreground", surfaceArt:"gameplay/flooded-lab-surface", layout:{ p:[[0,.70],[.16,.70],[.24,.62],[.40,.62],[.46,.70],[.54,.70],[.60,.62],[.76,.62],[.84,.70],[1,.70]], s:[.08,.16,.25,.75,.84,.92], solids:[{x:.04,y:.28,w:.025,h:.42},{x:.96,y:.28,w:.025,h:.42},{x:.29,y:.49,w:.035,h:.20},{x:.675,y:.49,w:.035,h:.20},{x:.42,y:.57,w:.16,h:.025}], cuts:[{x:.465,y:.70,w:.07,h:.30}] } },
+  { id:"conveyor_port", label:"Konveyör Limanı", hint:"Zıt yönlü yük bantları robotları merkeze taşır; yan iskeleler güvenli atış rotası sunar.", zoneLabel:"Yükleme Rıhtımı", zoneId:"loading", sky:["#10172f","#344b79","#e16d79"], orb:"#f5b972", dirt:"#302d35", grassDeep:"#34464a", grassTop:"#d7973e", surface:"rooftop", props:[{type:"crate",w:3},{type:"chain",w:2},{type:"pipe",w:1}], propDensity:112, backdrop:{kind:"skyline"}, haze:"rgba(68,91,137,0.28)", accent:"#f0aa4e", scene:"conveyor_port", keyArt:"map-key-art/conveyor-port", backdropArt:"gameplay/conveyor-port-background", foregroundArt:"gameplay/conveyor-port-foreground", surfaceArt:"gameplay/conveyor-port-surface", conveyors:[{start:.34,end:.49,direction:1},{start:.51,end:.66,direction:-1}], conveyorShift:12, layout:{ p:[[0,.62],[.17,.62],[.23,.54],[.30,.54],[.34,.66],[.66,.66],[.70,.54],[.77,.54],[.83,.62],[1,.62]], s:[.08,.16,.25,.75,.84,.92] } },
+  { id:"steamworks", label:"Buhar Bacaları", hint:"Tahliye jetleri sırayla robotları havaya kaldırır; zamanlamayı kullanıp atış çizgini değiştir.", zoneLabel:"Basınç Tesisi", zoneId:"pressure", sky:["#141b35","#455b83","#df8271"], orb:"#ffc36f", dirt:"#302d35", grassDeep:"#354348", grassTop:"#d89b42", surface:"rooftop", props:[{type:"pipe",w:3},{type:"valve",w:2},{type:"pressureTank",w:1}], propDensity:116, backdrop:{kind:"skyline"}, haze:"rgba(94,129,156,0.32)", accent:"#58d9d0", scene:"steamworks", keyArt:"map-key-art/steamworks", backdropArt:"gameplay/steamworks-background", foregroundArt:"gameplay/steamworks-foreground", surfaceArt:"gameplay/steamworks-surface", steamVents:[{x:.37,radius:.055,lift:7.5},{x:.63,radius:.055,lift:7.5}], layout:{ p:[[0,.62],[.15,.62],[.22,.55],[.30,.55],[.35,.69],[.65,.69],[.70,.55],[.78,.55],[.85,.62],[1,.62]], s:[.08,.16,.25,.75,.84,.92] } },
+  { id:"settling_basin", label:"KEPÇE-8 · Çöktürme Havzası", hint:"Geniş kuru havzaları alçak savak ayırır; düz atışları keser ama havanları durdurmaz.", zoneLabel:"Çöktürme Havzası", zoneId:"settling", sky:["#1c2338","#4e5573","#d49168"], orb:"#ffc17c", dirt:"#3d3c3d", grassDeep:"#586366", grassTop:"#cf8d51", surface:"rooftop", props:[{type:"pipe",w:3},{type:"valve",w:2},{type:"crate",w:1}], propDensity:120, backdrop:{kind:"skyline"}, haze:"rgba(133,145,151,0.30)", accent:"#e9a35f", scene:"settling_basin", keyArt:"map-key-art/settling-basin", backdropArt:"gameplay/settling-basin-background", foregroundArt:"gameplay/settling-basin-foreground", surfaceArt:"gameplay/settling-basin-surface", layout:{ p:[[0,.58],[.13,.58],[.20,.62],[.24,.75],[.46,.75],[.48,.685],[.54,.685],[.56,.75],[.78,.75],[.84,.62],[1,.62]], s:[.09,.28,.41,.61,.73,.91] } },
+  { id:"calibration_benches", label:"TOK-2 · Kalibrasyon Tezgâhları", hint:"Üç alçak tezgâh kısa siperler yaratır; rota seçip bir sonraki tezgâha ilerle.", zoneLabel:"Montaj Hattı", zoneId:"assembly", sky:["#111a2c","#3e5874","#d18e62"], orb:"#ffd08a", dirt:"#363c42", grassDeep:"#59686b", grassTop:"#dfa24b", surface:"rooftop", props:[{type:"robotArm",w:3},{type:"crate",w:2},{type:"antenna",w:1}], propDensity:118, backdrop:{kind:"skyline"}, haze:"rgba(90,121,145,0.30)", accent:"#e2ad59", scene:"calibration_benches", keyArt:"map-key-art/calibration-benches", backdropArt:"gameplay/calibration-benches-background", foregroundArt:"gameplay/calibration-benches-foreground", surfaceArt:"gameplay/calibration-benches-surface", layout:{p:[[0,.73],[.20,.73],[.20,.657],[.32,.657],[.37,.73],[.43,.73],[.43,.648],[.56,.648],[.62,.73],[.69,.73],[.69,.664],[.82,.664],[.88,.73],[1,.73]],s:[.09,.26,.38,.50,.64,.90],sf:[0,.657,0,.648,0,0]} },
+  { id:"filter_terraces", label:"VUR-5 · Filtre Terasları", hint:"İki yamaçtaki basamaklardan merkeze in; rakibi yüksek konumundan savur.", zoneLabel:"Atık Arıtma", zoneId:"waste", sky:["#263a38","#657665","#d1b27c"], orb:"#f5d799", dirt:"#3a3b34", grassDeep:"#596750", grassTop:"#9eaa65", surface:"grass", props:[{type:"valve",w:2},{type:"pipe",w:2},{type:"barrel",w:1}], propDensity:108, backdrop:{kind:"hills"}, haze:"rgba(137,160,139,0.30)", accent:"#a9c77d", scene:"filter_terraces", keyArt:"map-key-art/filter-terraces", backdropArt:"gameplay/filter-terraces-background", foregroundArt:"gameplay/filter-terraces-foreground", surfaceArt:"gameplay/filter-terraces-surface", layout:{p:[[0,.62],[.18,.62],[.25,.69],[.32,.69],[.39,.75],[.61,.75],[.68,.69],[.75,.69],[.82,.62],[1,.62]],s:[.10,.26,.42,.58,.74,.90],sf:[0,.69,.75,.75,.69,0]} },
+  { id:"weld_gantries", label:"PUNTA-1 · Kaynak Köprüleri", hint:"Yükseltilmiş uzun köprü hızlı geçiş sağlar; orta dikme görüş hattını keser.", zoneLabel:"Basınç Tesisi", zoneId:"pressure", sky:["#121a33","#394e75","#df7656"], orb:"#ffc36f", dirt:"#303740", grassDeep:"#3c555c", grassTop:"#d49b48", surface:"rooftop", props:[{type:"robotArm",w:2},{type:"cable",w:2},{type:"pipe",w:1}], propDensity:126, backdrop:{kind:"skyline"}, haze:"rgba(82,111,149,0.30)", accent:"#f0a54d", scene:"weld_gantries", keyArt:"map-key-art/weld-gantries", backdropArt:"gameplay/weld-gantries-background", foregroundArt:"gameplay/weld-gantries-foreground", surfaceArt:"gameplay/weld-gantries-surface", layout:{p:[[0,.73],[1,.73]],s:[.09,.28,.41,.60,.73,.91],sf:[0,.60,.60,.60,.60,0],solids:[{x:.20,y:.60,w:.60,h:.035},{x:.49,y:.48,w:.025,h:.12}]} },
+  { id:"old_filter_bay", label:"SIZ-7 · Eski Filtre Bölmesi", hint:"İki sığ siper düz atıştan korur; merkez platformu havan menzilini kontrol eder.", zoneLabel:"Montaj Hattı", zoneId:"assembly", sky:["#1a2832","#4a6570","#d49269"], orb:"#f2c57b", dirt:"#383b3c", grassDeep:"#53666a", grassTop:"#c58a50", surface:"rooftop", props:[{type:"pipe",w:3},{type:"crate",w:2},{type:"valve",w:1}], propDensity:116, backdrop:{kind:"skyline"}, haze:"rgba(112,143,148,0.30)", accent:"#d99a56", scene:"old_filter_bay", keyArt:"map-key-art/old-filter-bay", backdropArt:"gameplay/old-filter-bay-background", foregroundArt:"gameplay/old-filter-bay-foreground", surfaceArt:"gameplay/old-filter-bay-surface", layout:{p:[[0,.73],[.23,.73],[.25,.75],[.36,.75],[.42,.65],[.58,.65],[.64,.75],[.75,.75],[.77,.73],[1,.73]],s:[.09,.29,.44,.56,.71,.91],sf:[0,.75,.65,.65,.75,0]} },
+  { id:"substation_yard", label:"EMP-80 · Trafo Avlusu", hint:"Ortadaki yüksek platform görüş sağlar ama iki yandan ateşe açık bırakır.", zoneLabel:"Basınç Tesisi", zoneId:"pressure", sky:["#101a35","#354d72","#d17b62"], orb:"#ffc777", dirt:"#303743", grassDeep:"#41565c", grassTop:"#d29b50", surface:"rooftop", props:[{type:"pressureTank",w:2},{type:"pipe",w:2},{type:"antenna",w:1}], propDensity:122, backdrop:{kind:"skyline"}, haze:"rgba(78,111,150,0.32)", accent:"#e7b35a", scene:"substation_yard", keyArt:"map-key-art/substation-yard", backdropArt:"gameplay/substation-yard-background", foregroundArt:"gameplay/substation-yard-foreground", surfaceArt:"gameplay/substation-yard-surface", layout:{p:[[0,.713],[.32,.713],[.42,.519],[.58,.519],[.68,.713],[1,.713]],s:[.09,.25,.37,.63,.75,.91]} },
 ];
+
+function applyMapTurnMechanics(map, players, terrain, turnId = 0) {
+  if (!map || !Array.isArray(players) || !terrain) return [];
+  const moved = [];
+  if (Array.isArray(map.conveyors)) {
+    const shift = Math.max(0, Number(map.conveyorShift) || 0);
+    for (const player of players) {
+      if (!player.alive || !player.onGround) continue;
+      const belt = map.conveyors.find((entry) => player.x >= entry.start * terrain.w && player.x <= entry.end * terrain.w);
+      if (!belt) continue;
+      const delta = Math.sign(belt.direction) * shift;
+      const nextX = Math.max(player.r, Math.min(terrain.w - player.r, player.x + delta));
+      const stepTop = Math.max(0, Math.floor(player.y - 16));
+      if (terrain.isSolid && terrain.isSolid(Math.round(nextX), stepTop)) continue;
+      const surface = terrain.surfaceBelow(Math.round(nextX), stepTop);
+      if (surface >= terrain.h || Math.abs(surface - player.y) > 16) continue;
+      player.x = nextX;
+      player.y = surface;
+      player.vx = 0;
+      player.vy = 0;
+      player.onGround = true;
+      player.walkAnim = Math.sign(delta);
+      if (typeof player.advanceStride === "function") player.advanceStride(delta);
+      moved.push(player);
+    }
+  }
+  if (Array.isArray(map.steamVents) && map.steamVents.length) {
+    const vent = map.steamVents[((turnId | 0) % map.steamVents.length + map.steamVents.length) % map.steamVents.length];
+    for (const player of players) {
+      if (!player.alive || !player.onGround || Math.abs(player.x - vent.x * terrain.w) > vent.radius * terrain.w) continue;
+      const surface = terrain.surfaceBelow(Math.round(player.x), Math.max(0, Math.floor(player.y - 16)));
+      if (surface >= terrain.h || Math.abs(surface - player.y) > 16) continue;
+      player.vy = -Math.abs(vent.lift);
+      player.onGround = false;
+      moved.push(player);
+    }
+  }
+  return moved;
+}
 
 function getMapById(id) {
   return MAPS.find((m) => m.id === id) || MAPS[0];
@@ -1368,7 +1429,22 @@ function _drawGenericZoneBackdrop(ctx, W, H, theme) {
 }
 
 function drawBackdrop(ctx, W, H, theme) {
-  drawMapBackdropVector(ctx, W, H, theme);
+  const art = theme.backdropArt && typeof assetImage === "function" ? assetImage(theme.backdropArt) : null;
+  if (art) {
+    const scale = Math.max(W / art.naturalWidth, H / art.naturalHeight);
+    const sourceW = W / scale, sourceH = H / scale;
+    ctx.drawImage(art, (art.naturalWidth - sourceW) / 2, (art.naturalHeight - sourceH) / 2,
+      sourceW, sourceH, 0, 0, W, H);
+  } else {
+    drawMapBackdropVector(ctx, W, H, theme);
+  }
+  const foreground = theme.foregroundArt && typeof assetImage === "function" ? assetImage(theme.foregroundArt) : null;
+  if (foreground) {
+    const scale = Math.max(W / foreground.naturalWidth, H / foreground.naturalHeight);
+    const sourceW = W / scale, sourceH = H / scale;
+    ctx.drawImage(foreground, (foreground.naturalWidth - sourceW) / 2, (foreground.naturalHeight - sourceH) / 2,
+      sourceW, sourceH, 0, 0, W, H);
+  }
 }
 
 function drawMapLandmark(ctx, W, H, theme) {
@@ -1481,6 +1557,18 @@ function paintGround(ctx, heights, w, h, theme) {
   ctx.fillStyle = g;
   ctx.fillRect(0, 0, w, h);
 
+  const surfaceArt = theme.surfaceArt && typeof assetImage === "function" ? assetImage(theme.surfaceArt) : null;
+  if (surfaceArt && typeof ctx.createPattern === "function") {
+    const pattern = ctx.createPattern(surfaceArt, "repeat");
+    if (pattern) {
+      if (typeof pattern.setTransform === "function") pattern.setTransform({ a: 0.5, d: 0.5 });
+      ctx.globalAlpha = 0.62;
+      ctx.fillStyle = pattern;
+      ctx.fillRect(0, 0, w, h);
+      ctx.globalAlpha = 1;
+    }
+  }
+
   const textureImage = typeof assetImage === "function" && theme.zoneId
     ? assetImage(textureByZone[theme.zoneId] || "tex/factory-concrete")
     : null;
@@ -1522,6 +1610,66 @@ function paintSurfaceBand(ctx, heights, w, h, theme) {
   else if (surf === "sand") _bandSand(ctx, heights, w, h, theme);
   else if (surf === "ash") _bandAsh(ctx, heights, w, h, theme);
   else _bandGrass(ctx, heights, w, h, theme);
+
+  const surfaceArt = theme.surfaceArt && typeof assetImage === "function" ? assetImage(theme.surfaceArt) : null;
+  const pattern = surfaceArt && typeof ctx.createPattern === "function"
+    ? ctx.createPattern(surfaceArt, "repeat") : null;
+  if (pattern && !theme.conveyors) {
+    // İnce doku bandı zemindeki gerçek temas çizgisine oturur; üst kontur
+    // açık kalır, alttaki ana arazi ve patlama maskesi aynı geometriyi korur.
+    ctx.save();
+    if (typeof pattern.setTransform === "function") pattern.setTransform({ a: 0.5, d: 0.5 });
+    ctx.beginPath();
+    ctx.moveTo(0, heights[0] + 3);
+    for (let x = 1; x < w; x++) ctx.lineTo(x, heights[x] + 3);
+    for (let x = w - 1; x >= 0; x--) ctx.lineTo(x, heights[x] + 15);
+    ctx.closePath();
+    ctx.clip();
+    ctx.globalAlpha = 0.36;
+    ctx.fillStyle = pattern;
+    ctx.fillRect(0, 0, w, h);
+    ctx.restore();
+  }
+  if (theme.conveyors) {
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(0, heights[0] + 2);
+    for (let x = 1; x < w; x++) ctx.lineTo(x, heights[x] + 2);
+    for (let x = w - 1; x >= 0; x--) ctx.lineTo(x, heights[x] + 16);
+    ctx.closePath();
+    ctx.clip();
+    for (const belt of theme.conveyors) {
+      const left = Math.round(belt.start * w), right = Math.round(belt.end * w);
+      const midY = Math.round((heights[left] + heights[right]) / 2) + 9;
+      ctx.fillStyle = "rgba(15, 25, 33, 0.94)";
+      ctx.fillRect(left, midY - 7, right - left, 14);
+      if (surfaceArt) {
+        ctx.save();
+        if (belt.direction < 0) {
+          ctx.translate(left + right, 0);
+          ctx.scale(-1, 1);
+        }
+        ctx.globalAlpha = 0.76;
+        ctx.drawImage(surfaceArt, left, midY - 7, right - left, 14);
+        ctx.restore();
+      }
+      ctx.strokeStyle = "#58bec0";
+      ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.moveTo(left, midY - 7); ctx.lineTo(right, midY - 7);
+      ctx.moveTo(left, midY + 7); ctx.lineTo(right, midY + 7); ctx.stroke();
+      ctx.strokeStyle = "#e5a846";
+      ctx.lineWidth = 2.5;
+      for (let x = left + 12; x < right - 4; x += 25) {
+        const direction = belt.direction;
+        ctx.beginPath();
+        ctx.moveTo(x - direction * 4, midY - 4);
+        ctx.lineTo(x + direction * 2, midY);
+        ctx.lineTo(x - direction * 4, midY + 4);
+        ctx.stroke();
+      }
+    }
+    ctx.restore();
+  }
 }
 
 // Yüzeyden `t` px kalınlıkta, yüzeyi takip eden bandı doldur.
@@ -1545,8 +1693,8 @@ function _strokeSurface(ctx, heights, w, lw, color) {
 
 function _bandGrass(ctx, heights, w, h, theme) {
   ctx.save(); _traceSolid(ctx, heights, w, h); ctx.clip();
-  _fillBand(ctx, heights, 16, theme.grassDeep);
-  _fillBand(ctx, heights, 6, _shade(theme.grassTop, -0.05));
+  _fillBand(ctx, heights, w, 16, theme.grassDeep);
+  _fillBand(ctx, heights, w, 6, _shade(theme.grassTop, -0.05));
   ctx.restore();
   _strokeSurface(ctx, heights, w, 3, theme.grassTop);
   // çim bıçakları
@@ -1563,8 +1711,8 @@ function _bandGrass(ctx, heights, w, h, theme) {
 
 function _bandSnow(ctx, heights, w, h, theme) {
   ctx.save(); _traceSolid(ctx, heights, w, h); ctx.clip();
-  _fillBand(ctx, heights, 20, theme.grassDeep); // buz/kar taban tonu
-  _fillBand(ctx, heights, 9, "#ffffff");        // beyaz üst dudak
+  _fillBand(ctx, heights, w, 20, theme.grassDeep); // buz/kar taban tonu
+  _fillBand(ctx, heights, w, 9, "#ffffff");        // beyaz üst dudak
   // altına soğuk gölge çizgisi
   ctx.beginPath();
   ctx.moveTo(0, heights[0] + 9);
@@ -1581,7 +1729,7 @@ function _bandSnow(ctx, heights, w, h, theme) {
 
 function _bandRooftop(ctx, heights, w, h, theme) {
   ctx.save(); _traceSolid(ctx, heights, w, h); ctx.clip();
-  _fillBand(ctx, heights, 16, theme.grassDeep);
+  _fillBand(ctx, heights, w, 16, theme.grassDeep);
   // dikey kiremit çentikleri
   ctx.strokeStyle = _shadeA(theme.grassDeep, -0.3, 0.5);
   ctx.lineWidth = 0.8;
@@ -1612,7 +1760,7 @@ function _bandRooftop(ctx, heights, w, h, theme) {
 
 function _bandAutumn(ctx, heights, w, h, theme) {
   ctx.save(); _traceSolid(ctx, heights, w, h); ctx.clip();
-  _fillBand(ctx, heights, 16, theme.grassDeep);
+  _fillBand(ctx, heights, w, 16, theme.grassDeep);
   // çok tonlu yamalar
   for (let x = 0; x < w; x += 13) {
     const y = heights[x] + 2;
@@ -1631,8 +1779,8 @@ function _bandAutumn(ctx, heights, w, h, theme) {
 
 function _bandSand(ctx, heights, w, h, theme) {
   ctx.save(); _traceSolid(ctx, heights, w, h); ctx.clip();
-  _fillBand(ctx, heights, 18, theme.grassDeep);
-  _fillBand(ctx, heights, 7, theme.grassTop);
+  _fillBand(ctx, heights, w, 18, theme.grassDeep);
+  _fillBand(ctx, heights, w, 7, theme.grassTop);
   // kum dalgaları (dune)
   ctx.strokeStyle = _shadeA(theme.grassDeep, -0.12, 0.4);
   ctx.lineWidth = 1;
@@ -1651,8 +1799,8 @@ function _bandSand(ctx, heights, w, h, theme) {
 
 function _bandAsh(ctx, heights, w, h, theme) {
   ctx.save(); _traceSolid(ctx, heights, w, h); ctx.clip();
-  _fillBand(ctx, heights, 16, theme.grassDeep);
-  _fillBand(ctx, heights, 5, _shade(theme.grassTop, -0.1));
+  _fillBand(ctx, heights, w, 16, theme.grassDeep);
+  _fillBand(ctx, heights, w, 5, _shade(theme.grassTop, -0.1));
   ctx.restore();
   _strokeSurface(ctx, heights, w, 2.5, theme.grassTop);
   // ember parıltıları (yüzeyde sıcak çatlaklar)

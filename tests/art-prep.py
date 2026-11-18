@@ -11,6 +11,24 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 class RobotFitTest(unittest.TestCase):
+    def test_png_output_is_lossless_png(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            source = Path(tmp) / "source.png"
+            output = Path(tmp) / "background.png"
+            image = Image.new("RGB", (64, 36), (30, 90, 180))
+            ImageDraw.Draw(image).rectangle((8, 8, 24, 24), fill=(240, 120, 20))
+            image.save(source)
+            result = subprocess.run([
+                sys.executable, str(ROOT / "tools/art-prep.py"),
+                "--in", str(source), "--out", str(output),
+                "--size", "64x36", "--alpha", "none", "--format", "png",
+            ], capture_output=True, text=True)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            with Image.open(output) as actual:
+                self.assertEqual(actual.format, "PNG")
+                self.assertEqual(actual.size, (64, 36))
+                self.assertEqual(output.read_bytes()[:8], b"\x89PNG\r\n\x1a\n")
+
     def test_roster_has_no_clipped_edges(self):
         sprites = sorted((ROOT / "assets/robots").glob("*.webp"))
         self.assertEqual(len(sprites), 34)

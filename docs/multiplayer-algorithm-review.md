@@ -1,56 +1,55 @@
-# Steam Multiplayer — Algoritmik İnceleme
+# Steam Multiplayer — Algorithmic Review
 
-Tarih: 8 Ekim 2026. Kapsam: multiplayer-plan.md, mevcut oyun davranışları ve resmi Steam API sözleşmeleri. Uygulama kodu veya Steam bağlantısı henüz yok; bu inceleme tasarım düzeyinde karşı örnek analizi ve belge düzeltmesidir, çalışan multiplayerın test sonucu değildir.
+Date: October 8, 2026. Scope: `multiplayer-plan.md`, current gameplay logic, and official Steam API contracts. This review represents design-level counterexample analysis and specification hardening prior to native networking integration.
 
-## Sonuç
+## Executive Summary
 
-Oyuncunun yetkili host olduğu yıldız topolojisi, sıra tabanlı 2–6 kişilik arkadaş maçı için uygundur. Önceki planda temel mimari hatası bulunmadı; ancak doğrudan uygulamaya geçilirse yanlış atış, eşitleme döngüsü veya çelişen oturumlar üretebilecek dokuz açık vardı. Plan bunları aşağıdaki kurallarla giderdi. Native köprü/SDK uyumu hâlâ S0 deneyinin konusu.
+A star topology with player-authoritative hosting is well suited for 2–6 player turn-based peer matches. No fundamental architectural flaws were identified; however, direct implementation would have encountered nine edge-case hazards capable of producing misfires, infinite resync loops, or conflicting session states. The plan resolves these hazards via the rules below.
 
-P1: maç sonucunu veya temel bağlantı akışını bozabilir. P2: kurtarma/refaktör doğruluğunu veya dayanıklılığı bozar. Bu öncelikler uygulama sırasında test sırasını belirler.
+- **P1:** Could corrupt match outcomes or core connection flows.
+- **P2:** Affects recovery/refactoring accuracy or fault tolerance.
 
-| No | Öncelik | Önceki açık ve karşı örnek | Plan düzeltmesi |
+| ID | Pri | Hazard & Counterexample | Architectural Resolution |
 |---|---|---|---|
-| A1 | P1 | Güvenilmez son nişan kaybolur, güvenilir RELEASE gelir; host eski açıyla ateşler. Yalnız açı göndermek Bomba Yağmuru için de yetersizdir. | Atış niyeti güvenilir eylemde atomik açı/weaponId/hedefX taşır; tek seferlik eylemler sıralıdır. |
-| A2 | P1 | Her stateVersion boşluğu kurtarma sayılırsa, normal güvenilmez paket kaybı sürekli tam snapshot isteği üretir. | Bağımsız dinamik snapshotSeq boşluğu normal; arazi delta baseVersion boşluğu kurtarma sebebidir. |
-| A3 | P1 | Maç başında Steam lobisi joinable=false yapılırsa, lobiden düşen eski oyuncu davetle bile geri giremez. | Lobi katılabilir kalır; yeni oyuncuyu uygulama kadro kilidi reddeder. Kapasite sınırlaması açıkça belirtilir. |
-| A4 | P1 | Bir misafir hosta 10 saniye ulaşamaz, diğerleri ulaşır; misafir global iptal üretirse ekranlar farklı maç sonucu gösterir. | Yerel kopma UI'si ve hostun global ABORT'u ayrılır; host grace kararı verir, otorite kimliği eski oturumları çitler. |
-| A5 | P1 | Snapshot alınıp aktarılırken yeni arazi olayı önce ulaşır; olay önce uygulanıp eski maske yüklenirse krater geri dolar veya hasar iki kez işler. | Tek tick'te değişmez snapshot, eventHighWater/terrainVersion sınırı, parçalı hash ve sınırlı olay tamponu. |
-| A6 | P2 | İlk atış PROJECTILE'a geçer; aynı komut tekrar geldiğinde yalnız phase kontrolü yapılırsa önceki başarı ACK'i yerine hata döner. Tek global sequence de hareket ve atışı birbirine sildirir. | Kimlikten sonra sonuç cache kontrolü; akış başına sequence; chargeId; bağlantıdan bağımsız tekilleştirme/tombstone. |
-| A7 | P2 | JSON.stringify(Infinity) null üretir; eksik shotMod/rüzgâr sayacı/fitil checkpoint sonrası farklı salvo veya tur üretir. | Wire şeması açık sınırsız etiketi taşır; görüntü snapshotı ve tam simülasyon checkpointi ayrılır. |
-| A8 | P2 | 60 Hz fizik 20 Hz yayınla karıştırılırsa yürüyüş/fitil yavaşlar. Telafi borcu atılırsa tur saati gerçek zamandan kopar. Eski hazır/yükleme ACK'i yeni denemeyi başlatabilir. | Sabit 1/60 çekirdek, sınırlı telafi ve aşırı yük iptali; lobbyRevision/startAttemptId/snapshotId ile başlangıç bariyeri. |
-| A9 | P2 | Kopma süresi salvo ortasında dolar ve oyuncu dizisinden çıkarılırsa shooter/mine owner indeksi başka robotu gösterir. İki native modül/süreç SDK'yi ayrı başlatırsa callback sahipliği belirsizleşir. | Sabit slot/entityId, güvenli sınırda elenme, terminal tek geçiş; tek Steam servis sahibi ve saf simülasyon worker'ı. |
+| A1 | P1 | Unreliable aiming packet drops, reliable RELEASE arrives; host fires with stale aim angle. Sending only an angle is also insufficient for Airstrike. | Firing intent carries atomic angle / weaponId / targetX inside the reliable action envelope; single-shot actions are sequenced. |
+| A2 | P1 | If every `stateVersion` gap triggers recovery, normal unreliable packet loss induces perpetual full snapshot requests. | Gaps in independent dynamic `snapshotSeq` are normal; only baseVersion gaps in terrain delta streams trigger recovery. |
+| A3 | P1 | If a Steam lobby sets `joinable=false` at match start, disconnected players cannot rejoin, even via invite. | Lobby remains joinable; application-level roster locks reject unauthorized newcomers. Room capacity is clearly enforced. |
+| A4 | P1 | A single guest loses connection to the host for 10s while others remain connected; if that guest triggers a global abort, clients diverge on match outcome. | Isolate local disconnect UI from the host's authoritative global ABORT; host decides grace timeouts; authority epoch fencing invalidates stale sessions. |
+| A5 | P1 | While a snapshot is serialized and in flight, a new terrain destruction event arrives; if applied out of order, craters re-fill or damage applies twice. | Invariant snapshot captured in a single tick, bounded by `eventHighWater` and `terrainVersion`, using segmented hashes and ring-buffered events. |
+| A6 | P2 | Initial shot transitions state to `PROJECTILE`; if a duplicate command arrives and only phase is checked, an error returns instead of the prior success ACK. A single global sequence counter would clobber movement against firing. | Post-identification result cache check; per-stream sequence numbering; `chargeId`; connection-agnostic deduplication tombstones. |
+| A7 | P2 | `JSON.stringify(Infinity)` yields `null`; missing `shotMod`/wind turn counters/fuse values produce divergent salvos after checkpoint restore. | Wire schema uses explicit infinity tokens; visual snapshot is decoupled from full simulation checkpoints. |
+| A8 | P2 | Mixing 60 Hz physics with 20 Hz network broadcasts skews walking and fuse timing. Discarding debt decouples turn clocks from real time. Stale ready/load ACKs can trigger premature match start. | Fixed 1/60s simulation core, bounded catchup compensation, overload bailouts; start barrier enforced via `lobbyRevision`, `startAttemptId`, and `snapshotId`. |
+| A9 | P2 | Disconnect timeout expires mid-salvo and entity is removed from player array; shooter/mine owner indices point to another robot. Dual native modules/processes initializing SDKs clobber callback dispatch. | Invariant slot / `entityId` mapping, elimination handled only at safe turn boundaries; single Steam service owner with isolated simulation worker. |
 
-## Mevcut kodla doğrulanan bağımlılıklar
+## Verified Dependencies in Current Codebase
 
-- js/game.js fireAirdrop, input.mouseX'ten hedef sütununu alıyor; yalnız nişan açısı komutu içerik kapsamını karşılamaz.
-- fire, nextShotMod'u shotMod'a taşıyor ve shooterIdx atıyor; patlama hesabı bu alanları daha sonra okuyor. Salvo ortası checkpoint bunları taşımalıdır.
-- advanceWind, windTurnsRemaining ile 2–4 tur sabit rüzgâr davranışını koruyor; yalnız wind değeri yeterli değildir.
-- Entity.hasAmmo/consumeAmmo ve HUD, bazuka için Infinity kullanıyor; ağ temsilinde otomatik JSON dönüşümü yapılamaz.
-- Projectile.update, fuse ve bölünme/matkap davranışını kare sayısıyla yürütüyor. Entity.walk ve güç dolumu da adım bazlı. 60 Hz simülasyon korunmalıdır.
-- endTurn, cooldown/zehir/uçuş/hasar azaltmayı güncelliyor, yaşayan sayısını denetliyor ve sıra/rüzgârı ilerletiyor. Aynı turnId için iki kez çağrılamaz; ağ ACK/yeniden bağlanma bu işlevi tetiklememeli.
-- placeMine owner olarak shooterIdx saklıyor; oyuncu dizisinin sıkıştırılması sahiplik bozar. Çekirdeğe taşınırken sabit entityId kullanılır.
-- Terrain.destroy maskeyi değiştirirken canvası da boyuyor; istemci olayının tekrar uygulanması mantıksal sürümü ve görüntüyü farklılaştırabilir.
+- `js/game.js:fireAirdrop` reads the target column from `input.mouseX`; an aim angle alone cannot express target placement.
+- `fire` transfers `nextShotMod` to `shotMod` and assigns `shooterIdx`; explosion calculations read these fields asynchronously. Mid-salvo checkpoints must preserve them.
+- `advanceWind` maintains 2–4 turn wind stability via `windTurnsRemaining`; sending only the scalar `wind` value is insufficient.
+- `Entity.hasAmmo`/`consumeAmmo` and the HUD use `Infinity` for the standard bazooka; automatic JSON serialization produces `null`.
+- `Projectile.update` steps fuses and cluster splits on frame counts; `Entity.walk` and shot charging are also step-based. The 60 Hz simulation core must be maintained.
+- `endTurn` updates cooldowns, poison, flight, and damage reduction, evaluates surviving combatants, and advances turns and wind. It cannot be invoked twice for the same `turnId`; network ACKs and reconnections must never re-trigger it.
+- `placeMine` stores `shooterIdx` as owner; compacting the player array upon disconnect corrupts ownership. Fixed `entityId`s are required.
+- `Terrain.destroy` draws directly to the offscreen canvas while modifying the bitmask; replaying client events out of order diverges visual appearance from collision geometry.
 
-## Gerekli kabul senaryoları
+## Required Acceptance Test Scenarios
 
-1. Aynı RELEASE üç kez gelir: tek salvo, tek mühimmat tüketimi, aynı başarılı ACK.
-2. MOVE seq=100 gelir, ardından güvenilir action seq=7: farklı akışlar oldukları için geçerli eylem silinmez.
-3. Nişan update'i kaybolur: RELEASE içindeki doğrulanmış açı/hedef kullanılır.
-4. Tam durum seq=10 ardından seq=13: yeni tam durum uygulanır, kurtarma döngüsü oluşmaz.
-5. Terrain v11 gecikir, v12 gelir: v12 tamponlanır; bağımlılık tamamlanmadan maske değiştirilmez.
-6. Snapshot parça aktarımı sırasında hasar/krater gelir: snapshot eventHighWater sınırı eski/yeni olayları ayırır, tek sonuç elde edilir.
-7. LOADING A iptal edilir, LOADING B başlar, A'nın LOADED'ı gelir: B başlamaz.
-8. Güç doldururken hareket/input yenilemesi kesilir: lease sonunda hareket ve charge temizlenir; tur süresi dolduğunda hayalet atış oluşmaz.
-9. Salvo ortasında kopma grace'i dolar: mermi/owner kimliği korunur, elenme güvenli sınırda bir kez işler.
-10. Bir oyuncu hosta erişemez, diğerleri erişir: bağlı oyuncular devam eder; erişemeyen oyuncu global sonuç üretmez.
-11. Lobi sahibi değişir: yeni otorite yeni maç kimliğiyle başlar; gecikmiş eski host snapshotı reddedilir.
-12. Checkpoint, sınırsız bazuka + mayın + zehir + mermi fitili + RNG/shotMod/rüzgâr sayacı içerir: yükle/devam sonucu aynı kabul edilmiş komut/tick günlüğüyle eşleşir.
+1. Triple-delivered RELEASE: exactly one salvo fired, single ammo deduction, identical success ACK.
+2. MOVE `seq=100` followed by reliable ACTION `seq=7`: independent streams ensure valid actions are never overwritten.
+3. Aim packet dropped: verified angle/target embedded in reliable RELEASE is utilized.
+4. Full state `seq=10` followed by `seq=13`: newer full state applies cleanly without triggering recovery thrashing.
+5. Terrain `v11` delayed, `v12` arrives: `v12` is buffered until `v11` arrives and dependencies resolve.
+6. Damage/crater occurs during chunked snapshot transmission: `eventHighWater` boundary cleanly bifurcates pre- and post-snapshot events.
+7. LOADING A cancelled, LOADING B starts, stale LOADED A arrives: discarded; B continues unperturbed.
+8. Heartbeat lost while charging power: input lease timeout safely discards charge; no phantom shots on turn expiry.
+9. Disconnect grace expires mid-salvo: projectile/owner IDs remain intact; elimination executes cleanly at turn boundary.
+10. Single player split-brain: connected players continue uninterrupted; isolated client cannot force global match abortion.
+11. Host migration / authority handover: new authority assigns a new match epoch; late snapshots from former host are rejected.
+12. Checkpoint recovery: preserves infinite bazooka + mines + poison + projectile fuses + RNG seed + `shotMod` + wind counter; simulation resume produces bit-identical command log.
 
-Bu senaryoların fake transport ile otomatik ve S0/S2/S6'da gerçek Steam bağlantısıyla tamamlanması gerekir. Bir plan belgesinin mantıksal tutarlılığı paket kaybı, SDK/native köprü ve zamanlayıcı davranışının sahada doğrulandığı anlamına gelmez.
+## References
 
-## Kaynaklar
-
-- [ISteamNetworkingSockets — ConfigureConnectionLanes](https://partner.steamgames.com/doc/api/ISteamNetworkingSockets#ConfigureConnectionLanes): lane'ler arasında alım sırası garantisi yok; aynı lane içindeki güvenilir mesajlar sıralıdır. Eylem ve snapshot bağımlılıkları uygulama düzeyinde tanımlanır.
-- [ISteamMatchmaking — SetLobbyJoinable](https://partner.steamgames.com/doc/api/ISteamMatchmaking#SetLobbyJoinable): katılım kapalıyken arkadaş ve davetli de katılamaz.
-- [ISteamMatchmaking — GetLobbyOwner](https://partner.steamgames.com/doc/api/ISteamMatchmaking#GetLobbyOwner): lobi sahibi ayrıldığında yeni sahip atanır; simülasyon checkpoint devri bu API'nin yaptığı iş değildir.
-- [Steamworks API yaşam döngüsü](https://partner.steamgames.com/doc/sdk/api): init, callback ve shutdown yönetimi.
+- [ISteamNetworkingSockets — ConfigureConnectionLanes](https://partner.steamgames.com/doc/api/ISteamNetworkingSockets#ConfigureConnectionLanes): No ordering guarantees between lanes; reliable messages within the same lane remain strictly ordered.
+- [ISteamMatchmaking — SetLobbyJoinable](https://partner.steamgames.com/doc/api/ISteamMatchmaking#SetLobbyJoinable): When set to false, friends and invitees cannot join.
+- [ISteamMatchmaking — GetLobbyOwner](https://partner.steamgames.com/doc/api/ISteamMatchmaking#GetLobbyOwner): Ownership shifts automatically on disconnect; simulation state handoff must be handled at the application layer.
+- [Steamworks API Lifecycle](https://partner.steamgames.com/doc/sdk/api): Initialization, callback pumps, and shutdown discipline.

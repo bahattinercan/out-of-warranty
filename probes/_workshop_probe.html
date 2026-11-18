@@ -139,6 +139,19 @@
     const g7 = makeWs("upgrades");
     g7.W = 1260;
     g7.renderWorkshop(document.getElementById("c7").getContext("2d"));
+
+    setTimeout(() => {
+      for (const [game, id] of [[g1, "c1"], [g2, "c2"], [g3, "c3"], [g5, "c5"], [g6, "c6"], [g7, "c7"]]) {
+        const canvas = document.getElementById(id);
+        const ctx = canvas.getContext("2d");
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        game.renderWorkshop(ctx);
+      }
+      const charCanvas = document.getElementById("c4");
+      const charCtx = charCanvas.getContext("2d");
+      charCtx.clearRect(0, 0, charCanvas.width, charCanvas.height);
+      cs.renderCharSelect(charCtx);
+    }, 600);
   </script>
 </body>
 </html>

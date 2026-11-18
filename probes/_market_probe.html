@@ -121,6 +121,16 @@
     g4.input.mouseX = 700; g4.input.mouseY = 240;
     g4.renderMarket(document.getElementById("c4").getContext("2d"));
     audioGuide(document.getElementById("c4").getContext("2d"));
+
+    // Canvas game loop'u taklit et: ilk file:// yükleme tamamlanınca key art'ları çiz.
+    setTimeout(() => {
+      for (const [game, id] of [[g1, "c1"], [g2, "c2"], [g3, "c3"], [g4, "c4"]]) {
+        const ctx = document.getElementById(id).getContext("2d");
+        ctx.clearRect(0, 0, 960, 540);
+        game.renderMarket(ctx);
+        audioGuide(ctx);
+      }
+    }, 600);
   </script>
 </body>
 </html>

@@ -1,9 +1,7 @@
 /* Ses efektleri — Web Audio API ile prosedürel sentez.
  *
- * Neden dosyasız? Oyun `file://` üzerinden çift tıklayınca çalışıyor; harici ses
- * dosyalarını fetch/decode etmek tarayıcıların file:// CORS kısıtları yüzünden
- * çoğu zaman patlar. Onun yerine her efekti AudioContext ile anlık sentezliyoruz —
- * sıfır bağımlılık, sıfır indirme, anında çalar.
+ * Music and sound effects are synthesized on demand with AudioContext, preserving
+ * direct `file://` launch without audio files, runtime dependencies, or network requests.
  *
  * Tarayıcılar otomatik ses çalmayı engeller: AudioContext ancak bir kullanıcı
  * jesti (tık/tuş) sonrası "running" olur. ensure() bekleyen tek bir resume()
@@ -28,7 +26,8 @@
  *   SFX.uiClick()        — menü tıklaması
  *   SFX.turn()           — sıra yeni oyuncuya geçti
  *   SFX.windChange(a, b) — rüzgâr yönü/şiddeti değişti
- *   SFX.win()/lose()/draw() — maç sonucu jingle'ı
+ *   SFX.playResult(result) — match-result music sting synthesized in Web Audio
+ *   SFX.win()/lose()/draw() — prosedürel maç sonucu jingle'ları
  *   SFX.musicSync(state) — duruma göre arka plan müziğini aç/kapat/tema değiştir
  *   SFX.musicInfo()      — aktif müzik teması ve çalan nota sayısı (tanı/test)
  *   SFX.toggleMute()     — oyun sesini aç/kapat (durumu döndürür)
@@ -138,6 +137,13 @@ const SFX = (() => {
   // olmasın. Varyasyon yalnız frekans/süre/filtre ekseninde ±%4 gezinir;
   // kazanç sabittir, böylece ses seviyesi ve kritik olayın tanınırlığı değişmez.
   const VARIATION = 0.04;
+  const FX_VARIATIONS = [
+    { freq: 0.94, dur: 0.94, cutoff: 0.88, attack: 0.76, q: 0.82 },
+    { freq: 0.98, dur: 1.08, cutoff: 1.06, attack: 1.2, q: 1.12 },
+    { freq: 1.04, dur: 0.9, cutoff: 1.14, attack: 0.86, q: 0.92 },
+    { freq: 1, dur: 1.02, cutoff: 0.96, attack: 1, q: 1.24 },
+  ];
+  const effectVariationBags = new Map();
   let seedSequence = 0;
 
   function hashString(text) {
@@ -160,13 +166,45 @@ const SFX = (() => {
     return { freq: spread(unit("freq")), dur: spread(unit("dur")), cutoff: spread(unit("cutoff")) };
   }
 
+  function nextEffectVariation(key, seed) {
+    if (seed != null) return mixSeed(seed ^ hashString(key)) % FX_VARIATIONS.length;
+    let bag = effectVariationBags.get(key);
+    if (!bag) { bag = { order: [], cursor: 0, last: -1 }; effectVariationBags.set(key, bag); }
+    if (bag.cursor >= bag.order.length) {
+      bag.order = FX_VARIATIONS.map((_, index) => index);
+      for (let i = bag.order.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [bag.order[i], bag.order[j]] = [bag.order[j], bag.order[i]];
+      }
+      if (bag.order[0] === bag.last) [bag.order[0], bag.order[1]] = [bag.order[1], bag.order[0]];
+      bag.cursor = 0;
+    }
+    const selected = bag.order[bag.cursor++];
+    bag.last = selected;
+    return selected;
+  }
+
   // Olay bağlamı: öncelik, pan ve tohum. tone/noise katmanları bunu opts ile alır.
   function voice(key, priority, spatial) {
     const explicit = spatial && Number.isFinite(spatial.seed) ? (spatial.seed >>> 0) : null;
     const seed = explicit != null
       ? mixSeed(explicit ^ hashString(key))
       : mixSeed(hashString(key) ^ Math.imul(++seedSequence, 2654435761));
-    return { priority, pan: panFor(spatial), variant: variantOf(seed) };
+    const variationIndex = nextEffectVariation(key, explicit);
+    const micro = variantOf(seed);
+    const variation = FX_VARIATIONS[variationIndex];
+    return {
+      priority,
+      pan: panFor(spatial),
+      variationIndex,
+      variant: {
+        freq: micro.freq * variation.freq,
+        dur: micro.dur * variation.dur,
+        cutoff: micro.cutoff * variation.cutoff,
+        attack: variation.attack,
+        q: variation.q,
+      },
+    };
   }
 
   function stopVoice(source) {
@@ -352,38 +390,79 @@ const SFX = (() => {
     }
   }
 
-  // ── Arka plan müziği (B · prosedürel katman) ──
-  // Dosyasız döngü: her temanın nota deseni deterministik olarak ileriye
-  // zamanlanır (lookahead scheduler). Notlar musicSources setine kaydedilir;
-  // stopMusic'te iptal edilir, sessize alınca scheduling atlanır ve ses açılınca
-  // aynı döngü kendiliğinden devam eder (plan §21: atlanınca ses kalmaz).
+  // Procedural music avoids external files and remains compatible with file://.
   const musicSources = new Set();
   let musicTheme = null;
   let musicTimer = null;
   let musicStep = 0;
   let musicNextTime = 0;
-
-  // On altı sekizlik adımlı, sabit ve seyrek desenler. Müzik SFX'in arkasında kalır;
-  // frekanslar megafabrika atmosferi için düşük, kirli tınılardan seçilmiştir.
+  let guitarCurve = null;
+  // Each theme has four eight-bar variations. Menu uses a clean G-major
+  // arrangement; battle uses faster E-minor riffs, driven guitars and louder drums.
   const MUSIC_THEMES = {
-    battle: {
-      bpm: 92,
-      melody: [null, 196, null, 233.08, null, 174.61, null, 261.63, null, 196, null, 155.56, null, 174.61, 233.08, null],
-      bass: [55, null, null, 55, null, null, 73.42, null, 55, null, 55, null, null, 49, null, null],
-      pad: [110, null, null, null, null, null, null, null, 130.81, null, null, null, null, null, null, null],
-      beat: true,
-    },
     menu: {
-      bpm: 68,
-      melody: [null, 261.63, null, null, 311.13, null, 233.08, null, null, 196, null, 233.08, null, null, 174.61, null],
-      bass: [65.41, null, null, null, null, null, null, null, 58.27, null, null, null, null, null, null, null],
-      pad: [130.81, null, null, null, null, null, null, null, 116.54, null, null, null, null, null, null, null],
+      bpm: 88, leadType: "triangle", drive: false, leadGain: 0.075,
+      bassGain: 0.085, chordGain: 0.022, drumGain: 0.25, hatEvery: 4,
+      variations: [
+        { riff: [392, null, 493.88, 587.33, null, 659.25, 587.33, null, 440, null, 493.88, 587.33, null, 493.88, 440, null], bass: [98, 73.42, 82.41, 65.41], chords: [[196, 293.66, 392], [146.83, 220, 293.66], [164.81, 246.94, 329.63], [130.81, 196, 261.63]] },
+        { riff: [493.88, null, 587.33, 659.25, 587.33, null, 493.88, null, 392, null, 440, 493.88, null, 587.33, 493.88, null], bass: [98, 65.41, 73.42, 98], chords: [[196, 293.66, 392], [130.81, 196, 261.63], [146.83, 220, 293.66], [196, 293.66, 392]] },
+        { riff: [329.63, null, 392, 493.88, null, 587.33, 493.88, null, 392, null, 493.88, 587.33, 659.25, null, 587.33, null], bass: [82.41, 65.41, 98, 73.42], chords: [[164.81, 246.94, 329.63], [130.81, 196, 261.63], [196, 293.66, 392], [146.83, 220, 293.66]] },
+        { riff: [523.25, null, 587.33, 659.25, null, 587.33, 493.88, null, 440, null, 493.88, 587.33, null, 659.25, 587.33, null], bass: [65.41, 98, 73.42, 82.41], chords: [[130.81, 196, 261.63], [196, 293.66, 392], [146.83, 220, 293.66], [164.81, 246.94, 329.63]] },
+      ],
+    },
+    battle: {
+      bpm: 126, leadType: "sawtooth", drive: true, leadGain: 0.105,
+      bassGain: 0.12, chordGain: 0.038, drumGain: 1, hatEvery: 2,
+      variations: [
+        { riff: [329.63, null, 392, 440, null, 493.88, 440, 392, 329.63, null, 392, 493.88, 587.33, null, 493.88, 440], bass: [82.41, 65.41, 98, 73.42], chords: [[164.81, 246.94, 329.63], [130.81, 196, 261.63], [196, 293.66, 392], [146.83, 220, 293.66]] },
+        { riff: [493.88, null, 440, 392, 329.63, null, 392, 493.88, 440, null, 392, 329.63, 293.66, null, 329.63, 392], bass: [82.41, 73.42, 65.41, 73.42], chords: [[164.81, 246.94, 329.63], [146.83, 220, 293.66], [130.81, 196, 261.63], [146.83, 220, 293.66]] },
+        { riff: [392, 440, 493.88, null, 587.33, 493.88, 440, null, 392, null, 329.63, 392, 440, null, 493.88, null], bass: [98, 73.42, 82.41, 65.41], chords: [[196, 293.66, 392], [146.83, 220, 293.66], [164.81, 246.94, 329.63], [130.81, 196, 261.63]] },
+        { riff: [329.63, 392, null, 493.88, 587.33, null, 493.88, 392, 440, null, 493.88, 587.33, 659.25, 587.33, 493.88, null], bass: [65.41, 73.42, 82.41, 61.74], chords: [[130.81, 196, 261.63], [146.83, 220, 293.66], [164.81, 246.94, 329.63], [123.47, 185, 246.94]] },
+      ],
     },
   };
+  const variationBags = {
+    menu: { order: [], cursor: 0, last: -1 },
+    battle: { order: [], cursor: 0, last: -1 },
+  };
+  let musicVariation = -1;
+  let musicArrangement = null;
+
+  function nextMusicArrangement(theme) {
+    const bag = variationBags[theme];
+    if (bag.cursor >= bag.order.length) {
+      bag.order = [0, 1, 2, 3];
+      for (let i = bag.order.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [bag.order[i], bag.order[j]] = [bag.order[j], bag.order[i]];
+      }
+      if (bag.order[0] === bag.last) [bag.order[0], bag.order[1]] = [bag.order[1], bag.order[0]];
+      bag.cursor = 0;
+    }
+    musicVariation = bag.order[bag.cursor++];
+    bag.last = musicVariation;
+    return MUSIC_THEMES[theme].variations[musicVariation];
+  }
 
   function playMusic(build) {
     if (musicMuted || musicVolume === 0 || !ensure()) return;
     try { build(); } catch (error) { disable(error); }
+  }
+
+  function guitarDrive() {
+    if (typeof ctx.createWaveShaper !== "function") return null;
+    const shaper = ctx.createWaveShaper();
+    if (!guitarCurve) {
+      guitarCurve = new Float32Array(256);
+      const norm = Math.tanh(3.2);
+      for (let i = 0; i < guitarCurve.length; i++) {
+        const x = i * 2 / (guitarCurve.length - 1) - 1;
+        guitarCurve[i] = Math.tanh(x * 3.2) / norm;
+      }
+    }
+    shaper.curve = guitarCurve;
+    shaper.oversample = "2x";
+    return shaper;
   }
 
   // Müzik notası: tek seferlik zarflı ton; kaynak kaydı ortaktır.
@@ -393,17 +472,24 @@ const SFX = (() => {
       const osc = ctx.createOscillator();
       const filter = ctx.createBiquadFilter();
       const g = ctx.createGain();
+      const drive = opts.guitar ? guitarDrive() : null;
       const t0 = time;
       const dur = opts.dur;
-      osc.type = opts.type || "triangle";
+      osc.type = opts.type || "sawtooth";
       osc.frequency.setValueAtTime(freq, t0);
+      if (opts.freqEnd) osc.frequency.exponentialRampToValueAtTime(opts.freqEnd, t0 + dur * 0.72);
       filter.type = "lowpass";
-      filter.frequency.setValueAtTime(opts.cutoff || 1900, t0);
+      filter.frequency.setValueAtTime(opts.cutoff || 2600, t0);
+      filter.Q.value = opts.Q || 0.7;
       g.gain.setValueAtTime(0.0001, t0);
-      g.gain.exponentialRampToValueAtTime(opts.gain, t0 + 0.015);
+      const attack = Math.max(0.003, Math.min(opts.attack || 0.01, dur * 0.25));
+      g.gain.exponentialRampToValueAtTime(opts.gain, t0 + attack);
+      if (opts.sustain) g.gain.exponentialRampToValueAtTime(opts.gain * opts.sustain, t0 + dur * 0.62);
       g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
-      osc.connect(filter).connect(g).connect(musicGain || master);
-      track(osc, [osc, filter, g]);
+      if (drive) osc.connect(drive).connect(filter);
+      else osc.connect(filter);
+      filter.connect(g).connect(musicGain || master);
+      track(osc, drive ? [osc, drive, filter, g] : [osc, filter, g]);
       musicVoiceGains.set(osc, g);
       musicSources.add(osc);
       const cleanup = sources.get(osc);
@@ -426,7 +512,7 @@ const SFX = (() => {
       src.buffer = noiseBuffer();
       filter.type = "bandpass";
       filter.frequency.setValueAtTime(opts.freq, time);
-      filter.Q.value = 0.55;
+      filter.Q.value = opts.Q || 0.55;
       g.gain.setValueAtTime(0.0001, time);
       g.gain.exponentialRampToValueAtTime(opts.gain, time + 0.04);
       g.gain.exponentialRampToValueAtTime(0.0001, time + dur);
@@ -444,7 +530,11 @@ const SFX = (() => {
     });
   }
 
-  // Lookahead scheduler: her 120 ms'de bir 0.5 s ilerisini zamanlar.
+  function musicKick(time, gain) {
+    musicNote(118, time, { type: "sine", freqEnd: 43, gain, dur: 0.17, attack: 0.004, cutoff: 180 });
+  }
+
+  // Lookahead scheduler: each phrase combines melody, bass, power chords and drums.
   function musicTick() {
     if (musicMuted || musicVolume === 0 || disabled || !ensure()) return;
     const spec = MUSIC_THEMES[musicTheme];
@@ -454,18 +544,33 @@ const SFX = (() => {
     const stepDur = 60 / spec.bpm / 2;
     while (musicNextTime < now + 0.5) {
       const t = musicNextTime;
-      const step = musicStep % 16;
-      const melody = spec.melody[step];
-      if (melody != null) musicNote(melody, t, { type: "triangle", gain: 0.12, dur: stepDur * 1.5 });
-      const bass = spec.bass[step];
-      if (bass != null) musicNote(bass, t, { type: "sine", gain: 0.16, dur: stepDur * 3.6 });
-      const pad = spec.pad[step];
-      if (pad != null) {
-        musicNote(pad, t, { type: "sawtooth", gain: 0.028, dur: stepDur * 7.5 });
-        musicNote(pad * 1.5, t, { type: "triangle", gain: 0.016, dur: stepDur * 7.5 });
+      const phraseStep = musicStep % 64;
+      if (!musicArrangement || phraseStep === 0) musicArrangement = nextMusicArrangement(musicTheme);
+      const step = phraseStep % 32;
+      const variation = phraseStep >= 32;
+      const beat = step % 8;
+      const bar = Math.floor(step / 8);
+      const melody = musicArrangement.riff[step % 16];
+      if (melody != null) {
+        const guitar = spec.drive;
+        musicNote(melody, t, { guitar, type: spec.leadType, gain: spec.leadGain, dur: stepDur * 0.9, attack: 0.006, sustain: 0.28, cutoff: guitar ? 3000 : 1900 });
+        if (variation && (beat === 2 || beat === 6)) musicNote(melody * 1.5, t, { guitar, type: spec.leadType, gain: spec.leadGain * 0.34, dur: stepDur * 0.75, attack: 0.006, sustain: 0.22, cutoff: guitar ? 3600 : 2200 });
+        if (spec.drive && beat === 0) musicNote(melody * 1.003, t, { guitar: true, gain: 0.035, dur: stepDur * 0.85, attack: 0.006, sustain: 0.25, cutoff: 3200 });
       }
-      if (spec.beat && (step === 0 || step === 8)) musicNote(41.2, t, { type: "sine", gain: 0.075, dur: 0.12 });
-      if (step === 0 || step === 8) musicNoise(t, { freq: spec.beat ? 1050 : 520, gain: 0.018, dur: stepDur * 2.5 });
+      const root = musicArrangement.bass[bar];
+      if (beat === 0 || (spec.drive && beat === 4)) {
+        musicNote(beat === 4 ? root * 1.5 : root, t, { type: "triangle", gain: spec.bassGain, dur: stepDur * 2.8, sustain: 0.72, cutoff: 520 });
+      }
+      if (beat === 0 || (spec.drive && beat === 4)) {
+        for (const note of musicArrangement.chords[bar]) {
+          musicNote(note, t, { guitar: spec.drive, type: spec.drive ? "sawtooth" : "triangle", gain: spec.chordGain, dur: stepDur * (beat === 0 ? 1.8 : 1.1), attack: 0.004, sustain: 0.35, cutoff: spec.drive ? 2400 : 1450 });
+        }
+      }
+      if (beat === 0 || (spec.drive && beat === 4)) musicKick(t, 0.16 * spec.drumGain);
+      if (beat === 2 || beat === 6) musicNoise(t, { freq: 1850, gain: 0.075 * spec.drumGain, dur: 0.12, Q: 0.7 });
+      if (step % spec.hatEvery === 0) musicNoise(t, { freq: spec.drive ? 6200 : 4800, gain: 0.023 * spec.drumGain, dur: 0.035, Q: 0.35 });
+      if (variation && bar === 3 && beat === 7) musicNoise(t, { freq: 2400, gain: 0.1 * spec.drumGain, dur: 0.16, Q: 0.8 });
+      if (step % 2 === 0) musicNoise(t, { freq: 6200, gain: 0.023 * spec.drumGain, dur: 0.035, Q: 0.35 });
       musicStep++;
       musicNextTime += stepDur;
     }
@@ -485,12 +590,17 @@ const SFX = (() => {
       } catch (e) { /* zaten bitmiş olabilir */ }
     }
     musicSources.clear();
-    if (clearTheme) musicTheme = null;
+    if (clearTheme) { musicTheme = null; musicVariation = -1; musicArrangement = null; }
     musicNextTime = 0;
   }
 
   function startMusic(theme) {
     stopMusic(true);
+    musicTheme = theme;
+    startProceduralMusic(theme);
+  }
+
+  function startProceduralMusic(theme) {
     musicTheme = theme;
     musicStep = 0;
     musicNextTime = 0; // ilk tick'te güncel zamana oturur
@@ -553,7 +663,7 @@ const SFX = (() => {
         osc.frequency.exponentialRampToValueAtTime(Math.max(1, opts.freqEnd * (shape ? shape.freq : 1)), t0 + dur);
       }
       const peak = opts.gain != null ? opts.gain : 0.3;
-      const atk = opts.attack != null ? opts.attack : 0.006;
+      const atk = (opts.attack != null ? opts.attack : 0.006) * (shape ? shape.attack : 1);
       g.gain.setValueAtTime(0.0001, t0);
       g.gain.exponentialRampToValueAtTime(peak, t0 + atk);
       g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
@@ -562,6 +672,7 @@ const SFX = (() => {
       if (panner) { panner.pan.value = Math.max(-1, Math.min(1, opts.pan)); g.connect(panner).connect(outputFor(opts)); }
       else g.connect(outputFor(opts));
       osc.connect(g);
+      osc.effectVariation = opts.variationIndex;
       track(osc, panner ? [osc, g, panner] : [osc, g]); voiceMeta.set(osc, { priority });
       osc.start(t0);
       osc.stop(t0 + dur + 0.02);
@@ -576,7 +687,7 @@ const SFX = (() => {
       const shape = opts.variant || null;
       const cutoff = shape ? shape.cutoff : 1;
       const dur = (opts.dur != null ? opts.dur : 0.25) * (shape ? shape.dur : 1);
-      const attack = Math.min(opts.attack != null ? opts.attack : 0.004, dur * 0.35);
+      const attack = Math.min((opts.attack != null ? opts.attack : 0.004) * (shape ? shape.attack : 1), dur * 0.35);
       const src = ctx.createBufferSource();
       src.buffer = noiseBuffer();
       const filt = ctx.createBiquadFilter();
@@ -585,7 +696,7 @@ const SFX = (() => {
       if (opts.freqEnd != null) {
         filt.frequency.exponentialRampToValueAtTime(Math.max(40, opts.freqEnd * cutoff), t0 + dur);
       }
-      if (opts.Q != null) filt.Q.value = opts.Q;
+      if (opts.Q != null) filt.Q.value = opts.Q * (shape ? shape.q : 1);
       const g = ctx.createGain();
       const peak = opts.gain != null ? opts.gain : 0.3;
       g.gain.setValueAtTime(0.0001, t0);
@@ -595,6 +706,7 @@ const SFX = (() => {
       if (panner) { panner.pan.value = Math.max(-1, Math.min(1, opts.pan)); g.connect(panner).connect(outputFor(opts)); }
       else g.connect(outputFor(opts));
       src.connect(filt).connect(g);
+      src.effectVariation = opts.variationIndex;
       track(src, panner ? [src, filt, g, panner] : [src, filt, g]); voiceMeta.set(src, { priority });
       src.start(t0);
       src.stop(t0 + dur + 0.02);
@@ -608,11 +720,17 @@ const SFX = (() => {
     // daha pesten/uzun çalar; hızlı silahlar daha tiz/keskin. `spatial` verilirse
     // (ateş eden robotun namlu x'i) ses sahnenin o tarafından duyulur.
     shoot(spec, spatial) {
-      const v = voice("shoot", PRIORITY.ACTION, spatial);
       const data = spec && typeof spec === "object" ? spec : {};
       const radius = data.radius || 40;
       const heavy = Math.max(0, Math.min(1, (radius - 30) / 70)); // 0 hafif → 1 ağır
       const id = data.id || (typeof spec === "string" ? spec : "");
+      const family = data.teleport || data.hook || id === "teleportball" || id === "hook" ? "teleport"
+        : data.drill || id === "drill" ? "drill"
+        : data.directHitDamage || id === "sniper" ? "sniper"
+        : data.pellets && !(data.look && data.look.tail === "flame") ? "pellet"
+        : data.bounce || data.sticky || data.mine || data.cluster || data.fuse || ["grenade", "grenadetrio", "sticky", "rubber", "rubbertrio", "mine"].includes(id) ? "bounce"
+        : "standard";
+      const v = voice("shoot:" + family, PRIORITY.ACTION, spatial);
       if (data.teleport || data.hook || id === "teleportball" || id === "hook") {
         tone({ ...v, type: "sine", freq: 340, freqEnd: 900, dur: 0.12, gain: 0.14, attack: 0.002 });
         noise({ ...v, filter: "highpass", freq: 2600, freqEnd: 1400, dur: 0.08, gain: 0.07 });
@@ -637,7 +755,6 @@ const SFX = (() => {
 
     // Patlama: pes "boom" (gürültü + alçalan ton). Yarıçap büyüdükçe daha derin/uzun.
     explosion(radius, spec, spatial) {
-      const v = voice("explosion", PRIORITY.ACTION, spatial);
       const r = radius || 40;
       const big = Math.max(0, Math.min(1, (r - 30) / 90));
       const dur = 0.3 + big * 0.45;
@@ -645,6 +762,8 @@ const SFX = (() => {
       const isFire = !!(spec && (spec.napalm || spec.look && spec.look.tail === "flame") || id === "napalm" || id === "fireball");
       const isMetal = !!(spec && (spec.drill || spec.directHitDamage) || id === "drill" || id === "sniper");
       const isCluster = !!(spec && spec.cluster);
+      const family = isFire ? "fire" : isMetal ? "metal" : isCluster ? "cluster" : "standard";
+      const v = voice("explosion:" + family, PRIORITY.ACTION, spatial);
       noise({ ...v, filter: isFire ? "bandpass" : isMetal ? "highpass" : "lowpass",
         freq: isFire ? 1000 : isMetal ? 2400 : 620 + big * 420,
         freqEnd: isFire ? 2300 : isMetal ? 700 : 60, dur: isFire ? dur * 0.72 : dur,
@@ -762,7 +881,7 @@ const SFX = (() => {
     },
 
     // Durum → müzik teması eşlemesi. Her kare render'dan çağrılır; tema
-    // değişmemişse ucuz no-op. GAMEOVER müziği keser (zafer jingle'ı yeter).
+    // değişmemişse ucuz no-op. GAMEOVER arka plan temasını keser.
     musicSync(state, mode) {
       let target = "menu"; // menüler, zorluk/oyuncu seçimi, atölye
       if (state === "AIMING" || state === "PROJECTILE" || state === "SETTLE") target = "battle";
@@ -784,10 +903,14 @@ const SFX = (() => {
 
     // Test/teşhis: aktif tema + scheduler durumunu bildirir.
     musicInfo() {
+      const spec = MUSIC_THEMES[musicTheme];
       return {
         theme: musicTheme,
         running: musicTimer != null,
         scheduled: musicSources.size,
+        variation: musicVariation,
+        variationCount: spec ? spec.variations.length : 0,
+        bpm: spec ? spec.bpm : null,
       };
     },
 
@@ -842,6 +965,27 @@ const SFX = (() => {
       if (Number.isFinite(previous) && previous * value < 0) {
         tone({ ...v, type: "triangle", freq: right ? 620 : 930,
                freqEnd: right ? 930 : 620, dur: 0.2, gain: 0.12, delay: 0.16 });
+      }
+    },
+
+    // Compact arena-rock result stings are scheduled on the independent music bus.
+    playResult(result) {
+      stopMusic(true);
+      if (musicMuted || musicVolume === 0 || !ensure()) return;
+      const time = ctx.currentTime + 0.04;
+      if (result === "win") {
+        [329.63, 392, 493.88, 659.25].forEach((freq, i) =>
+          musicNote(freq, time + i * 0.1, { guitar: true, gain: 0.11, dur: 0.28, attack: 0.004, sustain: 0.5, cutoff: 3400 }));
+        [196, 246.94, 293.66, 392].forEach(freq =>
+          musicNote(freq, time + 0.48, { guitar: true, gain: 0.055, dur: 0.75, attack: 0.008, sustain: 0.7, cutoff: 2400 }));
+      } else if (result === "loss") {
+        [493.88, 392, 329.63, 246.94].forEach((freq, i) =>
+          musicNote(freq, time + i * 0.12, { guitar: true, gain: 0.09, dur: 0.3, attack: 0.006, sustain: 0.35, cutoff: 2500 }));
+        [82.41, 123.47, 164.81].forEach(freq =>
+          musicNote(freq, time + 0.42, { type: "triangle", gain: 0.05, dur: 0.62, sustain: 0.7, cutoff: 700 }));
+      } else {
+        [164.81, 220, 246.94].forEach(freq =>
+          musicNote(freq, time, { type: "triangle", gain: 0.055, dur: 0.65, sustain: 0.7, cutoff: 1100 }));
       }
     },
 

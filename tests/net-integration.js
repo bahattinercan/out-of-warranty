@@ -5,7 +5,7 @@
  * çalışması. Host ve misafir aynı süreçte döngü taşımasıyla bağlanır; maç
  * adımları gerçek Terrain/Entity/Projectile sınıflarıyla yürütülür. Bu, "aynı
  * makinede iki sekme" provasının headless karşılığıdır (iki farklı ağ denemesi
- * F3c sonunda elle yapılır: docs/web-lansman-plani.md §4).
+ * F3c sonunda elle yapılır: docs/web-launch-plan.md §4).
  *
  * Kapsam: kurulum el sıkışması (START → maske + durum → LOADED), komut akışı,
  * tekilleştirme, 5 turluk senkron turu (her turda host/misafir durum hash'i

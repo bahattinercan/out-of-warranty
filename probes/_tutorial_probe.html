@@ -60,7 +60,8 @@
       return g;
     }
 
-    makeFake(960, 540).renderTutorial(document.getElementById("tut").getContext("2d"));
+    const tutorialGame = makeFake(960, 540);
+    tutorialGame.renderTutorial(document.getElementById("tut").getContext("2d"));
 
     // Koç paneli: savaş durumunda bir insan turu taklit edilir ki adım metni
     // (tutorial.coach.N) ve rozet çizilsin.
@@ -71,6 +72,12 @@
     cg.players = [{ charDef: CHARACTERS[0], name: "FIX-8", alive: true }];
     cg.tutorial = { step: 3, done: [true, true, false, false], flash: 0 };
     cg.drawTutorialCoach(document.getElementById("coach").getContext("2d"));
+
+    setTimeout(() => {
+      const ctx = document.getElementById("tut").getContext("2d");
+      ctx.clearRect(0, 0, 960, 540);
+      tutorialGame.renderTutorial(ctx);
+    }, 600);
   </script>
 </body>
 </html>

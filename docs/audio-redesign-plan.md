@@ -6,17 +6,17 @@ Durum: **Uygulandı — otomatik doğrulama ve headless ses ölçümü geçti; k
 
 Out of Warranty'nin seslerini oyunun hurda robotlar ve terk edilmiş megafabrika dünyasına yaklaştırmak; mevcut efektlerin birbirine benzemesini, müziğin basit ve fark edilmez kalmasını gidermek. Sesler görsel eylemleri desteklemeli, kritik oyun bilgisini taşımalı ve uzun maçlarda dinlemesi yorucu olmamalıdır.
 
-Bu çalışma mevcut Web Audio API tabanlı, bağımlılıksız ve dosyasız ses yaklaşımını sürdürür. Oyun `file://` ile açılabilmeli; yeni harici paket, uzaktan ses kaynağı veya derleme adımı eklenmemelidir.
+Sound effects and music use zero-dependency Web Audio synthesis so the game remains playable via `file://`; no remote audio streams, external npm packages, or compilation steps may be introduced.
 
 ## 2. Mevcut durum ve sorunlar
 
-- `js/audio.js`, efektleri ve müziği Web Audio API ile prosedürel olarak üretir.
+- `js/audio.js` synthesizes sound effects, menu/battle themes and result stings.
 - `SFX` arayüzünde ateş, patlama, yetenek, arayüz, tur, rüzgâr ve maç sonu olayları için çağrılar vardır.
 - Silah sesi ağırlıklı olarak yarıçaptan türetilen kısa kare dalga ve gürültü katmanlarıdır. Bu yaklaşım silah kimliklerini yeterince ayırmıyor.
 - Patlama sesi genel gürültü ve alçalan ton katmanlarıyla üretilir; farklı patlama sınıfları arasında belirgin bir tını dili yoktur.
 - Yetenek sesleri çoğunlukla `kind` türüne göre gruplanır. Aynı türdeki farklı eylemler benzer duyulabilir.
-- Menü müziği dört sabit notalı kısa bir döngüdür; savaş müziği yalnızca düşük nabız/tik katmanıdır.
-- Müzik tercihi başlangıçta kapalıdır. `tests/audio.js` bu davranışı açıkça doğrular. Yeni plan, ürün kararı gerektiren bu varsayılanı değiştirmeden önce dinleme ve kullanılabilirlik kararı gerektirir.
+- Menu and battle use the procedural classic arena-rock themes as the primary playback path.
+- Music preference defaults to enabled at 58% on pristine profiles; saved user preferences are preserved.
 - `musicSync` her oyun karesinde çağrılır; tema değişmiyorsa mevcut kod no-op davranır. Yeni tasarım da bu maliyet özelliğini korumalıdır.
 - `tests/audio.js`, sahte Web Audio ortamında ses kaynaklarının kurulumu, temizlenmesi, mute, saklama ve müzik durum geçişlerini sınar; gerçek ses kalitesini değerlendirmez.
 
@@ -26,7 +26,9 @@ Bu çalışma mevcut Web Audio API tabanlı, bağımlılıksız ve dosyasız ses
 
 - **Dünya:** metal, hidrolik, elektrik, basınç, hava tahliyesi ve hurda mekanizması.
 - **Savaş:** kısa ve okunaklı saldırı sesleri; patlamalarda kontrollü bas; oyuncunun isabet ve tur bilgisini kaçırmamasını sağlayan net vurgular.
-- **Menü:** seyrek, soğuk ve hafif arızalı fabrika atmosferi. Uzun süre açık kaldığında dikkat dağıtmamalı.
+- **Müzik:** klasik arena rock; melodik elektrik gitar motifi, güçlü power chord'lar, canlı davul ve bas. Belirgin riff, robotların sıra tabanlı topçu savaşlarına enerji katmalı.
+- **Menü:** 88 BPM G majör, temiz gitar tınısı ve hafif davulla ayrı bir arena-rock teması; dört varyasyonu karışık çalmalı.
+- **Savaş:** 126 BPM E minör, drive'lı gitar ve güçlü davulla menüden ayrı bir arena-rock teması; dört varyasyonu karışık çalmalı ve top atışı/isabet efektlerine alan bırakmalı.
 - **Yetenekler:** işlevi işitsel olarak anlatan ayrımlar. Örneğin kalkan rezonansı, tamir/iyileştirme için kaynaklanan enerji, kazma için düşük mekanik sürtünme, hücum için kısa hava yarılması.
 - **Arayüz:** küçük, yumuşak ve tutarlı mekanik geri bildirimler. Menü tıklamaları savaş efektleriyle yarışmamalı.
 
@@ -37,21 +39,21 @@ Bu çalışma mevcut Web Audio API tabanlı, bağımlılıksız ve dosyasız ses
 ### 3.3 Kapsam dışı
 
 - Oyun kurallarını, silah hasarını, fizik veya ağ davranışını değiştirmek.
-- Harici ses dosyası, lisanslı müzik, yeni bağımlılık veya ses üretim servisi eklemek.
+- Adding licensed music, external libraries, or runtime audio generation services.
 - Bu plan aşamasında mevcut ses kodunu değiştirmek.
 
 ## 4. Dosya kapsamı
 
 | Dosya | Planlanan rol |
 |---|---|
-| `js/audio.js` | Ses kategorileri, efekt sentezi, müzik temaları, miks/seviye kontrolü ve kaynak yaşam döngüsü. |
+| `js/audio.js` | Audio categories, procedural effects and music, mixing controls, and voice lifecycle management. |
 | `js/game.js` | Yalnızca envanterde eksik veya yanlış yerde olduğu belirlenen olay çağrılarını düzeltmek; oyun mantığına dokunmamak. |
 | `tests/audio.js` | Web Audio sözleşmeleri, durum geçişleri, kaynak temizliği, tercih saklama ve yeni efekt/tema davranışları için regresyon kontrolleri. |
 | `js/mobile.js`, `tests/mobile.js` | Tarayıcı başlatma kontrolü `Game.draw` yerine var olan `Game.render` metoduna bağlanır; mobil çizim kancası testi güncellenir. |
 | `docs/audio-redesign-plan.md` | Plan, kararlar, uygulama ilerlemesi ve doğrulama kayıtları. |
 | `js/settings.js`, `index.html`, `js/i18n.js` | Yalnızca ses ayarlarının mevcut akışta yetersiz kaldığı kanıtlanırsa; ayrı dil/arayüz değişikliği olarak gerekçelendirilir. |
 
-`CLAUDE.md` mevcut ses politikasını ve `file://` kısıtını tanımlar. Uygulama bu proje kurallarına uymalıdır. Klasik script sırası ve global `SFX` arayüzü korunmalıdır.
+`CLAUDE.md` specifies the local-audio and `file://` compatibility constraint. The classic script load sequence and global `SFX` API must remain intact.
 
 ## 5. Aşamalar
 
@@ -379,3 +381,11 @@ mobilde tek kulaklıkta kaybolan ses.
   sayılır (0.55 derinlik). Bu bilinçli güvenli taraftır.
 - Ölçüm kapıları seviye/denge/ayrışma içindir; **müzik ve tını beğenisi** insan kulağı
   turuna bağlıdır (§12.3).
+
+## 13. AI-Generated Music Assets (2026-11-18)
+
+MiniMax Music 3 renders were tried and rejected by the user. Runtime playback now uses only the Web Audio procedural themes and result stings; the old MP3 files are not referenced. The user-selected direction is classic arena rock: a distinct slow/clean G-major menu theme and fast/driven E-minor battle theme, each with four shuffled eight-bar variations.
+
+The dark ambient and subsequent junkyard-funk sets were rejected. The current procedural score follows the user's chosen classic arena-rock direction. A variation bag plays each theme's four arrangements once in shuffled order, then reshuffles without an immediate boundary repeat. Sound effects follow the same four-variation rule per effect family: weapon shots and explosions are classified separately, and each family cycles all four profiles in shuffled order without repeating at the boundary. Profiles alter pitch, duration, filter, attack and resonance while preserving peak gain. The human listening pass for the coded sound remains open; see `audio-production.md`.
+
+`tests/audio.js` covers the coded themes, state transitions, mute/volume pause and resume, result stings, and returning to the menu. See [`audio-production.md`](audio-production.md) for the retired AI-render history and current listening status.

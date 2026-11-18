@@ -1,7 +1,7 @@
 /* Çevrimiçi protokol + oturum testleri (F3a) — saf Node, bağımlılıksız.
  * Çalıştır: node tests/net.js
  *
- * Sözleşme (docs/multiplayer-plan.md §6/§6.1 ve docs/web-lansman-plani.md §4):
+ * Sözleşme (docs/multiplayer-plan.md §6/§6.1 ve docs/web-launch-plan.md §4):
  *   - Zarf doğrulaması: sürüm, tür, maç kimliği, yetki oturumu, sıra.
  *   - Komut doğrulaması: bilinmeyen tür, NaN/Infinity, aralık dışı değer reddi.
  *   - Tekilleştirme: aynı commandId ikinci kez UYGULANMAZ, önceki sonuç döner;
