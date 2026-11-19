@@ -53,5 +53,5 @@ Prototype acceptance checks:
 - [x] Produce batches A, B, and C: all 27 planned robot masters are present, alongside the existing FIX-8 reference master.
 - [x] Add the omitted PRES-4 atlas: [`art/character-parts/pres-4-complete-parts.png`](../art/character-parts/pres-4-complete-parts.png).
 - [x] Prepare transparent runtime atlases and register them in `assets/manifest.json` and `js/assets-manifest.js`.
-- [x] Wire atlas-backed characters into the in-game renderer with a procedural fallback while images load; keep the existing part-art path for the six pilot robots.
-- [x] Inspect all 28 atlas-backed characters in seven Orca matches and view all 34 roster characters; a follow-up screenshot exposed missing visible lower-body parts on FIX-8 and MIK-0, which were repaired and rechecked in gameplay.
+- [ ] Wire the 28 new atlas-backed characters into the in-game renderer. A profile-based integration was tried, then rolled back after in-game visuals were rejected; the older character renderer is active again.
+- [ ] Recheck all 34 robots individually at gameplay scale before accepting a future renderer integration. FIX-8's latest atlas-cell layout still needs visual review.

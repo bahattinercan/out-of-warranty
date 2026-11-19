@@ -4,16 +4,14 @@
 
 34 robotun oyun içi çizimini, tek bir anatomi ve birkaç karakter istisnası üzerinden yürütmek yerine, her robotun parçalarını, eklem noktalarını ve hareket düzenini açıkça tarif eden bir sisteme taşımak. Her robot kendi siluetini korurken ayak, teker veya palet zemin çizgisine oturmalı; gövde ve uzuvlar eklem noktalarında birleşmeli.
 
-Bu belge, onaylanan yeniden tasarımın kabul ölçütlerini ve uygulama durumunu kaydeder.
+Bu belge, yeniden tasarım planını ve kabul ölçütlerini kaydeder.
 
-## Uygulama durumu
+## Uygulama geçmişi
 
-- 34 robot için `js/robot-rig-profiles.js` profilleri eklendi; her karakterin asset kaynağı, anatomi ailesi, görünür parçaları, hedef ölçüleri ve zemin teması açıkça tanımlı.
-- Atlaslı robotlar profil kesimlerini kullanan ortak kompozitörde çiziliyor. FIX-8'in atlas eşlemesi özel; alt gövde/kalça vektör parçası ve iki teker modülü profil içinde tanımlı.
-- Altı ayrı-parça robotun art kaynağı, ankrajları ve anatomi seçimi profil kataloğuna taşındı; mevcut eklemli çizim yardımcıları bu profillerden asset ve anatomi bilgisi alıyor.
-- Silah/muzzle pose sözleşmesi korundu; maçta yalnızca bakış yönündeki kol gösteriliyor.
-- `tests/robot-rig.js`, `tests/run.js` ve `tools/art-gate.js` geçti. Orca'da 34'lü rig probe'u incelendi ve gerçek maçta FIX-8 kontrol edildi.
-- **Kalan görsel kabul işi:** Altı ayrı-parça rig'in tamamı ve diğer 33 robot gerçek maçta tek tek incelenmedi. Zemin temasının ekran pikseli toleransı için otomatik alfa-sınırı ölçümü henüz yok. Bu nedenle rosterın tamamı için görsel kabul tamamlanmış sayılmaz.
+- Profil tabanlı çizici `52cef3b` commit'inde denendi ve pushlandı.
+- FIX-8 ve diğer robotların oyun içi görünümü kabul edilebilir bulunmadığı için kullanıcı isteğiyle önceki `js/robots.js` sistemi geri yüklendi.
+- Key art ve atlas dosyaları depoda tutuluyor; tam atlas kompozitörü şu an aktif değil.
+- Yeni çizim planı, daha sonra ayrı ve görsel olarak onaylı bir çalışma olarak ele alınmalı.
 
 ## Mevcut durum ve sorun
 
@@ -25,7 +23,7 @@ Bu belge, onaylanan yeniden tasarımın kabul ölçütlerini ve uygulama durumun
 
 Bu yolların üzerinde ayrıca karakter kimliğine göre `if` dalları bulunuyor. Kalça, gövde kayması, bacak ölçeği, atlas hücresi ve zemin teması farklı yerlerde hesaplandığı için bir noktayı düzeltmek başka çizim yolunda boşluk, örtüşme veya zeminden kopma yaratabiliyor. Son Orca görüntüsünde FIX-8’in teker modülleri ile alt bacakları ve MIK-0’ın teker ayakları zemine göre hâlâ tutarsız görünüyor.
 
-Asıl sorun karakter parçalarının farklı olması değil; çiziciye bu farklılıkların açık bir anatomik sözleşme olarak verilmemesiydi. `docs/robot-rig-plan.md` artık profil tabanlı raster ve ayrı-parça varlıklarını, ortak weapon pose hesabını ve gameplay'de yalnızca görünen kolu tarif ediyor.
+Asıl sorun karakter parçalarının farklı olması değil; çiziciye bu farklılıkların açık bir anatomik sözleşme olarak verilmemesiydi. `docs/robot-rig-plan.md` şu anda geri yüklenen eski çizim sistemini tarif ediyor.
 
 ## Değişmeyecek sözleşmeler
 

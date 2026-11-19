@@ -6,31 +6,10 @@ const vm = require("vm");
 
 const sandbox = { console, assetImage: id => ({ id, naturalWidth: 371, naturalHeight: 419 }) };
 vm.createContext(sandbox);
-vm.runInContext(["i18n", "characters", "robot-rig-profiles", "robots", "weapons", "entity"]
+vm.runInContext(["i18n", "characters", "robots", "weapons", "entity"]
   .map(name => fs.readFileSync(path.join(__dirname, "../js", name + ".js"), "utf8")).join("\n;\n") +
-  "\n;globalThis.rigTest = { CHARACTERS, ROBOT_RIG_PROFILES, WEAPONS, Entity };", sandbox);
-const { CHARACTERS, ROBOT_RIG_PROFILES, WEAPONS, Entity } = sandbox.rigTest;
-assert.equal(Object.keys(ROBOT_RIG_PROFILES).length, CHARACTERS.length,
-  "34 robotun her biri için ayrı rig profili bulunmalı");
-for (const charDef of CHARACTERS) {
-  const profile = ROBOT_RIG_PROFILES[charDef.id];
-  assert.ok(profile, charDef.label + ": rig profili eksik");
-  assert.ok(["atlas", "parts"].includes(profile.asset.kind), charDef.label + ": asset türü açık olmalı");
-  assert.ok(["legs", "spring", "wheels", "tracks", "ball", "rotors"].includes(profile.anatomy),
-    charDef.label + ": anatomi locomotion etiketinden ayrı tanımlanmalı");
-  assert.ok(profile.groundContact && Number.isFinite(profile.groundContact.y),
-    charDef.label + ": zemin teması profil verisi olmalı");
-  assert.ok(Array.isArray(profile.parts) && profile.parts.length >= 4,
-    charDef.label + ": kompozitör için kaynak ve hedef parçalar tanımlı olmalı");
-  for (const part of profile.parts) {
-    assert.ok(part.source === null ? part.kind === "vector"
-      : Array.isArray(part.source) && part.source.length === 4 && part.source.every(Number.isFinite)
-        && part.source.every(value => value >= 0 && value <= 1),
-    charDef.label + "/" + part.name + ": kaynak dikdörtgeni veya vektör parçası açık olmalı");
-    assert.ok(Array.isArray(part.target) && part.target.length === 4 && part.target.every(Number.isFinite),
-      charDef.label + "/" + part.name + ": hedef dikdörtgeni açık olmalı");
-  }
-}
+  "\n;globalThis.rigTest = { CHARACTERS, WEAPONS, Entity };", sandbox);
+const { CHARACTERS, WEAPONS, Entity } = sandbox.rigTest;
 assert.equal(vm.runInContext("WEAPONS.every(weapon => Object.hasOwn(WEAPON_RIG_BY_ID, weapon.id))", sandbox), true,
   "her silah için açık bir tutuş profili bulunmalı");
 const noop = () => {};
@@ -78,62 +57,15 @@ sandbox._rbHand = (ctx, x, y, angle, size, color, grip) => {
   originalHand(ctx, x, y, angle, size, color, grip);
 };
 
-const originalLegSegment = sandbox._rbDrawLegSegment;
-let firstLegHipY = null, firstLegKneeY = null;
-sandbox._rbDrawLegSegment = (ctx, image, x1, y1, x2, y2, width) => {
-  if (firstLegHipY === null) { firstLegHipY = y1; firstLegKneeY = y2; }
-  return originalLegSegment(ctx, image, x1, y1, x2, y2, width);
-};
-for (const id of ["kedi", "tilki", "tavsan"]) {
-  const charDef = CHARACTERS.find(entry => entry.id === id);
-  firstLegHipY = null;
-  sandbox.drawRobot(context(), { charDef, r: charDef.r, aim: -0.6, facing: 1 });
-  assert.ok(Math.abs(firstLegHipY - charDef.r * 1.1 * ROBOT_RIG_PROFILES[id].anchors.hipY) < 1e-8,
-    charDef.label + ": bacak kalçaları yükseltilmiş gövdeyi değil sabit pelvis mafsalını izlemeli");
-  assert.ok(firstLegKneeY >= charDef.r * 1.1 * 0.53,
-    charDef.label + ": üst ve alt bacak parçaları arasında görünür bir diz aralığı kalmalı");
-}
-sandbox._rbDrawLegSegment = originalLegSegment;
-const originalFoot = sandbox._rbFoot;
-let fix8ProceduralFeet = 0;
-sandbox._rbFoot = (ctx, ...args) => {
-  if (args[8] === "kopek") fix8ProceduralFeet++;
-  return originalFoot(ctx, ...args);
-};
-const fix8 = CHARACTERS.find(entry => entry.id === "kopek");
-sandbox.drawRobot(context(), { charDef: fix8, r: fix8.r, aim: -0.6, facing: 1 });
-assert.equal(fix8ProceduralFeet, 0, "FIX-8 atlas tekerleri çizilirken eski prosedürel ayaklar eklenmemeli");
-sandbox._rbFoot = originalFoot;
-const fix8Parts = ROBOT_RIG_PROFILES.kopek.parts;
-assert.deepEqual(Array.from(fix8Parts.find(part => part.name === "body").source), [2 / 3, 0, 1 / 3, 1 / 3],
-  "FIX-8 gövdesi atlasın üst sağ gövde hücresinden gelmeli");
-assert.deepEqual(Array.from(fix8Parts.find(part => part.name === "front-arm").source), [1 / 3, 0, 1 / 3, 1 / 3],
-  "FIX-8 kolu gövde atlas hücresinden gelmemeli");
-for (const name of ["far-shin", "near-shin"]) {
-  const shin = fix8Parts.find(part => part.name === name);
-  assert.deepEqual(Array.from(shin.source), [0, 2 / 3, 1 / 3, 1 / 3],
-    "FIX-8 alt bacakları alt sol atlas hücresinden gelmeli (" + name + ")");
-  assert.ok(shin.target[3] >= 0.30, "FIX-8 alt bacak oyun ölçeğinde görünür yükseklikte olmalı (" + name + ")");
-}
-
 for (const charDef of CHARACTERS) {
   hands = [];
   const ctx = context();
   sandbox.drawRobot(ctx, { charDef, r: charDef.r, aim: -0.6, facing: 1 });
   if (charDef.id === "kopek") {
     assert.ok(ctx.images.includes("robot-parts/fix8-parts-atlas"), charDef.label + ": tek FIX-8 atlas dosyası kullanılmalı");
-    assert.ok(ctx.imageDraws.filter(draw => draw.id === "robot-parts/fix8-parts-atlas").length >= 6,
+    assert.ok(ctx.imageDraws.filter(draw => draw.id === "robot-parts/fix8-parts-atlas").length >= 8,
       charDef.label + ": atlasın gövde, uzuv ve teker parçaları çizilmeli");
-    const wheels = ctx.imageDraws.filter(draw => draw.id === "robot-parts/fix8-parts-atlas"
-      && Math.abs(draw.args[1] / 419 - 2 / 3) < 1e-8
-      && (Math.abs(draw.args[0] / 371 - 1 / 3) < 1e-8 || Math.abs(draw.args[0] / 371 - 2 / 3) < 1e-8)
-      && Math.abs((draw.args[5] + draw.args[7]) / (charDef.r * 1.1) - 0.91) < 1e-8);
-    assert.equal(wheels.length, 2, charDef.label + ": iki atlas tekeri de alt gövdeye çizilmeli");
-    assert.ok(wheels.every(draw => draw.args[6] >= charDef.r * 0.6),
-      charDef.label + ": atlas tekerleri alt bacak ucunda görünür boyutta olmalı");
-    assert.ok(wheels.every(draw => Math.abs((draw.args[5] + draw.args[7]) / (charDef.r * 1.1) - 0.91) < 1e-8),
-      charDef.label + ": atlas tekerlerinin alt kenarı karakterin zemin koordinatına oturmalı");
-  } else if (ROBOT_RIG_PROFILES[charDef.id].asset.kind === "parts") {
+  } else if (["kedi", "ayi", "tilki", "tavsan", "rakun", "yarasa"].includes(charDef.id)) {
     const expected = {
       kedi: ["head", "body", "pelvis", "arm-upper", "arm-lower", "arm-back-upper", "arm-back-lower", "leg-upper", "leg-lower"],
       ayi: ["head", "body", "pelvis", "arm-upper", "arm-lower", "arm-back-upper", "arm-back-lower", "track-near", "track-far"],
@@ -148,39 +80,14 @@ for (const charDef of CHARACTERS) {
     }
     assert.ok(ctx.imageDraws.some(draw => draw.id === "robot-parts/" + charDef.id + "-art-head"),
       charDef.label + ": pilot kafa görseli çizilmeli");
-  } else if (ROBOT_RIG_PROFILES[charDef.id].asset.kind === "atlas") {
-    const atlasId = "robot-parts/" + charDef.id + "-complete-parts";
-    assert.ok(ctx.images.includes(atlasId), charDef.label + ": tam parça atlası kullanılmalı");
-    const draws = ctx.imageDraws.filter(draw => draw.id === atlasId);
-    const expectedParts = ROBOT_RIG_PROFILES[charDef.id].parts.filter(part => part.name !== "front-arm" && part.source);
-    assert.equal(draws.length, expectedParts.length,
-      charDef.label + ": profil tanımlı parçaların her biri tam bir kez çizilmeli");
-    for (const part of ROBOT_RIG_PROFILES[charDef.id].parts.filter(entry => entry.group === "ground")) {
-      const draw = draws.find(entry => Math.abs(entry.args[0] / 371 - part.source[0]) < 1e-8
-        && Math.abs(entry.args[1] / 419 - part.source[1]) < 1e-8
-        && Math.abs(entry.args[4] / (charDef.r * 1.1) - part.target[0]) < 1e-8);
-      assert.ok(draw, charDef.label + ": zemin modülü profilde çizilmeli (" + part.name + ")");
-      assert.ok(Math.abs((draw.args[5] + draw.args[7]) / (charDef.r * 1.1) - ROBOT_RIG_PROFILES[charDef.id].groundContact.y) < 1e-8,
-        charDef.label + ": zemin modülü profildeki temas çizgisine oturmalı (" + part.name + "; alt="
-          + (draw.args[5] + draw.args[7]) / (charDef.r * 1.1) + ")");
-    }
   } else {
     assert.ok(ctx.images.includes("robot-models/" + charDef.id + "-body"), charDef.label + ": özel gövde SVG'si kullanılmalı");
     assert.ok(ctx.images.includes("robot-models/" + charDef.id + "-head"), charDef.label + ": özel kafa SVG'si kullanılmalı");
     const headDraw = ctx.imageDraws.find(draw => draw.id === "robot-models/" + charDef.id + "-head");
     assert.equal(headDraw.args[2], charDef.r * 1.1 * 2, charDef.label + ": splash oranına uygun büyük kafa kullanılmalı");
   }
-  if (charDef.id === "kedi") {
-    assert.ok(ctx.images.includes("robot-parts/kedi-art-wheel-foot"), charDef.label + ": tekerli ayak görseli yüklenmeli");
-    const wheelFeet = ctx.imageDraws.filter(draw => draw.id === "robot-parts/kedi-art-wheel-foot");
-    assert.equal(wheelFeet.length, 2, charDef.label + ": iki tekerli ayak da çizilmeli");
-    assert.ok(wheelFeet.every(draw => draw.args[6] >= charDef.r * 0.55),
-      charDef.label + ": iki tekerli ayak görünür boyutta çizilmeli");
-    assert.ok(wheelFeet.every(draw => Math.abs(draw.args[5] + draw.args[7] - charDef.r * 1.1) < 1e-8),
-      charDef.label + ": tekerli ayakların alt kenarı karakterin zemin koordinatına oturmalı");
-  }
-  assert.equal(hands.filter(hand => hand.grip).length, ROBOT_RIG_PROFILES[charDef.id].asset.kind === "atlas" ? 1 : 2,
-    charDef.label + ": mevcut kol çizimi veya atlasın tek yön kolu kullanılmalı");
+  assert.equal(hands.filter(hand => hand.grip).length, 2,
+    charDef.label + ": görseller yüklüyken iki el de silahı tutmalı");
 }
 
 const originalArm = sandbox._rbArm;
@@ -255,16 +162,10 @@ for (const charDef of CHARACTERS) {
             sandbox.drawRobot(ctx, { cx: entity.x, cy: entity.y - entity.r, r: entity.r,
               charDef, facing, aim, weapon, recoil, timeMs: 1250,
               motion: { walk: 1, walkAmp: 1, walkPhase: 1.1, vx: 2.2, onGround: true } });
-            if (ROBOT_RIG_PROFILES[charDef.id].asset.kind === "atlas") {
-              assert.equal(hands.length, 1);
-              assert.ok(Math.hypot(hands[0].x - expectedHands[0].x, hands[0].y - expectedHands[0].y) < 0.01,
-                charDef.label + ": görünen ön el profilli silah tutuşuna bağlı kalmalı");
-            } else {
-              assert.equal(hands.length, 2);
-              for (const expected of expectedHands) {
-                assert.ok(hands.some(hand => hand.grip && Math.hypot(hand.x - expected.x, hand.y - expected.y) < 0.01),
-                  charDef.label + ": çizilen el tutamaktan ayrılmamalı");
-              }
+            assert.equal(hands.length, 2);
+            for (const expected of expectedHands) {
+              assert.ok(hands.some(hand => hand.grip && Math.hypot(hand.x - expected.x, hand.y - expected.y) < 0.01),
+                charDef.label + ": çizilen el tutamaktan ayrılmamalı");
             }
             const ringRadius = scale * 0.28 * 0.44;
             assert.ok(ctx.arcs.some(arc => Math.abs(arc.radius - ringRadius) < 1e-8 && Math.hypot(arc.x - actual.x, arc.y - actual.y) < 0.01),

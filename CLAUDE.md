@@ -127,12 +127,9 @@ The game MUST work when double-clicking `index.html` via `file://`. Therefore:
 | `js/net/transport.js` | ~300 | Online transport (F3c/F4): loopback transport (with latency/loss simulation for tests) + PeerJS wrapper (ICE/STUN, host N-connection management, `sendTo`/`onPeerClose`) + room code generator |
 | `js/net/adapter.js` | ~230 | Game ↔ Network bridge (F3c): `rules` adapter (commands → game actions), host turn/snapshot/terrain broadcasts, guest state application |
 | `js/online-lobby.js` | ~800 | Online lobby screen (F3c/F4): room code display/join flow, 2–6 seat capacity, bot/disconnect badges, lazy PeerJS loading, robot picker, error overlays |
-| `js/robots.js` | ~2000 | Profile-driven robot renderer: atlas compositor and articulated part helpers, weapon/muzzle alignment (`robotWeaponPose`, `robotMuzzlePoint`), equipment accessories. Deterministic: no `Math.random` or `Date.now` |
-| `js/robot-rig-profiles.js` | — | Per-character art source, anatomy, part layout, anchors, ground contact, and weapon pose profile for all 34 robots |
+| `js/robots.js` | ~1600 | Data-driven modular robot renderer: skeleton (helmet, chassis, arms, legs), **proportion grammar** (`_rbProportions`), helmet silhouette families, attachments, equipment accessories, muzzle alignment (`robotMuzzlePoint`, `robotTopOffset`). Deterministic: no `Math.random` or `Date.now` |
 
 ## Data-Driven Design & Extension Points
-
-- **Robot Rig Profiles:** `js/robot-rig-profiles.js` is the source of truth for each robot's anatomy, parts, atlas regions, anchors, and ground contact. `js/robots.js` consumes those profiles; avoid adding character-specific layout branches there. See [docs/robot-rig-plan.md](docs/robot-rig-plan.md) for source-cell conventions and validation.
 
 - **Robot Silhouette (Proportion Grammar):** Robot visuals are derived deterministically from `chassis`/`body`/`locomotion` specs (`robots.js > _rbProportions`): helmet scale, body width, leg length, stance spread + `def.id` seeded ±0.05 deviation. **Do not hardcode pixel dimensions when adding characters** — set family parameters accurately. Helmet shells follow 5 distinct silhouette families (`_rbHeadShellPath`). Visual gate probe: `_robot_silhouette_probe.html` (IoU, value contrast, HP bar clearance).
 - **Single Source of Truth for Muzzle Geometry:** Because the proportion grammar shifts muzzle pivots, `robotMuzzlePoint(cx, cy, r, facing, aim, charDef)` **requires `charDef`**; `Entity.muzzle`, `aiCreateCandidate`, and `Game` trajectory lines pass `charDef`. The "Muzzle Alignment" group in `tests/run.js` verifies visual alignment against logic coordinates. HP bar height is similarly calculated via `robotTopOffset(charDef)` rather than fixed offsets.

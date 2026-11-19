@@ -5,7 +5,7 @@ const vm = require("vm");
 const fs = require("fs");
 const path = require("path");
 const assert = require("assert");
-const source = ["i18n", "version", "portal", "diagnostics", "audio", "characters", "robot-rig-profiles", "weapons", "entity", "projectile", "skills", "ai", "game"]
+const source = ["i18n", "version", "portal", "diagnostics", "audio", "characters", "weapons", "entity", "projectile", "skills", "ai", "game"]
   .map(name => fs.readFileSync(path.join(__dirname, "..", "js", name + ".js"), "utf8")).join("\n;\n") +
   "\n;globalThis.api = { SFX, Entity, Game, WEAPONS };";
 
