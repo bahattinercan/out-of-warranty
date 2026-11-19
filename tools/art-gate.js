@@ -32,7 +32,7 @@ const BUDGET = [
   { prefix: "splashes/", maxKb: 2560, perAsset: 100, label: "karakter splash (34)" },
   { prefix: "robots/", maxKb: 3072, perAsset: 100, label: "robot sprite (34)" },
   { prefix: "robot-models/", maxKb: 512, perAsset: 24, label: "robot model parts (68 SVG)" },
-  { prefix: "robot-parts/", maxKb: 2048, perAsset: 100, label: "modular robot key art parts" },
+  { prefix: "robot-parts/", maxKb: 3072, perAsset: 100, label: "modular robot key art parts" },
   { prefix: "atlases/", maxKb: 2048, perAsset: 512, label: "görsel atlasları" },
   { prefix: "weapons/", maxKb: 256, perAsset: 120, label: "silah sprite'ları" },
 ];

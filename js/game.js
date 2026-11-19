@@ -1062,46 +1062,54 @@ class Game {
     ctx.fillText(scrapLabel, badgeX + 10, badgeY + badgeH / 2 + (badgeHovered ? -1 : 0), scrapMaxWidth);
 
     // ── Başlık Alanı (Logo & Endüstriyel Damga) ───────────────────────────
-    const titleY = H * 0.052;
     const titleText = t("brand.title", GAME_TITLE);
+    const logo = typeof assetImage === "function" ? assetImage("menu/out-of-warranty-logo") : null;
+    if (logo) {
+      const logoW = Math.min(W * 0.47, H * 0.83);
+      const logoH = logoW * logo.naturalHeight / logo.naturalWidth;
+      ctx.drawImage(logo, W * 0.59 - logoW / 2, (H * 0.3 - logoH) / 2, logoW, logoH);
+    } else {
+        const titleY = H * 0.052;
 
-    // Başlık aurası (yumuşak radyal ışık)
-    const tglow = ctx.createRadialGradient(W / 2, titleY + 22, 6, W / 2, titleY + 22, 220);
-    tglow.addColorStop(0, "rgba(244, 189, 98, 0.16)");
-    tglow.addColorStop(0.55, "rgba(113, 211, 189, 0.035)");
-    tglow.addColorStop(1, "rgba(0,0,0,0)");
-    ctx.fillStyle = tglow;
-    ctx.fillRect(W / 2 - 240, titleY - 14, 480, 72);
+        // Başlık aurası (yumuşak radyal ışık)
+        const tglow = ctx.createRadialGradient(W / 2, titleY + 22, 6, W / 2, titleY + 22, 220);
+        tglow.addColorStop(0, "rgba(244, 189, 98, 0.16)");
+        tglow.addColorStop(0.55, "rgba(113, 211, 189, 0.035)");
+        tglow.addColorStop(1, "rgba(0,0,0,0)");
+        ctx.fillStyle = tglow;
+        ctx.fillRect(W / 2 - 240, titleY - 14, 480, 72);
 
-    // Üst mikro damga
-    ctx.textAlign = "center"; ctx.textBaseline = "top";
-    ctx.fillStyle = "rgba(113, 211, 189, 0.65)";
-    ctx.font = uiTitleFont(10, 700);
-    ctx.fillText("PROT-9 // OUT OF WARRANTY", W / 2, titleY);
+        // Üst mikro damga
+        ctx.textAlign = "center"; ctx.textBaseline = "top";
+        ctx.fillStyle = "rgba(113, 211, 189, 0.65)";
+        ctx.font = uiTitleFont(10, 700);
+        ctx.fillText("PROT-9 // OUT OF WARRANTY", W / 2, titleY);
 
-    // Ana Başlık (Gölge + Parıldayan Neon)
-    ctx.font = uiTitleFont(Math.min(38, W * 0.044), 700);
-    ctx.fillStyle = "rgba(0, 0, 0, 0.75)";
-    ctx.fillText(titleText, W / 2 + 2, titleY + 16);
-    ctx.fillStyle = "#ffe45e";
-    ctx.shadowColor = "rgba(255, 228, 94, 0.42)";
-    ctx.shadowBlur = 10;
-    ctx.fillText(titleText, W / 2, titleY + 14);
-    ctx.shadowBlur = 0;
+        // Ana Başlık (Gölge + Parıldayan Neon)
+        ctx.font = uiTitleFont(Math.min(38, W * 0.044), 700);
+        ctx.fillStyle = "rgba(0, 0, 0, 0.75)";
+        ctx.fillText(titleText, W / 2 + 2, titleY + 16);
+        ctx.fillStyle = "#ffe45e";
+        ctx.shadowColor = "rgba(255, 228, 94, 0.42)";
+        ctx.shadowBlur = 10;
+        ctx.fillText(titleText, W / 2, titleY + 14);
+        ctx.shadowBlur = 0;
 
-    // Başlık altı dekoratif tehlike şeridi
-    const stripW = Math.min(280, W * 0.32);
-    _csHazardStrip(ctx, W / 2 - stripW / 2, titleY + 52, stripW, 3);
+        // Başlık altı dekoratif tehlike şeridi
+        const stripW = Math.min(280, W * 0.32);
+        _csHazardStrip(ctx, W / 2 - stripW / 2, titleY + 52, stripW, 3);
 
-    // Tagline / Slogan
-    ctx.fillStyle = "#a2b8c2";
-    ctx.font = uiTextFont(12, 600);
-    ctx.fillText(
-      "// " + t("menu.tagline", "Arena tahsis protokolünü başlat") + " //",
-      W / 2, titleY + 60
-    );
+        // Tagline / Slogan
+        ctx.fillStyle = "#a2b8c2";
+        ctx.font = uiTextFont(12, 600);
+        ctx.fillText(
+          "// " + t("menu.tagline", "Arena tahsis protokolünü başlat") + " //",
+          W / 2, titleY + 60
+        );
 
+    }
     // Ortak depo sayacı (Pazar kartı için)
+
     const depotTotal = ammoDepotTotal(getAmmoDepot(this.profile));
 
     const items = [

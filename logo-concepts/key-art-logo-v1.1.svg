@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 430" role="img" aria-label="Out of Warranty key art logo, version 1.1">
+  <g stroke="#10151f" stroke-width="20" stroke-linejoin="round" stroke-linecap="square">
+    <path fill="#e99435" d="M72 142 119 87l112 9 44 49-15 111-55 50-114-10-40-55z"/>
+    <path fill="#272638" d="m117 150 30-28 64 7 26 28-10 67-30 26-65-7-23-33z"/>
+    <path fill="#77f2cf" stroke="none" d="m138 166 36 6-5 22-36-6zm64 11 27 3-4 22-27-3z"/>
+    <path fill="#f5b44e" d="m112 100-10-48 53 34m73 16 43-24-8 58"/>
+    <path fill="#a849ca" d="m1128 142-47-55-112 9-44 49 15 111 55 50 114-10 40-55z"/>
+    <path fill="#272638" d="m1083 150-30-28-64 7-26 28 10 67 30 26 65-7 23-33z"/>
+    <path fill="#ef7df3" stroke="none" d="m1062 166-36 6 5 22 36-6zm-64 11-27 3 4 22 27-3z"/>
+    <path fill="#f5b44e" d="m1088 100 10-48-53 34m-73 16-43-24 8 58"/>
+  </g>
+  <path d="M301 366h598" stroke="#e99435" stroke-width="5"/>
+  <g fill="#10151f" stroke="#f5b44e" stroke-width="8" stroke-linejoin="round">
+    <path d="m600 56 25 17 31-5 14 29 29 14-5 31 17 25-17 25 5 31-29 14-14 29-31-5-25 17-25-17-31 5-14-29-29-14 5-31-17-25 17-25-5-31 29-14 14-29 31 5z"/>
+  </g>
+  <path d="m565 151 70-70m-74 5 74 70" fill="none" stroke="#77f2cf" stroke-width="12" stroke-linecap="square"/>
+  <text x="600" y="301" text-anchor="middle" fill="#fff0d2" stroke="#10151f" stroke-width="18" paint-order="stroke" font-family="Russo One, Impact, sans-serif" font-size="65" letter-spacing="1">OUT OF WARRANTY</text>
+  <text x="600" y="407" text-anchor="middle" fill="#77f2cf" font-family="Chakra Petch, Arial, sans-serif" font-weight="700" font-size="19" letter-spacing="8">TACTICAL ARTILLERY</text>
+</svg>

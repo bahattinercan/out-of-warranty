@@ -49,6 +49,9 @@ Prototype acceptance checks:
 
 - [x] Inventory existing parts art and remaining roster.
 - [x] Define atlas contents, style constraints, and acceptance checks.
-- [x] Create and review KES-9 prototype sheet: [`art/character-parts/kes-9-complete-parts.png`](../art/character-parts/kes-9-complete-parts.png) (transparent 1254×1254 concept atlas; not wired into gameplay yet).
+- [x] Create and review KES-9 prototype sheet: [`art/character-parts/kes-9-complete-parts.png`](../art/character-parts/kes-9-complete-parts.png).
 - [x] Produce batches A, B, and C: all 27 planned robot masters are present, alongside the existing FIX-8 reference master.
-- [ ] Integrate accepted sheets into the in-game robot renderer. The generated sheets are currently concept atlases; renderer-ready part crops and placement tuning remain necessary.
+- [x] Add the omitted PRES-4 atlas: [`art/character-parts/pres-4-complete-parts.png`](../art/character-parts/pres-4-complete-parts.png).
+- [x] Prepare transparent runtime atlases and register them in `assets/manifest.json` and `js/assets-manifest.js`.
+- [x] Wire atlas-backed characters into the in-game renderer with a procedural fallback while images load; keep the existing part-art path for the six pilot robots.
+- [x] Inspect all 28 atlas-backed characters in seven Orca matches and view all 34 roster characters; a follow-up screenshot exposed missing visible lower-body parts on FIX-8 and MIK-0, which were repaired and rechecked in gameplay.
