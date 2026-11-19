@@ -9,13 +9,15 @@ Bu belge, yeniden tasarım planını ve kabul ölçütlerini kaydeder.
 ## Uygulama geçmişi
 
 - Profil tabanlı çizici `52cef3b` commit'inde denendi ve pushlandı.
-- FIX-8 ve diğer robotların oyun içi görünümü kabul edilebilir bulunmadığı için kullanıcı isteğiyle önceki `js/robots.js` sistemi geri yüklendi.
+- İlk geri dönüş (`f362a55`) görsel sorunu çözmedi. Kullanıcı geri bildirimiyle çalışan tam sprite çizicisi `98e937a` sürümünden yeniden yüklendi; `assets/robots/<id>.webp` tam gövdeyi çizer, nişanda launcher katmanı eklenir ve görsel yoksa Canvas fallback'i çalışır.
 - Key art ve atlas dosyaları depoda tutuluyor; tam atlas kompozitörü şu an aktif değil.
 - Yeni çizim planı, daha sonra ayrı ve görsel olarak onaylı bir çalışma olarak ele alınmalı.
 
 ## Mevcut durum ve sorun
 
-`js/robots.js` içinde şu anda üç farklı görsel yol birlikte çalışıyor:
+Aktif `js/robots.js` tam sprite çizimini kullanıyor. Bu yeniden tasarım planındaki profil tabanlı kompozitör devre dışı bırakıldı. Yeniden denenmeden önce kaynak parçalar ve gerçek maç ölçeğindeki görünüm ayrıca doğrulanmalı.
+
+Önceki profil tabanlı çizici döneminde üç farklı görsel yol birlikte çalışıyordu:
 
 1. Altı pilot karakter için parça dosyası veya FIX-8 atlası kullanan özel çizim dalları.
 2. Diğer 28 karakter için, kodun 3×3 semantik kesim düzeni beklediği tam atlas yolu. Atlasların gerçekten aynı ölçü, hücre sırası ve şeffaf kenar boşluğunu kullandığı henüz kanıtlanmış değil; bu, envanter fazında dosya dosya ölçülecek.

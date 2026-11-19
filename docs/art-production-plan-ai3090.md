@@ -1,6 +1,6 @@
 # Expanded Implementation Status — November 15, 2026
 
-The in-game robot weapon-handling system was transitioned to an articulated Canvas rig. Full-body robot renders and portraits are retained as source references; match, menu, garage, and HUD use the identical articulated rig. The weapon, two hands, and projectile muzzle align to a shared skeletal pose. The active rig specification is documented in [robot-rig-plan.md](robot-rig-plan.md). The raster production records below reflect the historical generation pipeline for the art package.
+The active in-game renderer draws full-body robot sprites, with a launcher overlay while aiming and a procedural Canvas fallback when a sprite is unavailable. Modular part and atlas composition is inactive. The raster production records below reflect the art package's historical generation pipeline; [robot-rig-plan.md](robot-rig-plan.md) documents the current renderer.
 
 Final user approval brought robot, projectile, and skill visuals into raster scope, superseding the original plan's raster exclusions. Game physics, collision hitboxes, and effect durations remain hardcoded in the engine, while visible sprites were migrated to generated WebP assets.
 
