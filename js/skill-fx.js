@@ -929,7 +929,8 @@ function drawSkillFxIcon(ctx, def, size) {
 // süzülme, hücum. Nabız `timeMs`'e bağlıdır (oyun saati), böylece kare hızına
 // değil zamana göre nefes alır.
 function drawSkillAura(ctx, entity, cx, cy, timeMs) {
-  if (!entity) return;
+  if (!entity || !ctx) return;
+  ctx.save();
   const R = entity.r;
   const t = (timeMs || 0) / 1000;
   const pulse = 0.5 + 0.5 * Math.sin(t * 4.2);
@@ -966,6 +967,8 @@ function drawSkillAura(ctx, entity, cx, cy, timeMs) {
     }
     sfxRing(ctx, cx, cy, R * 1.25, "#ff8a4a", 2, 0.5 + 0.3 * pulse);
   }
+  ctx.restore();
+  ctx.globalAlpha = 1;
 }
 
 // Efekt listesini temizle (maç başı / menüye dönüş).

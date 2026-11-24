@@ -58,10 +58,17 @@ function projColors(spec) {
 
 // ── Paylaşılan gövde parçaları ──────────────────────────────────────────────
 
-// Roket gövdesi: kanatlar + silindir + konik burun. `wings` kanat sayısını belirler.
+// Roket gövdesi: kanatlar + silindir + konik burun + egzoz nozülü. `wings` kanat sayısını belirler.
 function projRocketBody(ctx, r, spec, wings) {
   const c = projColors(spec);
   const lw = Math.max(1, r * 0.3);
+  // Arka egzoz nozülü
+  projPoly(ctx, [[-r * 1.45, -r * 0.35], [-r * 1.75, -r * 0.48],
+                 [-r * 1.75, r * 0.48], [-r * 1.45, r * 0.35]]);
+  ctx.fillStyle = c.edge;
+  ctx.fill();
+  projCircle(ctx, -r * 1.7, 0, r * 0.22, c.accent); // itki ateşi çekirdeği
+
   for (let i = 0; i < wings; i++) {
     const up = i % 2 === 0 ? -1 : 1;
     const spread = 0.85 + Math.floor(i / 2) * 0.55;
@@ -77,10 +84,16 @@ function projRocketBody(ctx, r, spec, wings) {
   ctx.strokeStyle = c.edge;
   ctx.lineWidth = lw;
   ctx.stroke();
-  projCircle(ctx, r * 1.2, 0, r * 0.32, c.accent); // sıcak burun ucu
+
+  // Gövde panel dikişi & burun halkası
+  ctx.globalAlpha = 0.55;
+  projLine(ctx, -r * 1.1, 0, r * 0.5, 0, c.edge, Math.max(1, r * 0.12));
+  projLine(ctx, r * 0.2, -r * 0.5, r * 0.2, r * 0.5, c.accent, Math.max(1, r * 0.12));
+  ctx.globalAlpha = 1;
+  projCircle(ctx, r * 1.25, 0, r * 0.32, c.accent); // sıcak burun ucu
 }
 
-// El bombası gövdesi: oval gövde + kapak + pim halkası + çentikler.
+// El bombası gövdesi: oval gövde + kare fragmentasyon dikişleri + emniyet maşası + pim halkası.
 function projGrenadeBody(ctx, r, spec) {
   const c = projColors(spec);
   const lw = Math.max(1, r * 0.28);
@@ -91,6 +104,7 @@ function projGrenadeBody(ctx, r, spec) {
   ctx.strokeStyle = c.edge;
   ctx.lineWidth = lw;
   ctx.stroke();
+  // Üst boyun & fitil kapağı
   projPoly(ctx, [[-r * 0.45, -r * 0.85], [r * 0.45, -r * 0.85],
                  [r * 0.3, -r * 1.35], [-r * 0.3, -r * 1.35]]);
   ctx.fillStyle = c.accent;
@@ -98,24 +112,44 @@ function projGrenadeBody(ctx, r, spec) {
   ctx.strokeStyle = c.edge;
   ctx.lineWidth = Math.max(1, r * 0.18);
   ctx.stroke();
-  projRing(ctx, r * 0.78, -r * 1.05, r * 0.34, c.accent, Math.max(1, r * 0.18)); // pim
-  ctx.globalAlpha = 0.45;
+  // Emniyet maşası (spoon)
+  ctx.beginPath();
+  ctx.moveTo(r * 0.2, -r * 1.3);
+  ctx.quadraticCurveTo(r * 1.05, -r * 0.7, r * 0.88, r * 0.55);
+  ctx.strokeStyle = c.edge;
+  ctx.lineWidth = Math.max(1, r * 0.15);
+  ctx.stroke();
+  // Pim halkası
+  projRing(ctx, r * 0.78, -r * 1.05, r * 0.34, c.accent, Math.max(1, r * 0.18));
+  // Kare fragmentasyon ızgarası (ananas gövde)
+  ctx.globalAlpha = 0.5;
   ctx.lineWidth = Math.max(1, r * 0.12);
-  for (let i = -1; i <= 1; i++) projLine(ctx, -r * 0.68, i * r * 0.42, r * 0.68, i * r * 0.42, c.edge, Math.max(1, r * 0.12));
+  for (let i = -1; i <= 1; i++) {
+    projLine(ctx, -r * 0.68, i * r * 0.42 + r * 0.15, r * 0.68, i * r * 0.42 + r * 0.15, c.edge, Math.max(1, r * 0.12));
+    projLine(ctx, i * r * 0.45, -r * 0.55 + r * 0.15, i * r * 0.45, r * 0.70 + r * 0.15, c.edge, Math.max(1, r * 0.12));
+  }
   ctx.globalAlpha = 1;
 }
 
-// İnce mermi (nişancı): uzun gövde + kızıl uç + hız çizgileri.
+// İnce mermi (nişancı): süpersonik sabot gövde + kanatçıklar + kızıl uç + hız çizgileri.
 function projNeedleBody(ctx, r, spec) {
   const c = projColors(spec);
-  projPoly(ctx, [[-r * 2.4, -r * 0.5], [r * 1.2, -r * 0.42], [r * 2.6, 0],
-                 [r * 1.2, r * 0.42], [-r * 2.4, r * 0.5]]);
+  // Arka denge kanatçıkları
+  for (let s = -1; s <= 1; s += 2) {
+    projPoly(ctx, [[-r * 2.4, 0], [-r * 2.6, s * r * 0.8], [-r * 1.8, s * r * 0.35], [-r * 1.6, 0]]);
+    ctx.fillStyle = c.edge;
+    ctx.fill();
+  }
+  projPoly(ctx, [[-r * 2.4, -r * 0.48], [r * 1.2, -r * 0.40], [r * 2.6, 0],
+                 [r * 1.2, r * 0.40], [-r * 2.4, r * 0.48]]);
   ctx.fillStyle = c.body;
   ctx.fill();
   ctx.strokeStyle = c.edge;
   ctx.lineWidth = Math.max(1, r * 0.3);
   ctx.stroke();
-  projCircle(ctx, r * 1.75, 0, r * 0.3, c.accent);
+  // Tungsten çekirdek ve mach şok dalgası
+  projLine(ctx, -r * 1.5, 0, r * 1.5, 0, c.accent, Math.max(1, r * 0.18));
+  projCircle(ctx, r * 1.85, 0, r * 0.32, c.accent);
   ctx.globalAlpha = 0.5;
   for (let i = -1; i <= 1; i += 2) projLine(ctx, -r * 2.05, i * r * 0.16, -r * 0.2, i * r * 0.16, c.accent, Math.max(1, r * 0.14));
   ctx.globalAlpha = 1;
@@ -186,14 +220,16 @@ function projBlobShape(ctx, pr) {
   projCircle(ctx, r * 0.25, -r * 0.2, r * 0.35, c.accent);
 }
 
-// Nükleer: kalın gövde + radyasyon üç yaprağı + kuyruk kanatları.
+// Nükleer: kalın gövde + radyasyon üç yaprağı + radar pimi + kuyruk kanatları.
 function projNukeShape(ctx, pr) {
   const r = pr.r, c = projColors(pr.spec);
+  // Kuyruk kanatları
   projPoly(ctx, [[-r * 1.5, -r * 0.85], [-r * 0.95, -r * 1.5], [-r * 0.6, -r * 1.4], [-r * 0.75, -r * 0.85]]);
   ctx.fillStyle = c.edge;
   ctx.fill();
   projPoly(ctx, [[-r * 1.5, r * 0.85], [-r * 0.95, r * 1.5], [-r * 0.6, r * 1.4], [-r * 0.75, r * 0.85]]);
   ctx.fill();
+  // Ana balistik gövde
   ctx.beginPath();
   ctx.moveTo(-r * 1.5, -r * 0.9);
   ctx.lineTo(r * 0.4, -r * 0.9);
@@ -206,7 +242,14 @@ function projNukeShape(ctx, pr) {
   ctx.strokeStyle = c.edge;
   ctx.lineWidth = Math.max(1, r * 0.22);
   ctx.stroke();
-  const cx = r * 0.5, rr = r * 0.52;
+
+  // Gövde ikaz kuşağı
+  ctx.globalAlpha = 0.55;
+  projLine(ctx, -r * 0.6, -r * 0.9, -r * 0.6, r * 0.9, c.accent, Math.max(1, r * 0.16));
+  ctx.globalAlpha = 1;
+
+  // Radyasyon sembolü (üç yaprak)
+  const cx = r * 0.45, rr = r * 0.52;
   ctx.fillStyle = c.accent;
   for (let i = 0; i < 3; i++) {
     const a0 = -Math.PI / 2 + i * (Math.PI * 2 / 3) - 0.55;
@@ -217,6 +260,10 @@ function projNukeShape(ctx, pr) {
     ctx.fill();
   }
   projCircle(ctx, cx, 0, rr * 0.22, c.body);
+
+  // Radar/darbe detonatör pimi
+  projLine(ctx, r * 1.6, 0, r * 2.05, 0, c.accent, Math.max(1, r * 0.16));
+  projCircle(ctx, r * 2.05, 0, r * 0.12, "#ffffff");
 }
 
 // Tepe bombası: konik burun + üstte ayrılma halkası + kuyruk kanatları.
@@ -266,32 +313,41 @@ function projBombShape(ctx, pr) {
   projLine(ctx, -r * 1.05, -r * 0.7, -r * 1.05, r * 0.7, c.accent, Math.max(1, r * 0.16));
 }
 
-// Matkap: konik uç + spiral yiv + uç kıvılcımı.
+// Matkap: konik uç + helikal spiral yiv + kesici karbür uç.
 function projDrillShape(ctx, pr) {
   const r = pr.r, c = projColors(pr.spec);
+  // Gövde kovanı
   projPoly(ctx, [[-r * 1.4, -r * 0.8], [r * 0.4, -r * 0.8], [r * 0.4, r * 0.8], [-r * 1.4, r * 0.8]]);
   ctx.fillStyle = c.body;
   ctx.fill();
   ctx.strokeStyle = c.edge;
   ctx.lineWidth = Math.max(1, r * 0.24);
   ctx.stroke();
+
+  // Kovan flanşı
+  projLine(ctx, -r * 0.5, -r * 0.8, -r * 0.5, r * 0.8, c.accent, Math.max(1, r * 0.16));
+
+  // Delici koni
   projPoly(ctx, [[r * 0.4, -r * 0.8], [r * 0.4, r * 0.8], [r * 2.2, 0]]);
   ctx.fillStyle = c.edge;
   ctx.fill();
   ctx.strokeStyle = c.accent;
   ctx.lineWidth = Math.max(1, r * 0.16);
   ctx.stroke();
-  // Spiral yiv: gövde + koni üzerinde KOYU çizilir (açık konide okunur)
-  ctx.globalAlpha = 0.7;
+
+  // Helikal spiral yivler: dönüş açısına göre dinamik kayma
+  ctx.globalAlpha = 0.75;
   ctx.strokeStyle = c.body;
   ctx.lineWidth = Math.max(1, r * 0.18);
+  const shift = ((pr.spinAngle || 0) * 0.5) % 0.55;
   for (let i = 0; i < 4; i++) {
-    const x = r * (0.1 + i * 0.55);
-    const h = r * (0.72 - i * 0.16);
+    const x = r * (0.1 + i * 0.55 + shift);
+    if (x >= r * 2.1) continue;
+    const h = Math.max(r * 0.15, r * (0.75 - (x - r * 0.4) * 0.4));
     projLine(ctx, x, -h, x + r * 0.35, h, c.body, Math.max(1, r * 0.18));
   }
   ctx.globalAlpha = 1;
-  projCircle(ctx, r * 2.0, 0, r * 0.18, "#ffffff");
+  projCircle(ctx, r * 2.05, 0, r * 0.18, "#ffffff");
 }
 
 // Mayın: disk gövde + üst pim + yanıp sönen LED (kurulunca drawMines aynı gövdeyi kullanır).
@@ -474,25 +530,27 @@ function projAcidShape(ctx, pr) {
   projCircle(ctx, r * 0.55, r * 0.95, r * 0.2, c.edge);
 }
 
-// Işınlanma topu: küre içinde dönen girdap yayları + parlak çekirdek.
+// Işınlanma topu: kuantum küresi + zıt dönen enerji yayları + parıldayan çekirdek.
 function projTeleportBallShape(ctx, pr) {
   const r = pr.r, c = projColors(pr.spec);
   projCircle(ctx, 0, 0, r, c.body);
   projRing(ctx, 0, 0, r, c.edge, Math.max(1, r * 0.24));
-  // İç girdap: iki eş merkezli yay dönüşle kayar (spinAngle) — aktif portal izlenimi
+  // İç girdap: iki zıt eş merkezli yay dönüşle kayar (spinAngle)
   const a0 = pr.spinAngle || 0;
   ctx.strokeStyle = c.accent;
   ctx.lineWidth = Math.max(1, r * 0.18);
   for (let k = 0; k < 2; k++) {
+    const dir = k === 0 ? 1 : -1;
     ctx.beginPath();
-    ctx.ellipse(0, 0, r * (0.75 - k * 0.32), r * (0.45 - k * 0.14), 0.5,
-                a0 + k * 1.9, a0 + k * 1.9 + Math.PI * 1.4);
+    ctx.ellipse(0, 0, r * (0.75 - k * 0.32), r * (0.45 - k * 0.14), 0.5 * dir,
+                dir * a0 + k * 1.9, dir * a0 + k * 1.9 + Math.PI * 1.4);
     ctx.stroke();
   }
-  projCircle(ctx, 0, 0, r * 0.22, c.accent);
+  projCircle(ctx, 0, 0, r * 0.30, c.accent);
+  projCircle(ctx, 0, 0, r * 0.15, "#ffffff");
 }
 
-// Kanca: bağlantı halkası + şaft + aşağı kıvrılan hilal burun + sivri uç.
+// Kanca: bağlantı kelepçesi + şaft + çift tırnaklı çapa burnu.
 function projHookShape(ctx, pr) {
   const r = pr.r, c = projColors(pr.spec);
   // Bağlantı halkası (ip buradan geçer)
@@ -504,11 +562,13 @@ function projHookShape(ctx, pr) {
   ctx.strokeStyle = c.edge;
   ctx.lineWidth = Math.max(1, r * 0.2);
   ctx.stroke();
-  // Kanca burnu: aşağı kıvrılan hilal + sivri uç
+  projCircle(ctx, -r * 0.45, 0, r * 0.14, c.accent); // montaj perçini
+
+  // Ana kanca burnu: aşağı kıvrılan hilal + sivri uç
   ctx.beginPath();
   ctx.moveTo(r * 0.5, -r * 0.35);
-  ctx.quadraticCurveTo(r * 1.9, -r * 0.2, r * 1.1, r * 0.9);
-  ctx.quadraticCurveTo(r * 0.8, r * 1.2, r * 0.45, r * 0.95);
+  ctx.quadraticCurveTo(r * 1.9, -r * 0.2, r * 1.1, r * 0.95);
+  ctx.quadraticCurveTo(r * 0.8, r * 1.25, r * 0.45, r * 0.95);
   ctx.quadraticCurveTo(r * 1.0, r * 0.1, r * 0.5, -r * 0.1);
   ctx.closePath();
   ctx.fillStyle = c.edge;
@@ -516,7 +576,16 @@ function projHookShape(ctx, pr) {
   ctx.strokeStyle = c.accent;
   ctx.lineWidth = Math.max(1, r * 0.16);
   ctx.stroke();
-  projCircle(ctx, r * 0.62, r * 1.0, r * 0.15, "#ffffff");
+  projCircle(ctx, r * 0.62, r * 1.05, r * 0.15, "#ffffff");
+
+  // Üst denge tırnağı
+  ctx.beginPath();
+  ctx.moveTo(r * 0.4, -r * 0.35);
+  ctx.lineTo(r * 0.75, -r * 0.75);
+  ctx.lineTo(r * 0.60, -r * 0.35);
+  ctx.closePath();
+  ctx.fillStyle = c.edge;
+  ctx.fill();
 }
 
 // Eski varsayılan görünüm: dolu daire + halka (look'suz spec'ler için).

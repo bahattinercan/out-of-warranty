@@ -94,6 +94,7 @@ class Entity {
     this.color = color;
     this.name = name;
     this.onGround = false;
+    this.landTimer = 0;
     this.aim = -Math.PI / 4;
     this.facing = 1;
     this.alive = true;
@@ -244,6 +245,8 @@ class Entity {
   }
 
   update(terrain) {
+    const wasOnGround = this.onGround;
+    this.landTimer = Math.max(0, this.landTimer - 1);
     this.visualHitTimer = Math.max(0, this.visualHitTimer - 1);
     this.visualShieldTimer = Math.max(0, this.visualShieldTimer - 1);
     if (this.skillPoseTimer > 0) this.skillPoseTimer--;
@@ -306,6 +309,7 @@ class Entity {
     } else {
       this.onGround = false;
     }
+    if (!wasOnGround && this.onGround) this.landTimer = 12;
 
     // Haritanın dibine düşerse
     if (this.y > terrain.h + 40) {
@@ -334,6 +338,8 @@ class Entity {
   }
 
   draw(ctx, isActive, timeMs = 0) {
+    if (!ctx) return;
+    ctx.save();
     const cx = this.x;
     const cy = this.y - this.r;
 
@@ -358,7 +364,9 @@ class Entity {
     // Robot gövdesi. Legacy veri yüklenirse eski dairesel çizim güvenli fallback'tir.
     const drewRobot = typeof drawRobot === "function" && drawRobot(ctx, {
       cx, cy, r: this.r, facing: this.facing, aim: this.aim, charDef: this.charDef,
-      weapon: this.heldWeaponSpec, recoil: this.weaponRecoil,
+      animKey: this, alive: this.alive, visualHitTimer: this.visualHitTimer,
+      skillPoseTimer: this.skillPoseTimer, landTimer: this.landTimer,
+      weapon: this.heldWeaponSpec, recoil: this.weaponRecoil, weaponRecoil: this.weaponRecoil,
       frontArmOnly: true,
       playerTint: this.playerTint, timeMs,
       healthRatio: this.maxHp > 0 ? this.hp / this.maxHp : 1,
@@ -370,7 +378,10 @@ class Entity {
         vx: this.vx, vy: this.vy, onGround: this.onGround,
         walk: this.walkAnim, walkAmp: this.walkBlend,
         walkPhase: this.walkPhase, rollPhase: this.rollPhase,
+        landTimer: this.landTimer,
+        aiming: !!isActive,
       },
+      aiming: !!isActive,
       // Aparat III hazırken aparatta hafif vurgu ışığı (yalnız görsel seçenek).
       upgradeVisuals: { attachmentGlow: this.apparatusGlow && this.skillCooldown === 0 },
       // Takılı parça aksesuarları (yuva→id); yoksa çizici hiçbir şey eklemez.
@@ -459,5 +470,7 @@ class Entity {
     if (this.skillCooldown > 0) {
       drawCooldownBadge(ctx, cx + this.r - 2, cy + this.r - 2, this.skillCooldown);
     }
+    ctx.restore();
+    ctx.globalAlpha = 1;
   }
 }

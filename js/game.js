@@ -3199,11 +3199,18 @@ class Game {
         ctx.restore();
       }
 
-      // Mermi tasarımı: HUD ile aynı çizici (Projectile.drawIcon)
-      ctx.save();
-      ctx.translate(cx + 6, cyv + 11);
-      Projectile.drawIcon(ctx, spec, 40, { tail: false });
-      ctx.restore();
+      // Key art hazır değilse aynı kart ölçüsünde prosedürel mermi ikonuna düş.
+      const weaponArt = typeof assetImage === "function"
+        ? assetImage("weapon-key-art/" + spec.id)
+        : null;
+      if (weaponArt) {
+        ctx.drawImage(weaponArt, cx + 4, cyv + 6, 44, 50);
+      } else {
+        ctx.save();
+        ctx.translate(cx + 6, cyv + 11);
+        Projectile.drawIcon(ctx, spec, 40, { tail: false });
+        ctx.restore();
+      }
 
       const tx = cx + 52;
       ctx.textAlign = "left";
@@ -5180,6 +5187,7 @@ class Game {
       const p = this.players[i];
       if (p.alive) p.draw(ctx, i === this.turn && this.state === "AIMING", this.renderTimeMs || 0);
     }
+    ctx.globalAlpha = 1;
 
     // Modül cast efektleri oyuncuların üstünde, mermilerin ve HUD'un altında.
     if (typeof drawSkillFx === "function") drawSkillFx(ctx, this);
@@ -6341,7 +6349,11 @@ class Game {
     const toggleBtn = document.getElementById("weapon-toggle");
     if (toggleBtn) toggleBtn.classList.toggle("on", !!this.weaponMenuOpen);
 
+    const selectedArt = typeof assetImage === "function"
+      ? assetImage("weapon-key-art/" + WEAPONS[a.weapon].id)
+      : null;
     const key = this.turn + "|" + a.weapon + "|" + this.state + "|" + a.skillCooldown + "|" +
+                (selectedArt ? "art" : "procedural") + "|" +
                 WEAPONS.map((w) => a.ammo[w.id]).join(",");
     if (key === this._weaponKey) return;
     this._weaponKey = key;
@@ -6368,7 +6380,7 @@ class Game {
       if (sel) bar.scrollLeft = sel.offsetLeft - bar.clientWidth / 2 + sel.offsetWidth / 2;
       // Çiplerdeki mermi önizlemeleri (emoji ikon yerine gerçek tasarım)
       for (const cv of bar.querySelectorAll("canvas.wc-preview")) {
-        this.paintProjectilePreview(cv, WEAPONS[Number(cv.dataset.preview)], 90);
+        this.paintWeaponKeyArtPreview(cv, WEAPONS[Number(cv.dataset.preview)], 90);
       }
       // Panel yüksekliği değiştiyse alt HUD (güç barı + modül kartı) yeniden hizalanır
       this.syncBottomHud();
@@ -6409,7 +6421,7 @@ class Game {
         `<span class="wd-ammo">${ammoLine}</span></div>`;
       // Seçili silahın mermi önizlemesi (başlığın solunda)
       const previewCv = desc.querySelector("canvas.wd-preview");
-      if (previewCv) this.paintProjectilePreview(previewCv, spec, 48);
+      if (previewCv) this.paintWeaponKeyArtPreview(previewCv, spec, 48);
     }
 
   }
@@ -6438,6 +6450,24 @@ class Game {
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.clearRect(0, 0, px, px);
     ctx.drawImage(src, 0, 0);
+  }
+
+  paintWeaponKeyArtPreview(canvas, spec, size) {
+    const art = typeof assetImage === "function"
+      ? assetImage("weapon-key-art/" + spec.id)
+      : null;
+    if (!art) {
+      this.paintProjectilePreview(canvas, spec, size);
+      return;
+    }
+    const dpr = Math.min(2, Math.max(1, (typeof window !== "undefined" && window.devicePixelRatio) || 1));
+    const px = Math.round(size * dpr);
+    if (canvas.width !== px) { canvas.width = px; canvas.height = px; }
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.clearRect(0, 0, px, px);
+    ctx.drawImage(art, 0, 0, px, px);
   }
 
   /* Robot portresi — alt panel kartındaki küçük canvas'a oyun içi robot
@@ -7202,7 +7232,7 @@ function paintWeaponSlot(game, slotName, a, spec, isSelected, label) {
   const el = document.getElementById("slot-" + slotName);
   if (!el || !spec) return;
   const cv = el.querySelector(".slot-icon");
-  if (cv && game) game.paintProjectilePreview(cv, spec, 44);
+  if (cv && game) game.paintWeaponKeyArtPreview(cv, spec, 44);
   const left = a.ammo[spec.id];
   const empty = left !== Infinity && !(left > 0);
   setSlotText(el, ".slot-count", left === Infinity ? "∞" : String(left));

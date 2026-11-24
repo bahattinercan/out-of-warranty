@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<base href="../">
+  <meta charset="UTF-8" />
+  <title>Robot Spritesheet Animation Probe</title>
+  <style>
+    html, body { margin: 0; padding: 20px; background: #0c1014; color: #d0d7de; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, monospace; }
+    h1 { font-size: 20px; margin: 0 0 10px 0; color: #63e6be; }
+    .toolbar { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; align-items: center; }
+    button { background: #1f2937; color: #f9fafb; border: 1px solid #374151; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 13px; font-weight: 500; }
+    button:hover { background: #374151; }
+    button.active { background: #059669; border-color: #10b981; }
+    .canvas-container { display: flex; gap: 20px; align-items: flex-start; }
+    canvas { background: #161b22; border: 1px solid #30363d; border-radius: 6px; box-shadow: 0 4px 12px rgba(0,0,0,0.5); }
+    .info-panel { background: #161b22; border: 1px solid #30363d; border-radius: 6px; padding: 16px; min-width: 320px; font-size: 13px; line-height: 1.6; }
+    .badge { display: inline-block; padding: 2px 6px; border-radius: 3px; font-size: 11px; font-weight: bold; }
+    .badge-sheet { background: #065f46; color: #a7f3d0; }
+    .badge-fallback { background: #92400e; color: #fde68a; }
+    .slider-row { display: flex; align-items: center; gap: 10px; margin-top: 10px; }
+  </style>
+</head>
+<body>
+  <h1>Robot Spritesheet Animation Live Probe</h1>
+  <div class="toolbar" id="robotButtons"></div>
+  <div class="toolbar" id="stateButtons"></div>
+
+  <div class="canvas-container">
+    <canvas id="view" width="600" height="600"></canvas>
+    <div class="info-panel" id="infoPanel">
+      <div><strong>Status:</strong> Initializing assets...</div>
+    </div>
+  </div>
+
+  <script src="js/assets-manifest.js"></script>
+  <script src="js/assets.js"></script>
+  <script src="js/characters.js"></script>
+  <script src="js/weapons.js"></script>
+  <script src="js/robot-animation-manifest.js"></script>
+  <script src="js/robots.js"></script>
+  <script>
+    if (typeof assetPreload === "function") {
+      assetPreload();
+    }
+
+    let activeChar = CHARACTERS.find(c => c.id === "kopek") || CHARACTERS[0];
+    let activeState = "idle";
+    let facing = 1;
+    let aimAngle = 0;
+    let aimActive = false;
+    let stateStartMs = performance.now();
+    let isPaused = false;
+    let manualFrame = null;
+    let zoomLevel = 6.0;
+    let animSpeed = 1.0;
+
+    const STATES = ["idle", "walk", "aim", "fire", "jump", "fall", "land", "hit", "skill", "death"];
+
+    const rBtns = document.getElementById("robotButtons");
+    const sBtns = document.getElementById("stateButtons");
+    const canvas = document.getElementById("view");
+    const ctx = canvas.getContext("2d");
+    const info = document.getElementById("infoPanel");
+
+    // Robot buttons (Pilot first)
+    const PILOTS = ["kopek", "kedi", "ayi", "tavsan", "tilki", "yarasa", "rakun"];
+    CHARACTERS.forEach(c => {
+      const b = document.createElement("button");
+      b.textContent = `${c.label} (${c.id})`;
+      if (PILOTS.includes(c.id)) b.style.borderColor = "#63e6be";
+      if (c.id === activeChar.id) b.classList.add("active");
+      b.onclick = () => {
+        activeChar = c;
+        document.querySelectorAll("#robotButtons button").forEach(el => el.classList.remove("active"));
+        b.classList.add("active");
+        stateStartMs = performance.now();
+        manualFrame = null;
+      };
+      rBtns.appendChild(b);
+    });
+
+    // State buttons
+    STATES.forEach(st => {
+      const b = document.createElement("button");
+      b.textContent = st.toUpperCase();
+      if (st === activeState) b.classList.add("active");
+      b.onclick = () => {
+        activeState = st;
+        document.querySelectorAll("#stateButtons button").forEach(el => el.classList.remove("active"));
+        b.classList.add("active");
+        aimActive = (st === "aim" || st === "fire");
+        stateStartMs = performance.now();
+        manualFrame = null;
+      };
+      sBtns.appendChild(b);
+    });
+
+    // Facing toggle
+    const faceBtn = document.createElement("button");
+    faceBtn.textContent = "Flip Facing (Right)";
+    faceBtn.onclick = () => {
+      facing = -facing;
+      faceBtn.textContent = facing > 0 ? "Flip Facing (Right)" : "Flip Facing (Left)";
+    };
+    sBtns.appendChild(faceBtn);
+
+    // Pause/Play toggle
+    const pauseBtn = document.createElement("button");
+    pauseBtn.textContent = "Pause Animation";
+    pauseBtn.onclick = () => {
+      isPaused = !isPaused;
+      pauseBtn.textContent = isPaused ? "Resume Animation" : "Pause Animation";
+    };
+    sBtns.appendChild(pauseBtn);
+
+    // Step frame
+    const stepBtn = document.createElement("button");
+    stepBtn.textContent = "Next Frame >";
+    stepBtn.onclick = () => {
+      isPaused = true;
+      pauseBtn.textContent = "Resume Animation";
+      const animDef = getRobotAnimationDef(activeChar.id);
+      const stDef = animDef && animDef.states && animDef.states[activeState];
+      const maxF = stDef ? stDef.frames : 1;
+      manualFrame = manualFrame === null ? 1 : (manualFrame + 1) % maxF;
+    };
+    sBtns.appendChild(stepBtn);
+
+    // Zoom Buttons
+    [3.5, 5.0, 6.5, 8.0].forEach(z => {
+      const zb = document.createElement("button");
+      zb.textContent = `${z}x Zoom`;
+      if (Math.abs(zoomLevel - z) < 0.2) zb.style.borderColor = "#63e6be";
+      zb.onclick = () => {
+        zoomLevel = z;
+        document.querySelectorAll("#stateButtons button").forEach(b => {
+          if (b.textContent.includes("x Zoom")) b.style.borderColor = "";
+        });
+        zb.style.borderColor = "#63e6be";
+      };
+      sBtns.appendChild(zb);
+    });
+
+    // Speed Buttons
+    [1.0, 0.5, 0.25].forEach(sp => {
+      const spb = document.createElement("button");
+      spb.textContent = `${sp}x Speed`;
+      if (Math.abs(animSpeed - sp) < 0.05) spb.style.borderColor = "#388bfd";
+      spb.onclick = () => {
+        animSpeed = sp;
+        document.querySelectorAll("#stateButtons button").forEach(b => {
+          if (b.textContent.includes("x Speed")) b.style.borderColor = "";
+        });
+        spb.style.borderColor = "#388bfd";
+      };
+      sBtns.appendChild(spb);
+    });
+
+    let lastTime = performance.now();
+
+    function loop(now) {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      // Draw background grid & ground line
+      const groundY = 480;
+      ctx.strokeStyle = "#21262d";
+      ctx.lineWidth = 1;
+      for (let x = 0; x < canvas.width; x += 32) {
+        ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); ctx.stroke();
+      }
+      for (let y = 0; y < canvas.height; y += 32) {
+        ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke();
+      }
+
+      // Ground shadow (matching gameplay entity shadow)
+      const cx = canvas.width / 2;
+      const cy = groundY - (activeChar.r || 14) * zoomLevel;
+
+      ctx.beginPath();
+      ctx.ellipse(cx, groundY, (activeChar.r || 14) * zoomLevel * 0.9, 8, 0, 0, Math.PI * 2);
+      ctx.fillStyle = "rgba(0, 0, 0, 0.45)";
+      ctx.fill();
+
+      // Ground surface line
+      ctx.strokeStyle = "#388bfd";
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(0, groundY);
+      ctx.lineTo(canvas.width, groundY);
+      ctx.stroke();
+
+      const animDef = getRobotAnimationDef(activeChar.id);
+      const sheetImg = (animDef && typeof assetImage === "function") ? assetImage(animDef.sheetAsset) : null;
+      const isSheetLoaded = !!sheetImg;
+      const elapsed = isPaused ? 0 : (now - stateStartMs) * animSpeed;
+
+      // Mock entity motion matching current state
+      const motion = {
+        onGround: activeState !== "jump" && activeState !== "fall",
+        vy: activeState === "jump" ? -5 : (activeState === "fall" ? 5 : 0),
+        walkAmp: activeState === "walk" ? 1 : 0,
+        walkPhase: (now / 1000) * 8 * animSpeed,
+        vx: activeState === "walk" ? 2 : 0,
+        visualHitTimer: activeState === "hit" ? 0.3 : 0,
+        skillPoseTimer: activeState === "skill" ? 0.4 : 0,
+        weaponRecoil: activeState === "fire" ? 0.3 : 0,
+        landTimer: activeState === "land" ? 0.2 : 0,
+        alive: activeState !== "death",
+        state: activeState,
+        aiming: activeState === "aim"
+      };
+
+      const resolvedState = activeState || resolveRobotAnimation(motion, now);
+      let frameIdx = manualFrame !== null
+        ? manualFrame
+        : getRobotAnimationFrame(animDef, resolvedState, { motion, timeMs: now * animSpeed, stateElapsedMs: elapsed });
+
+      // Render robot firmly resting on groundY
+      drawRobot(ctx, {
+        charDef: activeChar,
+        cx: cx,
+        cy: groundY - (activeChar.r || 14) * zoomLevel,
+        r: (activeChar.r || 14) * zoomLevel,
+        facing: facing,
+        aim: aimActive ? aimAngle : undefined,
+        timeMs: isPaused ? 0 : now * animSpeed,
+        stateElapsedMs: elapsed,
+        state: resolvedState,
+        frameIdx: frameIdx,
+        motion: motion
+      });
+
+      // Update info panel
+      info.innerHTML = `
+        <h3>${activeChar.label} (${activeChar.id})</h3>
+        <p><strong>Mode:</strong> ${isSheetLoaded ? '<span class="badge badge-sheet">ACTIVE SPRITESHEET (LOADED)</span>' : '<span class="badge badge-fallback">LOADING / FALLBACK</span>'}</p>
+        <p><strong>Selected State:</strong> ${activeState}</p>
+        <p><strong>Resolved State:</strong> <span style="color:#58a6ff">${resolvedState}</span></p>
+        <p><strong>Frame Index:</strong> ${frameIdx}</p>
+        <p><strong>Facing:</strong> ${facing > 0 ? 'Right (+1)' : 'Left (-1)'}</p>
+        <p><strong>Radius (r):</strong> ${activeChar.r || 14} px (Gameplay radius)</p>
+        <p><strong>Chassis:</strong> ${activeChar.chassis}</p>
+        <p><strong>Locomotion:</strong> ${activeChar.locomotion}</p>
+        <p><strong>Attachment:</strong> ${activeChar.attachment}</p>
+        <p><strong>Ground Y:</strong> ${groundY} px (Pinned to blue baseline)</p>
+      `;
+
+      requestAnimationFrame(loop);
+    }
+
+    requestAnimationFrame(loop);
+  </script>
+</body>
+</html>

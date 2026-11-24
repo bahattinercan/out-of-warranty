@@ -19,7 +19,8 @@
       "stats": {
         "coverage": 46.7
       },
-      "generationSource": "codex-imagegen"
+      "generationSource": "codex-imagegen",
+      "bytes": 223760
     },
     {
       "id": "atlases/projectiles",
@@ -39,7 +40,8 @@
       "stats": {
         "coverage": 22.7
       },
-      "generationSource": "codex-imagegen"
+      "generationSource": "codex-imagegen",
+      "bytes": 139776
     },
     {
       "id": "atlases/skill-fx",
@@ -59,7 +61,8 @@
       "stats": {
         "coverage": 40.6
       },
-      "generationSource": "codex-imagegen"
+      "generationSource": "codex-imagegen",
+      "bytes": 429292
     },
     {
       "id": "atlases/ui",
@@ -79,7 +82,8 @@
       "stats": {
         "coverage": 49.5
       },
-      "generationSource": "codex-imagegen"
+      "generationSource": "codex-imagegen",
+      "bytes": 161550
     },
     {
       "id": "bg/assembly-far",
@@ -134,7 +138,8 @@
       "stats": {
         "srcMeanDrift": 5.13,
         "srcMaxDrift": 162
-      }
+      },
+      "bytes": 47072
     },
     {
       "id": "bg/assembly-mid",
@@ -159,7 +164,8 @@
         "srcMeanDrift": 28.24,
         "srcMaxDrift": 183,
         "coverage": 13.7
-      }
+      },
+      "bytes": 19028
     },
     {
       "id": "bg/cooling-far",
@@ -214,7 +220,8 @@
       "stats": {
         "srcMeanDrift": 3.77,
         "srcMaxDrift": 152
-      }
+      },
+      "bytes": 27380
     },
     {
       "id": "bg/cooling-mid",
@@ -239,7 +246,8 @@
         "srcMeanDrift": 57.8,
         "srcMaxDrift": 104,
         "coverage": 14.2
-      }
+      },
+      "bytes": 24548
     },
     {
       "id": "bg/foundry-far",
@@ -294,7 +302,8 @@
       "stats": {
         "srcMeanDrift": 5.31,
         "srcMaxDrift": 167
-      }
+      },
+      "bytes": 42748
     },
     {
       "id": "bg/foundry-mid",
@@ -319,7 +328,8 @@
         "srcMeanDrift": 28.17,
         "srcMaxDrift": 184,
         "coverage": 31.4
-      }
+      },
+      "bytes": 29572
     },
     {
       "id": "bg/loading-far",
@@ -345,7 +355,8 @@
       "stats": {
         "srcMeanDrift": 21.44,
         "srcMaxDrift": 56
-      }
+      },
+      "bytes": 22490
     },
     {
       "id": "bg/loading-mid",
@@ -370,7 +381,8 @@
         "srcMeanDrift": 51.12,
         "srcMaxDrift": 109,
         "coverage": 3.5
-      }
+      },
+      "bytes": 9686
     },
     {
       "id": "bg/paint-far",
@@ -396,7 +408,8 @@
       "stats": {
         "srcMeanDrift": 21.35,
         "srcMaxDrift": 49
-      }
+      },
+      "bytes": 18158
     },
     {
       "id": "bg/paint-mid",
@@ -421,7 +434,8 @@
         "srcMeanDrift": 45.78,
         "srcMaxDrift": 136,
         "coverage": 13.6
-      }
+      },
+      "bytes": 20410
     },
     {
       "id": "bg/sandblast-far",
@@ -447,7 +461,8 @@
       "stats": {
         "srcMeanDrift": 26.36,
         "srcMaxDrift": 83
-      }
+      },
+      "bytes": 34960
     },
     {
       "id": "bg/sandblast-mid",
@@ -472,7 +487,8 @@
         "srcMeanDrift": 58.05,
         "srcMaxDrift": 141,
         "coverage": 14.1
-      }
+      },
+      "bytes": 31242
     },
     {
       "id": "bg/scrapyard-far",
@@ -527,7 +543,8 @@
       "stats": {
         "srcMeanDrift": 4.43,
         "srcMaxDrift": 179
-      }
+      },
+      "bytes": 46166
     },
     {
       "id": "bg/scrapyard-mid",
@@ -552,7 +569,8 @@
         "srcMeanDrift": 36.52,
         "srcMaxDrift": 110,
         "coverage": 18.5
-      }
+      },
+      "bytes": 27148
     },
     {
       "id": "bg/warehouse-far",
@@ -607,7 +625,8 @@
       "stats": {
         "srcMeanDrift": 6.23,
         "srcMaxDrift": 161
-      }
+      },
+      "bytes": 44296
     },
     {
       "id": "bg/warehouse-mid",
@@ -632,7 +651,8 @@
         "srcMeanDrift": 28.97,
         "srcMaxDrift": 144,
         "coverage": 19.2
-      }
+      },
+      "bytes": 21980
     },
     {
       "id": "bg/waste-far",
@@ -687,7 +707,8 @@
       "stats": {
         "srcMeanDrift": 7.36,
         "srcMaxDrift": 130
-      }
+      },
+      "bytes": 61008
     },
     {
       "id": "bg/waste-mid",
@@ -712,7 +733,8 @@
         "srcMeanDrift": 28.9,
         "srcMaxDrift": 157,
         "coverage": 14.9
-      }
+      },
+      "bytes": 22198
     },
     {
       "id": "gameplay/calibration-benches-background",
@@ -732,7 +754,8 @@
       "zone": "assembly",
       "phase": "gameplay",
       "gate": "pending",
-      "stats": {}
+      "stats": {},
+      "bytes": 1403621
     },
     {
       "id": "gameplay/calibration-benches-foreground",
@@ -754,7 +777,8 @@
       "gate": "pending",
       "stats": {
         "coverage": 18.9
-      }
+      },
+      "bytes": 627559
     },
     {
       "id": "gameplay/calibration-benches-surface",
@@ -777,7 +801,8 @@
       "stats": {
         "seamLR": 3.6,
         "seamTB": 36.5
-      }
+      },
+      "bytes": 243246
     },
     {
       "id": "gameplay/conveyor-port-background",
@@ -797,7 +822,8 @@
       "zone": "loading",
       "phase": "gameplay",
       "gate": "pending",
-      "stats": {}
+      "stats": {},
+      "bytes": 1975612
     },
     {
       "id": "gameplay/conveyor-port-foreground",
@@ -817,7 +843,8 @@
       "zone": "loading",
       "phase": "gameplay",
       "gate": "pending",
-      "stats": {}
+      "stats": {},
+      "bytes": 815403
     },
     {
       "id": "gameplay/conveyor-port-surface",
@@ -837,7 +864,8 @@
       "zone": "loading",
       "phase": "gameplay",
       "gate": "pending",
-      "stats": {}
+      "stats": {},
+      "bytes": 352974
     },
     {
       "id": "gameplay/crane-yard-background",
@@ -857,7 +885,8 @@
       "zone": null,
       "phase": "gameplay",
       "gate": "pending",
-      "stats": {}
+      "stats": {},
+      "bytes": 2121029
     },
     {
       "id": "gameplay/crane-yard-foreground",
@@ -877,7 +906,8 @@
       "zone": null,
       "phase": "gameplay",
       "gate": "pending",
-      "stats": {}
+      "stats": {},
+      "bytes": 770429
     },
     {
       "id": "gameplay/crane-yard-surface",
@@ -897,7 +927,8 @@
       "zone": null,
       "phase": "gameplay",
       "gate": "pending",
-      "stats": {}
+      "stats": {},
+      "bytes": 882084
     },
     {
       "id": "gameplay/filter-terraces-background",
@@ -917,7 +948,8 @@
       "zone": "waste",
       "phase": "gameplay",
       "gate": "pending",
-      "stats": {}
+      "stats": {},
+      "bytes": 1123356
     },
     {
       "id": "gameplay/filter-terraces-foreground",
@@ -939,7 +971,8 @@
       "gate": "pending",
       "stats": {
         "coverage": 28.8
-      }
+      },
+      "bytes": 938746
     },
     {
       "id": "gameplay/filter-terraces-surface",
@@ -962,7 +995,8 @@
       "stats": {
         "seamLR": 2.3,
         "seamTB": 0
-      }
+      },
+      "bytes": 226221
     },
     {
       "id": "gameplay/flooded-lab-background",
@@ -982,7 +1016,8 @@
       "zone": null,
       "phase": "gameplay",
       "gate": "pending",
-      "stats": {}
+      "stats": {},
+      "bytes": 2278355
     },
     {
       "id": "gameplay/flooded-lab-foreground",
@@ -1002,7 +1037,8 @@
       "zone": null,
       "phase": "gameplay",
       "gate": "pending",
-      "stats": {}
+      "stats": {},
+      "bytes": 400127
     },
     {
       "id": "gameplay/flooded-lab-surface",
@@ -1022,7 +1058,8 @@
       "zone": null,
       "phase": "gameplay",
       "gate": "pending",
-      "stats": {}
+      "stats": {},
+      "bytes": 873926
     },
     {
       "id": "gameplay/furnace-background-v3",
@@ -1042,7 +1079,8 @@
       "zone": null,
       "phase": "gameplay",
       "gate": "pending",
-      "stats": {}
+      "stats": {},
+      "bytes": 2062072
     },
     {
       "id": "gameplay/ice-rift-background",
@@ -1062,7 +1100,8 @@
       "zone": null,
       "phase": "gameplay",
       "gate": "pending",
-      "stats": {}
+      "stats": {},
+      "bytes": 2356205
     },
     {
       "id": "gameplay/ice-rift-foreground",
@@ -1082,7 +1121,8 @@
       "zone": null,
       "phase": "gameplay",
       "gate": "pending",
-      "stats": {}
+      "stats": {},
+      "bytes": 546699
     },
     {
       "id": "gameplay/ice-rift-surface",
@@ -1102,7 +1142,8 @@
       "zone": null,
       "phase": "gameplay",
       "gate": "pending",
-      "stats": {}
+      "stats": {},
+      "bytes": 673637
     },
     {
       "id": "gameplay/moon-scrapyard-background",
@@ -1122,7 +1163,8 @@
       "zone": null,
       "phase": "gameplay",
       "gate": "pending",
-      "stats": {}
+      "stats": {},
+      "bytes": 2319144
     },
     {
       "id": "gameplay/moon-scrapyard-foreground",
@@ -1142,7 +1184,8 @@
       "zone": null,
       "phase": "gameplay",
       "gate": "pending",
-      "stats": {}
+      "stats": {},
+      "bytes": 638154
     },
     {
       "id": "gameplay/moon-scrapyard-surface",
@@ -1162,7 +1205,8 @@
       "zone": null,
       "phase": "gameplay",
       "gate": "pending",
-      "stats": {}
+      "stats": {},
+      "bytes": 922937
     },
     {
       "id": "gameplay/old-filter-bay-background",
@@ -1182,7 +1226,8 @@
       "zone": "assembly",
       "phase": "gameplay",
       "gate": "pending",
-      "stats": {}
+      "stats": {},
+      "bytes": 1595376
     },
     {
       "id": "gameplay/old-filter-bay-foreground",
@@ -1204,7 +1249,8 @@
       "gate": "pending",
       "stats": {
         "coverage": 30.2
-      }
+      },
+      "bytes": 1009480
     },
     {
       "id": "gameplay/old-filter-bay-surface",
@@ -1227,7 +1273,8 @@
       "stats": {
         "seamLR": 6.5,
         "seamTB": 9.4
-      }
+      },
+      "bytes": 329285
     },
     {
       "id": "gameplay/reactor-garden-background",
@@ -1247,7 +1294,8 @@
       "zone": null,
       "phase": "gameplay",
       "gate": "pending",
-      "stats": {}
+      "stats": {},
+      "bytes": 2485425
     },
     {
       "id": "gameplay/reactor-garden-foreground",
@@ -1267,7 +1315,8 @@
       "zone": null,
       "phase": "gameplay",
       "gate": "pending",
-      "stats": {}
+      "stats": {},
+      "bytes": 479987
     },
     {
       "id": "gameplay/reactor-garden-surface",
@@ -1287,7 +1336,8 @@
       "zone": null,
       "phase": "gameplay",
       "gate": "pending",
-      "stats": {}
+      "stats": {},
+      "bytes": 1033568
     },
     {
       "id": "gameplay/settling-basin-background",
@@ -1307,7 +1357,8 @@
       "zone": "settling",
       "phase": "gameplay",
       "gate": "pending",
-      "stats": {}
+      "stats": {},
+      "bytes": 1512319
     },
     {
       "id": "gameplay/settling-basin-foreground",
@@ -1329,7 +1380,8 @@
       "gate": "pending",
       "stats": {
         "coverage": 25.7
-      }
+      },
+      "bytes": 831499
     },
     {
       "id": "gameplay/settling-basin-surface",
@@ -1352,7 +1404,8 @@
       "stats": {
         "seamLR": 7.6,
         "seamTB": 13.9
-      }
+      },
+      "bytes": 338102
     },
     {
       "id": "gameplay/steamworks-background",
@@ -1372,7 +1425,8 @@
       "zone": "pressure",
       "phase": "gameplay",
       "gate": "pending",
-      "stats": {}
+      "stats": {},
+      "bytes": 725574
     },
     {
       "id": "gameplay/steamworks-foreground",
@@ -1392,7 +1446,8 @@
       "zone": "pressure",
       "phase": "gameplay",
       "gate": "pending",
-      "stats": {}
+      "stats": {},
+      "bytes": 919572
     },
     {
       "id": "gameplay/steamworks-surface",
@@ -1412,7 +1467,8 @@
       "zone": "pressure",
       "phase": "gameplay",
       "gate": "pending",
-      "stats": {}
+      "stats": {},
+      "bytes": 394568
     },
     {
       "id": "gameplay/substation-yard-background",
@@ -1432,7 +1488,8 @@
       "zone": "pressure",
       "phase": "gameplay",
       "gate": "pending",
-      "stats": {}
+      "stats": {},
+      "bytes": 1648542
     },
     {
       "id": "gameplay/substation-yard-foreground",
@@ -1454,7 +1511,8 @@
       "gate": "pending",
       "stats": {
         "coverage": 27.6
-      }
+      },
+      "bytes": 838757
     },
     {
       "id": "gameplay/substation-yard-surface",
@@ -1477,7 +1535,8 @@
       "stats": {
         "seamLR": 7.6,
         "seamTB": 44.4
-      }
+      },
+      "bytes": 258090
     },
     {
       "id": "gameplay/weld-gantries-background",
@@ -1497,7 +1556,8 @@
       "zone": "pressure",
       "phase": "gameplay",
       "gate": "pending",
-      "stats": {}
+      "stats": {},
+      "bytes": 1440849
     },
     {
       "id": "gameplay/weld-gantries-foreground",
@@ -1519,7 +1579,8 @@
       "gate": "pending",
       "stats": {
         "coverage": 21.1
-      }
+      },
+      "bytes": 743686
     },
     {
       "id": "gameplay/weld-gantries-surface",
@@ -1542,7 +1603,8 @@
       "stats": {
         "seamLR": 9.3,
         "seamTB": 30.9
-      }
+      },
+      "bytes": 149766
     },
     {
       "id": "map-key-art/calibration-benches",
@@ -1562,7 +1624,8 @@
       "zone": "assembly",
       "phase": "menu",
       "gate": "pending",
-      "stats": {}
+      "stats": {},
+      "bytes": 605429
     },
     {
       "id": "map-key-art/conveyor-port",
@@ -1582,7 +1645,8 @@
       "zone": "loading",
       "phase": "menu",
       "gate": "pending",
-      "stats": {}
+      "stats": {},
+      "bytes": 222993
     },
     {
       "id": "map-key-art/crane-yard",
@@ -1602,7 +1666,8 @@
       "phase": "menu",
       "gate": "pending",
       "stats": {},
-      "format": "png"
+      "format": "png",
+      "bytes": 709986
     },
     {
       "id": "map-key-art/filter-terraces",
@@ -1622,7 +1687,8 @@
       "zone": "waste",
       "phase": "menu",
       "gate": "pending",
-      "stats": {}
+      "stats": {},
+      "bytes": 484509
     },
     {
       "id": "map-key-art/flooded-lab",
@@ -1642,7 +1708,8 @@
       "phase": "menu",
       "gate": "pending",
       "stats": {},
-      "format": "png"
+      "format": "png",
+      "bytes": 770180
     },
     {
       "id": "map-key-art/furnace",
@@ -1662,7 +1729,8 @@
       "phase": "menu",
       "gate": "pending",
       "stats": {},
-      "format": "png"
+      "format": "png",
+      "bytes": 668929
     },
     {
       "id": "map-key-art/ice-rift",
@@ -1682,7 +1750,8 @@
       "phase": "menu",
       "gate": "pending",
       "stats": {},
-      "format": "png"
+      "format": "png",
+      "bytes": 779974
     },
     {
       "id": "map-key-art/moon-scrapyard",
@@ -1702,7 +1771,8 @@
       "phase": "menu",
       "gate": "pending",
       "stats": {},
-      "format": "png"
+      "format": "png",
+      "bytes": 763122
     },
     {
       "id": "map-key-art/old-filter-bay",
@@ -1722,7 +1792,8 @@
       "zone": "assembly",
       "phase": "menu",
       "gate": "pending",
-      "stats": {}
+      "stats": {},
+      "bytes": 681685
     },
     {
       "id": "map-key-art/reactor-garden",
@@ -1742,7 +1813,8 @@
       "phase": "menu",
       "gate": "pending",
       "stats": {},
-      "format": "png"
+      "format": "png",
+      "bytes": 803143
     },
     {
       "id": "map-key-art/settling-basin",
@@ -1762,7 +1834,8 @@
       "zone": "settling",
       "phase": "menu",
       "gate": "pending",
-      "stats": {}
+      "stats": {},
+      "bytes": 635444
     },
     {
       "id": "map-key-art/steamworks",
@@ -1782,7 +1855,8 @@
       "zone": "pressure",
       "phase": "menu",
       "gate": "pending",
-      "stats": {}
+      "stats": {},
+      "bytes": 286101
     },
     {
       "id": "map-key-art/substation-yard",
@@ -1802,7 +1876,8 @@
       "zone": "pressure",
       "phase": "menu",
       "gate": "pending",
-      "stats": {}
+      "stats": {},
+      "bytes": 688689
     },
     {
       "id": "map-key-art/weld-gantries",
@@ -1822,7 +1897,8 @@
       "zone": "pressure",
       "phase": "menu",
       "gate": "pending",
-      "stats": {}
+      "stats": {},
+      "bytes": 633862
     },
     {
       "id": "menu/key-art-arena",
@@ -1841,7 +1917,8 @@
       "zone": null,
       "phase": "menu",
       "gate": "pending",
-      "stats": {}
+      "stats": {},
+      "bytes": 387190
     },
     {
       "id": "menu/key-art-cooling-plant",
@@ -1860,7 +1937,8 @@
       "zone": null,
       "phase": "menu",
       "gate": "pending",
-      "stats": {}
+      "stats": {},
+      "bytes": 468102
     },
     {
       "id": "menu/key-art-foundry",
@@ -1879,7 +1957,8 @@
       "zone": null,
       "phase": "menu",
       "gate": "pending",
-      "stats": {}
+      "stats": {},
+      "bytes": 521174
     },
     {
       "id": "menu/key-art-loading-yard",
@@ -1898,7 +1977,8 @@
       "zone": null,
       "phase": "menu",
       "gate": "pending",
-      "stats": {}
+      "stats": {},
+      "bytes": 488648
     },
     {
       "id": "menu/key-art-menu-ammo-market",
@@ -1917,7 +1997,8 @@
       "zone": null,
       "phase": "menu",
       "gate": "pending",
-      "stats": {}
+      "stats": {},
+      "bytes": 404464
     },
     {
       "id": "menu/key-art-menu-bot-count",
@@ -1936,7 +2017,8 @@
       "zone": null,
       "phase": "menu",
       "gate": "pending",
-      "stats": {}
+      "stats": {},
+      "bytes": 377604
     },
     {
       "id": "menu/key-art-menu-character-select",
@@ -1955,7 +2037,8 @@
       "zone": null,
       "phase": "menu",
       "gate": "pending",
-      "stats": {}
+      "stats": {},
+      "bytes": 384664
     },
     {
       "id": "menu/key-art-menu-map-select",
@@ -1974,7 +2057,8 @@
       "zone": null,
       "phase": "menu",
       "gate": "pending",
-      "stats": {}
+      "stats": {},
+      "bytes": 355186
     },
     {
       "id": "menu/key-art-menu-online-code",
@@ -1993,7 +2077,8 @@
       "zone": null,
       "phase": "menu",
       "gate": "pending",
-      "stats": {}
+      "stats": {},
+      "bytes": 303598
     },
     {
       "id": "menu/key-art-menu-online-loading",
@@ -2012,7 +2097,8 @@
       "zone": null,
       "phase": "menu",
       "gate": "pending",
-      "stats": {}
+      "stats": {},
+      "bytes": 317106
     },
     {
       "id": "menu/key-art-menu-online-role",
@@ -2031,7 +2117,8 @@
       "zone": null,
       "phase": "menu",
       "gate": "pending",
-      "stats": {}
+      "stats": {},
+      "bytes": 327466
     },
     {
       "id": "menu/key-art-menu-tutorial",
@@ -2050,7 +2137,8 @@
       "zone": null,
       "phase": "menu",
       "gate": "pending",
-      "stats": {}
+      "stats": {},
+      "bytes": 328822
     },
     {
       "id": "menu/key-art-menu-workshop",
@@ -2069,7 +2157,8 @@
       "zone": null,
       "phase": "menu",
       "gate": "pending",
-      "stats": {}
+      "stats": {},
+      "bytes": 337822
     },
     {
       "id": "menu/key-art-paint-atelier",
@@ -2088,7 +2177,8 @@
       "zone": null,
       "phase": "menu",
       "gate": "pending",
-      "stats": {}
+      "stats": {},
+      "bytes": 535756
     },
     {
       "id": "menu/key-art-service-market",
@@ -2108,7 +2198,8 @@
       "zone": null,
       "phase": "menu",
       "gate": "pending",
-      "stats": {}
+      "stats": {},
+      "bytes": 76162
     },
     {
       "id": "menu/key-art-service-tutorial",
@@ -2128,7 +2219,8 @@
       "zone": null,
       "phase": "menu",
       "gate": "pending",
-      "stats": {}
+      "stats": {},
+      "bytes": 50864
     },
     {
       "id": "menu/key-art-service-workshop",
@@ -2148,7 +2240,88 @@
       "zone": null,
       "phase": "menu",
       "gate": "pending",
-      "stats": {}
+      "stats": {},
+      "bytes": 68042
+    },
+    {
+      "id": "menu/main",
+      "file": "assets/menu/main.webp",
+      "w": 1920,
+      "h": 1080,
+      "alpha": false,
+      "kb": 369.2,
+      "seed": null,
+      "size": "1920x1080",
+      "steps": 0,
+      "prompt": "Direct reuse of the exact user-supplied key-art.webp; same source file as art/marketing/key-art.webp, copied byte-for-byte without visual edits.",
+      "generationSource": "project-source-reuse",
+      "derivedFrom": "art/marketing/key-art.webp",
+      "palette": [],
+      "zone": null,
+      "phase": "menu",
+      "gate": "pending",
+      "stats": {},
+      "bytes": 378098
+    },
+    {
+      "id": "menu/mode-computer",
+      "file": "assets/menu/mode-computer.webp",
+      "w": 960,
+      "h": 336,
+      "alpha": false,
+      "kb": 51.6,
+      "seed": null,
+      "size": "2119x742",
+      "steps": 1,
+      "prompt": "Panoramic 3.5:1 Out of Warranty banner: three complete robots, amber maintenance hero center-left facing two distinct factory bots center-right across scrapyard, all figures inside central 78% with clear side margins, no close-up or edge clipping, teal gantry and amber reflections, painterly 2D key art, no text/logo/UI/watermark.",
+      "generationSource": "codex-imagegen",
+      "derivedFrom": null,
+      "palette": [],
+      "zone": null,
+      "phase": "menu",
+      "gate": "pending",
+      "stats": {},
+      "bytes": 52810
+    },
+    {
+      "id": "menu/mode-local",
+      "file": "assets/menu/mode-local.webp",
+      "w": 960,
+      "h": 336,
+      "alpha": false,
+      "kb": 67,
+      "seed": null,
+      "size": "2115x744",
+      "steps": 1,
+      "prompt": "Panoramic 3.5:1 Out of Warranty local multiplayer banner: exactly two complete robots, teal left and magenta right, playful face-off around glowing service target, figures inside central 78% with clear side margins, no close-up or edge clipping, painterly 2D key art, no text/logo/UI/watermark.",
+      "generationSource": "codex-imagegen",
+      "derivedFrom": null,
+      "palette": [],
+      "zone": null,
+      "phase": "menu",
+      "gate": "pending",
+      "stats": {},
+      "bytes": 68606
+    },
+    {
+      "id": "menu/mode-online",
+      "file": "assets/menu/mode-online.webp",
+      "w": 960,
+      "h": 336,
+      "alpha": false,
+      "kb": 51,
+      "seed": null,
+      "size": "2120x742",
+      "steps": 1,
+      "prompt": "Panoramic 3.5:1 Out of Warranty online banner: exactly two complete amber and teal robots cooperating around a lit relay mast under suspended cargo hook, both centered with clear side margins, no close-up or edge clipping, painterly 2D key art, no text/logo/UI/watermark.",
+      "generationSource": "codex-imagegen",
+      "derivedFrom": null,
+      "palette": [],
+      "zone": null,
+      "phase": "menu",
+      "gate": "pending",
+      "stats": {},
+      "bytes": 52182
     },
     {
       "id": "menu/out-of-warranty-logo",
@@ -2168,83 +2341,8 @@
       "zone": null,
       "phase": "menu",
       "gate": "pending",
-      "stats": {}
-    },
-    {
-      "id": "menu/main",
-      "file": "assets/menu/main.webp",
-      "w": 1920,
-      "h": 1080,
-      "alpha": false,
-      "kb": 369.2,
-      "seed": null,
-      "size": "1920x1080",
-      "steps": 0,
-      "prompt": "Direct reuse of the exact user-supplied key-art.webp; same source file as art/marketing/key-art.webp, copied byte-for-byte without visual edits.",
-      "generationSource": "project-source-reuse",
-      "derivedFrom": "art/marketing/key-art.webp",
-      "palette": [],
-      "zone": null,
-      "phase": "menu",
-      "gate": "pending",
-      "stats": {}
-    },
-    {
-      "id": "menu/mode-computer",
-      "file": "assets/menu/mode-computer.webp",
-      "w": 960,
-      "h": 336,
-      "alpha": false,
-      "kb": 51.6,
-      "seed": null,
-      "size": "2119x742",
-      "steps": 1,
-      "prompt": "Panoramic 3.5:1 Out of Warranty banner: three complete robots, amber maintenance hero center-left facing two distinct factory bots center-right across scrapyard, all figures inside central 78% with clear side margins, no close-up or edge clipping, teal gantry and amber reflections, painterly 2D key art, no text/logo/UI/watermark.",
-      "generationSource": "codex-imagegen",
-      "derivedFrom": null,
-      "palette": [],
-      "zone": null,
-      "phase": "menu",
-      "gate": "pending",
-      "stats": {}
-    },
-    {
-      "id": "menu/mode-local",
-      "file": "assets/menu/mode-local.webp",
-      "w": 960,
-      "h": 336,
-      "alpha": false,
-      "kb": 67,
-      "seed": null,
-      "size": "2115x744",
-      "steps": 1,
-      "prompt": "Panoramic 3.5:1 Out of Warranty local multiplayer banner: exactly two complete robots, teal left and magenta right, playful face-off around glowing service target, figures inside central 78% with clear side margins, no close-up or edge clipping, painterly 2D key art, no text/logo/UI/watermark.",
-      "generationSource": "codex-imagegen",
-      "derivedFrom": null,
-      "palette": [],
-      "zone": null,
-      "phase": "menu",
-      "gate": "pending",
-      "stats": {}
-    },
-    {
-      "id": "menu/mode-online",
-      "file": "assets/menu/mode-online.webp",
-      "w": 960,
-      "h": 336,
-      "alpha": false,
-      "kb": 51,
-      "seed": null,
-      "size": "2120x742",
-      "steps": 1,
-      "prompt": "Panoramic 3.5:1 Out of Warranty online banner: exactly two complete amber and teal robots cooperating around a lit relay mast under suspended cargo hook, both centered with clear side margins, no close-up or edge clipping, painterly 2D key art, no text/logo/UI/watermark.",
-      "generationSource": "codex-imagegen",
-      "derivedFrom": null,
-      "palette": [],
-      "zone": null,
-      "phase": "menu",
-      "gate": "pending",
-      "stats": {}
+      "stats": {},
+      "bytes": 271474
     },
     {
       "id": "menu/service-market",
@@ -2263,7 +2361,8 @@
       "zone": null,
       "phase": "menu",
       "gate": "pending",
-      "stats": {}
+      "stats": {},
+      "bytes": 16834
     },
     {
       "id": "menu/service-tutorial",
@@ -2282,7 +2381,8 @@
       "zone": null,
       "phase": "menu",
       "gate": "pending",
-      "stats": {}
+      "stats": {},
+      "bytes": 13096
     },
     {
       "id": "menu/service-workshop",
@@ -2301,7 +2401,8 @@
       "zone": null,
       "phase": "menu",
       "gate": "pending",
-      "stats": {}
+      "stats": {},
+      "bytes": 12650
     },
     {
       "id": "portraits/armadillo",
@@ -2322,7 +2423,8 @@
         "coverage": 78.6
       },
       "generationSource": "derived-crop",
-      "derivedFrom": "robots/armadillo"
+      "derivedFrom": "robots/armadillo",
+      "bytes": 27592
     },
     {
       "id": "portraits/aslan",
@@ -2343,7 +2445,8 @@
         "coverage": 59.2
       },
       "generationSource": "derived-crop",
-      "derivedFrom": "robots/aslan"
+      "derivedFrom": "robots/aslan",
+      "bytes": 29294
     },
     {
       "id": "portraits/ayi",
@@ -2364,7 +2467,8 @@
         "coverage": 75.6
       },
       "generationSource": "derived-crop",
-      "derivedFrom": "robots/ayi"
+      "derivedFrom": "robots/ayi",
+      "bytes": 23730
     },
     {
       "id": "portraits/bukalemun",
@@ -2385,7 +2489,8 @@
         "coverage": 43.6
       },
       "generationSource": "derived-crop",
-      "derivedFrom": "robots/bukalemun"
+      "derivedFrom": "robots/bukalemun",
+      "bytes": 30408
     },
     {
       "id": "portraits/dino",
@@ -2406,7 +2511,8 @@
         "coverage": 72.3
       },
       "generationSource": "derived-crop",
-      "derivedFrom": "robots/dino"
+      "derivedFrom": "robots/dino",
+      "bytes": 24912
     },
     {
       "id": "portraits/ejderha",
@@ -2427,7 +2533,8 @@
         "coverage": 82.2
       },
       "generationSource": "derived-crop",
-      "derivedFrom": "robots/ejderha"
+      "derivedFrom": "robots/ejderha",
+      "bytes": 34080
     },
     {
       "id": "portraits/gergedan",
@@ -2448,7 +2555,8 @@
         "coverage": 61.2
       },
       "generationSource": "derived-crop",
-      "derivedFrom": "robots/gergedan"
+      "derivedFrom": "robots/gergedan",
+      "bytes": 24084
     },
     {
       "id": "portraits/hamster",
@@ -2469,7 +2577,8 @@
         "coverage": 87.5
       },
       "generationSource": "derived-crop",
-      "derivedFrom": "robots/hamster"
+      "derivedFrom": "robots/hamster",
+      "bytes": 22256
     },
     {
       "id": "portraits/kanguru",
@@ -2490,7 +2599,8 @@
         "coverage": 38.3
       },
       "generationSource": "derived-crop",
-      "derivedFrom": "robots/kanguru"
+      "derivedFrom": "robots/kanguru",
+      "bytes": 21704
     },
     {
       "id": "portraits/kaplan",
@@ -2511,7 +2621,8 @@
         "coverage": 52.1
       },
       "generationSource": "derived-crop",
-      "derivedFrom": "robots/kaplan"
+      "derivedFrom": "robots/kaplan",
+      "bytes": 27366
     },
     {
       "id": "portraits/kedi",
@@ -2532,7 +2643,8 @@
         "coverage": 69.3
       },
       "generationSource": "derived-crop",
-      "derivedFrom": "robots/kedi"
+      "derivedFrom": "robots/kedi",
+      "bytes": 20752
     },
     {
       "id": "portraits/kirpi",
@@ -2553,7 +2665,8 @@
         "coverage": 83.9
       },
       "generationSource": "derived-crop",
-      "derivedFrom": "robots/kirpi"
+      "derivedFrom": "robots/kirpi",
+      "bytes": 32198
     },
     {
       "id": "portraits/koala",
@@ -2574,7 +2687,8 @@
         "coverage": 62.3
       },
       "generationSource": "derived-crop",
-      "derivedFrom": "robots/koala"
+      "derivedFrom": "robots/koala",
+      "bytes": 22600
     },
     {
       "id": "portraits/kokarca",
@@ -2595,7 +2709,8 @@
         "coverage": 58.9
       },
       "generationSource": "derived-crop",
-      "derivedFrom": "robots/kokarca"
+      "derivedFrom": "robots/kokarca",
+      "bytes": 20310
     },
     {
       "id": "portraits/kopek",
@@ -2616,7 +2731,8 @@
         "coverage": 59
       },
       "generationSource": "derived-crop",
-      "derivedFrom": "robots/kopek"
+      "derivedFrom": "robots/kopek",
+      "bytes": 21750
     },
     {
       "id": "portraits/kunduz",
@@ -2637,7 +2753,8 @@
         "coverage": 60.1
       },
       "generationSource": "derived-crop",
-      "derivedFrom": "robots/kunduz"
+      "derivedFrom": "robots/kunduz",
+      "bytes": 24348
     },
     {
       "id": "portraits/kurtadam",
@@ -2658,7 +2775,8 @@
         "coverage": 47.6
       },
       "generationSource": "derived-crop",
-      "derivedFrom": "robots/kurtadam"
+      "derivedFrom": "robots/kurtadam",
+      "bytes": 21338
     },
     {
       "id": "portraits/kus",
@@ -2679,7 +2797,8 @@
         "coverage": 60.8
       },
       "generationSource": "derived-crop",
-      "derivedFrom": "robots/kus"
+      "derivedFrom": "robots/kus",
+      "bytes": 22000
     },
     {
       "id": "portraits/maymun",
@@ -2700,7 +2819,8 @@
         "coverage": 53.8
       },
       "generationSource": "derived-crop",
-      "derivedFrom": "robots/maymun"
+      "derivedFrom": "robots/maymun",
+      "bytes": 26840
     },
     {
       "id": "portraits/oklukirpi",
@@ -2721,7 +2841,8 @@
         "coverage": 74
       },
       "generationSource": "derived-crop",
-      "derivedFrom": "robots/oklukirpi"
+      "derivedFrom": "robots/oklukirpi",
+      "bytes": 26326
     },
     {
       "id": "portraits/ordek",
@@ -2742,7 +2863,8 @@
         "coverage": 49.6
       },
       "generationSource": "derived-crop",
-      "derivedFrom": "robots/ordek"
+      "derivedFrom": "robots/ordek",
+      "bytes": 23878
     },
     {
       "id": "portraits/ornitorenk",
@@ -2763,7 +2885,8 @@
         "coverage": 39.6
       },
       "generationSource": "derived-crop",
-      "derivedFrom": "robots/ornitorenk"
+      "derivedFrom": "robots/ornitorenk",
+      "bytes": 26068
     },
     {
       "id": "portraits/panda",
@@ -2784,7 +2907,8 @@
         "coverage": 79
       },
       "generationSource": "derived-crop",
-      "derivedFrom": "robots/panda"
+      "derivedFrom": "robots/panda",
+      "bytes": 24948
     },
     {
       "id": "portraits/penguen",
@@ -2805,7 +2929,8 @@
         "coverage": 78.5
       },
       "generationSource": "derived-crop",
-      "derivedFrom": "robots/penguen"
+      "derivedFrom": "robots/penguen",
+      "bytes": 23702
     },
     {
       "id": "portraits/rakun",
@@ -2826,7 +2951,8 @@
         "coverage": 68.3
       },
       "generationSource": "derived-crop",
-      "derivedFrom": "robots/rakun"
+      "derivedFrom": "robots/rakun",
+      "bytes": 22442
     },
     {
       "id": "portraits/sincap",
@@ -2847,7 +2973,8 @@
         "coverage": 67.8
       },
       "generationSource": "derived-crop",
-      "derivedFrom": "robots/sincap"
+      "derivedFrom": "robots/sincap",
+      "bytes": 36580
     },
     {
       "id": "portraits/sirtlan",
@@ -2868,7 +2995,8 @@
         "coverage": 68.2
       },
       "generationSource": "derived-crop",
-      "derivedFrom": "robots/sirtlan"
+      "derivedFrom": "robots/sirtlan",
+      "bytes": 28898
     },
     {
       "id": "portraits/suaygiri",
@@ -2889,7 +3017,8 @@
         "coverage": 71.4
       },
       "generationSource": "derived-crop",
-      "derivedFrom": "robots/suaygiri"
+      "derivedFrom": "robots/suaygiri",
+      "bytes": 24574
     },
     {
       "id": "portraits/tavsan",
@@ -2910,7 +3039,8 @@
         "coverage": 48.3
       },
       "generationSource": "derived-crop",
-      "derivedFrom": "robots/tavsan"
+      "derivedFrom": "robots/tavsan",
+      "bytes": 22492
     },
     {
       "id": "portraits/tilki",
@@ -2931,7 +3061,8 @@
         "coverage": 58.1
       },
       "generationSource": "derived-crop",
-      "derivedFrom": "robots/tilki"
+      "derivedFrom": "robots/tilki",
+      "bytes": 24658
     },
     {
       "id": "portraits/timsah",
@@ -2952,7 +3083,8 @@
         "coverage": 48.1
       },
       "generationSource": "derived-crop",
-      "derivedFrom": "robots/timsah"
+      "derivedFrom": "robots/timsah",
+      "bytes": 17776
     },
     {
       "id": "portraits/yarasa",
@@ -2973,7 +3105,8 @@
         "coverage": 54.6
       },
       "generationSource": "derived-crop",
-      "derivedFrom": "robots/yarasa"
+      "derivedFrom": "robots/yarasa",
+      "bytes": 22050
     },
     {
       "id": "portraits/yeti",
@@ -2994,7 +3127,8 @@
         "coverage": 73.2
       },
       "generationSource": "derived-crop",
-      "derivedFrom": "robots/yeti"
+      "derivedFrom": "robots/yeti",
+      "bytes": 31646
     },
     {
       "id": "portraits/zurafa",
@@ -3015,7 +3149,8 @@
         "coverage": 31.1
       },
       "generationSource": "derived-crop",
-      "derivedFrom": "robots/zurafa"
+      "derivedFrom": "robots/zurafa",
+      "bytes": 19228
     },
     {
       "id": "robot-models/armadillo-body",
@@ -3023,7 +3158,7 @@
       "w": 110,
       "h": 82,
       "alpha": true,
-      "kb": 3.509765625,
+      "kb": 3.5,
       "size": "110x82",
       "steps": 0,
       "prompt": "Modular body vector asset for MAT-6; low chassis, visor face, palette matched to roster.",
@@ -3037,7 +3172,8 @@
       "stats": {
         "coverage": 45
       },
-      "generationSource": "tools/robot-models.js"
+      "generationSource": "tools/robot-models.js",
+      "bytes": 3594
     },
     {
       "id": "robot-models/armadillo-head",
@@ -3045,7 +3181,7 @@
       "w": 110,
       "h": 82,
       "alpha": true,
-      "kb": 2.126953125,
+      "kb": 2.1,
       "size": "110x82",
       "steps": 0,
       "prompt": "Modular head vector asset for MAT-6; low chassis, visor face, palette matched to roster.",
@@ -3059,7 +3195,8 @@
       "stats": {
         "coverage": 45
       },
-      "generationSource": "tools/robot-models.js"
+      "generationSource": "tools/robot-models.js",
+      "bytes": 2178
     },
     {
       "id": "robot-models/aslan-body",
@@ -3067,7 +3204,7 @@
       "w": 110,
       "h": 82,
       "alpha": true,
-      "kb": 3.44921875,
+      "kb": 3.4,
       "size": "110x82",
       "steps": 0,
       "prompt": "Modular body vector asset for EMP-80; coil chassis, visor face, palette matched to roster.",
@@ -3081,7 +3218,8 @@
       "stats": {
         "coverage": 45
       },
-      "generationSource": "tools/robot-models.js"
+      "generationSource": "tools/robot-models.js",
+      "bytes": 3532
     },
     {
       "id": "robot-models/aslan-head",
@@ -3089,7 +3227,7 @@
       "w": 110,
       "h": 82,
       "alpha": true,
-      "kb": 2.0849609375,
+      "kb": 2.1,
       "size": "110x82",
       "steps": 0,
       "prompt": "Modular head vector asset for EMP-80; coil chassis, visor face, palette matched to roster.",
@@ -3103,7 +3241,8 @@
       "stats": {
         "coverage": 45
       },
-      "generationSource": "tools/robot-models.js"
+      "generationSource": "tools/robot-models.js",
+      "bytes": 2135
     },
     {
       "id": "robot-models/ayi-body",
@@ -3111,7 +3250,7 @@
       "w": 110,
       "h": 82,
       "alpha": true,
-      "kb": 3.646484375,
+      "kb": 3.6,
       "size": "110x82",
       "steps": 0,
       "prompt": "Modular body vector asset for BOM-12; tank chassis, gauge face, palette matched to roster.",
@@ -3125,7 +3264,8 @@
       "stats": {
         "coverage": 45
       },
-      "generationSource": "tools/robot-models.js"
+      "generationSource": "tools/robot-models.js",
+      "bytes": 3734
     },
     {
       "id": "robot-models/ayi-head",
@@ -3133,7 +3273,7 @@
       "w": 110,
       "h": 82,
       "alpha": true,
-      "kb": 2.0126953125,
+      "kb": 2,
       "size": "110x82",
       "steps": 0,
       "prompt": "Modular head vector asset for BOM-12; tank chassis, gauge face, palette matched to roster.",
@@ -3147,7 +3287,8 @@
       "stats": {
         "coverage": 45
       },
-      "generationSource": "tools/robot-models.js"
+      "generationSource": "tools/robot-models.js",
+      "bytes": 2061
     },
     {
       "id": "robot-models/bukalemun-body",
@@ -3155,7 +3296,7 @@
       "w": 110,
       "h": 82,
       "alpha": true,
-      "kb": 3.10546875,
+      "kb": 3.1,
       "size": "110x82",
       "steps": 0,
       "prompt": "Modular body vector asset for HAYALET-4; flat chassis, visor face, palette matched to roster.",
@@ -3169,7 +3310,8 @@
       "stats": {
         "coverage": 45
       },
-      "generationSource": "tools/robot-models.js"
+      "generationSource": "tools/robot-models.js",
+      "bytes": 3180
     },
     {
       "id": "robot-models/bukalemun-head",
@@ -3177,7 +3319,7 @@
       "w": 110,
       "h": 82,
       "alpha": true,
-      "kb": 2.130859375,
+      "kb": 2.1,
       "size": "110x82",
       "steps": 0,
       "prompt": "Modular head vector asset for HAYALET-4; flat chassis, visor face, palette matched to roster.",
@@ -3191,7 +3333,8 @@
       "stats": {
         "coverage": 45
       },
-      "generationSource": "tools/robot-models.js"
+      "generationSource": "tools/robot-models.js",
+      "bytes": 2182
     },
     {
       "id": "robot-models/dino-body",
@@ -3199,7 +3342,7 @@
       "w": 110,
       "h": 82,
       "alpha": true,
-      "kb": 3.1240234375,
+      "kb": 3.1,
       "size": "110x82",
       "steps": 0,
       "prompt": "Modular body vector asset for ŞOK-9; wide chassis, warning_led face, palette matched to roster.",
@@ -3213,7 +3356,8 @@
       "stats": {
         "coverage": 45
       },
-      "generationSource": "tools/robot-models.js"
+      "generationSource": "tools/robot-models.js",
+      "bytes": 3199
     },
     {
       "id": "robot-models/dino-head",
@@ -3221,7 +3365,7 @@
       "w": 110,
       "h": 82,
       "alpha": true,
-      "kb": 1.958984375,
+      "kb": 2,
       "size": "110x82",
       "steps": 0,
       "prompt": "Modular head vector asset for ŞOK-9; wide chassis, warning_led face, palette matched to roster.",
@@ -3235,7 +3379,8 @@
       "stats": {
         "coverage": 45
       },
-      "generationSource": "tools/robot-models.js"
+      "generationSource": "tools/robot-models.js",
+      "bytes": 2006
     },
     {
       "id": "robot-models/ejderha-body",
@@ -3243,7 +3388,7 @@
       "w": 110,
       "h": 82,
       "alpha": true,
-      "kb": 3.3662109375,
+      "kb": 3.4,
       "size": "110x82",
       "steps": 0,
       "prompt": "Modular body vector asset for FIRIN-3; furnace chassis, warning_led face, palette matched to roster.",
@@ -3257,7 +3402,8 @@
       "stats": {
         "coverage": 45
       },
-      "generationSource": "tools/robot-models.js"
+      "generationSource": "tools/robot-models.js",
+      "bytes": 3447
     },
     {
       "id": "robot-models/ejderha-head",
@@ -3265,7 +3411,7 @@
       "w": 110,
       "h": 82,
       "alpha": true,
-      "kb": 1.9697265625,
+      "kb": 2,
       "size": "110x82",
       "steps": 0,
       "prompt": "Modular head vector asset for FIRIN-3; furnace chassis, warning_led face, palette matched to roster.",
@@ -3279,7 +3425,8 @@
       "stats": {
         "coverage": 45
       },
-      "generationSource": "tools/robot-models.js"
+      "generationSource": "tools/robot-models.js",
+      "bytes": 2017
     },
     {
       "id": "robot-models/gergedan-body",
@@ -3287,7 +3434,7 @@
       "w": 110,
       "h": 82,
       "alpha": true,
-      "kb": 3.2412109375,
+      "kb": 3.2,
       "size": "110x82",
       "steps": 0,
       "prompt": "Modular body vector asset for TEK-8; forward chassis, speedometer face, palette matched to roster.",
@@ -3301,7 +3448,8 @@
       "stats": {
         "coverage": 45
       },
-      "generationSource": "tools/robot-models.js"
+      "generationSource": "tools/robot-models.js",
+      "bytes": 3319
     },
     {
       "id": "robot-models/gergedan-head",
@@ -3309,7 +3457,7 @@
       "w": 110,
       "h": 82,
       "alpha": true,
-      "kb": 1.9921875,
+      "kb": 2,
       "size": "110x82",
       "steps": 0,
       "prompt": "Modular head vector asset for TEK-8; forward chassis, speedometer face, palette matched to roster.",
@@ -3323,7 +3471,8 @@
       "stats": {
         "coverage": 45
       },
-      "generationSource": "tools/robot-models.js"
+      "generationSource": "tools/robot-models.js",
+      "bytes": 2040
     },
     {
       "id": "robot-models/hamster-body",
@@ -3331,7 +3480,7 @@
       "w": 110,
       "h": 82,
       "alpha": true,
-      "kb": 3.2353515625,
+      "kb": 3.2,
       "size": "110x82",
       "steps": 0,
       "prompt": "Modular body vector asset for ZIRH-2; round chassis, dual_led face, palette matched to roster.",
@@ -3345,7 +3494,8 @@
       "stats": {
         "coverage": 45
       },
-      "generationSource": "tools/robot-models.js"
+      "generationSource": "tools/robot-models.js",
+      "bytes": 3313
     },
     {
       "id": "robot-models/hamster-head",
@@ -3353,7 +3503,7 @@
       "w": 110,
       "h": 82,
       "alpha": true,
-      "kb": 2.048828125,
+      "kb": 2,
       "size": "110x82",
       "steps": 0,
       "prompt": "Modular head vector asset for ZIRH-2; round chassis, dual_led face, palette matched to roster.",
@@ -3367,7 +3517,8 @@
       "stats": {
         "coverage": 45
       },
-      "generationSource": "tools/robot-models.js"
+      "generationSource": "tools/robot-models.js",
+      "bytes": 2098
     },
     {
       "id": "robot-models/kanguru-body",
@@ -3375,7 +3526,7 @@
       "w": 110,
       "h": 82,
       "alpha": true,
-      "kb": 3.478515625,
+      "kb": 3.5,
       "size": "110x82",
       "steps": 0,
       "prompt": "Modular body vector asset for ZIP-X; tall chassis, visor face, palette matched to roster.",
@@ -3389,7 +3540,8 @@
       "stats": {
         "coverage": 45
       },
-      "generationSource": "tools/robot-models.js"
+      "generationSource": "tools/robot-models.js",
+      "bytes": 3562
     },
     {
       "id": "robot-models/kanguru-head",
@@ -3397,7 +3549,7 @@
       "w": 110,
       "h": 82,
       "alpha": true,
-      "kb": 2.048828125,
+      "kb": 2,
       "size": "110x82",
       "steps": 0,
       "prompt": "Modular head vector asset for ZIP-X; tall chassis, visor face, palette matched to roster.",
@@ -3411,7 +3563,8 @@
       "stats": {
         "coverage": 45
       },
-      "generationSource": "tools/robot-models.js"
+      "generationSource": "tools/robot-models.js",
+      "bytes": 2098
     },
     {
       "id": "robot-models/kaplan-body",
@@ -3419,7 +3572,7 @@
       "w": 110,
       "h": 82,
       "alpha": true,
-      "kb": 3.0732421875,
+      "kb": 3.1,
       "size": "110x82",
       "steps": 0,
       "prompt": "Modular body vector asset for KES-9; angular chassis, visor face, palette matched to roster.",
@@ -3433,7 +3586,8 @@
       "stats": {
         "coverage": 45
       },
-      "generationSource": "tools/robot-models.js"
+      "generationSource": "tools/robot-models.js",
+      "bytes": 3147
     },
     {
       "id": "robot-models/kaplan-head",
@@ -3441,7 +3595,7 @@
       "w": 110,
       "h": 82,
       "alpha": true,
-      "kb": 2.0380859375,
+      "kb": 2,
       "size": "110x82",
       "steps": 0,
       "prompt": "Modular head vector asset for KES-9; angular chassis, visor face, palette matched to roster.",
@@ -3455,7 +3609,8 @@
       "stats": {
         "coverage": 45
       },
-      "generationSource": "tools/robot-models.js"
+      "generationSource": "tools/robot-models.js",
+      "bytes": 2087
     },
     {
       "id": "robot-models/kedi-body",
@@ -3463,7 +3618,7 @@
       "w": 110,
       "h": 82,
       "alpha": true,
-      "kb": 3.3212890625,
+      "kb": 3.3,
       "size": "110x82",
       "steps": 0,
       "prompt": "Modular body vector asset for MIK-0; u_frame chassis, single_lens face, palette matched to roster.",
@@ -3477,7 +3632,8 @@
       "stats": {
         "coverage": 45
       },
-      "generationSource": "tools/robot-models.js"
+      "generationSource": "tools/robot-models.js",
+      "bytes": 3401
     },
     {
       "id": "robot-models/kedi-head",
@@ -3485,7 +3641,7 @@
       "w": 110,
       "h": 82,
       "alpha": true,
-      "kb": 1.9267578125,
+      "kb": 1.9,
       "size": "110x82",
       "steps": 0,
       "prompt": "Modular head vector asset for MIK-0; u_frame chassis, single_lens face, palette matched to roster.",
@@ -3499,7 +3655,8 @@
       "stats": {
         "coverage": 45
       },
-      "generationSource": "tools/robot-models.js"
+      "generationSource": "tools/robot-models.js",
+      "bytes": 1973
     },
     {
       "id": "robot-models/kirpi-body",
@@ -3507,7 +3664,7 @@
       "w": 110,
       "h": 82,
       "alpha": true,
-      "kb": 3.0615234375,
+      "kb": 3.1,
       "size": "110x82",
       "steps": 0,
       "prompt": "Modular body vector asset for BİLYE-3; compact chassis, single_lens face, palette matched to roster.",
@@ -3521,7 +3678,8 @@
       "stats": {
         "coverage": 45
       },
-      "generationSource": "tools/robot-models.js"
+      "generationSource": "tools/robot-models.js",
+      "bytes": 3135
     },
     {
       "id": "robot-models/kirpi-head",
@@ -3529,7 +3687,7 @@
       "w": 110,
       "h": 82,
       "alpha": true,
-      "kb": 1.9521484375,
+      "kb": 2,
       "size": "110x82",
       "steps": 0,
       "prompt": "Modular head vector asset for BİLYE-3; compact chassis, single_lens face, palette matched to roster.",
@@ -3543,7 +3701,8 @@
       "stats": {
         "coverage": 45
       },
-      "generationSource": "tools/robot-models.js"
+      "generationSource": "tools/robot-models.js",
+      "bytes": 1999
     },
     {
       "id": "robot-models/koala-body",
@@ -3551,7 +3710,7 @@
       "w": 110,
       "h": 82,
       "alpha": true,
-      "kb": 3.1875,
+      "kb": 3.2,
       "size": "110x82",
       "steps": 0,
       "prompt": "Modular body vector asset for TOK-2; compact chassis, dual_led face, palette matched to roster.",
@@ -3565,7 +3724,8 @@
       "stats": {
         "coverage": 45
       },
-      "generationSource": "tools/robot-models.js"
+      "generationSource": "tools/robot-models.js",
+      "bytes": 3264
     },
     {
       "id": "robot-models/koala-head",
@@ -3573,7 +3733,7 @@
       "w": 110,
       "h": 82,
       "alpha": true,
-      "kb": 2.083984375,
+      "kb": 2.1,
       "size": "110x82",
       "steps": 0,
       "prompt": "Modular head vector asset for TOK-2; compact chassis, dual_led face, palette matched to roster.",
@@ -3587,7 +3747,8 @@
       "stats": {
         "coverage": 45
       },
-      "generationSource": "tools/robot-models.js"
+      "generationSource": "tools/robot-models.js",
+      "bytes": 2134
     },
     {
       "id": "robot-models/kokarca-body",
@@ -3595,7 +3756,7 @@
       "w": 110,
       "h": 82,
       "alpha": true,
-      "kb": 3.080078125,
+      "kb": 3.1,
       "size": "110x82",
       "steps": 0,
       "prompt": "Modular body vector asset for SIZ-7; small chassis, warning_led face, palette matched to roster.",
@@ -3609,7 +3770,8 @@
       "stats": {
         "coverage": 45
       },
-      "generationSource": "tools/robot-models.js"
+      "generationSource": "tools/robot-models.js",
+      "bytes": 3154
     },
     {
       "id": "robot-models/kokarca-head",
@@ -3617,7 +3779,7 @@
       "w": 110,
       "h": 82,
       "alpha": true,
-      "kb": 1.9677734375,
+      "kb": 2,
       "size": "110x82",
       "steps": 0,
       "prompt": "Modular head vector asset for SIZ-7; small chassis, warning_led face, palette matched to roster.",
@@ -3631,7 +3793,8 @@
       "stats": {
         "coverage": 45
       },
-      "generationSource": "tools/robot-models.js"
+      "generationSource": "tools/robot-models.js",
+      "bytes": 2015
     },
     {
       "id": "robot-models/kopek-body",
@@ -3639,7 +3802,7 @@
       "w": 110,
       "h": 82,
       "alpha": true,
-      "kb": 3.1826171875,
+      "kb": 3.2,
       "size": "110x82",
       "steps": 0,
       "prompt": "Modular body vector asset for FIX-8; compact chassis, dual_led face, palette matched to roster.",
@@ -3653,7 +3816,8 @@
       "stats": {
         "coverage": 45
       },
-      "generationSource": "tools/robot-models.js"
+      "generationSource": "tools/robot-models.js",
+      "bytes": 3259
     },
     {
       "id": "robot-models/kopek-head",
@@ -3661,7 +3825,7 @@
       "w": 110,
       "h": 82,
       "alpha": true,
-      "kb": 2.0263671875,
+      "kb": 2,
       "size": "110x82",
       "steps": 0,
       "prompt": "Modular head vector asset for FIX-8; compact chassis, dual_led face, palette matched to roster.",
@@ -3675,7 +3839,8 @@
       "stats": {
         "coverage": 45
       },
-      "generationSource": "tools/robot-models.js"
+      "generationSource": "tools/robot-models.js",
+      "bytes": 2075
     },
     {
       "id": "robot-models/kunduz-body",
@@ -3683,7 +3848,7 @@
       "w": 110,
       "h": 82,
       "alpha": true,
-      "kb": 3.2734375,
+      "kb": 3.3,
       "size": "110x82",
       "steps": 0,
       "prompt": "Modular body vector asset for VUR-5; compact chassis, visor face, palette matched to roster.",
@@ -3697,7 +3862,8 @@
       "stats": {
         "coverage": 45
       },
-      "generationSource": "tools/robot-models.js"
+      "generationSource": "tools/robot-models.js",
+      "bytes": 3352
     },
     {
       "id": "robot-models/kunduz-head",
@@ -3705,7 +3871,7 @@
       "w": 110,
       "h": 82,
       "alpha": true,
-      "kb": 2.0380859375,
+      "kb": 2,
       "size": "110x82",
       "steps": 0,
       "prompt": "Modular head vector asset for VUR-5; compact chassis, visor face, palette matched to roster.",
@@ -3719,7 +3885,8 @@
       "stats": {
         "coverage": 45
       },
-      "generationSource": "tools/robot-models.js"
+      "generationSource": "tools/robot-models.js",
+      "bytes": 2087
     },
     {
       "id": "robot-models/kurtadam-body",
@@ -3727,7 +3894,7 @@
       "w": 110,
       "h": 82,
       "alpha": true,
-      "kb": 3.361328125,
+      "kb": 3.4,
       "size": "110x82",
       "steps": 0,
       "prompt": "Modular body vector asset for SİREN-6; angular chassis, warning_led face, palette matched to roster.",
@@ -3741,7 +3908,8 @@
       "stats": {
         "coverage": 45
       },
-      "generationSource": "tools/robot-models.js"
+      "generationSource": "tools/robot-models.js",
+      "bytes": 3442
     },
     {
       "id": "robot-models/kurtadam-head",
@@ -3749,7 +3917,7 @@
       "w": 110,
       "h": 82,
       "alpha": true,
-      "kb": 1.978515625,
+      "kb": 2,
       "size": "110x82",
       "steps": 0,
       "prompt": "Modular head vector asset for SİREN-6; angular chassis, warning_led face, palette matched to roster.",
@@ -3763,7 +3931,8 @@
       "stats": {
         "coverage": 45
       },
-      "generationSource": "tools/robot-models.js"
+      "generationSource": "tools/robot-models.js",
+      "bytes": 2026
     },
     {
       "id": "robot-models/kus-body",
@@ -3771,7 +3940,7 @@
       "w": 110,
       "h": 82,
       "alpha": true,
-      "kb": 3.5185546875,
+      "kb": 3.5,
       "size": "110x82",
       "steps": 0,
       "prompt": "Modular body vector asset for FAN-5; tall chassis, dual_led face, palette matched to roster.",
@@ -3785,7 +3954,8 @@
       "stats": {
         "coverage": 45
       },
-      "generationSource": "tools/robot-models.js"
+      "generationSource": "tools/robot-models.js",
+      "bytes": 3603
     },
     {
       "id": "robot-models/kus-head",
@@ -3793,7 +3963,7 @@
       "w": 110,
       "h": 82,
       "alpha": true,
-      "kb": 2.009765625,
+      "kb": 2,
       "size": "110x82",
       "steps": 0,
       "prompt": "Modular head vector asset for FAN-5; tall chassis, dual_led face, palette matched to roster.",
@@ -3807,7 +3977,8 @@
       "stats": {
         "coverage": 45
       },
-      "generationSource": "tools/robot-models.js"
+      "generationSource": "tools/robot-models.js",
+      "bytes": 2058
     },
     {
       "id": "robot-models/maymun-body",
@@ -3815,7 +3986,7 @@
       "w": 110,
       "h": 82,
       "alpha": true,
-      "kb": 3.2568359375,
+      "kb": 3.3,
       "size": "110x82",
       "steps": 0,
       "prompt": "Modular body vector asset for KANCA-4; compact chassis, dual_led face, palette matched to roster.",
@@ -3829,7 +4000,8 @@
       "stats": {
         "coverage": 45
       },
-      "generationSource": "tools/robot-models.js"
+      "generationSource": "tools/robot-models.js",
+      "bytes": 3335
     },
     {
       "id": "robot-models/maymun-head",
@@ -3837,7 +4009,7 @@
       "w": 110,
       "h": 82,
       "alpha": true,
-      "kb": 2.0400390625,
+      "kb": 2,
       "size": "110x82",
       "steps": 0,
       "prompt": "Modular head vector asset for KANCA-4; compact chassis, dual_led face, palette matched to roster.",
@@ -3851,7 +4023,8 @@
       "stats": {
         "coverage": 45
       },
-      "generationSource": "tools/robot-models.js"
+      "generationSource": "tools/robot-models.js",
+      "bytes": 2089
     },
     {
       "id": "robot-models/oklukirpi-body",
@@ -3859,7 +4032,7 @@
       "w": 110,
       "h": 82,
       "alpha": true,
-      "kb": 3.3154296875,
+      "kb": 3.3,
       "size": "110x82",
       "steps": 0,
       "prompt": "Modular body vector asset for PERÇİN-3; compact chassis, visor face, palette matched to roster.",
@@ -3873,7 +4046,8 @@
       "stats": {
         "coverage": 45
       },
-      "generationSource": "tools/robot-models.js"
+      "generationSource": "tools/robot-models.js",
+      "bytes": 3395
     },
     {
       "id": "robot-models/oklukirpi-head",
@@ -3881,7 +4055,7 @@
       "w": 110,
       "h": 82,
       "alpha": true,
-      "kb": 2.087890625,
+      "kb": 2.1,
       "size": "110x82",
       "steps": 0,
       "prompt": "Modular head vector asset for PERÇİN-3; compact chassis, visor face, palette matched to roster.",
@@ -3895,7 +4069,8 @@
       "stats": {
         "coverage": 45
       },
-      "generationSource": "tools/robot-models.js"
+      "generationSource": "tools/robot-models.js",
+      "bytes": 2138
     },
     {
       "id": "robot-models/ordek-body",
@@ -3903,7 +4078,7 @@
       "w": 110,
       "h": 82,
       "alpha": true,
-      "kb": 3.2109375,
+      "kb": 3.2,
       "size": "110x82",
       "steps": 0,
       "prompt": "Modular body vector asset for PUNTA-1; small chassis, single_lens face, palette matched to roster.",
@@ -3917,7 +4092,8 @@
       "stats": {
         "coverage": 45
       },
-      "generationSource": "tools/robot-models.js"
+      "generationSource": "tools/robot-models.js",
+      "bytes": 3288
     },
     {
       "id": "robot-models/ordek-head",
@@ -3925,7 +4101,7 @@
       "w": 110,
       "h": 82,
       "alpha": true,
-      "kb": 1.9912109375,
+      "kb": 2,
       "size": "110x82",
       "steps": 0,
       "prompt": "Modular head vector asset for PUNTA-1; small chassis, single_lens face, palette matched to roster.",
@@ -3939,7 +4115,8 @@
       "stats": {
         "coverage": 45
       },
-      "generationSource": "tools/robot-models.js"
+      "generationSource": "tools/robot-models.js",
+      "bytes": 2039
     },
     {
       "id": "robot-models/ornitorenk-body",
@@ -3947,7 +4124,7 @@
       "w": 110,
       "h": 82,
       "alpha": true,
-      "kb": 3.4140625,
+      "kb": 3.4,
       "size": "110x82",
       "steps": 0,
       "prompt": "Modular body vector asset for DALGA-2; long chassis, dual_led face, palette matched to roster.",
@@ -3961,7 +4138,8 @@
       "stats": {
         "coverage": 45
       },
-      "generationSource": "tools/robot-models.js"
+      "generationSource": "tools/robot-models.js",
+      "bytes": 3496
     },
     {
       "id": "robot-models/ornitorenk-head",
@@ -3969,7 +4147,7 @@
       "w": 110,
       "h": 82,
       "alpha": true,
-      "kb": 2.1259765625,
+      "kb": 2.1,
       "size": "110x82",
       "steps": 0,
       "prompt": "Modular head vector asset for DALGA-2; long chassis, dual_led face, palette matched to roster.",
@@ -3983,7 +4161,8 @@
       "stats": {
         "coverage": 45
       },
-      "generationSource": "tools/robot-models.js"
+      "generationSource": "tools/robot-models.js",
+      "bytes": 2177
     },
     {
       "id": "robot-models/panda-body",
@@ -3991,7 +4170,7 @@
       "w": 110,
       "h": 82,
       "alpha": true,
-      "kb": 3.521484375,
+      "kb": 3.5,
       "size": "110x82",
       "steps": 0,
       "prompt": "Modular body vector asset for PRES-4; wide chassis, gauge face, palette matched to roster.",
@@ -4005,7 +4184,8 @@
       "stats": {
         "coverage": 45
       },
-      "generationSource": "tools/robot-models.js"
+      "generationSource": "tools/robot-models.js",
+      "bytes": 3606
     },
     {
       "id": "robot-models/panda-head",
@@ -4013,7 +4193,7 @@
       "w": 110,
       "h": 82,
       "alpha": true,
-      "kb": 2.0048828125,
+      "kb": 2,
       "size": "110x82",
       "steps": 0,
       "prompt": "Modular head vector asset for PRES-4; wide chassis, gauge face, palette matched to roster.",
@@ -4027,7 +4207,8 @@
       "stats": {
         "coverage": 45
       },
-      "generationSource": "tools/robot-models.js"
+      "generationSource": "tools/robot-models.js",
+      "bytes": 2053
     },
     {
       "id": "robot-models/penguen-body",
@@ -4035,7 +4216,7 @@
       "w": 110,
       "h": 82,
       "alpha": true,
-      "kb": 3.5927734375,
+      "kb": 3.6,
       "size": "110x82",
       "steps": 0,
       "prompt": "Modular body vector asset for SOĞUT-2; tank chassis, dual_led face, palette matched to roster.",
@@ -4049,7 +4230,8 @@
       "stats": {
         "coverage": 45
       },
-      "generationSource": "tools/robot-models.js"
+      "generationSource": "tools/robot-models.js",
+      "bytes": 3679
     },
     {
       "id": "robot-models/penguen-head",
@@ -4057,7 +4239,7 @@
       "w": 110,
       "h": 82,
       "alpha": true,
-      "kb": 2.0390625,
+      "kb": 2,
       "size": "110x82",
       "steps": 0,
       "prompt": "Modular head vector asset for SOĞUT-2; tank chassis, dual_led face, palette matched to roster.",
@@ -4071,7 +4253,8 @@
       "stats": {
         "coverage": 45
       },
-      "generationSource": "tools/robot-models.js"
+      "generationSource": "tools/robot-models.js",
+      "bytes": 2088
     },
     {
       "id": "robot-models/rakun-body",
@@ -4079,7 +4262,7 @@
       "w": 110,
       "h": 82,
       "alpha": true,
-      "kb": 3.140625,
+      "kb": 3.1,
       "size": "110x82",
       "steps": 0,
       "prompt": "Modular body vector asset for DÖNER-5; round chassis, visor face, palette matched to roster.",
@@ -4093,7 +4276,8 @@
       "stats": {
         "coverage": 45
       },
-      "generationSource": "tools/robot-models.js"
+      "generationSource": "tools/robot-models.js",
+      "bytes": 3216
     },
     {
       "id": "robot-models/rakun-head",
@@ -4101,7 +4285,7 @@
       "w": 110,
       "h": 82,
       "alpha": true,
-      "kb": 2.03125,
+      "kb": 2,
       "size": "110x82",
       "steps": 0,
       "prompt": "Modular head vector asset for DÖNER-5; round chassis, visor face, palette matched to roster.",
@@ -4115,7 +4299,8 @@
       "stats": {
         "coverage": 45
       },
-      "generationSource": "tools/robot-models.js"
+      "generationSource": "tools/robot-models.js",
+      "bytes": 2080
     },
     {
       "id": "robot-models/sincap-body",
@@ -4123,7 +4308,7 @@
       "w": 110,
       "h": 82,
       "alpha": true,
-      "kb": 3.1455078125,
+      "kb": 3.1,
       "size": "110x82",
       "steps": 0,
       "prompt": "Modular body vector asset for CİV-1; small chassis, single_lens face, palette matched to roster.",
@@ -4137,7 +4322,8 @@
       "stats": {
         "coverage": 45
       },
-      "generationSource": "tools/robot-models.js"
+      "generationSource": "tools/robot-models.js",
+      "bytes": 3221
     },
     {
       "id": "robot-models/sincap-head",
@@ -4145,7 +4331,7 @@
       "w": 110,
       "h": 82,
       "alpha": true,
-      "kb": 2.0009765625,
+      "kb": 2,
       "size": "110x82",
       "steps": 0,
       "prompt": "Modular head vector asset for CİV-1; small chassis, single_lens face, palette matched to roster.",
@@ -4159,7 +4345,8 @@
       "stats": {
         "coverage": 45
       },
-      "generationSource": "tools/robot-models.js"
+      "generationSource": "tools/robot-models.js",
+      "bytes": 2049
     },
     {
       "id": "robot-models/sirtlan-body",
@@ -4167,7 +4354,7 @@
       "w": 110,
       "h": 82,
       "alpha": true,
-      "kb": 3.193359375,
+      "kb": 3.2,
       "size": "110x82",
       "steps": 0,
       "prompt": "Modular body vector asset for REZ-7; compact chassis, waveform face, palette matched to roster.",
@@ -4181,7 +4368,8 @@
       "stats": {
         "coverage": 45
       },
-      "generationSource": "tools/robot-models.js"
+      "generationSource": "tools/robot-models.js",
+      "bytes": 3270
     },
     {
       "id": "robot-models/sirtlan-head",
@@ -4189,7 +4377,7 @@
       "w": 110,
       "h": 82,
       "alpha": true,
-      "kb": 2.10546875,
+      "kb": 2.1,
       "size": "110x82",
       "steps": 0,
       "prompt": "Modular head vector asset for REZ-7; compact chassis, waveform face, palette matched to roster.",
@@ -4203,7 +4391,8 @@
       "stats": {
         "coverage": 45
       },
-      "generationSource": "tools/robot-models.js"
+      "generationSource": "tools/robot-models.js",
+      "bytes": 2156
     },
     {
       "id": "robot-models/suaygiri-body",
@@ -4211,7 +4400,7 @@
       "w": 110,
       "h": 82,
       "alpha": true,
-      "kb": 3.6875,
+      "kb": 3.7,
       "size": "110x82",
       "steps": 0,
       "prompt": "Modular body vector asset for KEPÇE-8; flat chassis, gauge face, palette matched to roster.",
@@ -4225,7 +4414,8 @@
       "stats": {
         "coverage": 45
       },
-      "generationSource": "tools/robot-models.js"
+      "generationSource": "tools/robot-models.js",
+      "bytes": 3776
     },
     {
       "id": "robot-models/suaygiri-head",
@@ -4233,7 +4423,7 @@
       "w": 110,
       "h": 82,
       "alpha": true,
-      "kb": 2.072265625,
+      "kb": 2.1,
       "size": "110x82",
       "steps": 0,
       "prompt": "Modular head vector asset for KEPÇE-8; flat chassis, gauge face, palette matched to roster.",
@@ -4247,7 +4437,8 @@
       "stats": {
         "coverage": 45
       },
-      "generationSource": "tools/robot-models.js"
+      "generationSource": "tools/robot-models.js",
+      "bytes": 2122
     },
     {
       "id": "robot-models/tavsan-body",
@@ -4255,7 +4446,7 @@
       "w": 110,
       "h": 82,
       "alpha": true,
-      "kb": 3.3154296875,
+      "kb": 3.3,
       "size": "110x82",
       "steps": 0,
       "prompt": "Modular body vector asset for ZIP; small chassis, dual_led face, palette matched to roster.",
@@ -4269,7 +4460,8 @@
       "stats": {
         "coverage": 45
       },
-      "generationSource": "tools/robot-models.js"
+      "generationSource": "tools/robot-models.js",
+      "bytes": 3395
     },
     {
       "id": "robot-models/tavsan-head",
@@ -4277,7 +4469,7 @@
       "w": 110,
       "h": 82,
       "alpha": true,
-      "kb": 2.0322265625,
+      "kb": 2,
       "size": "110x82",
       "steps": 0,
       "prompt": "Modular head vector asset for ZIP; small chassis, dual_led face, palette matched to roster.",
@@ -4291,7 +4483,8 @@
       "stats": {
         "coverage": 45
       },
-      "generationSource": "tools/robot-models.js"
+      "generationSource": "tools/robot-models.js",
+      "bytes": 2081
     },
     {
       "id": "robot-models/tilki-body",
@@ -4299,7 +4492,7 @@
       "w": 110,
       "h": 82,
       "alpha": true,
-      "kb": 3.13671875,
+      "kb": 3.1,
       "size": "110x82",
       "steps": 0,
       "prompt": "Modular body vector asset for ÇİFT-6; compact chassis, visor face, palette matched to roster.",
@@ -4313,7 +4506,8 @@
       "stats": {
         "coverage": 45
       },
-      "generationSource": "tools/robot-models.js"
+      "generationSource": "tools/robot-models.js",
+      "bytes": 3212
     },
     {
       "id": "robot-models/tilki-head",
@@ -4321,7 +4515,7 @@
       "w": 110,
       "h": 82,
       "alpha": true,
-      "kb": 2.095703125,
+      "kb": 2.1,
       "size": "110x82",
       "steps": 0,
       "prompt": "Modular head vector asset for ÇİFT-6; compact chassis, visor face, palette matched to roster.",
@@ -4335,7 +4529,8 @@
       "stats": {
         "coverage": 45
       },
-      "generationSource": "tools/robot-models.js"
+      "generationSource": "tools/robot-models.js",
+      "bytes": 2146
     },
     {
       "id": "robot-models/timsah-body",
@@ -4343,7 +4538,7 @@
       "w": 110,
       "h": 82,
       "alpha": true,
-      "kb": 3.4716796875,
+      "kb": 3.5,
       "size": "110x82",
       "steps": 0,
       "prompt": "Modular body vector asset for SAP-3; long chassis, single_lens face, palette matched to roster.",
@@ -4357,7 +4552,8 @@
       "stats": {
         "coverage": 45
       },
-      "generationSource": "tools/robot-models.js"
+      "generationSource": "tools/robot-models.js",
+      "bytes": 3555
     },
     {
       "id": "robot-models/timsah-head",
@@ -4365,7 +4561,7 @@
       "w": 110,
       "h": 82,
       "alpha": true,
-      "kb": 1.9873046875,
+      "kb": 2,
       "size": "110x82",
       "steps": 0,
       "prompt": "Modular head vector asset for SAP-3; long chassis, single_lens face, palette matched to roster.",
@@ -4379,7 +4575,8 @@
       "stats": {
         "coverage": 45
       },
-      "generationSource": "tools/robot-models.js"
+      "generationSource": "tools/robot-models.js",
+      "bytes": 2035
     },
     {
       "id": "robot-models/yarasa-body",
@@ -4387,7 +4584,7 @@
       "w": 110,
       "h": 82,
       "alpha": true,
-      "kb": 3.4033203125,
+      "kb": 3.4,
       "size": "110x82",
       "steps": 0,
       "prompt": "Modular body vector asset for VIZIR; small chassis, single_lens face, palette matched to roster.",
@@ -4401,7 +4598,8 @@
       "stats": {
         "coverage": 45
       },
-      "generationSource": "tools/robot-models.js"
+      "generationSource": "tools/robot-models.js",
+      "bytes": 3485
     },
     {
       "id": "robot-models/yarasa-head",
@@ -4409,7 +4607,7 @@
       "w": 110,
       "h": 82,
       "alpha": true,
-      "kb": 1.9541015625,
+      "kb": 2,
       "size": "110x82",
       "steps": 0,
       "prompt": "Modular head vector asset for VIZIR; small chassis, single_lens face, palette matched to roster.",
@@ -4423,7 +4621,8 @@
       "stats": {
         "coverage": 45
       },
-      "generationSource": "tools/robot-models.js"
+      "generationSource": "tools/robot-models.js",
+      "bytes": 2001
     },
     {
       "id": "robot-models/yeti-body",
@@ -4431,7 +4630,7 @@
       "w": 110,
       "h": 82,
       "alpha": true,
-      "kb": 3.509765625,
+      "kb": 3.5,
       "size": "110x82",
       "steps": 0,
       "prompt": "Modular body vector asset for KRİYO-7; low chassis, gauge face, palette matched to roster.",
@@ -4445,7 +4644,8 @@
       "stats": {
         "coverage": 45
       },
-      "generationSource": "tools/robot-models.js"
+      "generationSource": "tools/robot-models.js",
+      "bytes": 3594
     },
     {
       "id": "robot-models/yeti-head",
@@ -4453,7 +4653,7 @@
       "w": 110,
       "h": 82,
       "alpha": true,
-      "kb": 1.970703125,
+      "kb": 2,
       "size": "110x82",
       "steps": 0,
       "prompt": "Modular head vector asset for KRİYO-7; low chassis, gauge face, palette matched to roster.",
@@ -4467,7 +4667,8 @@
       "stats": {
         "coverage": 45
       },
-      "generationSource": "tools/robot-models.js"
+      "generationSource": "tools/robot-models.js",
+      "bytes": 2018
     },
     {
       "id": "robot-models/zurafa-body",
@@ -4475,7 +4676,7 @@
       "w": 110,
       "h": 82,
       "alpha": true,
-      "kb": 3.0712890625,
+      "kb": 3.1,
       "size": "110x82",
       "steps": 0,
       "prompt": "Modular body vector asset for ASİT-6; tall chassis, warning_led face, palette matched to roster.",
@@ -4489,7 +4690,8 @@
       "stats": {
         "coverage": 45
       },
-      "generationSource": "tools/robot-models.js"
+      "generationSource": "tools/robot-models.js",
+      "bytes": 3145
     },
     {
       "id": "robot-models/zurafa-head",
@@ -4497,7 +4699,7 @@
       "w": 110,
       "h": 82,
       "alpha": true,
-      "kb": 2.1005859375,
+      "kb": 2.1,
       "size": "110x82",
       "steps": 0,
       "prompt": "Modular head vector asset for ASİT-6; tall chassis, warning_led face, palette matched to roster.",
@@ -4511,7 +4713,52 @@
       "stats": {
         "coverage": 45
       },
-      "generationSource": "tools/robot-models.js"
+      "generationSource": "tools/robot-models.js",
+      "bytes": 2151
+    },
+    {
+      "id": "robot-parts/armadillo-complete-parts",
+      "file": "assets/robot-parts/armadillo-complete-parts.webp",
+      "w": 768,
+      "h": 768,
+      "alpha": true,
+      "kb": 39,
+      "seed": null,
+      "size": "768x768",
+      "steps": 0,
+      "prompt": "MAT-6 complete transparent 3x3 robot assembly atlas.",
+      "palette": [],
+      "zone": null,
+      "phase": "character-parts",
+      "gate": "pending",
+      "stats": {
+        "coverage": 100
+      },
+      "generationSource": "image_gen.imagegen",
+      "derivedFrom": "art/character-parts/mat-6-complete-parts.png",
+      "bytes": 39900
+    },
+    {
+      "id": "robot-parts/aslan-complete-parts",
+      "file": "assets/robot-parts/aslan-complete-parts.webp",
+      "w": 768,
+      "h": 768,
+      "alpha": true,
+      "kb": 39.7,
+      "seed": null,
+      "size": "768x768",
+      "steps": 0,
+      "prompt": "EMP-80 complete transparent 3x3 robot assembly atlas.",
+      "palette": [],
+      "zone": null,
+      "phase": "character-parts",
+      "gate": "pending",
+      "stats": {
+        "coverage": 100
+      },
+      "generationSource": "image_gen.imagegen",
+      "derivedFrom": "art/character-parts/emp-80-complete-parts.png",
+      "bytes": 40618
     },
     {
       "id": "robot-parts/ayi-art-arm-back-lower",
@@ -4532,7 +4779,8 @@
         "coverage": 100
       },
       "generationSource": "image_gen.imagegen",
-      "derivedFrom": "art/character-parts/bom-12-modular-parts.png"
+      "derivedFrom": "art/character-parts/bom-12-modular-parts.png",
+      "bytes": 25346
     },
     {
       "id": "robot-parts/ayi-art-arm-back-upper",
@@ -4553,7 +4801,8 @@
         "coverage": 100
       },
       "generationSource": "image_gen.imagegen",
-      "derivedFrom": "art/character-parts/bom-12-modular-parts.png"
+      "derivedFrom": "art/character-parts/bom-12-modular-parts.png",
+      "bytes": 24738
     },
     {
       "id": "robot-parts/ayi-art-arm-lower",
@@ -4574,7 +4823,8 @@
         "coverage": 100
       },
       "generationSource": "image_gen.imagegen",
-      "derivedFrom": "art/character-parts/bom-12-modular-parts.png"
+      "derivedFrom": "art/character-parts/bom-12-modular-parts.png",
+      "bytes": 19700
     },
     {
       "id": "robot-parts/ayi-art-arm-upper",
@@ -4595,7 +4845,8 @@
         "coverage": 100
       },
       "generationSource": "image_gen.imagegen",
-      "derivedFrom": "art/character-parts/bom-12-modular-parts.png"
+      "derivedFrom": "art/character-parts/bom-12-modular-parts.png",
+      "bytes": 21172
     },
     {
       "id": "robot-parts/ayi-art-body",
@@ -4616,7 +4867,8 @@
         "coverage": 100
       },
       "generationSource": "image_gen.imagegen",
-      "derivedFrom": "art/character-parts/bom-12-modular-parts.png"
+      "derivedFrom": "art/character-parts/bom-12-modular-parts.png",
+      "bytes": 34976
     },
     {
       "id": "robot-parts/ayi-art-head",
@@ -4637,7 +4889,8 @@
         "coverage": 100
       },
       "generationSource": "image_gen.imagegen",
-      "derivedFrom": "art/character-parts/bom-12-modular-parts.png"
+      "derivedFrom": "art/character-parts/bom-12-modular-parts.png",
+      "bytes": 28406
     },
     {
       "id": "robot-parts/ayi-art-pelvis",
@@ -4658,7 +4911,8 @@
         "coverage": 100
       },
       "generationSource": "image_gen.imagegen",
-      "derivedFrom": "art/character-parts/bom-12-modular-parts.png"
+      "derivedFrom": "art/character-parts/bom-12-modular-parts.png",
+      "bytes": 17662
     },
     {
       "id": "robot-parts/ayi-art-track-far",
@@ -4679,7 +4933,8 @@
         "coverage": 100
       },
       "generationSource": "image_gen.imagegen",
-      "derivedFrom": "art/character-parts/bom-12-modular-parts.png"
+      "derivedFrom": "art/character-parts/bom-12-modular-parts.png",
+      "bytes": 35026
     },
     {
       "id": "robot-parts/ayi-art-track-near",
@@ -4700,7 +4955,184 @@
         "coverage": 100
       },
       "generationSource": "image_gen.imagegen",
-      "derivedFrom": "art/character-parts/bom-12-modular-parts.png"
+      "derivedFrom": "art/character-parts/bom-12-modular-parts.png",
+      "bytes": 34516
+    },
+    {
+      "id": "robot-parts/bukalemun-complete-parts",
+      "file": "assets/robot-parts/bukalemun-complete-parts.webp",
+      "w": 768,
+      "h": 768,
+      "alpha": true,
+      "kb": 37,
+      "seed": null,
+      "size": "768x768",
+      "steps": 0,
+      "prompt": "HAYALET-4 complete transparent 3x3 robot assembly atlas.",
+      "palette": [],
+      "zone": null,
+      "phase": "character-parts",
+      "gate": "pending",
+      "stats": {
+        "coverage": 100
+      },
+      "generationSource": "image_gen.imagegen",
+      "derivedFrom": "art/character-parts/hayalet-4-complete-parts.png",
+      "bytes": 37888
+    },
+    {
+      "id": "robot-parts/dino-complete-parts",
+      "file": "assets/robot-parts/dino-complete-parts.webp",
+      "w": 768,
+      "h": 768,
+      "alpha": true,
+      "kb": 45.5,
+      "seed": null,
+      "size": "768x768",
+      "steps": 0,
+      "prompt": "SHOCK-9 complete transparent 3x3 robot assembly atlas.",
+      "palette": [],
+      "zone": null,
+      "phase": "character-parts",
+      "gate": "pending",
+      "stats": {
+        "coverage": 100
+      },
+      "generationSource": "image_gen.imagegen",
+      "derivedFrom": "art/character-parts/shock-9-complete-parts.png",
+      "bytes": 46640
+    },
+    {
+      "id": "robot-parts/ejderha-complete-parts",
+      "file": "assets/robot-parts/ejderha-complete-parts.webp",
+      "w": 768,
+      "h": 768,
+      "alpha": true,
+      "kb": 41.6,
+      "seed": null,
+      "size": "768x768",
+      "steps": 0,
+      "prompt": "FIRIN-3 complete transparent 3x3 robot assembly atlas.",
+      "palette": [],
+      "zone": null,
+      "phase": "character-parts",
+      "gate": "pending",
+      "stats": {
+        "coverage": 100
+      },
+      "generationSource": "image_gen.imagegen",
+      "derivedFrom": "art/character-parts/firin-3-complete-parts.png",
+      "bytes": 42630
+    },
+    {
+      "id": "robot-parts/fix8-parts-atlas",
+      "file": "assets/robot-parts/fix8-parts-atlas.webp",
+      "w": 900,
+      "h": 900,
+      "alpha": true,
+      "kb": 96.3,
+      "seed": null,
+      "size": "900x900",
+      "steps": 0,
+      "prompt": "Packed FIX-8 modular robot key art atlas with nine named component cells.",
+      "palette": [],
+      "zone": null,
+      "phase": "character-parts",
+      "gate": "pending",
+      "stats": {
+        "coverage": 100
+      },
+      "generationSource": "codex-imagegen",
+      "derivedFrom": "art/character-parts/fix-8-complete-parts.png",
+      "bytes": 98608
+    },
+    {
+      "id": "robot-parts/gergedan-complete-parts",
+      "file": "assets/robot-parts/gergedan-complete-parts.webp",
+      "w": 768,
+      "h": 768,
+      "alpha": true,
+      "kb": 43.9,
+      "seed": null,
+      "size": "768x768",
+      "steps": 0,
+      "prompt": "TEK-8 complete transparent 3x3 robot assembly atlas.",
+      "palette": [],
+      "zone": null,
+      "phase": "character-parts",
+      "gate": "pending",
+      "stats": {
+        "coverage": 100
+      },
+      "generationSource": "image_gen.imagegen",
+      "derivedFrom": "art/character-parts/tek-8-complete-parts.png",
+      "bytes": 44990
+    },
+    {
+      "id": "robot-parts/hamster-complete-parts",
+      "file": "assets/robot-parts/hamster-complete-parts.webp",
+      "w": 768,
+      "h": 768,
+      "alpha": true,
+      "kb": 47.3,
+      "seed": null,
+      "size": "768x768",
+      "steps": 0,
+      "prompt": "ZIRH-2 complete transparent 3x3 robot assembly atlas.",
+      "palette": [],
+      "zone": null,
+      "phase": "character-parts",
+      "gate": "pending",
+      "stats": {
+        "coverage": 100
+      },
+      "generationSource": "image_gen.imagegen",
+      "derivedFrom": "art/character-parts/zirh-2-complete-parts.png",
+      "bytes": 48446
+    },
+    {
+      "id": "robot-parts/kanguru-complete-parts",
+      "file": "assets/robot-parts/kanguru-complete-parts.webp",
+      "w": 768,
+      "h": 768,
+      "alpha": true,
+      "kb": 37.8,
+      "seed": null,
+      "size": "768x768",
+      "steps": 0,
+      "prompt": "ZIP-X complete transparent 3x3 robot assembly atlas.",
+      "palette": [],
+      "zone": null,
+      "phase": "character-parts",
+      "gate": "pending",
+      "stats": {
+        "coverage": 100
+      },
+      "generationSource": "image_gen.imagegen",
+      "derivedFrom": "art/character-parts/zip-x-complete-parts.png",
+      "bytes": 38694
+    },
+    {
+      "id": "robot-parts/kaplan-complete-parts",
+      "file": "assets/robot-parts/kaplan-complete-parts.webp",
+      "w": 768,
+      "h": 768,
+      "alpha": true,
+      "kb": 38.3,
+      "seed": null,
+      "size": "768x768",
+      "steps": 0,
+      "prompt": "KES-9 complete transparent 3x3 robot assembly atlas.",
+      "palette": [],
+      "zone": null,
+      "phase": "character-parts",
+      "gate": "pending",
+      "stats": {
+        "coverage": 100
+      },
+      "generationSource": "image_gen.imagegen",
+      "derivedFrom": "art/character-parts/kes-9-complete-parts.png",
+      "bytes": 39202
     },
     {
       "id": "robot-parts/kedi-art-arm-back-lower",
@@ -4721,7 +5153,8 @@
         "coverage": 100
       },
       "generationSource": "image_gen.imagegen",
-      "derivedFrom": "art/character-parts/mik-0-modular-parts.png"
+      "derivedFrom": "art/character-parts/mik-0-modular-parts.png",
+      "bytes": 24876
     },
     {
       "id": "robot-parts/kedi-art-arm-back-upper",
@@ -4742,7 +5175,8 @@
         "coverage": 100
       },
       "generationSource": "image_gen.imagegen",
-      "derivedFrom": "art/character-parts/mik-0-modular-parts.png"
+      "derivedFrom": "art/character-parts/mik-0-modular-parts.png",
+      "bytes": 20112
     },
     {
       "id": "robot-parts/kedi-art-arm-lower",
@@ -4763,7 +5197,8 @@
         "coverage": 100
       },
       "generationSource": "image_gen.imagegen",
-      "derivedFrom": "art/character-parts/mik-0-modular-parts.png"
+      "derivedFrom": "art/character-parts/mik-0-modular-parts.png",
+      "bytes": 21080
     },
     {
       "id": "robot-parts/kedi-art-arm-upper",
@@ -4784,7 +5219,8 @@
         "coverage": 100
       },
       "generationSource": "image_gen.imagegen",
-      "derivedFrom": "art/character-parts/mik-0-modular-parts.png"
+      "derivedFrom": "art/character-parts/mik-0-modular-parts.png",
+      "bytes": 23784
     },
     {
       "id": "robot-parts/kedi-art-body",
@@ -4805,7 +5241,8 @@
         "coverage": 100
       },
       "generationSource": "image_gen.imagegen",
-      "derivedFrom": "art/character-parts/mik-0-modular-parts.png"
+      "derivedFrom": "art/character-parts/mik-0-modular-parts.png",
+      "bytes": 41390
     },
     {
       "id": "robot-parts/kedi-art-head",
@@ -4826,7 +5263,52 @@
         "coverage": 100
       },
       "generationSource": "image_gen.imagegen",
-      "derivedFrom": "art/character-parts/mik-0-modular-parts.png"
+      "derivedFrom": "art/character-parts/mik-0-modular-parts.png",
+      "bytes": 30034
+    },
+    {
+      "id": "robot-parts/kedi-art-leg-lower",
+      "file": "assets/robot-parts/kedi-art-leg-lower.webp",
+      "w": 253,
+      "h": 358,
+      "alpha": true,
+      "kb": 19.7,
+      "seed": null,
+      "size": "253x358",
+      "steps": 0,
+      "prompt": "MIK-0 articulated violet robot wheel-leg key art segment with visible treaded roller foot.",
+      "palette": [],
+      "zone": null,
+      "phase": "character-parts",
+      "gate": "pending",
+      "stats": {
+        "coverage": 100
+      },
+      "generationSource": "image_gen.imagegen",
+      "derivedFrom": "art/character-parts/mik-0-modular-parts.png",
+      "bytes": 20212
+    },
+    {
+      "id": "robot-parts/kedi-art-leg-upper",
+      "file": "assets/robot-parts/kedi-art-leg-upper.webp",
+      "w": 252,
+      "h": 370,
+      "alpha": true,
+      "kb": 19.4,
+      "seed": null,
+      "size": "252x370",
+      "steps": 0,
+      "prompt": "MIK-0 articulated violet robot wheel-leg key art segment with visible treaded roller foot.",
+      "palette": [],
+      "zone": null,
+      "phase": "character-parts",
+      "gate": "pending",
+      "stats": {
+        "coverage": 100
+      },
+      "generationSource": "image_gen.imagegen",
+      "derivedFrom": "art/character-parts/mik-0-modular-parts.png",
+      "bytes": 19888
     },
     {
       "id": "robot-parts/kedi-art-pelvis",
@@ -4847,7 +5329,294 @@
         "coverage": 100
       },
       "generationSource": "image_gen.imagegen",
-      "derivedFrom": "art/character-parts/mik-0-modular-parts.png"
+      "derivedFrom": "art/character-parts/mik-0-modular-parts.png",
+      "bytes": 21436
+    },
+    {
+      "id": "robot-parts/kedi-art-wheel-foot",
+      "file": "assets/robot-parts/kedi-art-wheel-foot.webp",
+      "w": 955,
+      "h": 1000,
+      "alpha": true,
+      "kb": 48.7,
+      "seed": null,
+      "size": "955x1000",
+      "steps": 0,
+      "prompt": "MIK-0 violet mono-wheel lower-foot assembly, transparent game key art.",
+      "palette": [],
+      "zone": null,
+      "phase": "character-parts",
+      "gate": "pending",
+      "stats": {
+        "coverage": 100
+      },
+      "generationSource": "codex-imagegen",
+      "derivedFrom": "art/character-parts/mik-0-wheel-foot.png",
+      "bytes": 49850
+    },
+    {
+      "id": "robot-parts/kirpi-complete-parts",
+      "file": "assets/robot-parts/kirpi-complete-parts.webp",
+      "w": 768,
+      "h": 768,
+      "alpha": true,
+      "kb": 42,
+      "seed": null,
+      "size": "768x768",
+      "steps": 0,
+      "prompt": "BILYE-3 complete transparent 3x3 robot assembly atlas.",
+      "palette": [],
+      "zone": null,
+      "phase": "character-parts",
+      "gate": "pending",
+      "stats": {
+        "coverage": 100
+      },
+      "generationSource": "image_gen.imagegen",
+      "derivedFrom": "art/character-parts/bilye-3-complete-parts.png",
+      "bytes": 42980
+    },
+    {
+      "id": "robot-parts/koala-complete-parts",
+      "file": "assets/robot-parts/koala-complete-parts.webp",
+      "w": 768,
+      "h": 768,
+      "alpha": true,
+      "kb": 39.8,
+      "seed": null,
+      "size": "768x768",
+      "steps": 0,
+      "prompt": "TOK-2 complete transparent 3x3 robot assembly atlas.",
+      "palette": [],
+      "zone": null,
+      "phase": "character-parts",
+      "gate": "pending",
+      "stats": {
+        "coverage": 100
+      },
+      "generationSource": "image_gen.imagegen",
+      "derivedFrom": "art/character-parts/tok-2-complete-parts.png",
+      "bytes": 40772
+    },
+    {
+      "id": "robot-parts/kokarca-complete-parts",
+      "file": "assets/robot-parts/kokarca-complete-parts.webp",
+      "w": 768,
+      "h": 768,
+      "alpha": true,
+      "kb": 43.1,
+      "seed": null,
+      "size": "768x768",
+      "steps": 0,
+      "prompt": "SIZ-7 complete transparent 3x3 robot assembly atlas.",
+      "palette": [],
+      "zone": null,
+      "phase": "character-parts",
+      "gate": "pending",
+      "stats": {
+        "coverage": 100
+      },
+      "generationSource": "image_gen.imagegen",
+      "derivedFrom": "art/character-parts/siz-7-complete-parts.png",
+      "bytes": 44172
+    },
+    {
+      "id": "robot-parts/kunduz-complete-parts",
+      "file": "assets/robot-parts/kunduz-complete-parts.webp",
+      "w": 768,
+      "h": 768,
+      "alpha": true,
+      "kb": 38.2,
+      "seed": null,
+      "size": "768x768",
+      "steps": 0,
+      "prompt": "VUR-5 complete transparent 3x3 robot assembly atlas.",
+      "palette": [],
+      "zone": null,
+      "phase": "character-parts",
+      "gate": "pending",
+      "stats": {
+        "coverage": 100
+      },
+      "generationSource": "image_gen.imagegen",
+      "derivedFrom": "art/character-parts/vur-5-complete-parts.png",
+      "bytes": 39086
+    },
+    {
+      "id": "robot-parts/kurtadam-complete-parts",
+      "file": "assets/robot-parts/kurtadam-complete-parts.webp",
+      "w": 768,
+      "h": 768,
+      "alpha": true,
+      "kb": 36.9,
+      "seed": null,
+      "size": "768x768",
+      "steps": 0,
+      "prompt": "SIREN-6 complete transparent 3x3 robot assembly atlas.",
+      "palette": [],
+      "zone": null,
+      "phase": "character-parts",
+      "gate": "pending",
+      "stats": {
+        "coverage": 100
+      },
+      "generationSource": "image_gen.imagegen",
+      "derivedFrom": "art/character-parts/siren-6-complete-parts.png",
+      "bytes": 37820
+    },
+    {
+      "id": "robot-parts/kus-complete-parts",
+      "file": "assets/robot-parts/kus-complete-parts.webp",
+      "w": 768,
+      "h": 768,
+      "alpha": true,
+      "kb": 36,
+      "seed": null,
+      "size": "768x768",
+      "steps": 0,
+      "prompt": "FAN-5 complete transparent 3x3 robot assembly atlas.",
+      "palette": [],
+      "zone": null,
+      "phase": "character-parts",
+      "gate": "pending",
+      "stats": {
+        "coverage": 100
+      },
+      "generationSource": "image_gen.imagegen",
+      "derivedFrom": "art/character-parts/fan-5-complete-parts.png",
+      "bytes": 36886
+    },
+    {
+      "id": "robot-parts/maymun-complete-parts",
+      "file": "assets/robot-parts/maymun-complete-parts.webp",
+      "w": 768,
+      "h": 768,
+      "alpha": true,
+      "kb": 37.5,
+      "seed": null,
+      "size": "768x768",
+      "steps": 0,
+      "prompt": "KANCA-4 complete transparent 3x3 robot assembly atlas.",
+      "palette": [],
+      "zone": null,
+      "phase": "character-parts",
+      "gate": "pending",
+      "stats": {
+        "coverage": 100
+      },
+      "generationSource": "image_gen.imagegen",
+      "derivedFrom": "art/character-parts/kanca-4-complete-parts.png",
+      "bytes": 38404
+    },
+    {
+      "id": "robot-parts/oklukirpi-complete-parts",
+      "file": "assets/robot-parts/oklukirpi-complete-parts.webp",
+      "w": 768,
+      "h": 768,
+      "alpha": true,
+      "kb": 39.5,
+      "seed": null,
+      "size": "768x768",
+      "steps": 0,
+      "prompt": "PERCIN-3 complete transparent 3x3 robot assembly atlas.",
+      "palette": [],
+      "zone": null,
+      "phase": "character-parts",
+      "gate": "pending",
+      "stats": {
+        "coverage": 100
+      },
+      "generationSource": "image_gen.imagegen",
+      "derivedFrom": "art/character-parts/percin-3-complete-parts.png",
+      "bytes": 40476
+    },
+    {
+      "id": "robot-parts/ordek-complete-parts",
+      "file": "assets/robot-parts/ordek-complete-parts.webp",
+      "w": 768,
+      "h": 768,
+      "alpha": true,
+      "kb": 39.1,
+      "seed": null,
+      "size": "768x768",
+      "steps": 0,
+      "prompt": "PUNTA-1 complete transparent 3x3 robot assembly atlas.",
+      "palette": [],
+      "zone": null,
+      "phase": "character-parts",
+      "gate": "pending",
+      "stats": {
+        "coverage": 100
+      },
+      "generationSource": "image_gen.imagegen",
+      "derivedFrom": "art/character-parts/punta-1-complete-parts.png",
+      "bytes": 40052
+    },
+    {
+      "id": "robot-parts/ornitorenk-complete-parts",
+      "file": "assets/robot-parts/ornitorenk-complete-parts.webp",
+      "w": 768,
+      "h": 768,
+      "alpha": true,
+      "kb": 45.3,
+      "seed": null,
+      "size": "768x768",
+      "steps": 0,
+      "prompt": "DALGA-2 complete transparent 3x3 robot assembly atlas.",
+      "palette": [],
+      "zone": null,
+      "phase": "character-parts",
+      "gate": "pending",
+      "stats": {
+        "coverage": 100
+      },
+      "generationSource": "image_gen.imagegen",
+      "derivedFrom": "art/character-parts/dalga-2-complete-parts.png",
+      "bytes": 46388
+    },
+    {
+      "id": "robot-parts/panda-complete-parts",
+      "file": "assets/robot-parts/panda-complete-parts.webp",
+      "w": 384,
+      "h": 384,
+      "alpha": true,
+      "kb": 42,
+      "seed": null,
+      "size": "384x384",
+      "steps": 0,
+      "prompt": "PRES-4 squat hydraulic press robot in a transparent three-by-three component atlas.",
+      "palette": [],
+      "zone": null,
+      "phase": "character-parts",
+      "gate": "pending",
+      "stats": {
+        "coverage": 100
+      },
+      "generationSource": "image_gen.imagegen",
+      "derivedFrom": "art/character-parts/pres-4-complete-parts.png",
+      "bytes": 43022
+    },
+    {
+      "id": "robot-parts/penguen-complete-parts",
+      "file": "assets/robot-parts/penguen-complete-parts.webp",
+      "w": 768,
+      "h": 768,
+      "alpha": true,
+      "kb": 45.4,
+      "seed": null,
+      "size": "768x768",
+      "steps": 0,
+      "prompt": "SOGUT-2 complete transparent 3x3 robot assembly atlas.",
+      "palette": [],
+      "zone": null,
+      "phase": "character-parts",
+      "gate": "pending",
+      "stats": {
+        "coverage": 100
+      },
+      "generationSource": "image_gen.imagegen",
+      "derivedFrom": "art/character-parts/sogut-2-complete-parts.png",
+      "bytes": 46464
     },
     {
       "id": "robot-parts/rakun-art-arm-back-lower",
@@ -4868,7 +5637,8 @@
         "coverage": 100
       },
       "generationSource": "image_gen.imagegen",
-      "derivedFrom": "art/character-parts/doner-5-modular-parts.png"
+      "derivedFrom": "art/character-parts/doner-5-modular-parts.png",
+      "bytes": 24218
     },
     {
       "id": "robot-parts/rakun-art-arm-back-upper",
@@ -4889,7 +5659,8 @@
         "coverage": 100
       },
       "generationSource": "image_gen.imagegen",
-      "derivedFrom": "art/character-parts/doner-5-modular-parts.png"
+      "derivedFrom": "art/character-parts/doner-5-modular-parts.png",
+      "bytes": 24728
     },
     {
       "id": "robot-parts/rakun-art-arm-lower",
@@ -4910,7 +5681,8 @@
         "coverage": 100
       },
       "generationSource": "image_gen.imagegen",
-      "derivedFrom": "art/character-parts/doner-5-modular-parts.png"
+      "derivedFrom": "art/character-parts/doner-5-modular-parts.png",
+      "bytes": 21730
     },
     {
       "id": "robot-parts/rakun-art-arm-upper",
@@ -4931,7 +5703,8 @@
         "coverage": 100
       },
       "generationSource": "image_gen.imagegen",
-      "derivedFrom": "art/character-parts/doner-5-modular-parts.png"
+      "derivedFrom": "art/character-parts/doner-5-modular-parts.png",
+      "bytes": 21538
     },
     {
       "id": "robot-parts/rakun-art-ball-far",
@@ -4952,7 +5725,8 @@
         "coverage": 100
       },
       "generationSource": "image_gen.imagegen",
-      "derivedFrom": "art/character-parts/doner-5-modular-parts.png"
+      "derivedFrom": "art/character-parts/doner-5-modular-parts.png",
+      "bytes": 24470
     },
     {
       "id": "robot-parts/rakun-art-ball-near",
@@ -4973,7 +5747,8 @@
         "coverage": 100
       },
       "generationSource": "image_gen.imagegen",
-      "derivedFrom": "art/character-parts/doner-5-modular-parts.png"
+      "derivedFrom": "art/character-parts/doner-5-modular-parts.png",
+      "bytes": 23896
     },
     {
       "id": "robot-parts/rakun-art-body",
@@ -4994,7 +5769,8 @@
         "coverage": 100
       },
       "generationSource": "image_gen.imagegen",
-      "derivedFrom": "art/character-parts/doner-5-modular-parts.png"
+      "derivedFrom": "art/character-parts/doner-5-modular-parts.png",
+      "bytes": 31718
     },
     {
       "id": "robot-parts/rakun-art-head",
@@ -5015,7 +5791,8 @@
         "coverage": 100
       },
       "generationSource": "image_gen.imagegen",
-      "derivedFrom": "art/character-parts/doner-5-modular-parts.png"
+      "derivedFrom": "art/character-parts/doner-5-modular-parts.png",
+      "bytes": 30104
     },
     {
       "id": "robot-parts/rakun-art-pelvis",
@@ -5036,7 +5813,74 @@
         "coverage": 100
       },
       "generationSource": "image_gen.imagegen",
-      "derivedFrom": "art/character-parts/doner-5-modular-parts.png"
+      "derivedFrom": "art/character-parts/doner-5-modular-parts.png",
+      "bytes": 15762
+    },
+    {
+      "id": "robot-parts/sincap-complete-parts",
+      "file": "assets/robot-parts/sincap-complete-parts.webp",
+      "w": 768,
+      "h": 768,
+      "alpha": true,
+      "kb": 41.2,
+      "seed": null,
+      "size": "768x768",
+      "steps": 0,
+      "prompt": "CIV-1 complete transparent 3x3 robot assembly atlas.",
+      "palette": [],
+      "zone": null,
+      "phase": "character-parts",
+      "gate": "pending",
+      "stats": {
+        "coverage": 100
+      },
+      "generationSource": "image_gen.imagegen",
+      "derivedFrom": "art/character-parts/civ-1-complete-parts.png",
+      "bytes": 42152
+    },
+    {
+      "id": "robot-parts/sirtlan-complete-parts",
+      "file": "assets/robot-parts/sirtlan-complete-parts.webp",
+      "w": 768,
+      "h": 768,
+      "alpha": true,
+      "kb": 42,
+      "seed": null,
+      "size": "768x768",
+      "steps": 0,
+      "prompt": "REZ-7 complete transparent 3x3 robot assembly atlas.",
+      "palette": [],
+      "zone": null,
+      "phase": "character-parts",
+      "gate": "pending",
+      "stats": {
+        "coverage": 100
+      },
+      "generationSource": "image_gen.imagegen",
+      "derivedFrom": "art/character-parts/rez-7-complete-parts.png",
+      "bytes": 43048
+    },
+    {
+      "id": "robot-parts/suaygiri-complete-parts",
+      "file": "assets/robot-parts/suaygiri-complete-parts.webp",
+      "w": 768,
+      "h": 768,
+      "alpha": true,
+      "kb": 41.1,
+      "seed": null,
+      "size": "768x768",
+      "steps": 0,
+      "prompt": "KEPCE-8 complete transparent 3x3 robot assembly atlas.",
+      "palette": [],
+      "zone": null,
+      "phase": "character-parts",
+      "gate": "pending",
+      "stats": {
+        "coverage": 100
+      },
+      "generationSource": "image_gen.imagegen",
+      "derivedFrom": "art/character-parts/kepce-8-complete-parts.png",
+      "bytes": 42060
     },
     {
       "id": "robot-parts/tavsan-art-arm-back-lower",
@@ -5057,7 +5901,8 @@
         "coverage": 100
       },
       "generationSource": "image_gen.imagegen",
-      "derivedFrom": "art/character-parts/zip-modular-parts.png"
+      "derivedFrom": "art/character-parts/zip-modular-parts.png",
+      "bytes": 19262
     },
     {
       "id": "robot-parts/tavsan-art-arm-back-upper",
@@ -5078,7 +5923,8 @@
         "coverage": 100
       },
       "generationSource": "image_gen.imagegen",
-      "derivedFrom": "art/character-parts/zip-modular-parts.png"
+      "derivedFrom": "art/character-parts/zip-modular-parts.png",
+      "bytes": 20354
     },
     {
       "id": "robot-parts/tavsan-art-arm-lower",
@@ -5099,7 +5945,8 @@
         "coverage": 100
       },
       "generationSource": "image_gen.imagegen",
-      "derivedFrom": "art/character-parts/zip-modular-parts.png"
+      "derivedFrom": "art/character-parts/zip-modular-parts.png",
+      "bytes": 15934
     },
     {
       "id": "robot-parts/tavsan-art-arm-upper",
@@ -5120,7 +5967,8 @@
         "coverage": 100
       },
       "generationSource": "image_gen.imagegen",
-      "derivedFrom": "art/character-parts/zip-modular-parts.png"
+      "derivedFrom": "art/character-parts/zip-modular-parts.png",
+      "bytes": 15880
     },
     {
       "id": "robot-parts/tavsan-art-body",
@@ -5141,7 +5989,52 @@
         "coverage": 100
       },
       "generationSource": "image_gen.imagegen",
-      "derivedFrom": "art/character-parts/zip-modular-parts.png"
+      "derivedFrom": "art/character-parts/zip-modular-parts.png",
+      "bytes": 16560
+    },
+    {
+      "id": "robot-parts/tavsan-art-foot-far",
+      "file": "assets/robot-parts/tavsan-art-foot-far.webp",
+      "w": 695,
+      "h": 601,
+      "alpha": true,
+      "kb": 47.3,
+      "seed": null,
+      "size": "695x601",
+      "steps": 0,
+      "prompt": "ZIP white and cyan robot boot with treaded sole, separated transparent key art.",
+      "palette": [],
+      "zone": null,
+      "phase": "character-parts",
+      "gate": "pending",
+      "stats": {
+        "coverage": 100
+      },
+      "generationSource": "image_gen.imagegen",
+      "derivedFrom": "art/character-parts/zip-foot-pair.png",
+      "bytes": 48418
+    },
+    {
+      "id": "robot-parts/tavsan-art-foot-near",
+      "file": "assets/robot-parts/tavsan-art-foot-near.webp",
+      "w": 569,
+      "h": 473,
+      "alpha": true,
+      "kb": 35.7,
+      "seed": null,
+      "size": "569x473",
+      "steps": 0,
+      "prompt": "ZIP white and cyan robot boot with treaded sole, separated transparent key art.",
+      "palette": [],
+      "zone": null,
+      "phase": "character-parts",
+      "gate": "pending",
+      "stats": {
+        "coverage": 100
+      },
+      "generationSource": "image_gen.imagegen",
+      "derivedFrom": "art/character-parts/zip-foot-pair.png",
+      "bytes": 36580
     },
     {
       "id": "robot-parts/tavsan-art-head",
@@ -5162,7 +6055,8 @@
         "coverage": 100
       },
       "generationSource": "image_gen.imagegen",
-      "derivedFrom": "art/character-parts/zip-modular-parts.png"
+      "derivedFrom": "art/character-parts/zip-modular-parts.png",
+      "bytes": 35944
     },
     {
       "id": "robot-parts/tavsan-art-leg-lower",
@@ -5183,7 +6077,8 @@
         "coverage": 100
       },
       "generationSource": "image_gen.imagegen",
-      "derivedFrom": "art/character-parts/zip-modular-parts.png"
+      "derivedFrom": "art/character-parts/zip-modular-parts.png",
+      "bytes": 25232
     },
     {
       "id": "robot-parts/tavsan-art-leg-upper",
@@ -5204,7 +6099,8 @@
         "coverage": 100
       },
       "generationSource": "image_gen.imagegen",
-      "derivedFrom": "art/character-parts/zip-modular-parts.png"
+      "derivedFrom": "art/character-parts/zip-modular-parts.png",
+      "bytes": 22698
     },
     {
       "id": "robot-parts/tavsan-art-pelvis",
@@ -5225,7 +6121,8 @@
         "coverage": 100
       },
       "generationSource": "image_gen.imagegen",
-      "derivedFrom": "art/character-parts/zip-modular-parts.png"
+      "derivedFrom": "art/character-parts/zip-modular-parts.png",
+      "bytes": 16284
     },
     {
       "id": "robot-parts/tilki-art-arm-back-lower",
@@ -5246,7 +6143,8 @@
         "coverage": 100
       },
       "generationSource": "image_gen.imagegen",
-      "derivedFrom": "art/character-parts/cift-6-modular-parts.png"
+      "derivedFrom": "art/character-parts/cift-6-modular-parts.png",
+      "bytes": 22582
     },
     {
       "id": "robot-parts/tilki-art-arm-back-upper",
@@ -5267,7 +6165,8 @@
         "coverage": 100
       },
       "generationSource": "image_gen.imagegen",
-      "derivedFrom": "art/character-parts/cift-6-modular-parts.png"
+      "derivedFrom": "art/character-parts/cift-6-modular-parts.png",
+      "bytes": 24196
     },
     {
       "id": "robot-parts/tilki-art-arm-lower",
@@ -5288,7 +6187,8 @@
         "coverage": 100
       },
       "generationSource": "image_gen.imagegen",
-      "derivedFrom": "art/character-parts/cift-6-modular-parts.png"
+      "derivedFrom": "art/character-parts/cift-6-modular-parts.png",
+      "bytes": 18200
     },
     {
       "id": "robot-parts/tilki-art-arm-upper",
@@ -5309,7 +6209,8 @@
         "coverage": 100
       },
       "generationSource": "image_gen.imagegen",
-      "derivedFrom": "art/character-parts/cift-6-modular-parts.png"
+      "derivedFrom": "art/character-parts/cift-6-modular-parts.png",
+      "bytes": 18856
     },
     {
       "id": "robot-parts/tilki-art-body",
@@ -5330,7 +6231,52 @@
         "coverage": 100
       },
       "generationSource": "image_gen.imagegen",
-      "derivedFrom": "art/character-parts/cift-6-modular-parts.png"
+      "derivedFrom": "art/character-parts/cift-6-modular-parts.png",
+      "bytes": 30684
+    },
+    {
+      "id": "robot-parts/tilki-art-foot-far",
+      "file": "assets/robot-parts/tilki-art-foot-far.webp",
+      "w": 734,
+      "h": 627,
+      "alpha": true,
+      "kb": 86.9,
+      "seed": null,
+      "size": "734x627",
+      "steps": 0,
+      "prompt": "ÇİFT-6 articulated orange armored boot with treaded sole, transparent game key art.",
+      "palette": [],
+      "zone": null,
+      "phase": "character-parts",
+      "gate": "pending",
+      "stats": {
+        "coverage": 100
+      },
+      "generationSource": "codex-imagegen",
+      "derivedFrom": "art/character-parts/cift-6-foot-pair.png",
+      "bytes": 88986
+    },
+    {
+      "id": "robot-parts/tilki-art-foot-near",
+      "file": "assets/robot-parts/tilki-art-foot-near.webp",
+      "w": 637,
+      "h": 534,
+      "alpha": true,
+      "kb": 66.5,
+      "seed": null,
+      "size": "637x534",
+      "steps": 0,
+      "prompt": "ÇİFT-6 articulated orange armored boot with treaded sole, transparent game key art.",
+      "palette": [],
+      "zone": null,
+      "phase": "character-parts",
+      "gate": "pending",
+      "stats": {
+        "coverage": 100
+      },
+      "generationSource": "codex-imagegen",
+      "derivedFrom": "art/character-parts/cift-6-foot-pair.png",
+      "bytes": 68052
     },
     {
       "id": "robot-parts/tilki-art-head",
@@ -5351,7 +6297,8 @@
         "coverage": 100
       },
       "generationSource": "image_gen.imagegen",
-      "derivedFrom": "art/character-parts/cift-6-modular-parts.png"
+      "derivedFrom": "art/character-parts/cift-6-modular-parts.png",
+      "bytes": 25132
     },
     {
       "id": "robot-parts/tilki-art-leg-lower",
@@ -5372,7 +6319,8 @@
         "coverage": 100
       },
       "generationSource": "image_gen.imagegen",
-      "derivedFrom": "art/character-parts/cift-6-modular-parts.png"
+      "derivedFrom": "art/character-parts/cift-6-modular-parts.png",
+      "bytes": 22916
     },
     {
       "id": "robot-parts/tilki-art-leg-upper",
@@ -5393,7 +6341,8 @@
         "coverage": 100
       },
       "generationSource": "image_gen.imagegen",
-      "derivedFrom": "art/character-parts/cift-6-modular-parts.png"
+      "derivedFrom": "art/character-parts/cift-6-modular-parts.png",
+      "bytes": 18566
     },
     {
       "id": "robot-parts/tilki-art-pelvis",
@@ -5414,7 +6363,30 @@
         "coverage": 100
       },
       "generationSource": "image_gen.imagegen",
-      "derivedFrom": "art/character-parts/cift-6-modular-parts.png"
+      "derivedFrom": "art/character-parts/cift-6-modular-parts.png",
+      "bytes": 20006
+    },
+    {
+      "id": "robot-parts/timsah-complete-parts",
+      "file": "assets/robot-parts/timsah-complete-parts.webp",
+      "w": 768,
+      "h": 768,
+      "alpha": true,
+      "kb": 38.8,
+      "seed": null,
+      "size": "768x768",
+      "steps": 0,
+      "prompt": "SAP-3 complete transparent 3x3 robot assembly atlas.",
+      "palette": [],
+      "zone": null,
+      "phase": "character-parts",
+      "gate": "pending",
+      "stats": {
+        "coverage": 100
+      },
+      "generationSource": "image_gen.imagegen",
+      "derivedFrom": "art/character-parts/sap-3-complete-parts.png",
+      "bytes": 39684
     },
     {
       "id": "robot-parts/yarasa-art-arm-back-lower",
@@ -5435,7 +6407,8 @@
         "coverage": 100
       },
       "generationSource": "image_gen.imagegen",
-      "derivedFrom": "art/character-parts/vizir-modular-parts.png"
+      "derivedFrom": "art/character-parts/vizir-modular-parts.png",
+      "bytes": 25624
     },
     {
       "id": "robot-parts/yarasa-art-arm-back-upper",
@@ -5456,7 +6429,8 @@
         "coverage": 100
       },
       "generationSource": "image_gen.imagegen",
-      "derivedFrom": "art/character-parts/vizir-modular-parts.png"
+      "derivedFrom": "art/character-parts/vizir-modular-parts.png",
+      "bytes": 21002
     },
     {
       "id": "robot-parts/yarasa-art-arm-lower",
@@ -5477,7 +6451,8 @@
         "coverage": 100
       },
       "generationSource": "image_gen.imagegen",
-      "derivedFrom": "art/character-parts/vizir-modular-parts.png"
+      "derivedFrom": "art/character-parts/vizir-modular-parts.png",
+      "bytes": 18110
     },
     {
       "id": "robot-parts/yarasa-art-arm-upper",
@@ -5498,7 +6473,8 @@
         "coverage": 100
       },
       "generationSource": "image_gen.imagegen",
-      "derivedFrom": "art/character-parts/vizir-modular-parts.png"
+      "derivedFrom": "art/character-parts/vizir-modular-parts.png",
+      "bytes": 17726
     },
     {
       "id": "robot-parts/yarasa-art-body",
@@ -5519,7 +6495,8 @@
         "coverage": 100
       },
       "generationSource": "image_gen.imagegen",
-      "derivedFrom": "art/character-parts/vizir-modular-parts.png"
+      "derivedFrom": "art/character-parts/vizir-modular-parts.png",
+      "bytes": 24524
     },
     {
       "id": "robot-parts/yarasa-art-head",
@@ -5540,7 +6517,8 @@
         "coverage": 100
       },
       "generationSource": "image_gen.imagegen",
-      "derivedFrom": "art/character-parts/vizir-modular-parts.png"
+      "derivedFrom": "art/character-parts/vizir-modular-parts.png",
+      "bytes": 40494
     },
     {
       "id": "robot-parts/yarasa-art-pelvis",
@@ -5561,7 +6539,8 @@
         "coverage": 100
       },
       "generationSource": "image_gen.imagegen",
-      "derivedFrom": "art/character-parts/vizir-modular-parts.png"
+      "derivedFrom": "art/character-parts/vizir-modular-parts.png",
+      "bytes": 20602
     },
     {
       "id": "robot-parts/yarasa-art-rotor-far",
@@ -5582,7 +6561,8 @@
         "coverage": 100
       },
       "generationSource": "image_gen.imagegen",
-      "derivedFrom": "art/character-parts/vizir-modular-parts.png"
+      "derivedFrom": "art/character-parts/vizir-modular-parts.png",
+      "bytes": 22522
     },
     {
       "id": "robot-parts/yarasa-art-rotor-near",
@@ -5603,7 +6583,74 @@
         "coverage": 100
       },
       "generationSource": "image_gen.imagegen",
-      "derivedFrom": "art/character-parts/vizir-modular-parts.png"
+      "derivedFrom": "art/character-parts/vizir-modular-parts.png",
+      "bytes": 25368
+    },
+    {
+      "id": "robot-parts/yarasa-complete-parts",
+      "file": "assets/robot-parts/yarasa-complete-parts.webp",
+      "w": 768,
+      "h": 768,
+      "alpha": true,
+      "kb": 36.5,
+      "seed": null,
+      "size": "768x768",
+      "steps": 0,
+      "prompt": "VIZIR complete transparent 3x3 robot assembly atlas.",
+      "palette": [],
+      "zone": null,
+      "phase": "character-parts",
+      "gate": "pending",
+      "stats": {
+        "coverage": 100
+      },
+      "generationSource": "image_gen.imagegen",
+      "derivedFrom": "art/character-parts/vizir-complete-parts.png",
+      "bytes": 37328
+    },
+    {
+      "id": "robot-parts/yeti-complete-parts",
+      "file": "assets/robot-parts/yeti-complete-parts.webp",
+      "w": 768,
+      "h": 768,
+      "alpha": true,
+      "kb": 52.1,
+      "seed": null,
+      "size": "768x768",
+      "steps": 0,
+      "prompt": "KRIYO-7 complete transparent 3x3 robot assembly atlas.",
+      "palette": [],
+      "zone": null,
+      "phase": "character-parts",
+      "gate": "pending",
+      "stats": {
+        "coverage": 100
+      },
+      "generationSource": "image_gen.imagegen",
+      "derivedFrom": "art/character-parts/kriyo-7-complete-parts.png",
+      "bytes": 53354
+    },
+    {
+      "id": "robot-parts/zurafa-complete-parts",
+      "file": "assets/robot-parts/zurafa-complete-parts.webp",
+      "w": 768,
+      "h": 768,
+      "alpha": true,
+      "kb": 43.4,
+      "seed": null,
+      "size": "768x768",
+      "steps": 0,
+      "prompt": "ASIT-6 complete transparent 3x3 robot assembly atlas.",
+      "palette": [],
+      "zone": null,
+      "phase": "character-parts",
+      "gate": "pending",
+      "stats": {
+        "coverage": 100
+      },
+      "generationSource": "image_gen.imagegen",
+      "derivedFrom": "art/character-parts/asit-6-complete-parts.png",
+      "bytes": 44444
     },
     {
       "id": "robots/armadillo",
@@ -5623,7 +6670,8 @@
       "stats": {
         "coverage": 37.6
       },
-      "generationSource": "codex-imagegen"
+      "generationSource": "codex-imagegen",
+      "bytes": 49408
     },
     {
       "id": "robots/aslan",
@@ -5643,7 +6691,8 @@
       "stats": {
         "coverage": 33.7
       },
-      "generationSource": "codex-imagegen"
+      "generationSource": "codex-imagegen",
+      "bytes": 61866
     },
     {
       "id": "robots/ayi",
@@ -5663,7 +6712,8 @@
       "stats": {
         "coverage": 58.2
       },
-      "generationSource": "codex-imagegen"
+      "generationSource": "codex-imagegen",
+      "bytes": 64868
     },
     {
       "id": "robots/bukalemun",
@@ -5683,7 +6733,8 @@
       "stats": {
         "coverage": 26.3
       },
-      "generationSource": "codex-imagegen"
+      "generationSource": "codex-imagegen",
+      "bytes": 73630
     },
     {
       "id": "robots/dino",
@@ -5703,7 +6754,8 @@
       "stats": {
         "coverage": 48.9
       },
-      "generationSource": "codex-imagegen"
+      "generationSource": "codex-imagegen",
+      "bytes": 56408
     },
     {
       "id": "robots/ejderha",
@@ -5723,7 +6775,8 @@
       "stats": {
         "coverage": 44.8
       },
-      "generationSource": "codex-imagegen"
+      "generationSource": "codex-imagegen",
+      "bytes": 69104
     },
     {
       "id": "robots/gergedan",
@@ -5743,7 +6796,8 @@
       "stats": {
         "coverage": 30.5
       },
-      "generationSource": "codex-imagegen"
+      "generationSource": "codex-imagegen",
+      "bytes": 44060
     },
     {
       "id": "robots/hamster",
@@ -5763,7 +6817,8 @@
       "stats": {
         "coverage": 67.4
       },
-      "generationSource": "codex-imagegen"
+      "generationSource": "codex-imagegen",
+      "bytes": 69760
     },
     {
       "id": "robots/kanguru",
@@ -5783,7 +6838,8 @@
       "stats": {
         "coverage": 20.4
       },
-      "generationSource": "codex-imagegen"
+      "generationSource": "codex-imagegen",
+      "bytes": 49336
     },
     {
       "id": "robots/kaplan",
@@ -5803,7 +6859,8 @@
       "stats": {
         "coverage": 31.6
       },
-      "generationSource": "codex-imagegen"
+      "generationSource": "codex-imagegen",
+      "bytes": 62282
     },
     {
       "id": "robots/kedi",
@@ -5823,7 +6880,8 @@
       "stats": {
         "coverage": 41
       },
-      "generationSource": "codex-imagegen"
+      "generationSource": "codex-imagegen",
+      "bytes": 49204
     },
     {
       "id": "robots/kirpi",
@@ -5843,7 +6901,8 @@
       "stats": {
         "coverage": 47
       },
-      "generationSource": "codex-imagegen"
+      "generationSource": "codex-imagegen",
+      "bytes": 77952
     },
     {
       "id": "robots/koala",
@@ -5863,7 +6922,8 @@
       "stats": {
         "coverage": 41.2
       },
-      "generationSource": "codex-imagegen"
+      "generationSource": "codex-imagegen",
+      "bytes": 53086
     },
     {
       "id": "robots/kokarca",
@@ -5883,7 +6943,8 @@
       "stats": {
         "coverage": 30.5
       },
-      "generationSource": "codex-imagegen"
+      "generationSource": "codex-imagegen",
+      "bytes": 38270
     },
     {
       "id": "robots/kopek",
@@ -5903,7 +6964,8 @@
       "stats": {
         "coverage": 36.9
       },
-      "generationSource": "codex-imagegen"
+      "generationSource": "codex-imagegen",
+      "bytes": 52538
     },
     {
       "id": "robots/kunduz",
@@ -5923,7 +6985,8 @@
       "stats": {
         "coverage": 36.9
       },
-      "generationSource": "codex-imagegen"
+      "generationSource": "codex-imagegen",
+      "bytes": 56928
     },
     {
       "id": "robots/kurtadam",
@@ -5943,7 +7006,8 @@
       "stats": {
         "coverage": 23.5
       },
-      "generationSource": "codex-imagegen"
+      "generationSource": "codex-imagegen",
+      "bytes": 43230
     },
     {
       "id": "robots/kus",
@@ -5963,7 +7027,8 @@
       "stats": {
         "coverage": 31.7
       },
-      "generationSource": "codex-imagegen"
+      "generationSource": "codex-imagegen",
+      "bytes": 45704
     },
     {
       "id": "robots/maymun",
@@ -5983,7 +7048,8 @@
       "stats": {
         "coverage": 31.4
       },
-      "generationSource": "codex-imagegen"
+      "generationSource": "codex-imagegen",
+      "bytes": 65216
     },
     {
       "id": "robots/oklukirpi",
@@ -6003,7 +7069,8 @@
       "stats": {
         "coverage": 35.2
       },
-      "generationSource": "codex-imagegen"
+      "generationSource": "codex-imagegen",
+      "bytes": 47392
     },
     {
       "id": "robots/ordek",
@@ -6023,7 +7090,8 @@
       "stats": {
         "coverage": 21.9
       },
-      "generationSource": "codex-imagegen"
+      "generationSource": "codex-imagegen",
+      "bytes": 44988
     },
     {
       "id": "robots/ornitorenk",
@@ -6043,7 +7111,8 @@
       "stats": {
         "coverage": 17.8
       },
-      "generationSource": "codex-imagegen"
+      "generationSource": "codex-imagegen",
+      "bytes": 45428
     },
     {
       "id": "robots/panda",
@@ -6063,7 +7132,8 @@
       "stats": {
         "coverage": 60.2
       },
-      "generationSource": "codex-imagegen"
+      "generationSource": "codex-imagegen",
+      "bytes": 69902
     },
     {
       "id": "robots/penguen",
@@ -6083,7 +7153,8 @@
       "stats": {
         "coverage": 54.3
       },
-      "generationSource": "codex-imagegen"
+      "generationSource": "codex-imagegen",
+      "bytes": 61194
     },
     {
       "id": "robots/rakun",
@@ -6103,7 +7174,8 @@
       "stats": {
         "coverage": 41.5
       },
-      "generationSource": "codex-imagegen"
+      "generationSource": "codex-imagegen",
+      "bytes": 50030
     },
     {
       "id": "robots/sincap",
@@ -6123,7 +7195,8 @@
       "stats": {
         "coverage": 42.3
       },
-      "generationSource": "codex-imagegen"
+      "generationSource": "codex-imagegen",
+      "bytes": 89958
     },
     {
       "id": "robots/sirtlan",
@@ -6143,7 +7216,8 @@
       "stats": {
         "coverage": 48.1
       },
-      "generationSource": "codex-imagegen"
+      "generationSource": "codex-imagegen",
+      "bytes": 74490
     },
     {
       "id": "robots/suaygiri",
@@ -6163,7 +7237,8 @@
       "stats": {
         "coverage": 37
       },
-      "generationSource": "codex-imagegen"
+      "generationSource": "codex-imagegen",
+      "bytes": 45158
     },
     {
       "id": "robots/tavsan",
@@ -6183,7 +7258,8 @@
       "stats": {
         "coverage": 28.6
       },
-      "generationSource": "codex-imagegen"
+      "generationSource": "codex-imagegen",
+      "bytes": 47220
     },
     {
       "id": "robots/tilki",
@@ -6203,7 +7279,8 @@
       "stats": {
         "coverage": 31.1
       },
-      "generationSource": "codex-imagegen"
+      "generationSource": "codex-imagegen",
+      "bytes": 51766
     },
     {
       "id": "robots/timsah",
@@ -6223,7 +7300,8 @@
       "stats": {
         "coverage": 24.4
       },
-      "generationSource": "codex-imagegen"
+      "generationSource": "codex-imagegen",
+      "bytes": 30850
     },
     {
       "id": "robots/yarasa",
@@ -6243,7 +7321,8 @@
       "stats": {
         "coverage": 28.7
       },
-      "generationSource": "codex-imagegen"
+      "generationSource": "codex-imagegen",
+      "bytes": 41624
     },
     {
       "id": "robots/yeti",
@@ -6263,7 +7342,8 @@
       "stats": {
         "coverage": 40.1
       },
-      "generationSource": "codex-imagegen"
+      "generationSource": "codex-imagegen",
+      "bytes": 59866
     },
     {
       "id": "robots/zurafa",
@@ -6283,7 +7363,8 @@
       "stats": {
         "coverage": 16.8
       },
-      "generationSource": "codex-imagegen"
+      "generationSource": "codex-imagegen",
+      "bytes": 48862
     },
     {
       "id": "splashes/armadillo",
@@ -6303,7 +7384,8 @@
       "stats": {
         "coverage": 100
       },
-      "generationSource": "codex-imagegen"
+      "generationSource": "codex-imagegen",
+      "bytes": 81492
     },
     {
       "id": "splashes/aslan",
@@ -6323,7 +7405,8 @@
       "stats": {
         "coverage": 100
       },
-      "generationSource": "codex-imagegen"
+      "generationSource": "codex-imagegen",
+      "bytes": 69360
     },
     {
       "id": "splashes/ayi",
@@ -6343,7 +7426,8 @@
       "stats": {
         "coverage": 100
       },
-      "generationSource": "codex-imagegen"
+      "generationSource": "codex-imagegen",
+      "bytes": 59706
     },
     {
       "id": "splashes/bukalemun",
@@ -6363,7 +7447,8 @@
       "stats": {
         "coverage": 100
       },
-      "generationSource": "codex-imagegen"
+      "generationSource": "codex-imagegen",
+      "bytes": 77370
     },
     {
       "id": "splashes/dino",
@@ -6383,7 +7468,8 @@
       "stats": {
         "coverage": 100
       },
-      "generationSource": "codex-imagegen"
+      "generationSource": "codex-imagegen",
+      "bytes": 66480
     },
     {
       "id": "splashes/ejderha",
@@ -6403,7 +7489,8 @@
       "stats": {
         "coverage": 100
       },
-      "generationSource": "codex-imagegen"
+      "generationSource": "codex-imagegen",
+      "bytes": 81220
     },
     {
       "id": "splashes/gergedan",
@@ -6423,7 +7510,8 @@
       "stats": {
         "coverage": 100
       },
-      "generationSource": "codex-imagegen"
+      "generationSource": "codex-imagegen",
+      "bytes": 72142
     },
     {
       "id": "splashes/hamster",
@@ -6443,7 +7531,8 @@
       "stats": {
         "coverage": 100
       },
-      "generationSource": "codex-imagegen"
+      "generationSource": "codex-imagegen",
+      "bytes": 59848
     },
     {
       "id": "splashes/kanguru",
@@ -6463,7 +7552,8 @@
       "stats": {
         "coverage": 100
       },
-      "generationSource": "codex-imagegen"
+      "generationSource": "codex-imagegen",
+      "bytes": 55010
     },
     {
       "id": "splashes/kaplan",
@@ -6483,7 +7573,8 @@
       "stats": {
         "coverage": 100
       },
-      "generationSource": "codex-imagegen"
+      "generationSource": "codex-imagegen",
+      "bytes": 67786
     },
     {
       "id": "splashes/kedi",
@@ -6503,7 +7594,8 @@
       "stats": {
         "coverage": 100
       },
-      "generationSource": "codex-imagegen"
+      "generationSource": "codex-imagegen",
+      "bytes": 41320
     },
     {
       "id": "splashes/kirpi",
@@ -6523,7 +7615,8 @@
       "stats": {
         "coverage": 100
       },
-      "generationSource": "codex-imagegen"
+      "generationSource": "codex-imagegen",
+      "bytes": 74410
     },
     {
       "id": "splashes/koala",
@@ -6543,7 +7636,8 @@
       "stats": {
         "coverage": 100
       },
-      "generationSource": "codex-imagegen"
+      "generationSource": "codex-imagegen",
+      "bytes": 43612
     },
     {
       "id": "splashes/kokarca",
@@ -6563,7 +7657,8 @@
       "stats": {
         "coverage": 100
       },
-      "generationSource": "codex-imagegen"
+      "generationSource": "codex-imagegen",
+      "bytes": 54834
     },
     {
       "id": "splashes/kopek",
@@ -6583,7 +7678,8 @@
       "stats": {
         "coverage": 100
       },
-      "generationSource": "codex-imagegen"
+      "generationSource": "codex-imagegen",
+      "bytes": 46030
     },
     {
       "id": "splashes/kunduz",
@@ -6603,7 +7699,8 @@
       "stats": {
         "coverage": 100
       },
-      "generationSource": "codex-imagegen"
+      "generationSource": "codex-imagegen",
+      "bytes": 66928
     },
     {
       "id": "splashes/kurtadam",
@@ -6623,7 +7720,8 @@
       "stats": {
         "coverage": 100
       },
-      "generationSource": "codex-imagegen"
+      "generationSource": "codex-imagegen",
+      "bytes": 46182
     },
     {
       "id": "splashes/kus",
@@ -6643,7 +7741,8 @@
       "stats": {
         "coverage": 100
       },
-      "generationSource": "codex-imagegen"
+      "generationSource": "codex-imagegen",
+      "bytes": 59556
     },
     {
       "id": "splashes/maymun",
@@ -6663,7 +7762,8 @@
       "stats": {
         "coverage": 100
       },
-      "generationSource": "codex-imagegen"
+      "generationSource": "codex-imagegen",
+      "bytes": 56228
     },
     {
       "id": "splashes/oklukirpi",
@@ -6683,7 +7783,8 @@
       "stats": {
         "coverage": 100
       },
-      "generationSource": "codex-imagegen"
+      "generationSource": "codex-imagegen",
+      "bytes": 66456
     },
     {
       "id": "splashes/ordek",
@@ -6703,7 +7804,8 @@
       "stats": {
         "coverage": 100
       },
-      "generationSource": "codex-imagegen"
+      "generationSource": "codex-imagegen",
+      "bytes": 56276
     },
     {
       "id": "splashes/ornitorenk",
@@ -6723,7 +7825,8 @@
       "stats": {
         "coverage": 100
       },
-      "generationSource": "codex-imagegen"
+      "generationSource": "codex-imagegen",
+      "bytes": 58688
     },
     {
       "id": "splashes/panda",
@@ -6743,7 +7846,8 @@
       "stats": {
         "coverage": 100
       },
-      "generationSource": "codex-imagegen"
+      "generationSource": "codex-imagegen",
+      "bytes": 67426
     },
     {
       "id": "splashes/penguen",
@@ -6763,7 +7867,8 @@
       "stats": {
         "coverage": 100
       },
-      "generationSource": "codex-imagegen"
+      "generationSource": "codex-imagegen",
+      "bytes": 67658
     },
     {
       "id": "splashes/rakun",
@@ -6783,7 +7888,8 @@
       "stats": {
         "coverage": 100
       },
-      "generationSource": "codex-imagegen"
+      "generationSource": "codex-imagegen",
+      "bytes": 59398
     },
     {
       "id": "splashes/sincap",
@@ -6803,7 +7909,8 @@
       "stats": {
         "coverage": 100
       },
-      "generationSource": "codex-imagegen"
+      "generationSource": "codex-imagegen",
+      "bytes": 73050
     },
     {
       "id": "splashes/sirtlan",
@@ -6823,7 +7930,8 @@
       "stats": {
         "coverage": 100
       },
-      "generationSource": "codex-imagegen"
+      "generationSource": "codex-imagegen",
+      "bytes": 74494
     },
     {
       "id": "splashes/suaygiri",
@@ -6843,7 +7951,8 @@
       "stats": {
         "coverage": 100
       },
-      "generationSource": "codex-imagegen"
+      "generationSource": "codex-imagegen",
+      "bytes": 67774
     },
     {
       "id": "splashes/tavsan",
@@ -6863,7 +7972,8 @@
       "stats": {
         "coverage": 100
       },
-      "generationSource": "codex-imagegen"
+      "generationSource": "codex-imagegen",
+      "bytes": 47808
     },
     {
       "id": "splashes/tilki",
@@ -6883,7 +7993,8 @@
       "stats": {
         "coverage": 100
       },
-      "generationSource": "codex-imagegen"
+      "generationSource": "codex-imagegen",
+      "bytes": 53698
     },
     {
       "id": "splashes/timsah",
@@ -6903,7 +8014,8 @@
       "stats": {
         "coverage": 100
       },
-      "generationSource": "codex-imagegen"
+      "generationSource": "codex-imagegen",
+      "bytes": 55368
     },
     {
       "id": "splashes/yarasa",
@@ -6923,7 +8035,8 @@
       "stats": {
         "coverage": 100
       },
-      "generationSource": "codex-imagegen"
+      "generationSource": "codex-imagegen",
+      "bytes": 55716
     },
     {
       "id": "splashes/yeti",
@@ -6943,7 +8056,8 @@
       "stats": {
         "coverage": 100
       },
-      "generationSource": "codex-imagegen"
+      "generationSource": "codex-imagegen",
+      "bytes": 74016
     },
     {
       "id": "splashes/zurafa",
@@ -6963,7 +8077,8 @@
       "stats": {
         "coverage": 100
       },
-      "generationSource": "codex-imagegen"
+      "generationSource": "codex-imagegen",
+      "bytes": 75292
     },
     {
       "id": "tex/cooling-frost",
@@ -6983,7 +8098,8 @@
       "stats": {
         "seamLR": 2.6,
         "seamTB": 2.7
-      }
+      },
+      "bytes": 10250
     },
     {
       "id": "tex/copper-plates",
@@ -7003,7 +8119,8 @@
       "stats": {
         "seamLR": 4.8,
         "seamTB": 4.1
-      }
+      },
+      "bytes": 35714
     },
     {
       "id": "tex/dark-rubber",
@@ -7023,7 +8140,8 @@
       "stats": {
         "seamLR": 0.7,
         "seamTB": 1
-      }
+      },
+      "bytes": 3378
     },
     {
       "id": "tex/factory-concrete",
@@ -7043,7 +8161,8 @@
       "stats": {
         "seamLR": 2.4,
         "seamTB": 2.4
-      }
+      },
+      "bytes": 5216
     },
     {
       "id": "tex/foundry-ash",
@@ -7063,7 +8182,8 @@
       "stats": {
         "seamLR": 7.1,
         "seamTB": 7
-      }
+      },
+      "bytes": 34146
     },
     {
       "id": "tex/foundry-playable-ground",
@@ -7085,7 +8205,8 @@
       "stats": {
         "seamLR": 9.8,
         "seamTB": 8.9
-      }
+      },
+      "bytes": 183996
     },
     {
       "id": "tex/hazard-stripe",
@@ -7105,7 +8226,8 @@
       "stats": {
         "seamLR": 1.7,
         "seamTB": 2.6
-      }
+      },
+      "bytes": 12330
     },
     {
       "id": "tex/oily-water",
@@ -7125,7 +8247,8 @@
       "stats": {
         "seamLR": 1.2,
         "seamTB": 1.3
-      }
+      },
+      "bytes": 5754
     },
     {
       "id": "tex/oxide-rust",
@@ -7145,7 +8268,8 @@
       "stats": {
         "seamLR": 1.6,
         "seamTB": 6.5
-      }
+      },
+      "bytes": 6582
     },
     {
       "id": "tex/painted-steel",
@@ -7165,7 +8289,8 @@
       "stats": {
         "seamLR": 1.8,
         "seamTB": 1.4
-      }
+      },
+      "bytes": 7128
     },
     {
       "id": "tex/sandblasted-steel",
@@ -7185,6 +8310,447 @@
       "stats": {
         "seamLR": 4.3,
         "seamTB": 4.5
+      },
+      "bytes": 23404
+    },
+    {
+      "id": "weapon-key-art/airstrike",
+      "file": "assets/weapon-key-art/airstrike.webp",
+      "format": "webp",
+      "w": 256,
+      "h": 256,
+      "alpha": true,
+      "kb": 23.2,
+      "seed": null,
+      "size": null,
+      "steps": null,
+      "prompt": "stylized-concept square product illustration for a whimsical fictional robot arena game; polished hand-painted industrial toy art, chipped teal and cream paint, warm orange accents, silver rivets, bold clean contour; create a distinct harmless fantastical game collectible: six cream and orange flying drop capsules descending in an arc from a whimsical teal carrier; clearly nonfunctional, centered with generous transparent padding, strong readable silhouette, restrained cel shading, transparent background; no realistic weapon, no characters, no environment, no text, no logo, no watermark",
+      "generationSource": "OpenAI built-in image_gen; stylized-concept; transparent background",
+      "derivedFrom": "bazooka.png style reference",
+      "palette": [],
+      "zone": null,
+      "phase": "K",
+      "gate": "pending",
+      "stats": {
+        "coverage": 15.6
+      }
+    },
+    {
+      "id": "weapon-key-art/barrage",
+      "file": "assets/weapon-key-art/barrage.webp",
+      "format": "webp",
+      "w": 256,
+      "h": 256,
+      "alpha": true,
+      "kb": 21.7,
+      "seed": null,
+      "size": null,
+      "steps": null,
+      "prompt": "stylized-concept square product illustration for a whimsical fictional robot arena game; polished hand-painted industrial toy art, chipped teal and cream paint, warm orange accents, silver rivets, bold clean contour; create a distinct harmless fantastical game collectible: bundle of five little teal rocket-shaped capsules with orange fins arranged in a wide fan; clearly nonfunctional, centered with generous transparent padding, strong readable silhouette, restrained cel shading, transparent background; no realistic weapon, no characters, no environment, no text, no logo, no watermark",
+      "generationSource": "OpenAI built-in image_gen; stylized-concept; transparent background",
+      "derivedFrom": "bazooka.png style reference",
+      "palette": [],
+      "zone": null,
+      "phase": "K",
+      "gate": "pending",
+      "stats": {
+        "coverage": 33
+      }
+    },
+    {
+      "id": "weapon-key-art/bazooka",
+      "file": "assets/weapon-key-art/bazooka.webp",
+      "format": "webp",
+      "w": 256,
+      "h": 256,
+      "alpha": true,
+      "kb": 17.5,
+      "seed": null,
+      "size": null,
+      "steps": null,
+      "prompt": "stylized-concept square product illustration for a whimsical fictional robot arena game; polished hand-painted industrial toy art, chipped teal and cream paint, warm orange accents, silver rivets, bold clean contour; create a distinct harmless fantastical game collectible: compact teal and orange rounded tube gadget with a tiny rocket capsule peeking from the front; clearly nonfunctional, centered with generous transparent padding, strong readable silhouette, restrained cel shading, transparent background; no realistic weapon, no characters, no environment, no text, no logo, no watermark",
+      "generationSource": "OpenAI built-in image_gen; stylized-concept; transparent background",
+      "derivedFrom": null,
+      "palette": [],
+      "zone": null,
+      "phase": "K",
+      "gate": "pending",
+      "stats": {
+        "coverage": 41
+      }
+    },
+    {
+      "id": "weapon-key-art/cluster",
+      "file": "assets/weapon-key-art/cluster.webp",
+      "format": "webp",
+      "w": 256,
+      "h": 256,
+      "alpha": true,
+      "kb": 19.7,
+      "seed": null,
+      "size": null,
+      "steps": null,
+      "prompt": "stylized-concept square product illustration for a whimsical fictional robot arena game; polished hand-painted industrial toy art, chipped teal and cream paint, warm orange accents, silver rivets, bold clean contour; create a distinct harmless fantastical game collectible: round teal carrier pod opening to reveal eight colorful little spherical sub-orbs; clearly nonfunctional, centered with generous transparent padding, strong readable silhouette, restrained cel shading, transparent background; no realistic weapon, no characters, no environment, no text, no logo, no watermark",
+      "generationSource": "OpenAI built-in image_gen; stylized-concept; transparent background",
+      "derivedFrom": "bazooka.png style reference",
+      "palette": [],
+      "zone": null,
+      "phase": "K",
+      "gate": "pending",
+      "stats": {
+        "coverage": 40.3
+      }
+    },
+    {
+      "id": "weapon-key-art/drill",
+      "file": "assets/weapon-key-art/drill.webp",
+      "format": "webp",
+      "w": 256,
+      "h": 256,
+      "alpha": true,
+      "kb": 18.1,
+      "seed": null,
+      "size": null,
+      "steps": null,
+      "prompt": "stylized-concept square product illustration for a whimsical fictional robot arena game; polished hand-painted industrial toy art, chipped teal and cream paint, warm orange accents, silver rivets, bold clean contour; create a distinct harmless fantastical game collectible: single teal and orange spiral-tipped digging bit with chunky silver rings and bright amber center; clearly nonfunctional, centered with generous transparent padding, strong readable silhouette, restrained cel shading, transparent background; no realistic weapon, no characters, no environment, no text, no logo, no watermark",
+      "generationSource": "OpenAI built-in image_gen; stylized-concept; transparent background",
+      "derivedFrom": "bazooka.png style reference",
+      "palette": [],
+      "zone": null,
+      "phase": "K",
+      "gate": "pending",
+      "stats": {
+        "coverage": 37.7
+      }
+    },
+    {
+      "id": "weapon-key-art/grenade",
+      "file": "assets/weapon-key-art/grenade.webp",
+      "format": "webp",
+      "w": 256,
+      "h": 256,
+      "alpha": true,
+      "kb": 16.9,
+      "seed": null,
+      "size": null,
+      "steps": null,
+      "prompt": "Edit the existing isolated grenade illustration, preserve its rounded olive cream orange canister silhouette, pull ring, paint, bolts, shading, transparent background and framing; replace its face-like plate with a blank cream armored panel containing three vertical orange ventilation slots and small rivets; no eyes, mouth, face, text, logo.",
+      "generationSource": "OpenAI built-in image_gen edit; transparent background",
+      "derivedFrom": "grenade.png original design",
+      "palette": [],
+      "zone": null,
+      "phase": "K",
+      "gate": "pending",
+      "stats": {
+        "coverage": 39.5
+      }
+    },
+    {
+      "id": "weapon-key-art/grenadetrio",
+      "file": "assets/weapon-key-art/grenadetrio.webp",
+      "format": "webp",
+      "w": 256,
+      "h": 256,
+      "alpha": true,
+      "kb": 26.4,
+      "seed": null,
+      "size": null,
+      "steps": null,
+      "prompt": "Square transparent-background polished whimsical industrial toy collectible set for a colorful 2D game: exactly three upright chunky canister-shaped props grouped close together, each with a distinct cream, orange, teal, and muted olive color arrangement, big simple top pull rings, riveted bands, small vent panels and tasteful orange diagonal stripes. Clearly harmless fictional toys. Hand-painted chipped paint, silver rivets, bold clean silhouettes. Center group, all three complete and visible with generous transparent padding. Front-facing slight three-quarter view. No explosions, text, logo, watermark, or extra objects.",
+      "generationSource": "OpenAI built-in image_gen; stylized-concept; transparent background",
+      "derivedFrom": null,
+      "palette": [],
+      "zone": null,
+      "phase": "K",
+      "gate": "pending",
+      "stats": {
+        "coverage": 55
+      }
+    },
+    {
+      "id": "weapon-key-art/hook",
+      "file": "assets/weapon-key-art/hook.webp",
+      "format": "webp",
+      "w": 256,
+      "h": 256,
+      "alpha": true,
+      "kb": 20.6,
+      "seed": null,
+      "size": null,
+      "steps": null,
+      "prompt": "stylized-concept square product illustration for a whimsical fictional robot arena game; polished hand-painted industrial toy art, chipped teal and cream paint, warm orange accents, silver rivets, bold clean contour; create a distinct harmless fantastical game collectible: chunky orange and teal three-prong hook prop attached to a short visible coiled cable; clearly nonfunctional, centered with generous transparent padding, strong readable silhouette, restrained cel shading, transparent background; no realistic weapon, no characters, no environment, no text, no logo, no watermark",
+      "generationSource": "OpenAI built-in image_gen; stylized-concept; transparent background",
+      "derivedFrom": null,
+      "palette": [],
+      "zone": null,
+      "phase": "K",
+      "gate": "pending",
+      "stats": {
+        "coverage": 36.3
+      }
+    },
+    {
+      "id": "weapon-key-art/megacluster",
+      "file": "assets/weapon-key-art/megacluster.webp",
+      "format": "webp",
+      "w": 256,
+      "h": 256,
+      "alpha": true,
+      "kb": 35.8,
+      "seed": null,
+      "size": null,
+      "steps": null,
+      "prompt": "stylized-concept square product illustration for a whimsical fictional robot arena game; polished hand-painted industrial toy art, chipped teal and cream paint, warm orange accents, silver rivets, bold clean contour; create a distinct harmless fantastical game collectible: large teal carrier capsule opened around eight small colorful spherical fragments; clearly nonfunctional, centered with generous transparent padding, strong readable silhouette, restrained cel shading, transparent background; no realistic weapon, no characters, no environment, no text, no logo, no watermark",
+      "generationSource": "OpenAI built-in image_gen; stylized-concept; transparent background",
+      "derivedFrom": "bazooka.png style reference",
+      "palette": [],
+      "zone": null,
+      "phase": "K",
+      "gate": "pending",
+      "stats": {
+        "coverage": 40.3
+      }
+    },
+    {
+      "id": "weapon-key-art/mine",
+      "file": "assets/weapon-key-art/mine.webp",
+      "format": "webp",
+      "w": 256,
+      "h": 256,
+      "alpha": true,
+      "kb": 17.4,
+      "seed": null,
+      "size": null,
+      "steps": null,
+      "prompt": "stylized-concept square product illustration for a whimsical fictional robot arena game; polished hand-painted industrial toy art, chipped teal and cream paint, warm orange accents, silver rivets, bold clean contour; create a distinct harmless fantastical game collectible: squat round teal toy disc with four blunt bumpers, glowing orange center lens and small sensor nubs; clearly nonfunctional, centered with generous transparent padding, strong readable silhouette, restrained cel shading, transparent background; no realistic weapon, no characters, no environment, no text, no logo, no watermark",
+      "generationSource": "OpenAI built-in image_gen; stylized-concept; transparent background",
+      "derivedFrom": "bazooka.png style reference",
+      "palette": [],
+      "zone": null,
+      "phase": "K",
+      "gate": "pending",
+      "stats": {
+        "coverage": 41.1
+      }
+    },
+    {
+      "id": "weapon-key-art/mirv",
+      "file": "assets/weapon-key-art/mirv.webp",
+      "format": "webp",
+      "w": 256,
+      "h": 256,
+      "alpha": true,
+      "kb": 24.8,
+      "seed": null,
+      "size": null,
+      "steps": null,
+      "prompt": "stylized-concept square product illustration for a whimsical fictional robot arena game; polished hand-painted industrial toy art, chipped teal and cream paint, warm orange accents, silver rivets, bold clean contour; create a distinct harmless fantastical game collectible: teal carrier pod with five small cream and orange toy capsules separating below in a neat fan; clearly nonfunctional, centered with generous transparent padding, strong readable silhouette, restrained cel shading, transparent background; no realistic weapon, no characters, no environment, no text, no logo, no watermark",
+      "generationSource": "OpenAI built-in image_gen; stylized-concept; transparent background",
+      "derivedFrom": "bazooka.png style reference",
+      "palette": [],
+      "zone": null,
+      "phase": "K",
+      "gate": "pending",
+      "stats": {
+        "coverage": 42
+      }
+    },
+    {
+      "id": "weapon-key-art/napalm",
+      "file": "assets/weapon-key-art/napalm.webp",
+      "format": "webp",
+      "w": 256,
+      "h": 256,
+      "alpha": true,
+      "kb": 17.9,
+      "seed": null,
+      "size": null,
+      "steps": null,
+      "prompt": "stylized-concept square product illustration for a whimsical fictional robot arena game; polished hand-painted industrial toy art, chipped teal and cream paint, warm orange accents, silver rivets, bold clean contour; create a distinct harmless fantastical game collectible: small teal canister opening into a stylized curling orange and gold flame plume; clearly nonfunctional, centered with generous transparent padding, strong readable silhouette, restrained cel shading, transparent background; no realistic weapon, no characters, no environment, no text, no logo, no watermark",
+      "generationSource": "OpenAI built-in image_gen; stylized-concept; transparent background",
+      "derivedFrom": "bazooka.png style reference",
+      "palette": [],
+      "zone": null,
+      "phase": "K",
+      "gate": "pending",
+      "stats": {
+        "coverage": 27.6
+      }
+    },
+    {
+      "id": "weapon-key-art/nuke",
+      "file": "assets/weapon-key-art/nuke.webp",
+      "format": "webp",
+      "w": 256,
+      "h": 256,
+      "alpha": true,
+      "kb": 23.1,
+      "seed": null,
+      "size": null,
+      "steps": null,
+      "prompt": "stylized-concept square product illustration for a whimsical fictional robot arena game; polished hand-painted industrial toy art, chipped teal and cream paint, warm orange accents, silver rivets, bold clean contour; create a distinct harmless fantastical game collectible: comically oversized lime-green and cream fictional reactor capsule with glowing amber core and chunky fins; clearly nonfunctional, centered with generous transparent padding, strong readable silhouette, restrained cel shading, transparent background; no realistic weapon, no characters, no environment, no text, no logo, no watermark",
+      "generationSource": "OpenAI built-in image_gen; stylized-concept; transparent background",
+      "derivedFrom": "bazooka.png style reference",
+      "palette": [],
+      "zone": null,
+      "phase": "K",
+      "gate": "pending",
+      "stats": {
+        "coverage": 49.5
+      }
+    },
+    {
+      "id": "weapon-key-art/rubber",
+      "file": "assets/weapon-key-art/rubber.webp",
+      "format": "webp",
+      "w": 256,
+      "h": 256,
+      "alpha": true,
+      "kb": 17.2,
+      "seed": null,
+      "size": null,
+      "steps": null,
+      "prompt": "stylized-concept square product illustration for a whimsical fictional robot arena game; polished hand-painted industrial toy art, chipped teal and cream paint, warm orange accents, silver rivets, bold clean contour; create a distinct harmless fantastical game collectible: purple and teal springy toy sphere with thick rubber panels and soft bounce arcs; clearly nonfunctional, centered with generous transparent padding, strong readable silhouette, restrained cel shading, transparent background; no realistic weapon, no characters, no environment, no text, no logo, no watermark",
+      "generationSource": "OpenAI built-in image_gen; stylized-concept; transparent background",
+      "derivedFrom": "bazooka.png style reference",
+      "palette": [],
+      "zone": null,
+      "phase": "K",
+      "gate": "pending",
+      "stats": {
+        "coverage": 34.4
+      }
+    },
+    {
+      "id": "weapon-key-art/rubbertrio",
+      "file": "assets/weapon-key-art/rubbertrio.webp",
+      "format": "webp",
+      "w": 256,
+      "h": 256,
+      "alpha": true,
+      "kb": 22.8,
+      "seed": null,
+      "size": null,
+      "steps": null,
+      "prompt": "stylized-concept square product illustration for a whimsical fictional robot arena game; polished hand-painted industrial toy art, chipped teal and cream paint, warm orange accents, silver rivets, bold clean contour; create a distinct harmless fantastical game collectible: three purple and teal rubber toy spheres bouncing at different heights; clearly nonfunctional, centered with generous transparent padding, strong readable silhouette, restrained cel shading, transparent background; no realistic weapon, no characters, no environment, no text, no logo, no watermark",
+      "generationSource": "OpenAI built-in image_gen; stylized-concept; transparent background",
+      "derivedFrom": "bazooka.png style reference",
+      "palette": [],
+      "zone": null,
+      "phase": "K",
+      "gate": "pending",
+      "stats": {
+        "coverage": 26.8
+      }
+    },
+    {
+      "id": "weapon-key-art/shotgun",
+      "file": "assets/weapon-key-art/shotgun.webp",
+      "format": "webp",
+      "w": 256,
+      "h": 256,
+      "alpha": true,
+      "kb": 19.9,
+      "seed": null,
+      "size": null,
+      "steps": null,
+      "prompt": "Square transparent-background polished whimsical industrial toy collectible for a colorful 2D game. Compact teal-and-cream double-cylinder gadget with two large orange circular front openings, orange carry handle, little decorative rocket-shaped finial on top. Clearly harmless fictional toy prop. Hand-painted chipped teal and cream surfaces, warm orange accents, silver rivets, bold clean silhouette. Three-quarter view facing left, centered, fully visible, generous transparent padding. No effects, text, logos, watermark, or extra objects.",
+      "generationSource": "OpenAI built-in image_gen; stylized-concept; transparent background",
+      "derivedFrom": null,
+      "palette": [],
+      "zone": null,
+      "phase": "K",
+      "gate": "pending",
+      "stats": {
+        "coverage": 51.5
+      }
+    },
+    {
+      "id": "weapon-key-art/sniper",
+      "file": "assets/weapon-key-art/sniper.webp",
+      "format": "webp",
+      "w": 256,
+      "h": 256,
+      "alpha": true,
+      "kb": 30.9,
+      "seed": null,
+      "size": null,
+      "steps": null,
+      "prompt": "Square transparent-background polished whimsical industrial toy collectible for a colorful 2D game: one long teal-and-cream telescope-like gadget, with a small orange flared viewing tube at the lower-left end, a glowing cyan crystal set in a framed window in the center, an orange carry handle on top, a small yellow underside grip, silver rivets and orange diagonal decorative stripes. Clearly fictional harmless prop. Hand-painted chipped paint, bold clean silhouette. Centered diagonal composition, fully visible, generous transparent padding. No text, logo, watermark, or extra objects.",
+      "generationSource": "OpenAI built-in image_gen; stylized-concept; transparent background",
+      "derivedFrom": null,
+      "palette": [],
+      "zone": null,
+      "phase": "K",
+      "gate": "pending",
+      "stats": {
+        "coverage": 28.3
+      }
+    },
+    {
+      "id": "weapon-key-art/sticky",
+      "file": "assets/weapon-key-art/sticky.webp",
+      "format": "webp",
+      "w": 256,
+      "h": 256,
+      "alpha": true,
+      "kb": 17.3,
+      "seed": null,
+      "size": null,
+      "steps": null,
+      "prompt": "stylized-concept square product illustration for a whimsical fictional robot arena game; polished hand-painted industrial toy art, chipped teal and cream paint, warm orange accents, silver rivets, bold clean contour; create a distinct harmless fantastical game collectible: single squat teal gel capsule with a pale amber tacky ring and tiny orange wind-up fuse; clearly nonfunctional, centered with generous transparent padding, strong readable silhouette, restrained cel shading, transparent background; no realistic weapon, no characters, no environment, no text, no logo, no watermark",
+      "generationSource": "OpenAI built-in image_gen; stylized-concept; transparent background",
+      "derivedFrom": "bazooka.png style reference",
+      "palette": [],
+      "zone": null,
+      "phase": "K",
+      "gate": "pending",
+      "stats": {
+        "coverage": 38.1
+      }
+    },
+    {
+      "id": "weapon-key-art/teleportball",
+      "file": "assets/weapon-key-art/teleportball.webp",
+      "format": "webp",
+      "w": 256,
+      "h": 256,
+      "alpha": true,
+      "kb": 17.9,
+      "seed": null,
+      "size": null,
+      "steps": null,
+      "prompt": "stylized-concept square product illustration for a whimsical fictional robot arena game; polished hand-painted industrial toy art, chipped teal and cream paint, warm orange accents, silver rivets, bold clean contour; create a distinct harmless fantastical game collectible: violet glassy orb with a bright cyan core held in a small teal and brass ring with energy wisps; clearly nonfunctional, centered with generous transparent padding, strong readable silhouette, restrained cel shading, transparent background; no realistic weapon, no characters, no environment, no text, no logo, no watermark",
+      "generationSource": "OpenAI built-in image_gen; stylized-concept; transparent background",
+      "derivedFrom": null,
+      "palette": [],
+      "zone": null,
+      "phase": "K",
+      "gate": "pending",
+      "stats": {
+        "coverage": 30.2
+      }
+    },
+    {
+      "id": "weapon-key-art/triple",
+      "file": "assets/weapon-key-art/triple.webp",
+      "format": "webp",
+      "w": 256,
+      "h": 256,
+      "alpha": true,
+      "kb": 18.8,
+      "seed": null,
+      "size": null,
+      "steps": null,
+      "prompt": "stylized-concept square product illustration for a whimsical fictional robot arena game; polished hand-painted industrial toy art, chipped teal and cream paint, warm orange accents, silver rivets, bold clean contour; create a distinct harmless fantastical game collectible: three miniature teal toy rockets with orange fins arranged in a clear upward fan; clearly nonfunctional, centered with generous transparent padding, strong readable silhouette, restrained cel shading, transparent background; no realistic weapon, no characters, no environment, no text, no logo, no watermark",
+      "generationSource": "OpenAI built-in image_gen; stylized-concept; transparent background",
+      "derivedFrom": "bazooka.png style reference",
+      "palette": [],
+      "zone": null,
+      "phase": "K",
+      "gate": "pending",
+      "stats": {
+        "coverage": 32.1
       }
     },
     {
@@ -7205,763 +8771,8 @@
       "stats": {
         "coverage": 49.8
       },
-      "generationSource": "codex-imagegen"
-    },
-    {
-      "id": "robot-parts/fix8-parts-atlas",
-      "file": "assets/robot-parts/fix8-parts-atlas.webp",
-      "w": 900,
-      "h": 900,
-      "alpha": true,
-      "kb": 96.3,
-      "seed": null,
-      "size": "900x900",
-      "steps": 0,
-      "prompt": "Packed FIX-8 modular robot key art atlas with nine named component cells.",
-      "palette": [],
-      "zone": null,
-      "phase": "character-parts",
-      "gate": "pending",
-      "stats": {
-        "coverage": 100
-      },
       "generationSource": "codex-imagegen",
-      "derivedFrom": "art/character-parts/fix-8-complete-parts.png"
-    },
-    {
-      "id": "robot-parts/kedi-art-wheel-foot",
-      "file": "assets/robot-parts/kedi-art-wheel-foot.webp",
-      "w": 955,
-      "h": 1000,
-      "alpha": true,
-      "kb": 48.7,
-      "seed": null,
-      "size": "955x1000",
-      "steps": 0,
-      "prompt": "MIK-0 violet mono-wheel lower-foot assembly, transparent game key art.",
-      "palette": [],
-      "zone": null,
-      "phase": "character-parts",
-      "gate": "pending",
-      "stats": {
-        "coverage": 100
-      },
-      "generationSource": "codex-imagegen",
-      "derivedFrom": "art/character-parts/mik-0-wheel-foot.png"
-    },
-    {
-      "id": "robot-parts/tilki-art-foot-far",
-      "file": "assets/robot-parts/tilki-art-foot-far.webp",
-      "w": 734,
-      "h": 627,
-      "alpha": true,
-      "kb": 86.9,
-      "seed": null,
-      "size": "734x627",
-      "steps": 0,
-      "prompt": "ÇİFT-6 articulated orange armored boot with treaded sole, transparent game key art.",
-      "palette": [],
-      "zone": null,
-      "phase": "character-parts",
-      "gate": "pending",
-      "stats": {
-        "coverage": 100
-      },
-      "generationSource": "codex-imagegen",
-      "derivedFrom": "art/character-parts/cift-6-foot-pair.png"
-    },
-    {
-      "id": "robot-parts/tilki-art-foot-near",
-      "file": "assets/robot-parts/tilki-art-foot-near.webp",
-      "w": 637,
-      "h": 534,
-      "alpha": true,
-      "kb": 66.5,
-      "seed": null,
-      "size": "637x534",
-      "steps": 0,
-      "prompt": "ÇİFT-6 articulated orange armored boot with treaded sole, transparent game key art.",
-      "palette": [],
-      "zone": null,
-      "phase": "character-parts",
-      "gate": "pending",
-      "stats": {
-        "coverage": 100
-      },
-      "generationSource": "codex-imagegen",
-      "derivedFrom": "art/character-parts/cift-6-foot-pair.png"
-    },
-    {
-      "id": "robot-parts/kedi-art-leg-upper",
-      "file": "assets/robot-parts/kedi-art-leg-upper.webp",
-      "w": 252,
-      "h": 370,
-      "alpha": true,
-      "kb": 19.4,
-      "seed": null,
-      "size": "252x370",
-      "steps": 0,
-      "prompt": "MIK-0 articulated violet robot wheel-leg key art segment with visible treaded roller foot.",
-      "palette": [],
-      "zone": null,
-      "phase": "character-parts",
-      "gate": "pending",
-      "stats": {
-        "coverage": 100
-      },
-      "generationSource": "image_gen.imagegen",
-      "derivedFrom": "art/character-parts/mik-0-modular-parts.png"
-    },
-    {
-      "id": "robot-parts/kedi-art-leg-lower",
-      "file": "assets/robot-parts/kedi-art-leg-lower.webp",
-      "w": 253,
-      "h": 358,
-      "alpha": true,
-      "kb": 19.7,
-      "seed": null,
-      "size": "253x358",
-      "steps": 0,
-      "prompt": "MIK-0 articulated violet robot wheel-leg key art segment with visible treaded roller foot.",
-      "palette": [],
-      "zone": null,
-      "phase": "character-parts",
-      "gate": "pending",
-      "stats": {
-        "coverage": 100
-      },
-      "generationSource": "image_gen.imagegen",
-      "derivedFrom": "art/character-parts/mik-0-modular-parts.png"
-    },
-    {
-      "id": "robot-parts/tavsan-art-foot-far",
-      "file": "assets/robot-parts/tavsan-art-foot-far.webp",
-      "w": 695,
-      "h": 601,
-      "alpha": true,
-      "kb": 47.3,
-      "seed": null,
-      "size": "695x601",
-      "steps": 0,
-      "prompt": "ZIP white and cyan robot boot with treaded sole, separated transparent key art.",
-      "palette": [],
-      "zone": null,
-      "phase": "character-parts",
-      "gate": "pending",
-      "stats": {
-        "coverage": 100
-      },
-      "generationSource": "image_gen.imagegen",
-      "derivedFrom": "art/character-parts/zip-foot-pair.png"
-    },
-    {
-      "id": "robot-parts/tavsan-art-foot-near",
-      "file": "assets/robot-parts/tavsan-art-foot-near.webp",
-      "w": 569,
-      "h": 473,
-      "alpha": true,
-      "kb": 35.7,
-      "seed": null,
-      "size": "569x473",
-      "steps": 0,
-      "prompt": "ZIP white and cyan robot boot with treaded sole, separated transparent key art.",
-      "palette": [],
-      "zone": null,
-      "phase": "character-parts",
-      "gate": "pending",
-      "stats": {
-        "coverage": 100
-      },
-      "generationSource": "image_gen.imagegen",
-      "derivedFrom": "art/character-parts/zip-foot-pair.png"
-    },
-    {
-      "id": "robot-parts/zurafa-complete-parts",
-      "file": "assets/robot-parts/zurafa-complete-parts.webp",
-      "w": 768,
-      "h": 768,
-      "alpha": true,
-      "kb": 43.4,
-      "seed": null,
-      "size": "768x768",
-      "steps": 0,
-      "prompt": "ASIT-6 complete transparent 3x3 robot assembly atlas.",
-      "palette": [],
-      "zone": null,
-      "phase": "character-parts",
-      "gate": "pending",
-      "stats": {
-        "coverage": 100
-      },
-      "generationSource": "image_gen.imagegen",
-      "derivedFrom": "art/character-parts/asit-6-complete-parts.png"
-    },
-    {
-      "id": "robot-parts/kirpi-complete-parts",
-      "file": "assets/robot-parts/kirpi-complete-parts.webp",
-      "w": 768,
-      "h": 768,
-      "alpha": true,
-      "kb": 42.0,
-      "seed": null,
-      "size": "768x768",
-      "steps": 0,
-      "prompt": "BILYE-3 complete transparent 3x3 robot assembly atlas.",
-      "palette": [],
-      "zone": null,
-      "phase": "character-parts",
-      "gate": "pending",
-      "stats": {
-        "coverage": 100
-      },
-      "generationSource": "image_gen.imagegen",
-      "derivedFrom": "art/character-parts/bilye-3-complete-parts.png"
-    },
-    {
-      "id": "robot-parts/sincap-complete-parts",
-      "file": "assets/robot-parts/sincap-complete-parts.webp",
-      "w": 768,
-      "h": 768,
-      "alpha": true,
-      "kb": 41.2,
-      "seed": null,
-      "size": "768x768",
-      "steps": 0,
-      "prompt": "CIV-1 complete transparent 3x3 robot assembly atlas.",
-      "palette": [],
-      "zone": null,
-      "phase": "character-parts",
-      "gate": "pending",
-      "stats": {
-        "coverage": 100
-      },
-      "generationSource": "image_gen.imagegen",
-      "derivedFrom": "art/character-parts/civ-1-complete-parts.png"
-    },
-    {
-      "id": "robot-parts/ornitorenk-complete-parts",
-      "file": "assets/robot-parts/ornitorenk-complete-parts.webp",
-      "w": 768,
-      "h": 768,
-      "alpha": true,
-      "kb": 45.3,
-      "seed": null,
-      "size": "768x768",
-      "steps": 0,
-      "prompt": "DALGA-2 complete transparent 3x3 robot assembly atlas.",
-      "palette": [],
-      "zone": null,
-      "phase": "character-parts",
-      "gate": "pending",
-      "stats": {
-        "coverage": 100
-      },
-      "generationSource": "image_gen.imagegen",
-      "derivedFrom": "art/character-parts/dalga-2-complete-parts.png"
-    },
-    {
-      "id": "robot-parts/aslan-complete-parts",
-      "file": "assets/robot-parts/aslan-complete-parts.webp",
-      "w": 768,
-      "h": 768,
-      "alpha": true,
-      "kb": 39.7,
-      "seed": null,
-      "size": "768x768",
-      "steps": 0,
-      "prompt": "EMP-80 complete transparent 3x3 robot assembly atlas.",
-      "palette": [],
-      "zone": null,
-      "phase": "character-parts",
-      "gate": "pending",
-      "stats": {
-        "coverage": 100
-      },
-      "generationSource": "image_gen.imagegen",
-      "derivedFrom": "art/character-parts/emp-80-complete-parts.png"
-    },
-    {
-      "id": "robot-parts/kus-complete-parts",
-      "file": "assets/robot-parts/kus-complete-parts.webp",
-      "w": 768,
-      "h": 768,
-      "alpha": true,
-      "kb": 36.0,
-      "seed": null,
-      "size": "768x768",
-      "steps": 0,
-      "prompt": "FAN-5 complete transparent 3x3 robot assembly atlas.",
-      "palette": [],
-      "zone": null,
-      "phase": "character-parts",
-      "gate": "pending",
-      "stats": {
-        "coverage": 100
-      },
-      "generationSource": "image_gen.imagegen",
-      "derivedFrom": "art/character-parts/fan-5-complete-parts.png"
-    },
-    {
-      "id": "robot-parts/ejderha-complete-parts",
-      "file": "assets/robot-parts/ejderha-complete-parts.webp",
-      "w": 768,
-      "h": 768,
-      "alpha": true,
-      "kb": 41.6,
-      "seed": null,
-      "size": "768x768",
-      "steps": 0,
-      "prompt": "FIRIN-3 complete transparent 3x3 robot assembly atlas.",
-      "palette": [],
-      "zone": null,
-      "phase": "character-parts",
-      "gate": "pending",
-      "stats": {
-        "coverage": 100
-      },
-      "generationSource": "image_gen.imagegen",
-      "derivedFrom": "art/character-parts/firin-3-complete-parts.png"
-    },
-    {
-      "id": "robot-parts/bukalemun-complete-parts",
-      "file": "assets/robot-parts/bukalemun-complete-parts.webp",
-      "w": 768,
-      "h": 768,
-      "alpha": true,
-      "kb": 37.0,
-      "seed": null,
-      "size": "768x768",
-      "steps": 0,
-      "prompt": "HAYALET-4 complete transparent 3x3 robot assembly atlas.",
-      "palette": [],
-      "zone": null,
-      "phase": "character-parts",
-      "gate": "pending",
-      "stats": {
-        "coverage": 100
-      },
-      "generationSource": "image_gen.imagegen",
-      "derivedFrom": "art/character-parts/hayalet-4-complete-parts.png"
-    },
-    {
-      "id": "robot-parts/maymun-complete-parts",
-      "file": "assets/robot-parts/maymun-complete-parts.webp",
-      "w": 768,
-      "h": 768,
-      "alpha": true,
-      "kb": 37.5,
-      "seed": null,
-      "size": "768x768",
-      "steps": 0,
-      "prompt": "KANCA-4 complete transparent 3x3 robot assembly atlas.",
-      "palette": [],
-      "zone": null,
-      "phase": "character-parts",
-      "gate": "pending",
-      "stats": {
-        "coverage": 100
-      },
-      "generationSource": "image_gen.imagegen",
-      "derivedFrom": "art/character-parts/kanca-4-complete-parts.png"
-    },
-    {
-      "id": "robot-parts/suaygiri-complete-parts",
-      "file": "assets/robot-parts/suaygiri-complete-parts.webp",
-      "w": 768,
-      "h": 768,
-      "alpha": true,
-      "kb": 41.1,
-      "seed": null,
-      "size": "768x768",
-      "steps": 0,
-      "prompt": "KEPCE-8 complete transparent 3x3 robot assembly atlas.",
-      "palette": [],
-      "zone": null,
-      "phase": "character-parts",
-      "gate": "pending",
-      "stats": {
-        "coverage": 100
-      },
-      "generationSource": "image_gen.imagegen",
-      "derivedFrom": "art/character-parts/kepce-8-complete-parts.png"
-    },
-    {
-      "id": "robot-parts/kaplan-complete-parts",
-      "file": "assets/robot-parts/kaplan-complete-parts.webp",
-      "w": 768,
-      "h": 768,
-      "alpha": true,
-      "kb": 38.3,
-      "seed": null,
-      "size": "768x768",
-      "steps": 0,
-      "prompt": "KES-9 complete transparent 3x3 robot assembly atlas.",
-      "palette": [],
-      "zone": null,
-      "phase": "character-parts",
-      "gate": "pending",
-      "stats": {
-        "coverage": 100
-      },
-      "generationSource": "image_gen.imagegen",
-      "derivedFrom": "art/character-parts/kes-9-complete-parts.png"
-    },
-    {
-      "id": "robot-parts/yeti-complete-parts",
-      "file": "assets/robot-parts/yeti-complete-parts.webp",
-      "w": 768,
-      "h": 768,
-      "alpha": true,
-      "kb": 52.1,
-      "seed": null,
-      "size": "768x768",
-      "steps": 0,
-      "prompt": "KRIYO-7 complete transparent 3x3 robot assembly atlas.",
-      "palette": [],
-      "zone": null,
-      "phase": "character-parts",
-      "gate": "pending",
-      "stats": {
-        "coverage": 100
-      },
-      "generationSource": "image_gen.imagegen",
-      "derivedFrom": "art/character-parts/kriyo-7-complete-parts.png"
-    },
-    {
-      "id": "robot-parts/armadillo-complete-parts",
-      "file": "assets/robot-parts/armadillo-complete-parts.webp",
-      "w": 768,
-      "h": 768,
-      "alpha": true,
-      "kb": 39.0,
-      "seed": null,
-      "size": "768x768",
-      "steps": 0,
-      "prompt": "MAT-6 complete transparent 3x3 robot assembly atlas.",
-      "palette": [],
-      "zone": null,
-      "phase": "character-parts",
-      "gate": "pending",
-      "stats": {
-        "coverage": 100
-      },
-      "generationSource": "image_gen.imagegen",
-      "derivedFrom": "art/character-parts/mat-6-complete-parts.png"
-    },
-    {
-      "id": "robot-parts/oklukirpi-complete-parts",
-      "file": "assets/robot-parts/oklukirpi-complete-parts.webp",
-      "w": 768,
-      "h": 768,
-      "alpha": true,
-      "kb": 39.5,
-      "seed": null,
-      "size": "768x768",
-      "steps": 0,
-      "prompt": "PERCIN-3 complete transparent 3x3 robot assembly atlas.",
-      "palette": [],
-      "zone": null,
-      "phase": "character-parts",
-      "gate": "pending",
-      "stats": {
-        "coverage": 100
-      },
-      "generationSource": "image_gen.imagegen",
-      "derivedFrom": "art/character-parts/percin-3-complete-parts.png"
-    },
-    {
-      "id": "robot-parts/ordek-complete-parts",
-      "file": "assets/robot-parts/ordek-complete-parts.webp",
-      "w": 768,
-      "h": 768,
-      "alpha": true,
-      "kb": 39.1,
-      "seed": null,
-      "size": "768x768",
-      "steps": 0,
-      "prompt": "PUNTA-1 complete transparent 3x3 robot assembly atlas.",
-      "palette": [],
-      "zone": null,
-      "phase": "character-parts",
-      "gate": "pending",
-      "stats": {
-        "coverage": 100
-      },
-      "generationSource": "image_gen.imagegen",
-      "derivedFrom": "art/character-parts/punta-1-complete-parts.png"
-    },
-    {
-      "id": "robot-parts/sirtlan-complete-parts",
-      "file": "assets/robot-parts/sirtlan-complete-parts.webp",
-      "w": 768,
-      "h": 768,
-      "alpha": true,
-      "kb": 42.0,
-      "seed": null,
-      "size": "768x768",
-      "steps": 0,
-      "prompt": "REZ-7 complete transparent 3x3 robot assembly atlas.",
-      "palette": [],
-      "zone": null,
-      "phase": "character-parts",
-      "gate": "pending",
-      "stats": {
-        "coverage": 100
-      },
-      "generationSource": "image_gen.imagegen",
-      "derivedFrom": "art/character-parts/rez-7-complete-parts.png"
-    },
-    {
-      "id": "robot-parts/timsah-complete-parts",
-      "file": "assets/robot-parts/timsah-complete-parts.webp",
-      "w": 768,
-      "h": 768,
-      "alpha": true,
-      "kb": 38.8,
-      "seed": null,
-      "size": "768x768",
-      "steps": 0,
-      "prompt": "SAP-3 complete transparent 3x3 robot assembly atlas.",
-      "palette": [],
-      "zone": null,
-      "phase": "character-parts",
-      "gate": "pending",
-      "stats": {
-        "coverage": 100
-      },
-      "generationSource": "image_gen.imagegen",
-      "derivedFrom": "art/character-parts/sap-3-complete-parts.png"
-    },
-    {
-      "id": "robot-parts/dino-complete-parts",
-      "file": "assets/robot-parts/dino-complete-parts.webp",
-      "w": 768,
-      "h": 768,
-      "alpha": true,
-      "kb": 45.5,
-      "seed": null,
-      "size": "768x768",
-      "steps": 0,
-      "prompt": "SHOCK-9 complete transparent 3x3 robot assembly atlas.",
-      "palette": [],
-      "zone": null,
-      "phase": "character-parts",
-      "gate": "pending",
-      "stats": {
-        "coverage": 100
-      },
-      "generationSource": "image_gen.imagegen",
-      "derivedFrom": "art/character-parts/shock-9-complete-parts.png"
-    },
-    {
-      "id": "robot-parts/kurtadam-complete-parts",
-      "file": "assets/robot-parts/kurtadam-complete-parts.webp",
-      "w": 768,
-      "h": 768,
-      "alpha": true,
-      "kb": 36.9,
-      "seed": null,
-      "size": "768x768",
-      "steps": 0,
-      "prompt": "SIREN-6 complete transparent 3x3 robot assembly atlas.",
-      "palette": [],
-      "zone": null,
-      "phase": "character-parts",
-      "gate": "pending",
-      "stats": {
-        "coverage": 100
-      },
-      "generationSource": "image_gen.imagegen",
-      "derivedFrom": "art/character-parts/siren-6-complete-parts.png"
-    },
-    {
-      "id": "robot-parts/kokarca-complete-parts",
-      "file": "assets/robot-parts/kokarca-complete-parts.webp",
-      "w": 768,
-      "h": 768,
-      "alpha": true,
-      "kb": 43.1,
-      "seed": null,
-      "size": "768x768",
-      "steps": 0,
-      "prompt": "SIZ-7 complete transparent 3x3 robot assembly atlas.",
-      "palette": [],
-      "zone": null,
-      "phase": "character-parts",
-      "gate": "pending",
-      "stats": {
-        "coverage": 100
-      },
-      "generationSource": "image_gen.imagegen",
-      "derivedFrom": "art/character-parts/siz-7-complete-parts.png"
-    },
-    {
-      "id": "robot-parts/penguen-complete-parts",
-      "file": "assets/robot-parts/penguen-complete-parts.webp",
-      "w": 768,
-      "h": 768,
-      "alpha": true,
-      "kb": 45.4,
-      "seed": null,
-      "size": "768x768",
-      "steps": 0,
-      "prompt": "SOGUT-2 complete transparent 3x3 robot assembly atlas.",
-      "palette": [],
-      "zone": null,
-      "phase": "character-parts",
-      "gate": "pending",
-      "stats": {
-        "coverage": 100
-      },
-      "generationSource": "image_gen.imagegen",
-      "derivedFrom": "art/character-parts/sogut-2-complete-parts.png"
-    },
-    {
-      "id": "robot-parts/gergedan-complete-parts",
-      "file": "assets/robot-parts/gergedan-complete-parts.webp",
-      "w": 768,
-      "h": 768,
-      "alpha": true,
-      "kb": 43.9,
-      "seed": null,
-      "size": "768x768",
-      "steps": 0,
-      "prompt": "TEK-8 complete transparent 3x3 robot assembly atlas.",
-      "palette": [],
-      "zone": null,
-      "phase": "character-parts",
-      "gate": "pending",
-      "stats": {
-        "coverage": 100
-      },
-      "generationSource": "image_gen.imagegen",
-      "derivedFrom": "art/character-parts/tek-8-complete-parts.png"
-    },
-    {
-      "id": "robot-parts/koala-complete-parts",
-      "file": "assets/robot-parts/koala-complete-parts.webp",
-      "w": 768,
-      "h": 768,
-      "alpha": true,
-      "kb": 39.8,
-      "seed": null,
-      "size": "768x768",
-      "steps": 0,
-      "prompt": "TOK-2 complete transparent 3x3 robot assembly atlas.",
-      "palette": [],
-      "zone": null,
-      "phase": "character-parts",
-      "gate": "pending",
-      "stats": {
-        "coverage": 100
-      },
-      "generationSource": "image_gen.imagegen",
-      "derivedFrom": "art/character-parts/tok-2-complete-parts.png"
-    },
-    {
-      "id": "robot-parts/yarasa-complete-parts",
-      "file": "assets/robot-parts/yarasa-complete-parts.webp",
-      "w": 768,
-      "h": 768,
-      "alpha": true,
-      "kb": 36.5,
-      "seed": null,
-      "size": "768x768",
-      "steps": 0,
-      "prompt": "VIZIR complete transparent 3x3 robot assembly atlas.",
-      "palette": [],
-      "zone": null,
-      "phase": "character-parts",
-      "gate": "pending",
-      "stats": {
-        "coverage": 100
-      },
-      "generationSource": "image_gen.imagegen",
-      "derivedFrom": "art/character-parts/vizir-complete-parts.png"
-    },
-    {
-      "id": "robot-parts/kunduz-complete-parts",
-      "file": "assets/robot-parts/kunduz-complete-parts.webp",
-      "w": 768,
-      "h": 768,
-      "alpha": true,
-      "kb": 38.2,
-      "seed": null,
-      "size": "768x768",
-      "steps": 0,
-      "prompt": "VUR-5 complete transparent 3x3 robot assembly atlas.",
-      "palette": [],
-      "zone": null,
-      "phase": "character-parts",
-      "gate": "pending",
-      "stats": {
-        "coverage": 100
-      },
-      "generationSource": "image_gen.imagegen",
-      "derivedFrom": "art/character-parts/vur-5-complete-parts.png"
-    },
-    {
-      "id": "robot-parts/kanguru-complete-parts",
-      "file": "assets/robot-parts/kanguru-complete-parts.webp",
-      "w": 768,
-      "h": 768,
-      "alpha": true,
-      "kb": 37.8,
-      "seed": null,
-      "size": "768x768",
-      "steps": 0,
-      "prompt": "ZIP-X complete transparent 3x3 robot assembly atlas.",
-      "palette": [],
-      "zone": null,
-      "phase": "character-parts",
-      "gate": "pending",
-      "stats": {
-        "coverage": 100
-      },
-      "generationSource": "image_gen.imagegen",
-      "derivedFrom": "art/character-parts/zip-x-complete-parts.png"
-    },
-    {
-      "id": "robot-parts/hamster-complete-parts",
-      "file": "assets/robot-parts/hamster-complete-parts.webp",
-      "w": 768,
-      "h": 768,
-      "alpha": true,
-      "kb": 47.3,
-      "seed": null,
-      "size": "768x768",
-      "steps": 0,
-      "prompt": "ZIRH-2 complete transparent 3x3 robot assembly atlas.",
-      "palette": [],
-      "zone": null,
-      "phase": "character-parts",
-      "gate": "pending",
-      "stats": {
-        "coverage": 100
-      },
-      "generationSource": "image_gen.imagegen",
-      "derivedFrom": "art/character-parts/zirh-2-complete-parts.png"
-    },
-    {
-      "id": "robot-parts/panda-complete-parts",
-      "file": "assets/robot-parts/panda-complete-parts.webp",
-      "w": 384,
-      "h": 384,
-      "alpha": true,
-      "kb": 42.0,
-      "seed": null,
-      "size": "384x384",
-      "steps": 0,
-      "prompt": "PRES-4 squat hydraulic press robot in a transparent three-by-three component atlas.",
-      "palette": [],
-      "zone": null,
-      "phase": "character-parts",
-      "gate": "pending",
-      "stats": {
-        "coverage": 100
-      },
-      "generationSource": "image_gen.imagegen",
-      "derivedFrom": "art/character-parts/pres-4-complete-parts.png"
+      "bytes": 33930
     }
   ]
 }

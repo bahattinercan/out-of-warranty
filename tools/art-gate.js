@@ -31,10 +31,13 @@ const BUDGET = [
   { prefix: "portraits/", maxKb: 1024, perAsset: 60, label: "portre (34)" },
   { prefix: "splashes/", maxKb: 2560, perAsset: 100, label: "karakter splash (34)" },
   { prefix: "robots/", maxKb: 3072, perAsset: 100, label: "robot sprite (34)" },
+  { prefix: "robot-sheets/", maxKb: 18432, perAsset: 650, label: "robot spritesheets (34)" },
+  { prefix: "robot-rigs/", maxKb: 6800, perAsset: 200, label: "robot rig atlases (34)" },
   { prefix: "robot-models/", maxKb: 512, perAsset: 24, label: "robot model parts (68 SVG)" },
   { prefix: "robot-parts/", maxKb: 3072, perAsset: 100, label: "modular robot key art parts" },
   { prefix: "atlases/", maxKb: 2048, perAsset: 512, label: "görsel atlasları" },
   { prefix: "weapons/", maxKb: 256, perAsset: 120, label: "silah sprite'ları" },
+  { prefix: "weapon-key-art/", maxKb: 1536, perAsset: 100, label: "silah key art (20)" },
 ];
 const PACKAGE_MAX_KB = 500 * 1024; // Yerel kuru paket kapısı (tests/release.js ile aynı)
 const ZONES = ["scrapyard", "assembly", "warehouse", "cooling", "paint", "loading", "waste", "sandblast", "foundry"];
@@ -84,6 +87,16 @@ for (const a of assets) {
 }
 
 // ── 2) Dosya + ölçü ───────────────────────────────────────────────────────
+const weaponSource = fs.readFileSync(path.join(ROOT, "js", "weapons.js"), "utf8");
+const weaponIds = [...weaponSource.matchAll(/^\s+id:\s*"([^"]+)",\s*name:/gm)].map((m) => m[1]);
+const weaponArtIds = assets.filter((a) => a.id.startsWith("weapon-key-art/"))
+  .map((a) => a.id.slice("weapon-key-art/".length));
+const missingWeaponArt = weaponIds.filter((id) => !weaponArtIds.includes(id));
+const extraWeaponArt = weaponArtIds.filter((id) => !weaponIds.includes(id));
+check("weapon key art covers every selectable catalog entry",
+  weaponIds.length > 0 && missingWeaponArt.length === 0 && extraWeaponArt.length === 0,
+  `catalog=${weaponIds.length}, art=${weaponArtIds.length}, missing=${missingWeaponArt.join(",") || "none"}, extra=${extraWeaponArt.join(",") || "none"}`);
+
 let totalKb = 0;
 for (const a of assets) {
   const abs = path.join(ROOT, a.file);
@@ -122,6 +135,9 @@ for (const a of assets) {
     check(`${a.id}: splash must be opaque`, a.alpha === false);
   }
   if (a.id.startsWith("robots/")) {
+    check(`${a.id}: alfa var`, a.alpha === true);
+  }
+  if (a.id.startsWith("robot-rigs/")) {
     check(`${a.id}: alfa var`, a.alpha === true);
   }
   // Palet yakınlığı kalite sinyali: eşik aşılırsa uyarı (kantizasyon zaten düzeltiyor).

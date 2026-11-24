@@ -15,10 +15,10 @@ const path = require("path");
 
 // ── Kaynakları tek sandbox'ta yükle ─────────────────────────────────────────
 const JS_DIR = path.join(__dirname, "..", "js");
-const FILES = ["i18n.js", "version.js", "portal.js", "diagnostics.js", "audio.js", "characters.js", "progression.js", "profile.js", "parts.js", "market.js", "assets-manifest.js", "assets.js", "maps.js", "skills.js", "skill-fx.js", "robots.js", "terrain.js", "weapons.js", "entity.js", "projectile.js", "ai.js", "game.js"];
+const FILES = ["i18n.js", "version.js", "portal.js", "diagnostics.js", "audio.js", "characters.js", "progression.js", "profile.js", "parts.js", "market.js", "assets-manifest.js", "assets.js", "maps.js", "skills.js", "skill-fx.js", "robot-animation-manifest.js", "robot-rig-runtime.js", "rigs/kopek.js", "robots.js", "terrain.js", "weapons.js", "entity.js", "projectile.js", "ai.js", "game.js"];
 const bundle =
   FILES.map((f) => fs.readFileSync(path.join(JS_DIR, f), "utf8")).join("\n;\n") +
-  "\n;globalThis.__M = { CHARACTERS, MAPS, BIOMES, FACTORY_ZONES, PROP_DRAWERS, WEAPONS, SKILL_PROJECTILES, PROJECTILE_SHAPES, SHARED_SHAPES, PROJ_SUBSTEP, PROJ_MAX_SUBSTEPS, useSkill, drawCharExtras, drawRobot, robotMuzzlePoint, robotTopOffset, _rbProportions, RB_GUN_PIVOT_X, RB_GUN_PIVOT_Y, RB_GUN_MUZZLE, RB_VISUAL_SCALE, Entity, Projectile, Explosion, GRAVITY, Game, Terrain, BotController, AI_LIMITS, aiWorldKey, aiSimulateShot, aiCoarseCandidates, aiPathIsSafe, aiRandom, AI_DIFFICULTY, aiDamageMultiplier, aiAssignDamageScale, aiSelectWeapon, skillConsumesShot, SKILL_SHOT_KINDS, AI_SKILL_REPLACE_SCORE, " +
+  "\n;globalThis.__M = { CHARACTERS, MAPS, BIOMES, FACTORY_ZONES, PROP_DRAWERS, WEAPONS, SKILL_PROJECTILES, PROJECTILE_SHAPES, SHARED_SHAPES, PROJ_SUBSTEP, PROJ_MAX_SUBSTEPS, useSkill, drawCharExtras, drawRobot, robotMuzzlePoint, robotTopOffset, _rbProportions, RB_GUN_PIVOT_X, RB_GUN_PIVOT_Y, RB_GUN_MUZZLE, RB_VISUAL_SCALE, ROBOT_ANIMATIONS, ROBOT_ANIMATION_STATES, getRobotAnimationDef, resolveRobotAnimation, getRobotAnimationFrame, Entity, Projectile, Explosion, GRAVITY, Game, Terrain, BotController, AI_LIMITS, aiWorldKey, aiSimulateShot, aiCoarseCandidates, aiPathIsSafe, aiRandom, AI_DIFFICULTY, aiDamageMultiplier, aiAssignDamageScale, aiSelectWeapon, skillConsumesShot, SKILL_SHOT_KINDS, AI_SKILL_REPLACE_SCORE, " +
   "SKILL_FX_SHAPES, SKILL_FX_KIND_DEFAULT, SKILL_FX_EXTENT, spawnSkillFx, updateSkillFx, drawSkillFx, drawSkillFxIcon, drawSkillAura, SkillFx, arenaOpponentRoster, " +
   "SERVICE_LEVELS, MAX_SERVICE_XP, MAX_TIER, MAX_ARENA_STAGE, START_SCRAP, BRANCHES, BRANCH_LABELS, TIER_COSTS, TIER_LEVEL_GATES, REWARD_BASE, DIFFICULTY_MULTIPLIER, levelForXp, xpForLevel, nextLevelXp, levelUpMessage, calculateMatchReward, resolveRobotBuild, upgradeEffectText, robotUpgradeSummary, totalTiers, sanitizeUpgrades, nextUpgradeStep, toSafeInt, defaultProfile, defaultRobotProgress, normalizeProfile, loadProfile, saveProfile, getRobotProgress, grantMatchReward, purchaseUpgrade, PROFILE_KEY, createSessionId, " +
   "DEFAULT_UNLOCKED_ROBOTS, ACCOUNT_LEVELS, ROBOT_PRICES, levelForAccountXp, xpForAccountLevel, nextAccountLevelXp, accountLevelUpBonus, accountLevelTitle, robotPriceSpec, isRobotUnlocked, canUnlockRobot, unlockRobot, " +
@@ -473,9 +473,8 @@ group("Robot silüeti — oran grameri ve namlu sözleşmesi");
     check(`${ch.label}: oranlar sınır içinde`,
       Object.keys(LIMITS).every((k) => p[k] >= LIMITS[k][0] && p[k] <= LIMITS[k][1]),
       `head=${p.head.toFixed(2)} torsoX=${p.torsoX.toFixed(2)} legs=${p.legs.toFixed(2)} stance=${p.stance.toFixed(2)}`);
-    const lift = ch.id === "kopek" ? 0.55 : 0;
     check(`${ch.label}: üst gövde kayması bacak ölçeğiyle tutarlı`,
-      Math.abs(p.upperDy - (0.96 * (1 - p.legs) - lift)) < 1e-9, `upperDy=${p.upperDy}`);
+      Math.abs(p.upperDy - 0.96 * (1 - p.legs)) < 1e-9, `upperDy=${p.upperDy}`);
     const top = M.robotTopOffset(ch);
     check(`${ch.label}: HP çubuğu ofseti makul aralıkta`,
       Number.isFinite(top) && top < -1.2 && top > -2.6, `top=${top.toFixed(3)}r`);
@@ -1263,6 +1262,35 @@ group("Efekt ikonu ve auralar");
   const ctxAura = mockCtx();
   M.drawSkillAura(ctxAura, Object.assign(makeEntity(M.CHARACTERS[0]), { blockShield: true }), 100, 300, 0);
   check("kalkan aurası görünür iz bırakır", ctxAura.calls.stroke > 0);
+
+  // globalAlpha sızıntı koruması: kalkan veya aura sonrası globalAlpha 1 kalmalı
+  function alphaTrackingCtx() {
+    let alpha = 1;
+    const alphaStack = [];
+    const ctx = mockCtx();
+    const origSave = ctx.save.bind(ctx);
+    const origRestore = ctx.restore.bind(ctx);
+    ctx.save = () => { alphaStack.push(alpha); origSave(); };
+    ctx.restore = () => { if (alphaStack.length > 0) alpha = alphaStack.pop(); origRestore(); };
+    Object.defineProperty(ctx, "globalAlpha", {
+      get() { return alpha; },
+      set(v) { alpha = v; },
+      configurable: true
+    });
+    return ctx;
+  }
+
+  const alphaCtx = alphaTrackingCtx();
+  for (const st of states) {
+    const e = Object.assign(makeEntity(M.CHARACTERS[0]), st);
+    M.drawSkillAura(alphaCtx, e, 100, 300, 1000);
+    check(`drawSkillAura globalAlpha sızdırmaz (${JSON.stringify(st)})`, alphaCtx.globalAlpha === 1);
+  }
+
+  const entityAlphaCtx = alphaTrackingCtx();
+  const shieldedEntity = Object.assign(makeEntity(M.CHARACTERS[0]), { blockShield: true });
+  shieldedEntity.draw(entityAlphaCtx, false, 1000);
+  check("Entity.draw kalkan sonrasında globalAlpha'yı 1'de tutar (sonraki robot saydamlaşmaz)", entityAlphaCtx.globalAlpha === 1);
 }
 
 group("Yetenek efekti üretimi (useSkill entegrasyonu)");

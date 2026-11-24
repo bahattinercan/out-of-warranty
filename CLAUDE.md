@@ -127,11 +127,11 @@ The game MUST work when double-clicking `index.html` via `file://`. Therefore:
 | `js/net/transport.js` | ~300 | Online transport (F3c/F4): loopback transport (with latency/loss simulation for tests) + PeerJS wrapper (ICE/STUN, host N-connection management, `sendTo`/`onPeerClose`) + room code generator |
 | `js/net/adapter.js` | ~230 | Game ↔ Network bridge (F3c): `rules` adapter (commands → game actions), host turn/snapshot/terrain broadcasts, guest state application |
 | `js/online-lobby.js` | ~800 | Online lobby screen (F3c/F4): room code display/join flow, 2–6 seat capacity, bot/disconnect badges, lazy PeerJS loading, robot picker, error overlays |
-| `js/robots.js` | ~1300 | Robot rendering: complete per-character `robots/<id>` sprite with launcher overlay when assets are available; deterministic procedural Canvas fallback, weapon/muzzle placement (`robotMuzzlePoint`), and top offset (`robotTopOffset`) |
+| `js/robots.js` | ~1300 | Robot rendering: deterministic Canvas vector characters and weapons, weapon/muzzle placement (`robotMuzzlePoint`), and top offset (`robotTopOffset`) |
 
 ## Data-Driven Design & Extension Points
 
-- **Robot Rendering:** Gameplay draws each character's complete sprite (`assets/robots/<id>.webp`) as one image, then layers the launcher when aiming. If the sprite is unavailable, the procedural Canvas renderer remains available. This is the restored renderer from `98e937a`; modular part/atlas composition is inactive.
+- **Robot Rendering:** Gameplay draws every character and its weapon with the original procedural Canvas vector renderer. Rig atlases, animation sheets, and full character sprites remain available for future comparisons but are not selected in gameplay. The vector renderer works without image assets.
 - **Single Source of Truth for Muzzle Geometry:** Because the proportion grammar shifts muzzle pivots, `robotMuzzlePoint(cx, cy, r, facing, aim, charDef)` **requires `charDef`**; `Entity.muzzle`, `aiCreateCandidate`, and `Game` trajectory lines pass `charDef`. The "Muzzle Alignment" group in `tests/run.js` verifies visual alignment against logic coordinates. HP bar height is similarly calculated via `robotTopOffset(charDef)` rather than fixed offsets.
 
 Adding new content is primarily **data-driven rather than code modifications**:

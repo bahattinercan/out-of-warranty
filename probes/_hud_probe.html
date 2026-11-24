@@ -39,7 +39,8 @@
 <script src="js/maps.js"></script>
 <script src="js/skills.js"></script>
 <script src="js/skill-fx.js"></script>
-<script src="js/robots.js"></script>
+<script src="js/robot-animation-manifest.js"></script>
+  <script src="js/robots.js"></script>
 <script src="js/terrain.js"></script>
 <script src="js/weapons.js"></script>
 <script src="js/entity.js"></script>
@@ -69,6 +70,8 @@ fake.players = [{
   charDef: CHARACTERS[0], skillCooldown: 0, resolvedSkill: null,
 }];
 fake.updateWeaponHud();
+// Canvas HUD önizlemesini yerel görsel yüklemesi tamamlandıktan sonra yenile.
+setTimeout(() => { fake._weaponKey = null; fake.updateWeaponHud(); }, 700);
 document.getElementById("weapon-panel").classList.remove("hidden");
 
 // drawMines artık mermi çizicisini paylaşıyor: kurulu/kurulmamış mayın görünümü

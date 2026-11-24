@@ -29,6 +29,11 @@ const EXCLUDED_PREFIXES = ["_", "tests/", "docs/", "tools/", "probes/", "screens
   // Sanat: kaynak doküman ve build-zamanı manifest pakete girmez. Çalışma anında
   // yollar `js/assets-manifest.js`ten geliyor; card.md ise üretim talimatı.
   "assets/styles/", "assets/manifest.json"];
+// Source-only rig drafts are intentionally not loaded by index.html until they
+// pass visual acceptance and receive a runtime atlas registration.
+const UNREGISTERED_RIG_SCRIPTS = new Set([
+  "js/rigs/aslan.js", "js/rigs/kaplan.js", "js/rigs/tilki.js"
+]);
 
 // ── CRC32 (ZIP gerekli) ─────────────────────────────────────────────────────
 const CRC_TABLE = (() => {
@@ -70,6 +75,7 @@ function collectFiles(root) {
   for (const f of PACKAGE_FILES) if (fs.existsSync(path.join(base, f))) files.push(f);
   for (const d of PACKAGE_DIRS) walk(base, d, files);
   return files
+    .filter((rel) => !UNREGISTERED_RIG_SCRIPTS.has(rel))
     .filter((rel) => !EXCLUDED_PREFIXES.some((p) => rel.startsWith(p) || rel.includes("/_") || rel.endsWith(".tmp")))
     .sort();
 }

@@ -1,0 +1,41 @@
+﻿<!doctype html>
+<html lang="tr"><head><base href="../"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<title>FIX-8 rig çekirdeği</title>
+<style>body{margin:0;background:#101821;color:#eaf2f8;font:14px system-ui}header{padding:12px 16px;background:#17232e;display:flex;gap:18px;align-items:center}canvas{display:block;width:min(100%,1100px);height:auto;margin:auto}code{color:#63e6be}</style>
+<header><strong>FIX-8 / Rig v2</strong><label>Poz <select id="pose"><option>idle</option><option>walk</option><option>aim</option><option>fire</option><option>jump</option><option>fall</option><option>land</option><option>hit</option><option>skill</option><option>death</option></select></label><button id="next">Sonraki poz</button><label>Nişan <input id="aim" type="range" min="-80" max="80" value="-20"></label><label>Zaman <input id="timeline" type="range" min="0" max="1600" value="0"></label><output id="clip-time">0 ms</output><span id="status">yükleniyor…</span></header>
+<canvas id="view" width="1100" height="580"></canvas>
+<script src="js/assets-manifest.js"></script><script src="js/assets.js"></script>
+<script src="js/robot-animation-manifest.js"></script><script src="js/robot-rig-runtime.js"></script><script src="js/rigs/kopek.js"></script><script src="js/robots.js"></script>
+<script src="js/characters.js"></script><script>
+const canvas=document.getElementById('view'),ctx=canvas.getContext('2d'),poseSelect=document.getElementById('pose'),timeline=document.getElementById('timeline');poseSelect.value='aim';
+ASSET_INDEX['robot-rigs/kopek']='assets/robot-rigs/kopek.webp';document.getElementById('next').addEventListener('click',()=>{const states=['idle','walk','aim','fire','jump','fall','land','hit','skill','death'];poseSelect.value=states[(states.indexOf(poseSelect.value)+1)%states.length];});
+poseSelect.addEventListener('change',()=>{timeline.value=0;});
+ASSET_INDEX['weapons/launcher']='assets/weapons/launcher.webp';
+assetImage('robot-rigs/kopek');assetImage('weapons/launcher');
+window.__rigDrawResults=[];
+function frame(now){
+  ctx.fillStyle='#101821';ctx.fillRect(0,0,canvas.width,canvas.height);
+  const ready=robotRigReady('kopek'); document.getElementById('status').textContent=ready?'atlas hazır · 2 yön / 10 poz':'atlas yükleniyor…';
+  if(ready){
+    const rig=getRobotRig('kopek'),def=CHARACTERS.find(c=>c.id==='kopek');
+    const state=poseSelect.value,angle=Number(document.getElementById('aim').value)*Math.PI/180,clipTime=Number(timeline.value);
+    timeline.max=rig.clips[state].duration;document.getElementById('clip-time').textContent=clipTime+' ms';
+    for(const [i,facing] of [-1,1].entries()){
+      const aim=state==='idle'?undefined:(facing<0?Math.PI-angle:angle);
+      const motion={onGround:true,walkPhase:now/300,aiming:true};
+      const drawn=drawRobot(ctx,{cx:300+i*500,cy:460,r:54,facing,aim,state,timeMs:clipTime,stateElapsedMs:clipTime,motion,charDef:def});
+      window.__rigDrawResults[i]=drawn;
+      ctx.fillStyle='#d3dde7';ctx.textAlign='center';ctx.fillText((facing<0?'sol':'sağ')+' · '+state,300+i*500,520);
+      if(aim!==undefined){const m=robotRigMuzzlePoint(rig,{cx:300+i*500,cy:460,r:54,facing,aim,state,timeMs:now,motion});ctx.fillStyle='#ff637d';ctx.beginPath();ctx.arc(m.x,m.y,4,0,Math.PI*2);ctx.fill();}
+    }
+  }
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+</script></html>
+
+
+
+
+
+

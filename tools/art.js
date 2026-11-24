@@ -48,6 +48,7 @@ const PICK_DEFAULTS = {
   tex: { size: "512x512", alpha: "none", sat: 0.42, q: 84, tile: true },
   ui: { size: "512x512", alpha: "chroma", sat: 0.6, q: 84, tile: false },
   portraits: { size: "256x256", alpha: "chroma", sat: 0.6, q: 84, tile: false },
+  "weapon-key-art": { size: "256x256", alpha: "source", sat: 0.75, q: 84, tile: false },
   robots: { size: "512x544", alpha: "source", sat: 0.7, q: 84, tile: false },
 };
 
@@ -218,7 +219,7 @@ function cmdPick(args) {
   if (chroma) pyArgs.push("--chroma", chroma);
   if (tolerance) pyArgs.push("--tol", tolerance);
   pyArgs.push("--value", value);
-  if (kind === "robots") pyArgs.push("--fit", "contain");
+  if (kind === "robots" || kind === "weapon-key-art") pyArgs.push("--fit", "contain");
   pyArgs.push("--band", String(dflt.band || 0));
   pyArgs.push("--simplify", simplify);
   if (floor) pyArgs.push("--floor", floor);
@@ -281,6 +282,7 @@ function phaseOf(id) {
   if (id.startsWith("ui/")) return "D";
   if (id.startsWith("portraits/")) return "E";
   if (id.startsWith("robots/")) return "R";
+  if (id.startsWith("weapon-key-art/")) return "K";
   return "?";
 }
 
