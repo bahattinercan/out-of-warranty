@@ -5224,9 +5224,6 @@ class Game {
     this.drawTether(ctx); // kanca ipi: mermilerin üstünde, patlamaların altında
     for (const ex of this.explosions) ex.draw(ctx);
     this.drawSuddenDeath(ctx);
-    if (typeof GameSettings === "undefined" || GameSettings.get("hitMarkers")) {
-      this.drawHitMarkers(ctx);
-    }
     if (typeof GameSettings === "undefined" || GameSettings.get("damagePopups")) {
       this.drawDamagePopups(ctx);
     }
