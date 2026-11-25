@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Out of Warranty</string>
+    <string name="title_activity_main">Out of Warranty</string>
+    <string name="package_name">com.bahattinercan.outofwarranty</string>
+    <string name="custom_url_scheme">com.bahattinercan.outofwarranty</string>
+</resources>

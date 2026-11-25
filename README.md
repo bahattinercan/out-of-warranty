@@ -313,6 +313,12 @@ node tools/build.js --mobile
 
 The release package must include THIRD-PARTY-NOTICES.md and fonts/LICENSE-*.txt; publish the privacy document at a hosted URL for portal or Steam submissions.
 
+### Android APK (debug/testing)
+
+The optional Android wrapper requires Node.js, Android SDK platform 36, and JDK 21. Install the locked dependencies with `npm ci`, then run `npm run android:apk`.
+
+**Download:** [Android APK · debug build · v0.6.3](https://bahattinercan.github.io/out-of-warranty/downloads/android/out-of-warranty-debug.apk) (about 74 MB). This is an installable test build, not a Play Store release. The repository copy is [downloads/android/out-of-warranty-debug.apk](downloads/android/out-of-warranty-debug.apk).
+
 ---
 
 ## Licenses & Third-Party Notices
@@ -378,6 +384,10 @@ Depoda Node.js tabanlı birim ve bütünleşme testleri bulunur. Çalıştırma 
 ## Dağıtım
 
 Portal paketi `node tools/build.js` ile hazırlanır. İlk açılışı doğrulamak için `index.html` dosyasını doğrudan açın. Paket içeriği ve boyut denetimi için [Distribution & Packaging](#distribution--packaging) bölümüne bakın.
+
+Android debug APK'si için Node.js, Android SDK platform 36 ve JDK 21 gerekir. Bağımlılıkları `npm ci` ile kurup `npm run android:apk` çalıştırın.
+
+**İndir:** [Android APK · test sürümü · v0.6.3](https://bahattinercan.github.io/out-of-warranty/downloads/android/out-of-warranty-debug.apk) (yaklaşık 74 MB). Bu kurulabilir debug yapısı Play Store yayını değildir. Depodaki dosya: [downloads/android/out-of-warranty-debug.apk](downloads/android/out-of-warranty-debug.apk).
 
 ## Lisanslar
 

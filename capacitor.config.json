@@ -1,7 +1,7 @@
 {
   "appId": "com.bahattinercan.outofwarranty",
   "appName": "Out of Warranty",
-  "webDir": ".",
+  "webDir": "dist/android-web",
   "bundledWebRuntime": false,
   "server": {
     "androidScheme": "https"

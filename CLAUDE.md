@@ -11,13 +11,13 @@ Two players (Red / Blue) play **hot-seat** (same keyboard) or online multiplayer
 **Release Title:** *Out of Warranty* (Turkish interface: **Garanti Dışı**). Repository/folder names (`new-wild-ones`, `dokumhane-9`) and historical internal codenames (`Dökümhane-9`) are historical; the title shown to players is the release title (single source of truth: `js/game.js > GAME_TITLE`).
 Brand identity revolves around robot **model codes** (FIX-8, MIK-0, BOM-12 …). Animal `id` values in `js/characters.js` are internal identifiers only and are never shown in the UI.
 
-- **Technology:** HTML5 Canvas + **pure vanilla JavaScript**. No frameworks, no bundler/build step, zero npm dependencies.
+- **Technology:** HTML5 Canvas + **pure vanilla JavaScript**. The browser game has no runtime dependencies or bundler; Capacitor/npm dependencies are used only for the optional Android APK build.
 - **Running the game:** Double-click `index.html` to open in any browser — zero setup required.
 - **Canvas:** Fixed internal resolution of `960×540` (scaled via CSS; uses `devicePixelRatio` for HiDPI rendering).
 
 ## Commands
 
-There are **no** build/lint/package manager steps. Only two workflows exist:
+The browser game needs no build, lint, or package manager setup. Its optional Android wrapper uses the Android SDK and npm tooling.
 
 ```bash
 # Run the game: open index.html in a browser (works over file://)
@@ -47,6 +47,14 @@ node tests/encoding.js     # encoding gate: UTF-8 validity, BOM and mojibake aud
 node tools/build.js --dry   # file list + size check
 node tools/build.js         # produces dist/out-of-warranty-<version>.zip + manifest
 node tools/build.js --mobile # produces dist/out-of-warranty-<version>-mobile.zip + manifest
+```
+
+```bash
+# Optional Android debug APK (requires Android SDK platform 36 and JDK 21)
+npm ci
+npm run android:web  # stages only game runtime files in dist/android-web
+npm run android:sync # stages web assets and syncs Capacitor Android project
+npm run android:apk  # builds dist/android/out-of-warranty-debug.apk (Windows)
 ```
 
 ```bash
