@@ -1,17 +1,15 @@
 # GitHub Pages Deployment Guide
 
-This document describes the steps for publishing Out of Warranty documentation and privacy policy pages via GitHub Pages from the `/docs` folder.
+This document describes the public Out of Warranty game and its privacy policy pages on GitHub Pages.
 
 ## Publishing Steps
 
 1. **Repository Visibility:** Ensure the repository is public (`bahattinercan/out-of-warranty`). GitHub Pages runs on free accounts for public repositories.
 2. **Settings Tab:** In the GitHub repository, open the **Settings** tab and navigate to **Pages** in the left sidebar.
 3. **Build Source:** Under **Build and deployment > Source**, select **Deploy from a branch**.
-4. **Branch and Folder Settings:** In the **Branch** dropdown, select `main`, and in the folder dropdown, select `/docs`. Click **Save**.
-5. **Initial Build:** Once saved, the first build takes about one minute; progress can be monitored under the **Actions** tab in the `pages-build-deployment` workflow.
-6. **Published URLs:** When the build completes, the pages will be accessible at:
-   - `https://bahattinercan.github.io/out-of-warranty/index.html`
-   - `https://bahattinercan.github.io/out-of-warranty/privacy-and-data.html`
-   - `https://bahattinercan.github.io/out-of-warranty/privacy-en.html`
-7. **Updates & Redelivery:** Any time documentation changes are committed to the `main` branch, GitHub Pages automatically rebuilds and deploys the updated version.
-8. **Verification:** Confirm that page links and character encodings render properly without mojibake or layout breakage.
+4. **Branch and Folder Settings:** Select branch `main` and folder `/ (root)`, then save.
+5. **Published URLs:** The game and policies are available at:
+   - Game: `https://bahattinercan.github.io/out-of-warranty/`
+   - Turkish privacy policy: `https://bahattinercan.github.io/out-of-warranty/docs/privacy-and-data.html`
+   - English privacy policy: `https://bahattinercan.github.io/out-of-warranty/docs/privacy-en.html`
+6. **Updates & Verification:** Commits to `main` trigger a Pages deployment. Confirm all three URLs load, the game assets load without console errors, and policy text renders correctly.
