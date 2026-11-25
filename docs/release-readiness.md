@@ -1,13 +1,13 @@
 # Release Readiness Audit
 
-## Current Candidate — 0.6.1 (2026-11-25)
+## Current Candidate — 0.6.2 (2026-11-25)
 
 | Check | Result |
 |---|---|
-| Public release stamp | `0.6.1 / yayin` (`js/version.js`) |
+| Public release stamp | `0.6.2 / yayin` (`js/version.js`) |
 | Automated verification | `npm.cmd run verify` passed, including art, game, feedback, localization, mobile, network, release, encoding, and package dry-run gates. Art palette checks emitted 12 non-blocking warnings. |
 | Feedback browser check | Chrome opened `index.html` through `file://`; desktop (1280×900) and mobile (390×844) dialog, form input, category/rating selection, copy feedback, and Escape dismissal passed; 0 console errors. |
-| Built archive | `dist/out-of-warranty-0.6.1.zip`, 71,121,275 bytes; manifest reports 71,058,121 extracted bytes across 444 files. Largest file is 2,485,425 bytes. `index.html` is at the ZIP root. |
+| Package dry-run | `0.6.2 / yayin`; 444 files, 69,392.0 KB; gate passed. A 0.6.2 ZIP has not been generated. |
 | itch.io package limits | Within itch.io's current HTML5 limits: fewer than 1,000 files, under 500 MB extracted, and no individual file above 200 MB. See [itch.io HTML5 upload requirements](https://itch.io/docs/creators/html5#zip-file-requirements). |
 | itch.io project | No project page exists yet. Create a new HTML Game page, upload the archive, set closed-beta access, then verify the hosted embed. The archive has not been published. |
 | Public game page | `https://bahattinercan.github.io/out-of-warranty/` — GitHub Pages publishes the repository root; verify the live build after deployment. |
