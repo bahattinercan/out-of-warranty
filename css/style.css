@@ -119,7 +119,7 @@ html, body {
   height: 100vh;
   height: 100dvh;
   margin: 0;
-  padding: 8px;
+  padding: max(8px, env(safe-area-inset-top, 0px)) max(8px, env(safe-area-inset-right, 0px)) max(8px, env(safe-area-inset-bottom, 0px)) max(8px, env(safe-area-inset-left, 0px));
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -871,8 +871,9 @@ canvas#game {
 #app:fullscreen {
   width: 100vw;
   height: 100vh;
+  height: 100dvh;
   background: var(--bg);
-  padding: 8px;
+  padding: max(8px, env(safe-area-inset-top, 0px)) max(8px, env(safe-area-inset-right, 0px)) max(8px, env(safe-area-inset-bottom, 0px)) max(8px, env(safe-area-inset-left, 0px));
 }
 
 /* ── Operasyon konsolu: ortak arayüz yenilemesi ───────────────────────── */
@@ -1047,7 +1048,7 @@ canvas#game {
 }
 
 @media (max-width: 480px) {
-  #app { padding: 4px; }
+  #app { padding: max(4px, env(safe-area-inset-top, 0px)) max(4px, env(safe-area-inset-right, 0px)) max(4px, env(safe-area-inset-bottom, 0px)) max(4px, env(safe-area-inset-left, 0px)); }
   #battle-bar { height: 122px; }
   #players { flex-basis: 42px; }
   #battle-actions { gap: 5px; }
@@ -1774,7 +1775,7 @@ kbd.accent {
 #mobile-controls {
   position: absolute;
   left: max(16px, env(safe-area-inset-left));
-  bottom: 84px;
+  bottom: calc(84px + env(safe-area-inset-bottom, 0px));
   z-index: 45;
   display: flex;
   align-items: flex-end;
@@ -1866,12 +1867,13 @@ kbd.accent {
   left: 0;
   width: 100vw;
   height: 100vh;
+  height: 100dvh;
   background: rgba(8, 17, 22, 0.96);
   z-index: 9999;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 24px;
+  padding: max(24px, env(safe-area-inset-top, 0px)) max(24px, env(safe-area-inset-right, 0px)) max(24px, env(safe-area-inset-bottom, 0px)) max(24px, env(safe-area-inset-left, 0px));
   box-sizing: border-box;
   text-align: center;
 }

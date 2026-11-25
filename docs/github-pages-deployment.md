@@ -1,4 +1,4 @@
-﻿# GitHub Pages Deployment Guide
+# GitHub Pages Deployment Guide
 
 This document describes the public Out of Warranty game and its privacy policy pages on GitHub Pages.
 

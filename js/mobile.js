@@ -28,9 +28,9 @@ class MobileControls {
 
     // D-Pad dokunma takibi (multi-touch)
     this.dpadTouches = {
-      left: null,
-      right: null,
-      jump: null,
+      "touch-left": null,
+      "touch-right": null,
+      "touch-jump": null,
     };
   }
 
@@ -56,6 +56,7 @@ class MobileControls {
     this._bindDpad();
     this._bindSlingshot();
     this._bindOrientation();
+    this._bindCancellation();
 
     // Oyun çizim döngüsüne sapan kılavuzunu eklemek için hook
     if (this.game) {
@@ -81,11 +82,18 @@ class MobileControls {
       const handleStart = (e) => {
         e.preventDefault();
         e.stopPropagation();
+        if (e.changedTouches && this.dpadTouches[btn.id] !== null) return;
+        if (e.changedTouches) this.dpadTouches[btn.id] = e.changedTouches[0].identifier;
         btn.classList.add("active");
         onStart();
       };
 
       const handleEnd = (e) => {
+        if (e.changedTouches) {
+          const touch = Array.from(e.changedTouches).find((item) => item.identifier === this.dpadTouches[btn.id]);
+          if (!touch) return;
+          this.dpadTouches[btn.id] = null;
+        }
         e.preventDefault();
         e.stopPropagation();
         btn.classList.remove("active");
@@ -163,6 +171,8 @@ class MobileControls {
 
       const t = e.changedTouches && e.changedTouches[0];
       if (!t) return;
+      e.preventDefault();
+      if (this.slingshot.active) return;
 
       // Açık silah menüsü varsa dokunuş yalnız onu kapatır
       if (this.game.weaponMenuOpen) {
@@ -170,6 +180,8 @@ class MobileControls {
         this.game.updateHud();
         return;
       }
+
+      this.game.startCharge();
 
       const pt = this.game.pointerWorld(t);
       this.slingshot.active = true;
@@ -216,7 +228,7 @@ class MobileControls {
         this.slingshot.power = power;
 
         this.game.active.aim = angle;
-        this.game.input.power = power;
+        this.game.input.power = power / 100;
         this.game.input.charging = true;
 
         // Nişan koordinatını namlu çıkışına göre ileriye yansıt
@@ -226,7 +238,7 @@ class MobileControls {
         this.game.input.mouseMoved = true;
 
         if (typeof updatePowerBar === "function") {
-          updatePowerBar(power, true);
+          updatePowerBar(this.game.input.power, true);
         }
       }
     }, { passive: false });
@@ -249,7 +261,7 @@ class MobileControls {
       this.slingshot.touchId = null;
       if (this.cancelBtn) this.cancelBtn.classList.add("hidden");
 
-      if (dist < 15) {
+      if (e.type === "touchcancel" || dist < 15) {
         // Çok kısa dokunuş: atışı iptal et, kazara fırlatmayı engelle
         this.cancelSlingshot();
       } else {
@@ -273,10 +285,36 @@ class MobileControls {
 
     if (this.cancelBtn) this.cancelBtn.classList.add("hidden");
     if (this.game) {
+      if (this.game.cancelCharge) this.game.cancelCharge();
       this.game.input.charging = false;
       this.game.input.power = 0;
       if (typeof updatePowerBar === "function") updatePowerBar(0, false);
-      if (this.game.cancelCharge) this.game.cancelCharge();
+    }
+  }
+
+  /* AIMING dokunuşlarını tuval yerine yalnızca sapan motoru işler. */
+  ownsCanvasTouch() {
+    return !!(this.enabled && this.game && this.game.state === "AIMING" && this.game.isLocalTurn());
+  }
+
+  _bindCancellation() {
+    const cancel = () => {
+      this.cancelSlingshot();
+      for (const id of ["touch-left", "touch-right", "touch-jump"]) {
+        const btn = document.getElementById(id);
+        if (btn) btn.classList.remove("active");
+        this.dpadTouches[id] = null;
+      }
+      if (this.game && this.game.input) {
+        this.game.input.left = false;
+        this.game.input.right = false;
+      }
+    };
+    window.addEventListener("blur", cancel);
+    if (typeof document !== "undefined") {
+      document.addEventListener("visibilitychange", () => {
+        if (document.hidden) cancel();
+      });
     }
   }
 
@@ -343,7 +381,7 @@ class MobileControls {
     ctx.fill();
 
     // 2. Robot namlusundan hedefe doğru lazer izi (güce göre uzar)
-    const muzzle = a.muzzle ? a.muzzle() : { x: a.x, y: a.y - 10 };
+    const muzzle = a.muzzle || { x: a.x, y: a.y - 10 };
     const laserLength = 40 + (s.power * 1.4);
     const targetX = muzzle.x + Math.cos(s.angle) * laserLength;
     const targetY = muzzle.y + Math.sin(s.angle) * laserLength;

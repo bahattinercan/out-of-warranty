@@ -1,4 +1,4 @@
-﻿# Out of Warranty — Documentation
+# Out of Warranty — Documentation
 
 Project: **Out of Warranty (Garanti Dışı)**, a browser-based 2D tactical artillery game.
 

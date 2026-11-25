@@ -3836,20 +3836,21 @@ class Game {
     });
     this.canvas.addEventListener("mousedown", (e) => this.pressCanvas(e, e.button));
 
-    /* Dokunmatik: `touchstart` ayrıca dinlenir ve sentetik `mousedown`
-     * bastırılır (preventDefault) ki tek dokunuş iki kez işlenmesin. Sürükleme
-     * nişanı günceller, parmağı kaldırmak atışı bırakır (battle); menülerde
-     * tek dokunuş düğmeyi çalıştırır. */
+    /* Mobil maç dokunuşlarının sahibi MOBILE'dir: sapan ve canvas girişinin
+     * ayrı ayrı ateş başlatmasını önler. Diğer ekranlarda canvas dokunuşu
+     * menü eylemlerini çalıştırır; preventDefault sentetik fareyi bastırır. */
     this.canvas.addEventListener("touchstart", (e) => {
       const t = e.changedTouches && e.changedTouches[0];
       if (!t) return;
       e.preventDefault();
+      if (typeof MOBILE !== "undefined" && MOBILE.ownsCanvasTouch()) return;
       this.pressCanvas(t, 0);
     }, { passive: false });
     this.canvas.addEventListener("touchmove", (e) => {
       const t = e.changedTouches && e.changedTouches[0];
       if (!t) return;
       e.preventDefault();
+      if (typeof MOBILE !== "undefined" && MOBILE.ownsCanvasTouch()) return;
       const pt = this.pointerWorld(t);
       this.input.mouseX = pt.x;
       this.input.mouseY = pt.y;
@@ -3857,6 +3858,7 @@ class Game {
     }, { passive: false });
     const endTouch = (e) => {
       if (e.cancelable) e.preventDefault();
+      if (typeof MOBILE !== "undefined" && MOBILE.ownsCanvasTouch()) return;
       if (this.state === "AIMING") this.releaseFire();
     };
     this.canvas.addEventListener("touchend", endTouch, { passive: false });
@@ -4883,7 +4885,8 @@ class Game {
       }
 
       // Güç doldurma stamina harcamaz; stamina yalnızca yürümede tükenir
-      if (a.control !== "bot" && this.input.charging) {
+      const touchCharging = typeof MOBILE !== "undefined" && MOBILE.slingshot.active;
+      if (a.control !== "bot" && this.input.charging && !touchCharging) {
         this.input.power = Math.min(1, this.input.power + 0.012);
         const markerPct = a.lastShot ? a.lastShot.power * 100 : null;
         updatePowerBar(this.input.power, true, markerPct);
