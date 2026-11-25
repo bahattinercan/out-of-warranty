@@ -67,7 +67,7 @@ Evaluated the release readiness of the current build in the Out of Warranty repo
 | Poki — Mute / Fullscreen | VERIFIED | Mute and fullscreen contracts verified; SDK bridge tests pass. |
 | Poki — Rewarded Ads | VERIFIED | `js/portal.js:291-299` `PokiSDK.rewardedBreak()` wired to 2× Scrap bonus. |
 | Local dry-package gate | VERIFIED | 500 MiB (512,000 KiB) ceiling; re-measure with `node tools/build.js --dry`. |
-| Steam — Desktop Port | PARKED | `docs/steam-release-plan.md` marked parked per user decision; deferred until web portal rollout. |
+| Steam — Desktop Port | PARKED | `docs/plans/platforms/steam-release-plan.md` marked parked per user decision; deferred until web portal rollout. |
 | Steam — Native Wrapper | PARKED | Electron/NW.js desktop container initialization deferred. |
 | Steam — Store Graphics | PARKED | Marketing assets exist in `art/marketing/`; Steamworks uploads deferred. |
 | Global — Hosted Privacy Policy | READY (AWAITING PAGES) | `docs/index.md`, `docs/privacy-en.md`, and `docs/github-pages-deployment.md` committed (commit `df6f4e6`). |

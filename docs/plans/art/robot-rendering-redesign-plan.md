@@ -25,7 +25,7 @@ Aktif `js/robots.js` tam sprite çizimini kullanıyor. Bu yeniden tasarım plan�
 
 Bu yolların üzerinde ayrıca karakter kimliğine göre `if` dalları bulunuyor. Kalça, gövde kayması, bacak ölçeği, atlas hücresi ve zemin teması farklı yerlerde hesaplandığı için bir noktayı düzeltmek başka çizim yolunda boşluk, örtüşme veya zeminden kopma yaratabiliyor. Son Orca görüntüsünde FIX-8’in teker modülleri ile alt bacakları ve MIK-0’ın teker ayakları zemine göre hâlâ tutarsız görünüyor.
 
-Asıl sorun karakter parçalarının farklı olması değil; çiziciye bu farklılıkların açık bir anatomik sözleşme olarak verilmemesiydi. `docs/robot-rig-plan.md` şu anda geri yüklenen eski çizim sistemini tarif ediyor.
+Asıl sorun karakter parçalarının farklı olması değil; çiziciye bu farklılıkların açık bir anatomik sözleşme olarak verilmemesiydi. `docs/plans/art/robot-rig-plan.md` şu anda geri yüklenen eski çizim sistemini tarif ediyor.
 
 ## Değişmeyecek sözleşmeler
 
@@ -105,7 +105,7 @@ Bu altılı yalnızca dikey dilimdir; rosterın tüm rig ailelerini kapsadığı
 
 ## Uygulama öncesi belirsizlikleri kapatma
 
-- **Mimari kararı (uygulandı):** Profiller raster atlaslar veya ayrı-parça asset'leri seçer; weapon pose iki tutuş hesabını korur, gameplay yalnızca ön kolu çizer. `docs/robot-rig-plan.md` ve `CLAUDE.md` bu kararı izler.
+- **Mimari kararı (uygulandı):** Profiller raster atlaslar veya ayrı-parça asset'leri seçer; weapon pose iki tutuş hesabını korur, gameplay yalnızca ön kolu çizer. `docs/plans/art/robot-rig-plan.md` ve `CLAUDE.md` bu kararı izler.
 - **Asset kaynağı doğruluğu:** Tüm `assets/robot-parts/*complete-parts*`, ayrı parça görselleri ve `art/character-parts/` master dosyaları ölçülecek. Hücre sırası, gerçek alpha bounds, eksik uzuv ve karakterler arası kopya/uyumsuz görsel raporlanacak. 3×3 düzen yalnız ölçümle doğrulanan dosyalara uygulanacak.
 - **Anatomi envanteri:** 34 karakterin her biri görünür parçalar ve gerçek zemin taşıyan modül ile sınıflandırılacak. `legs`/`wheels` gibi katalog etiketleri yalnız başlangıç ipucudur; profile aynen kopyalanmayacak.
 - **Dikey dilim temsiliyeti:** Altılı; ayaklı bacak, yay, teker ve palet sınıflarını örnekler ama bilye/rotor ve tüm asset varyasyonlarını kapsamaz. Bu yüzden genel çizici kapatılmadan önce her hareket ailesinden en az bir karakter ve farklı asset biçiminden bir karakter dikey dilime eklenecek.
@@ -121,8 +121,8 @@ Bu altılı yalnızca dikey dilimdir; rosterın tüm rig ailelerini kapsadığı
 | `tests/harness.js` ve ilgili probe dosya listeleri | Yeni script sırasını test ortamında aynalamak |
 | `tests/robot-rig.js` | Profil şeması, 34 model kapsamı, bağlantı/zemin/katman/silah regresyonları |
 | `probes/_robot_rig_probe.html` veya yeni rig probe'u | 34 robotu yön, hareket tipi, ölçek ve parça katmanlarıyla görsel inceleme |
-| `docs/robot-rig-plan.md` | Raster/prosedürel asset kaynağı, iki-el weapon pose ve ortak çağıranlar kararına göre bu planla uzlaştırma |
-| `docs/character-parts-production-plan.md` | Atlas üretimi tamamlandıktan sonra render entegrasyonu kabul durumunu yeniden yazma |
+| `docs/plans/art/robot-rig-plan.md` | Raster/prosedürel asset kaynağı, iki-el weapon pose ve ortak çağıranlar kararına göre bu planla uzlaştırma |
+| `docs/plans/art/character-parts-production-plan.md` | Atlas üretimi tamamlandıktan sonra render entegrasyonu kabul durumunu yeniden yazma |
 
 Yeni varlık gerekirse ayrıca `assets/manifest.json` ve `js/assets-manifest.js` güncellenecek. Profil geçişi sırasında atlaslar yeniden adlandırılmayacak; dosya adları kod içinde dağınık özel durumlar olarak değil, profil verisi olarak tutulacak.
 

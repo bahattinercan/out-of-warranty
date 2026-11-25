@@ -1,6 +1,6 @@
 # Closed Beta Test Report (F6) — TEMPLATE
 
-This document serves as the **working report template**: metrics, findings, and strategic decisions are compiled here following closed beta testing (20–50 players, itch.io). Figures are populated directly from itch.io dashboard analytics, feedback forms, and `?rapor=1` diagnostics rather than estimations (`docs/web-launch-plan.md` §9 K1/K2 gates).
+This document serves as the **working report template**: metrics, findings, and strategic decisions are compiled here following closed beta testing (20–50 players, itch.io). Figures are populated directly from itch.io dashboard analytics, feedback forms, and `?rapor=1` diagnostics rather than estimations (`docs/plans/platforms/web-launch-plan.md` §9 K1/K2 gates).
 
 Version: **v0.6.1** (`js/version.js`) · Date range: ____ · Testers: ____ participants
 

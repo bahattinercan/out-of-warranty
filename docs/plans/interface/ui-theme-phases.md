@@ -1,8 +1,8 @@
 # UI Theme — Phased Implementation Plan Across All Interfaces
 
-> Historical Implementation Record: The comprehensive visual overhaul following this theme is tracked under [`design-redesign-plan.md`](design-redesign-plan.md).
+> Historical Implementation Record: The comprehensive visual overhaul following this theme is tracked under [`design-redesign-plan.md`](./design-redesign-plan.md).
 
-Source specifications & locked decisions: [`ui-theme-plan.md`](ui-theme-plan.md).  
+Source specifications & locked decisions: [`ui-theme-plan.md`](./ui-theme-plan.md).
 This document breaks down the systematic application of the industrial design language across every interface surface into numbered, file-level steps.
 
 Status: **Phases 1–5 Fully Implemented** (verified via 703/703 + 165/165 test suites).

@@ -8,7 +8,7 @@ Target hardware (user specified): **RTX 3090 24 GB + Ryzen 7 5700X + 32 GB RAM**
 (Note: The development machine in this repository is an RTX 3050 Ti 4 GB — asset generation is not performed there; it is used only for integration testing.)
 
 > **Revision (November 14, 2026) — Implementation plan in separate document:**
-> This file serves as the **research and architectural decision** record; concrete implementation steps and physical benchmarks reside in [`docs/art-production-plan-ai3090.md`](./art-production-plan-ai3090.md), which takes precedence in any contradiction.
+> This file serves as the **research and architectural decision** record; concrete implementation steps and physical benchmarks reside in [`docs/plans/art/art-production-plan-ai3090.md`](./art-production-plan-ai3090.md), which takes precedence in any contradiction.
 > Three key updates: (1) The ai3090 generation node **lacks SDXL**, adopting **Z-Image-Turbo** as the primary engine (Apache 2.0, measured 16–25 s/image: 1024² cold 24.2 s, 1280×720 warm 16.0 s); (2) The `ai image` graph operates at `cfg=1` + `ConditioningZeroOut`, making **negative prompts ineffective** — §4's negative prompt template serves as guidance only, with consistency enforced via prompt templates + seeds + palette quantization + Qwen-Image-Edit; (3) `controlnet/`, `upscale_models/`, and custom nodes are **unpopulated** — §3.1 represents architectural assumptions, not the active configuration on that date.
 
 ---
@@ -325,7 +325,7 @@ Current Architecture:
 | Z-Image / Z-Image-Turbo | ✅ Yes | Apache 2.0 License. |
 | SUPIR / SeedVR2 / Real-ESRGAN | ✅ Yes | Permissive open-source licenses (Apache/BSD). Upscaler outputs are unencumbered. |
 
-**Steam AI Disclosure (Updated January 2026):** Valve enforces a mandatory store questionnaire. While background developer efficiency tooling is exempt, all **player-facing generative content** (visuals, audio, text) must be disclosed. Shipping with AI backdrops or icons requires completing the **"AI Generated Content"** disclosure in Steamworks. Copy is tracked in `docs/steam-release-plan.md` §3.
+**Steam AI Disclosure (Updated January 2026):** Valve enforces a mandatory store questionnaire. While background developer efficiency tooling is exempt, all **player-facing generative content** (visuals, audio, text) must be disclosed. Shipping with AI backdrops or icons requires completing the **"AI Generated Content"** disclosure in Steamworks. Copy is tracked in `docs/plans/platforms/steam-release-plan.md` §3.
 
 ---
 

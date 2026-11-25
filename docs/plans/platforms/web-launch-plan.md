@@ -1,12 +1,12 @@
 # Web Launch Plan — Dökümhane-9
 
-Date: October 16, 2026 · Status: **Path A selected**; F1–F5 complete, F6 preparations finalized (package generator, version stamp, diagnostics/reporting, release copy, and report template). Next milestones are **F3c-3** (real-world network playtest across distinct networks) and **F6 release** (itch.io closed beta, 20–50 players). Details: `docs/portal-compliance.md`, `docs/itch-release-copy.md`.
+Date: October 16, 2026 · Status: **Path A selected**; F1–F5 complete, F6 preparations finalized (package generator, version stamp, diagnostics/reporting, release copy, and report template). Next milestones are **F3c-3** (real-world network playtest across distinct networks) and **F6 release** (itch.io closed beta, 20–50 players). Details: `docs/plans/platforms/portal-compliance.md`, `docs/itch-release-copy.md`.
 
 Related documents:
 
 - [steam-release-plan.md](./steam-release-plan.md) — **deferred**, gated behind Milestone K3 (see §9).
-- [multiplayer-plan.md](./multiplayer-plan.md) — authoritative host simulation and match clock rules (§2, §6) are **adopted directly**; Steam lobby/SDR transport is replaced by WebRTC.
-- [ui-theme-plan.md](./ui-theme-plan.md), [map-combat-layout-plan.md](./map-combat-layout-plan.md), [market-parts-plan.md](./market-parts-plan.md) — active content plans; economic models align with §8.
+- [multiplayer-plan.md](../gameplay/multiplayer-plan.md) — authoritative host simulation and match clock rules (§2, §6) are **adopted directly**; Steam lobby/SDR transport is replaced by WebRTC.
+- [ui-theme-plan.md](../interface/ui-theme-plan.md), [map-combat-layout-plan.md](../gameplay/map-combat-layout-plan.md), [market-parts-plan.md](../gameplay/market-parts-plan.md) — active content plans; economic models align with §8.
 - [online-trial.md](./online-trial.md) — F3c-3 real-world network trial guide, checklist, and exit criteria.
 
 ---
@@ -226,7 +226,7 @@ Evaluated **8 weeks post-launch**:
 | **F3b** (Complete) | Snapshot capture/restore and terrain delta replication | `js/net/state.js`, `tests/net-state.js` | `node tests/net-state.js` 53/53 assertions |
 | **F3c-1** (Complete) | Transport abstractions (PeerJS + Loopback) and integration tests | `js/net/transport.js`, `tests/net-integration.js` | `node tests/net-integration.js` 43/43 assertions |
 | **F3c-2** (Complete) | Canvas lobby UI, deep-linking, and game loop wiring | `js/online-lobby.js`, `js/net/adapter.js` | `node tests/net-game.js` 123/123 assertions + headless browser probes |
-| **F3c-3** (Pending User) | Real-world network playtest across separate networks (`docs/online-trial.md`) | Field test report | 5 complete turns, room creation <20 s, drop rate <5% |
+| **F3c-3** (Pending User) | Real-world network playtest across separate networks (`docs/plans/platforms/online-trial.md`) | Field test report | 5 complete turns, room creation <20 s, drop rate <5% |
 | **F4** (Complete) | 2–6 player scalability, room codes, bot handover | Multi-client session & reconnect logic | `tests/net-multi.js` 55/55 assertions + `tests/net-reconnect.js` 30/30 assertions |
 | **F5** (Complete) | Portal SDK bridge, rewarded ad hooks, telemetry events | `js/portal.js`, `tests/portal.js` | `tests/portal.js` 46/46 assertions + `tests/reward-ad.js` 19/19 assertions |
 | **F6** (Ready) | Closed beta (20–50 players, itch.io) → public web demo | Build generator (`tools/build.js`), version stamping, diagnostics UI | `node tests/release.js` 46/46 assertions; clean headless bundle validation |

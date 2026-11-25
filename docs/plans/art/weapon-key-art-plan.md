@@ -131,7 +131,7 @@ The count is 20 selectable weapons; the table has 20 entries. IDs are the stable
 
 | Path | Expected change |
 | --- | --- |
-| `docs/weapon-key-art-plan.md` | Plan, implementation record, and acceptance results |
+| `docs/plans/art/weapon-key-art-plan.md` | Plan, implementation record, and acceptance results |
 | `art/weapon-key-art/` | Approved 512x512 PNG masters, prompt metadata, and contact sheet |
 | `assets/weapon-key-art/` | 20 runtime WebP images |
 | `assets/manifest.json` | 20 runtime asset records |

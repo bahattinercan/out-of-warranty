@@ -11,7 +11,7 @@ This document defines the product requirements, aesthetic guidelines, component 
 - 2D turn-based tactical artillery combat in an industrial megafactory with 960×540 Canvas, DOM HUD, and modal overlays.
 - Navigation covers mode select, difficulty, player counts, robot select, arena select, combat, victory/defeat, workshop, market, tutorial, and online lobbies.
 - Visual assets include robot modular sprites, biome backdrops, weapon/part icons, local WOFF2 typography, and industrial panel primitives.
-- Historical specifications in `docs/ui-theme-plan.md` and `docs/ui-theme-phases.md` describe the original panel system (Russo One/Chakra Petch, chamfered steel plates, hazard hatching). This overhaul evolves that baseline toward a cleaner, more modern aesthetic without breaking existing architecture.
+- Historical specifications in `docs/plans/interface/ui-theme-plan.md` and `docs/plans/interface/ui-theme-phases.md` describe the original panel system (Russo One/Chakra Petch, chamfered steel plates, hazard hatching). This overhaul evolves that baseline toward a cleaner, more modern aesthetic without breaking existing architecture.
 - Quality backed by Node.js test suites and visual verification probes (`_*.html`).
 
 ## 2. Design Objectives

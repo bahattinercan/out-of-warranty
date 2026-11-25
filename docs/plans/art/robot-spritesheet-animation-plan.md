@@ -137,7 +137,7 @@ Eksik sheet'te sessizce yanlış pozu göstermek yerine fallback zinciri: karakt
 | Oyun olayı sinyalleri | `js/entity.js`, `js/game.js`, `js/skills.js` | Shot/skill/dig/land/death gibi mevcut sinyalleri gözden geçir; gerçekten eksik olan kısa görsel event state'lerini ekle. Hasar/damage sayısına müdahale yok. |
 | Varlık yükleme | `js/assets.js`, `assets/manifest.json`, `js/assets-manifest.js`, `tools/art.js` | Kare sheet'lerini `file://` uyumlu yükle, manifest üret/gate ve release paket kapsamı. |
 | Doğrulama | `tests/robot-rig.js`, yeni animasyon testleri, `probes/` | Şema, frame sınırları, state önceliği, one-shot, fallback, determinism, anchors ve ölçek. |
-| Dokümantasyon | `CLAUDE.md`, `docs/robot-rig-plan.md`, `docs/art-production-plan-ai3090.md`, README gerektiğinde | Gerçek renderer/asset sözleşmesi ve üretim süreci; eski renderer planıyla çelişkiler karar kaydıyla düzeltilir. |
+| Dokümantasyon | `CLAUDE.md`, `docs/plans/art/robot-rig-plan.md`, `docs/plans/art/art-production-plan-ai3090.md`, README gerektiğinde | Gerçek renderer/asset sözleşmesi ve üretim süreci; eski renderer planıyla çelişkiler karar kaydıyla düzeltilir. |
 
 Kod dosyalarının listesi uygulama öncesi yeniden okunup kesinleştirilecek. Yeni bağımlılık/bundler yok; `index.html` `file://` desteği korunur.
 

@@ -1,10 +1,10 @@
 # Menu UI Theme & Typography Plan
 
-> Historical record: The industrial panel styling and dual-font specifications defined in this document served as the baseline for the comprehensive UI overhaul tracked in [`design-redesign-plan.md`](design-redesign-plan.md).
+> Historical record: The industrial panel styling and dual-font specifications defined in this document served as the baseline for the comprehensive UI overhaul tracked in [`design-redesign-plan.md`](./design-redesign-plan.md).
 
 Date: September 24, 2026  
 Status: **Phases 1 + 2 Implemented** (font subsystem + panel framework pilot; 644/644 tests passed).  
-Implementation roadmap for all surfaces: [`ui-theme-phases.md`](ui-theme-phases.md).
+Implementation roadmap for all surfaces: [`ui-theme-phases.md`](./ui-theme-phases.md).
 
 ## 1. Locked Decisions
 

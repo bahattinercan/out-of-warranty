@@ -50,7 +50,7 @@ Sound effects and music use zero-dependency Web Audio synthesis so the game rema
 | `js/game.js` | Yalnızca envanterde eksik veya yanlış yerde olduğu belirlenen olay çağrılarını düzeltmek; oyun mantığına dokunmamak. |
 | `tests/audio.js` | Web Audio sözleşmeleri, durum geçişleri, kaynak temizliği, tercih saklama ve yeni efekt/tema davranışları için regresyon kontrolleri. |
 | `js/mobile.js`, `tests/mobile.js` | Tarayıcı başlatma kontrolü `Game.draw` yerine var olan `Game.render` metoduna bağlanır; mobil çizim kancası testi güncellenir. |
-| `docs/audio-redesign-plan.md` | Plan, kararlar, uygulama ilerlemesi ve doğrulama kayıtları. |
+| `docs/plans/audio/audio-redesign-plan.md` | Plan, kararlar, uygulama ilerlemesi ve doğrulama kayıtları. |
 | `js/settings.js`, `index.html`, `js/i18n.js` | Yalnızca ses ayarlarının mevcut akışta yetersiz kaldığı kanıtlanırsa; ayrı dil/arayüz değişikliği olarak gerekçelendirilir. |
 
 `CLAUDE.md` specifies the local-audio and `file://` compatibility constraint. The classic script load sequence and global `SFX` API must remain intact.
@@ -222,7 +222,7 @@ Efektleri tek tek sentezlemekten, oyun olaylarını tutarlı ve yönetilebilir b
 | `js/audio.js` | İlk geçişte var olan dosyada bus, olay yönlendirme ve profil kataloğu; ayrıştırma gerekirse klasik script sırasına uygun `js/audio-core.js` ve `js/audio-profiles.js` önerisi. |
 | `js/game.js` | Yalnızca olay envanteri/öncelik/koordinat için eksik parametreleri eklemek; oyun kuralları ve fizik değişmez. |
 | `tests/audio.js` | Bus yönlendirme, deterministik profil, öncelik/çalma çalma, tekrar sınırı, mute/askıya alma/temizleme sözleşmeleri. |
-| `docs/audio-redesign-plan.md` | Uygulama kararları, dinleme bulguları, doğrulama kayıtları ve kalan sınırlamalar. |
+| `docs/plans/audio/audio-redesign-plan.md` | Uygulama kararları, dinleme bulguları, doğrulama kayıtları ve kalan sınırlamalar. |
 | `js/settings.js`, `index.html`, `js/i18n.js` | Yalnızca dinleme kararı yeni ses kategorisi ayarı gerektirirse; ayrı kullanıcı arayüzü değişikliği olarak. |
 
 ### Doğrulama, risk ve geri dönüş
@@ -388,4 +388,4 @@ MiniMax Music 3 renders were tried and rejected by the user. Runtime playback no
 
 The dark ambient and subsequent junkyard-funk sets were rejected. The current procedural score follows the user's chosen classic arena-rock direction. A variation bag plays each theme's four arrangements once in shuffled order, then reshuffles without an immediate boundary repeat. Sound effects follow the same four-variation rule per effect family: weapon shots and explosions are classified separately, and each family cycles all four profiles in shuffled order without repeating at the boundary. Profiles alter pitch, duration, filter, attack and resonance while preserving peak gain. The human listening pass for the coded sound remains open; see `audio-production.md`.
 
-`tests/audio.js` covers the coded themes, state transitions, mute/volume pause and resume, result stings, and returning to the menu. See [`audio-production.md`](audio-production.md) for the retired AI-render history and current listening status.
+`tests/audio.js` covers the coded themes, state transitions, mute/volume pause and resume, result stings, and returning to the menu. See [`audio-production.md`](./audio-production.md) for the retired AI-render history and current listening status.

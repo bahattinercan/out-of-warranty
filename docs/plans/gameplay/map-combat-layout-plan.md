@@ -2,7 +2,7 @@
 
 Date: September 23, 2026  
 Status: On September 23, 2026, core terrain geometry, authentic previews, and map-specific spawn pads were implemented in game code; automated test suites passed. Visual gameplay validation and extended balance simulations are in progress.  
-Baseline: [Map Design Review](map-design-review.md), existing terrain, movement physics, and match launch codebase.
+Baseline: [Map Design Review](./map-design-review.md), existing terrain, movement physics, and match launch codebase.
 
 ## 1. Design Philosophy
 

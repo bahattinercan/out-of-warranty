@@ -6,7 +6,7 @@
 Date: September 24, 2026  
 Status: Architectural planning specification — execution suspended.
 
-Multiplayer Update (October 8, 2026): Selected star topology with player-authoritative hosting, Steam lobbies, and friend invites. Technical milestones are documented in the [Multiplayer Architecture Plan](./multiplayer-plan.md). Electron is the recommended container candidate for desktop builds.
+Multiplayer Update (October 8, 2026): Selected star topology with player-authoritative hosting, Steam lobbies, and friend invites. Technical milestones are documented in the [Multiplayer Architecture Plan](../gameplay/multiplayer-plan.md). Electron is the recommended container candidate for desktop builds.
 
 ## 1. Core Objective
 

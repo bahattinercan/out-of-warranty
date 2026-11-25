@@ -1,7 +1,7 @@
 # Map Design Review & Architectural Audit
 
 Date: September 23, 2026  
-Superseded / Detailed by: [Tactical Combat Layout Plan for 34 Arenas](map-combat-layout-plan.md).
+Superseded / Detailed by: [Tactical Combat Layout Plan for 34 Arenas](./map-combat-layout-plan.md).
 
 ## Scope & Limitations
 

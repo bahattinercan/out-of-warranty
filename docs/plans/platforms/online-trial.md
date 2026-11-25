@@ -2,7 +2,7 @@
 
 This guide provides procedures for testing the online multiplayer mode on a **live network**. Automated test suites (`tests/net-game.js`) validate the host + guest stack in a single process via loopback transport; real WebRTC and NAT traversal characteristics can only be measured with two distinct browser instances.
 
-**Exit Criteria (`docs/web-launch-plan.md` §4):** 5 full turns played across two distinct networks, room setup in **< 20 seconds**, disconnection rate **< 5%**.
+**Exit Criteria (`docs/plans/platforms/web-launch-plan.md` §4):** 5 full turns played across two distinct networks, room setup in **< 20 seconds**, disconnection rate **< 5%**.
 
 ---
 

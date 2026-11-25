@@ -1,6 +1,6 @@
 # Expanded Implementation Status — November 15, 2026
 
-The active in-game renderer draws full-body robot sprites, with a launcher overlay while aiming and a procedural Canvas fallback when a sprite is unavailable. Modular part and atlas composition is inactive. The raster production records below reflect the art package's historical generation pipeline; [robot-rig-plan.md](robot-rig-plan.md) documents the current renderer.
+The active in-game renderer draws full-body robot sprites, with a launcher overlay while aiming and a procedural Canvas fallback when a sprite is unavailable. Modular part and atlas composition is inactive. The raster production records below reflect the art package's historical generation pipeline; [robot-rig-plan.md](./robot-rig-plan.md) documents the current renderer.
 
 Final user approval brought robot, projectile, and skill visuals into raster scope, superseding the original plan's raster exclusions. Game physics, collision hitboxes, and effect durations remain hardcoded in the engine, while visible sprites were migrated to generated WebP assets.
 
@@ -23,7 +23,7 @@ Generation tooling: New illustrations in this rollout were generated via Codex `
 
 Date: November 14, 2026
 Status: Initial planned asset milestones complete; expanded scope implemented.
-License matrices reside in `docs/ai-visual-production-plan.md`. If contradictions arise, **this document** takes precedence, as all figures below were **benchmarked** on ai3090 hardware on November 14, 2026.
+License matrices reside in `docs/plans/art/ai-visual-production-plan.md`. If contradictions arise, **this document** takes precedence, as all figures below were **benchmarked** on ai3090 hardware on November 14, 2026.
 
 Scope: Player-visible raster assets — environments, terrain textures, 34 robots and portraits, projectile/skill/equipment atlases, UI, and marketing collateral.
 
@@ -173,7 +173,7 @@ Acceptance: Textures tile seamlessly in 2×2 grids; aggregate size ≤ 1.2 MB; `
 ### Phase D — UI Kit
 
 9 assets: 9-slice panel frames, horizontal hazard tape, rivet badges, screw caps, and 5 HUD/menu icons (audio, language, fullscreen, market, settings) in dark/light variants.
-Integration: `css/style.css` (`border-image` / `background-image`) following `docs/ui-theme-plan.md`. **Typography is never baked into images**; text renders via DOM/Canvas fonts.
+Integration: `css/style.css` (`border-image` / `background-image`) following `docs/plans/interface/ui-theme-plan.md`. **Typography is never baked into images**; text renders via DOM/Canvas fonts.
 
 Acceptance: 9-slice panels scale across 3 test aspect ratios without distortion; visual audit via `ai shot`; total size ≤ 400 KB.
 
@@ -186,7 +186,7 @@ Gate criteria: Silhouettes remain distinguishable downsampled to 24 px; total bu
 ### Phase F — Marketing Assets
 
 Key art (1920×1080), itch banner (630×500), Steam capsules (616×353 / 1920×620).
-Excluded from runtime bundle. AI disclosure documented in `docs/steam-release-plan.md` §3.
+Excluded from runtime bundle. AI disclosure documented in `docs/plans/platforms/steam-release-plan.md` §3.
 
 ---
 
@@ -254,7 +254,7 @@ if (ready) {
 
 ### 7.2 Canvas Tainting
 
-Loading external files onto a Canvas over `file://` flags the canvas as tainted. Because the game engine never calls `getImageData`, `toDataURL`, or `toBlob` during gameplay, tainting is completely harmless. If pixel-readback is ever required, the affected asset must be bundled as an inline data URI in `js/assets-*.js` (see `docs/ai-visual-production-plan.md` §7.2).
+Loading external files onto a Canvas over `file://` flags the canvas as tainted. Because the game engine never calls `getImageData`, `toDataURL`, or `toBlob` during gameplay, tainting is completely harmless. If pixel-readback is ever required, the affected asset must be bundled as an inline data URI in `js/assets-*.js` (see `docs/plans/art/ai-visual-production-plan.md` §7.2).
 
 ### 7.3 Determinism and RNG Isolation
 
@@ -344,7 +344,7 @@ Phases A–D require **5 sessions**, establishing the complete visual environmen
 | TRELLIS.2 | Pending check | ⚠️ Omitted from runtime production |
 | LTX-Video 0.9.8 | Lightricks Open Weights | ⚠️ Used only for marketing teasers; no runtime video assets |
 
-Steam releases containing AI-generated visual content must include an **AI Content Disclosure** in the store questionnaire (`docs/ai-visual-production-plan.md` §8). Disclosure copy is integrated into `docs/steam-release-plan.md` §3.
+Steam releases containing AI-generated visual content must include an **AI Content Disclosure** in the store questionnaire (`docs/plans/art/ai-visual-production-plan.md` §8). Disclosure copy is integrated into `docs/plans/platforms/steam-release-plan.md` §3.
 
 ---
 

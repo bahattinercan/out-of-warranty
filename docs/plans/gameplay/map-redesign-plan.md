@@ -1,6 +1,6 @@
 # Industrial Arena Design and Implementation Plan
 
-Status: The original six arenas and host-controlled online selection are implemented. The runtime roster has since expanded to 14 arenas; the map picker paginates the cards. Additional layouts and art are tracked in [map-combat-layout-plan.md](map-combat-layout-plan.md).
+Status: The original six arenas and host-controlled online selection are implemented. The runtime roster has since expanded to 14 arenas; the map picker paginates the cards. Additional layouts and art are tracked in [map-combat-layout-plan.md](./map-combat-layout-plan.md).
 
 ## Objective
 

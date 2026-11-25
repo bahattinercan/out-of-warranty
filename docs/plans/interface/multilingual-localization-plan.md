@@ -9,7 +9,7 @@ Ship complete player-facing localization for the four languages already listed b
 - `js/i18n.js` already declares all six locales in `LANG_ORDER` and provides language labels, browser-language normalization, persistence, DOM translation, canvas/game string lookup, and data-catalog translation.
 - At the start of implementation, the four additional locale dictionaries were empty and English was the only locale in `LANG_REQUIRED`.
 - The baseline `node tests/i18n.js` run passed 125 assertions; the dictionaries now contain 785 entries per target language, including 238 unique catalog keys.
-- `docs/web-launch-plan.md` already proposes the rollout order: Chinese and Russian, followed by Spanish and Brazilian Portuguese. This document turns that sequence into an implementation and release plan.
+- `docs/plans/platforms/web-launch-plan.md` already proposes the rollout order: Chinese and Russian, followed by Spanish and Brazilian Portuguese. This document turns that sequence into an implementation and release plan.
 - Existing project changes may be present during implementation. Review `git status` first and keep translation work limited to the files listed below.
 
 ## Scope and Translation Rules
@@ -56,7 +56,7 @@ Repeat Phase 1 for `es-ES` and `pt-BR`, with terminology and review specific to 
 ### Phase 3 — Release and documentation (Implemented; full verification pending)
 
 1. Confirm the language selector labels and order remain correct and persisted selections still round-trip.
-2. Update README language-support claims from bilingual to the actual supported-language set, and update `docs/web-launch-plan.md` status/sequence so it reflects shipped work.
+2. Update README language-support claims from bilingual to the actual supported-language set, and update `docs/plans/platforms/web-launch-plan.md` status/sequence so it reflects shipped work.
 3. Run the full project verification commands and inspect packaging output to confirm `file://` use and the dependency-free runtime remain intact.
 4. Include all four locales in the release notes only when their dictionaries are required and reviewed.
 
@@ -69,7 +69,7 @@ Repeat Phase 1 for `es-ES` and `pt-BR`, with terminology and review specific to 
 | `js/game.js` | Wrap no-space CJK card text and keep menu headings, descriptions, and the currency/workshop badge from colliding. |
 | `tests/run.js` | Add a regression check that CJK canvas text wraps within its available width. |
 | `README.md` | Replace bilingual support wording with the shipped locales and accurately describe coverage. |
-| `docs/web-launch-plan.md` | Mark the existing language rollout milestones with their actual status. |
+| `docs/plans/platforms/web-launch-plan.md` | Mark the existing language rollout milestones with their actual status. |
 
 Do not modify `index.html` for the language list: the selector is built from `LANG_ORDER`. Do not add JavaScript files, dependencies, profile schema changes, or network translation services.
 

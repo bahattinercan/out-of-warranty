@@ -2,7 +2,7 @@
 
 Status: **approved direction, pilot = FIX-8 (`kopek`)**
 Date: 2026-11-23
-Supersedes the slice-and-shift approach in `docs/robot-spritesheet-animation-plan.md` for rigged robots. The spritesheet system stays in place for robots that are not rigged yet.
+Supersedes the slice-and-shift approach in `docs/plans/art/robot-spritesheet-animation-plan.md` for rigged robots. The spritesheet system stays in place for robots that are not rigged yet.
 
 ---
 

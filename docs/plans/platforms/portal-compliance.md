@@ -1,7 +1,7 @@
 # Web Portal Integration (F5)
 
 Date: October 16, 2026 · Status: **Code complete** (CrazyGames + Poki adaptors), awaiting verification in production portal environments.
-Release sequence: itch.io closed testing → **CrazyGames Basic** → analytics/metrics → Full Launch + SDK ad placements → Poki submission (`docs/web-launch-plan.md` §7).
+Release sequence: itch.io closed testing → **CrazyGames Basic** → analytics/metrics → Full Launch + SDK ad placements → Poki submission (`docs/plans/platforms/web-launch-plan.md` §7).
 
 ## 1. Scope of Implementation
 

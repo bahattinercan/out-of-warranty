@@ -49,7 +49,7 @@ node tools/build.js         # produces dist/out-of-warranty-<version>.zip + mani
 ```
 
 ```bash
-# Art pipeline (ai3090 / Z-Image). Plan: docs/art-production-plan-ai3090.md
+# Art pipeline (ai3090 / Z-Image). Plan: docs/plans/art/art-production-plan-ai3090.md
 node tools/art.js gen --zone scrapyard --layer far --prompt "scene" --n 6
 node tools/art.js pick --id bg/scrapyard-far --src art/build/scrapyard/far/cand-03-seed140034.png
 node tools/art-gate.js      # schema + file + budget + index + type gates
