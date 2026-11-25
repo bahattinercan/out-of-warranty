@@ -63,6 +63,13 @@
         <select id="locale-select" aria-label="Dil"></select>
       </div>
 
+      <!-- Geri bildirim: dil seçicisinin hemen altında; menülerde ve savaşta her zaman görünür -->
+      <div id="feedback-control">
+        <button id="feedback-btn" type="button" title="Geri Bildirim & Hata Bildir" data-i18n-title="hud.feedback.title">
+          💬 <span data-i18n="hud.feedback">Geri Bildirim</span>
+        </button>
+      </div>
+
       <!-- Hata raporu (F6): kapalı testte oyuncu tek düğmeyle tanılama metnini
            panoya kopyalar. Varsayılan gizli; hata yakalanınca ya da ?rapor=1
            ile görünür olur (js/diagnostics.js). -->
@@ -165,6 +172,17 @@
                   </div>
                   <label class="st-switch">
                     <input id="st-chk-damage" type="checkbox" checked />
+                    <span class="st-slider round"></span>
+                  </label>
+                </div>
+
+                <div class="settings-row">
+                  <div class="settings-row-label">
+                    <span class="st-main-lbl" data-i18n="settings.graphics.hitMarkersLabel">Vuruş İmleri (Hit Markers)</span>
+                    <span class="st-sub-lbl" data-i18n="settings.graphics.hitMarkersSub">İsabet anında hedefte beliren çarpı imleri</span>
+                  </div>
+                  <label class="st-switch">
+                    <input id="st-chk-hitmarkers" type="checkbox" checked />
                     <span class="st-slider round"></span>
                   </label>
                 </div>
@@ -363,13 +381,111 @@
                 <h3 data-i18n="settings.about.assetsHeading">Varlıkların kaynağı</h3>
                 <p class="st-desc about-copy" data-i18n="settings.about.assets">Robot ve arayüz çizimleri prosedürel kodla (js/robots.js, js/maps.js, js/terrain.js, js/skill-fx.js) üretilir. Arka planlar, portreler ve parça simgeleri üretken görsel modelleriyle oluşturulup tools/art-prep.py ile işlendi. Menü, savaş ve maç sonucu müzikleri ai3090 üzerinde üretilip yerel MP3 olarak paketlenir; ses efektleri Web Audio API ile sentezlenir.</p>
                 <h3 data-i18n="settings.about.privacyHeading">Gizlilik ve veriler</h3>
-                <p class="st-desc about-copy" data-i18n="settings.about.privacy">İlerleme/profil, ayarlar ve dil tercihi yalnızca bu tarayıcıda (localStorage) saklanır; hesap, sunucu veya telemetri yoktur. Çevrimiçi maçlarda PeerJS yalnızca sinyal için kullanılır, maç trafiği oyuncular arasında doğrudan aktarılır. Teşhis raporu yalnızca oyuncu kopyalarsa cihazdan çıkar.</p>
+                <p class="st-desc about-copy" data-i18n="settings.about.privacy">İlerleme/profil, ayarlar ve dil tercihi yalnızca bu tarayıcıda (localStorage) saklanır; hesap veya telemetri yoktur. Çevrimiçi maçlarda PeerJS sinyal için kullanılır. Geri bildirim ve teşhis raporları yalnızca siz kopyalama, indirme veya e-posta seçeneğini seçtiğinizde paylaşım için hazırlanır; e-posta taslağını göndermek size bağlıdır.</p>
                 <p class="st-desc about-copy" data-i18n="settings.about.erase">Verileri Ayarlar &gt; Profil &amp; Veri &gt; Tüm İlerlemeyi Sıfırla seçeneğiyle veya site verilerini temizleyerek silebilirsiniz.</p>
+                <div class="settings-actions-row" style="margin-top: 14px;">
+                  <button id="st-open-feedback-btn" type="button" class="settings-btn" data-i18n="settings.about.feedbackBtn">💬 Geri Bildirim Gönder</button>
+                </div>
               </div>
             </div>
           </div>
         </div>
       </div>
+
+      <!-- Geri Bildirim ve Hata Raporlama Modalı -->
+      <dialog id="feedback-modal" aria-labelledby="fb-title" closedby="any">
+        <div class="feedback-card">
+          <div class="feedback-header">
+            <div class="feedback-title-wrap">
+              <span class="feedback-icon" aria-hidden="true">💬</span>
+              <div>
+                <h1 id="fb-title" data-i18n="feedback.title">Geri Bildirim &amp; Hata Raporu</h1>
+                <p class="fb-subtitle" data-i18n="feedback.subtitle">Rapor yalnızca seçtiğiniz paylaşım işlemiyle hazırlanır; gönderme kararı size aittir.</p>
+              </div>
+            </div>
+            <button id="fb-close-btn" class="settings-close" title="Kapat (Esc)" data-i18n-title="settings.close.title">✕</button>
+          </div>
+
+          <div class="feedback-body">
+            <!-- Kategori Seçimi -->
+            <div class="feedback-group">
+              <p id="fb-category-label" class="fb-label" data-i18n="feedback.category">Kategori</p>
+              <div class="feedback-cat-group" role="group" aria-labelledby="fb-category-label">
+                <button type="button" class="feedback-cat-btn" data-cat="bug" aria-pressed="false">
+                  🐛 <span data-i18n="feedback.cat.bug">Hata / Bug</span>
+                </button>
+                <button type="button" class="feedback-cat-btn active" data-cat="idea" aria-pressed="true">
+                  💡 <span data-i18n="feedback.cat.idea">Öneri / Fikir</span>
+                </button>
+                <button type="button" class="feedback-cat-btn" data-cat="balance" aria-pressed="false">
+                  ⚖️ <span data-i18n="feedback.cat.balance">Denge / Oynanış</span>
+                </button>
+                <button type="button" class="feedback-cat-btn" data-cat="art" aria-pressed="false">
+                  🎨 <span data-i18n="feedback.cat.art">Görsel / Ses</span>
+                </button>
+                <button type="button" class="feedback-cat-btn" data-cat="general" aria-pressed="false">
+                  💬 <span data-i18n="feedback.cat.general">Genel</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Derecelendirme (Yıldızlar) -->
+            <div class="feedback-group">
+              <p id="fb-rating-label" class="fb-label" data-i18n="feedback.rating">Oyun Deneyimi Puanı</p>
+              <div class="feedback-stars-wrap" role="group" aria-labelledby="fb-rating-label">
+                <button type="button" class="feedback-star-btn active" data-val="1" title="1" aria-pressed="false">★</button>
+                <button type="button" class="feedback-star-btn active" data-val="2" title="2" aria-pressed="false">★</button>
+                <button type="button" class="feedback-star-btn active" data-val="3" title="3" aria-pressed="false">★</button>
+                <button type="button" class="feedback-star-btn active" data-val="4" title="4" aria-pressed="false">★</button>
+                <button type="button" class="feedback-star-btn active" data-val="5" title="5" aria-pressed="true">★</button>
+              </div>
+            </div>
+
+            <!-- Mesaj Girişi -->
+            <div class="feedback-group">
+              <div class="fb-label-row">
+                <label for="fb-message" class="fb-label" data-i18n="feedback.message">Açıklamanız</label>
+                <span id="fb-char-count" class="fb-char-count">0 / 1000</span>
+              </div>
+              <textarea id="fb-message" maxlength="1000" rows="4" placeholder="Ne yaşadınız veya neyin eklenmesini isterdiniz?"></textarea>
+            </div>
+
+            <!-- Görsel / Ekran Görüntüsü Eki (Güvenli: Yalnızca PNG/JPG/WEBP ve Canvas Ekran Görüntüsü) -->
+            <div class="feedback-group">
+              <p class="fb-label" data-i18n="feedback.attachment.label">Ekran Görüntüsü / Görsel Eki</p>
+              <div class="fb-attachment-bar">
+                <button id="fb-capture-btn" type="button" class="settings-btn secondary" data-i18n="feedback.attachment.capture">📸 Ekran Görüntüsü Al</button>
+                <button id="fb-upload-btn" type="button" class="settings-btn secondary" data-i18n="feedback.attachment.upload">🖼️ Görsel Yükle (Maks 3 MB)</button>
+                <input id="fb-file-input" type="file" accept="image/png, image/jpeg, image/webp" class="hidden" />
+              </div>
+              <div id="fb-preview-wrap" class="fb-preview-wrap hidden">
+                <img id="fb-preview-img" alt="Eklenen görsel" />
+                <div class="fb-preview-info">
+                  <span id="fb-preview-meta" class="fb-preview-meta"></span>
+                  <button id="fb-remove-img-btn" type="button" class="fb-remove-btn" data-i18n="feedback.attachment.remove">✕ Görseli Kaldır</button>
+                </div>
+              </div>
+              <span class="fb-security-note" data-i18n="feedback.attachment.note">🛡️ Güvenlik: Yalnızca resim (PNG, JPG, WebP) kabul edilir; tüm görseller temizlenip yeniden kodlanır.</span>
+            </div>
+
+            <!-- Teşhis Verisi Onayı -->
+            <div class="feedback-group fb-diag-row">
+              <label class="fb-checkbox-label">
+                <input id="fb-include-diag" type="checkbox" checked />
+                <span data-i18n="feedback.includeDiag">Sistem ve teşhis verilerini rapora ekle (sürüm, FPS, son loglar)</span>
+              </label>
+            </div>
+
+            <div id="fb-toast" class="feedback-toast hidden" role="status"></div>
+
+            <!-- Aksiyon Butonları -->
+            <div class="feedback-actions">
+              <button id="fb-copy-btn" type="button" class="settings-btn" data-i18n="feedback.copyBtn">📋 Panoya Kopyala</button>
+              <button id="fb-download-btn" type="button" class="settings-btn secondary" data-i18n="feedback.downloadBtn">💾 Dosya İndir</button>
+            </div>
+          </div>
+        </div>
+      </dialog>
 
       <div id="storage-warning" class="hidden" role="status" aria-live="polite"></div>
 
@@ -445,6 +561,7 @@
   <script src="js/diagnostics.js"></script>
   <script src="js/audio.js"></script>
   <script src="js/settings.js"></script>
+  <script src="js/feedback.js"></script>
   <script src="js/characters.js"></script>
   <script src="js/progression.js"></script>
   <script src="js/profile.js"></script>

@@ -16,7 +16,7 @@
   <img src="https://img.shields.io/badge/Dependencies-Zero%20(No%20Build)-brightgreen?style=flat" alt="Zero Dependencies" />
   <img src="https://img.shields.io/badge/Tests-1400%2B%20Passing-success?style=flat" alt="Tests Passing" />
   <img src="https://img.shields.io/badge/i18n-6%20Languages-blue?style=flat" alt="Six-language support" />
-  <img src="https://img.shields.io/badge/Version-v0.6.0-orange?style=flat" alt="Version v0.6.0" />
+  <img src="https://img.shields.io/badge/Version-v0.6.1-orange?style=flat" alt="Version v0.6.1" />
 </p>
 
 ---
@@ -304,7 +304,7 @@ To generate a standalone, self-contained zip distribution ready for deployment t
 # Inspect package contents and size budget (Dry Run)
 node tools/build.js --dry
 
-# Build release zip (outputs dist/out-of-warranty-v0.6.0.zip)
+# Build release zip (outputs dist/out-of-warranty-v0.6.1.zip)
 node tools/build.js
 ```
 
@@ -321,7 +321,7 @@ The game and repository are proprietary, all rights reserved, as described in th
 - Settings, locale and the player profile are stored in browser local storage.
 - Online lobby uses PeerJS signalling; portal SDKs load only for CrazyGames or Poki builds.
 - Diagnostics are copied to the clipboard only when requested; the game sends no diagnostics.
-- Read [Privacy & Data (Turkish)](./docs/privacy-and-data.md) (policy publication address: https://bahattinercan.github.io/out-of-warranty/gizlilik-ve-veri.html; the same text is available in English at https://bahattinercan.github.io/out-of-warranty/privacy-en.html) for storage keys, deletion steps and publication notes.
+- Read [Gizlilik ve Veriler (Türkçe)](./docs/privacy-and-data.md) (publication addresses: `https://bahattinercan.github.io/out-of-warranty/privacy-and-data.html` and English `https://bahattinercan.github.io/out-of-warranty/privacy-en.html`) for storage keys, deletion steps and publication notes.
 
 
 ---

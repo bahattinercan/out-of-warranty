@@ -14,6 +14,7 @@ const SETTINGS_STORAGE_KEY = "nwo_settings";
 
 const DEFAULT_GAME_SETTINGS = {
   damagePopups: true,
+  hitMarkers: true,
   aimGuide: true,
   showFps: false,
 };
@@ -147,6 +148,9 @@ const GameSettings = (() => {
     // Graphics toggles
     const chkDamage = document.getElementById("st-chk-damage");
     if (chkDamage) chkDamage.checked = !!get("damagePopups");
+
+    const chkHitMarkers = document.getElementById("st-chk-hitmarkers");
+    if (chkHitMarkers) chkHitMarkers.checked = !!get("hitMarkers");
 
     const chkAim = document.getElementById("st-chk-aim");
     if (chkAim) chkAim.checked = !!get("aimGuide");
@@ -287,6 +291,15 @@ const GameSettings = (() => {
     if (chkDamage) {
       chkDamage.addEventListener("change", (e) => {
         set("damagePopups", e.target.checked);
+        if (typeof SFX !== "undefined") SFX.uiClick();
+      });
+    }
+
+    // Graphics: Hit markers
+    const chkHitMarkers = document.getElementById("st-chk-hitmarkers");
+    if (chkHitMarkers) {
+      chkHitMarkers.addEventListener("change", (e) => {
+        set("hitMarkers", e.target.checked);
         if (typeof SFX !== "undefined") SFX.uiClick();
       });
     }
@@ -442,6 +455,18 @@ const GameSettings = (() => {
               setTimeout(() => exportFeedback.classList.add("hidden"), 2500);
             }
           }
+        }
+      });
+    }
+
+    // Feedback button inside About tab
+    const openFbBtn = document.getElementById("st-open-feedback-btn");
+    if (openFbBtn) {
+      openFbBtn.addEventListener("click", () => {
+        if (typeof SFX !== "undefined") SFX.uiClick();
+        close();
+        if (typeof GameFeedback !== "undefined") {
+          GameFeedback.open();
         }
       });
     }

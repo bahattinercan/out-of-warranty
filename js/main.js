@@ -15,6 +15,7 @@ window.addEventListener("DOMContentLoaded", () => {
   if (typeof assetPreload === "function") assetPreload();
   const game = new Game(canvas);
   if (typeof GameSettings !== "undefined") GameSettings.init(game);
+  if (typeof GameFeedback !== "undefined") GameFeedback.init(game);
   if (typeof MOBILE !== "undefined") MOBILE.init(game);
 
   /* Portal (F5): SDK varsa tembel yüklenir ve başlatılır; yoksa oyun hiç

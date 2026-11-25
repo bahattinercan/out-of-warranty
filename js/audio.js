@@ -853,6 +853,26 @@ const SFX = (() => {
       noise({ ...v, filter: "bandpass", freq: 1400, dur: 0.05, gain: 0.14, Q: 1 });
     },
 
+    // Vuruş teyidi (Hitmarker / tactile hit chime)
+    hitConfirm(isCrit) {
+      if (!eventAllowed("hitConfirm", 0.035)) return;
+      const v = voice("hit", PRIORITY.CRITICAL);
+      if (isCrit) {
+        tone({ ...v, type: "triangle", freq: 1760, freqEnd: 2200, dur: 0.08, gain: 0.18, attack: 0.001 });
+        tone({ ...v, type: "sine", freq: 880, dur: 0.1, gain: 0.14, delay: 0.02 });
+      } else {
+        tone({ ...v, type: "triangle", freq: 1100, freqEnd: 1320, dur: 0.06, gain: 0.15, attack: 0.001 });
+      }
+    },
+
+    // Zırh / kalkan engelleme sesi — metalik sekme "ping" sesi
+    armorDeflect() {
+      if (!eventAllowed("armorDeflect", 0.05)) return;
+      const v = voice("deflect", PRIORITY.ACTION);
+      tone({ ...v, type: "sine", freq: 1480, freqEnd: 880, dur: 0.11, gain: 0.16, attack: 0.002 });
+      noise({ ...v, filter: "highpass", freq: 2800, dur: 0.04, gain: 0.11, Q: 2 });
+    },
+
     // Bir oyuncu elendi — alçalan üzgün motif.
     eliminate() {
       const v = voice("eliminate", PRIORITY.CRITICAL);

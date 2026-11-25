@@ -8,7 +8,7 @@ Out of Warranty is a modern browser-based 2D turn-based tactical artillery game 
 - [Robot Spritesheet Animasyon Sistemi Planı](./robot-spritesheet-animation-plan.md)
 - [Multilingual Localization Plan](./multilingual-localization-plan.md)
 - [Privacy & Data (English)](./privacy-en.html)
-- [Privacy & Data (Local Copy)](./gizlilik-ve-veri.html)
+- [Gizlilik ve Veriler (Türkçe)](./privacy-and-data.html)
 
 ---
 

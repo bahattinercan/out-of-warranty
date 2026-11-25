@@ -188,6 +188,7 @@ class Game {
     this.explosions = [];
     this.skillFx = [];        // modül cast efektleri (saf görsel, js/skill-fx.js)
     this.damagePopups = [];
+    this.hitMarkers = [];
     this.mines = [];          // kalıcı mayınlar (turlar arası yaşar)
     this.fires = [];          // napalm yanan alanları
     this.crates = [];
@@ -304,6 +305,7 @@ class Game {
     this.explosions = [];
     this.skillFx = [];
     this.damagePopups = [];
+    this.hitMarkers = [];
     this.mines = [];
     this.fires = [];
     this.crates = [];
@@ -785,6 +787,7 @@ class Game {
     if (typeof updateSkillFx === "function") updateSkillFx(this);
     for (const d of this.damagePopups) { d.age += dt; d.y -= 34 * dt; }
     this.damagePopups = this.damagePopups.filter((d) => d.age < 1.1);
+    this.updateHitMarkers(dt);
     if (o.notice) { o.notice.age += dt * 1000; if (o.notice.age > 2400) o.notice = null; }
     this.updateHud();
   }
@@ -3716,6 +3719,8 @@ class Game {
 
   bindInput() {
     window.addEventListener("keydown", (e) => {
+      // Geri bildirim acikken klavye oyunu degil, modal formunu kontrol eder.
+      if (typeof GameFeedback !== "undefined" && GameFeedback.isOpen()) return;
       // Çevrimiçi lobi açıkken klavye oraya gider (oda kodu yazımı, hazır,
       // başlat). Tarayıcı kısayolları (Ctrl/Cmd/Alt + tuş) TÜKETİLMEZ:
       // preventDefault çağrılırsa tarayıcının YAPIŞTIRMA eylemi iptal olur ve
@@ -4437,9 +4442,12 @@ class Game {
         if (actual > 0) {
           anyHit = true;
           if (!p.alive) anyKilled = true;
+          const isCrit = actual >= 45;
+          this.triggerHitMarker(p.x, p.y - p.r, isCrit ? "crit" : "hit");
+          if (typeof SFX !== "undefined" && SFX.hitConfirm) SFX.hitConfirm(isCrit);
           this.damagePopups.push({ x: p.x, y: p.y - p.r - 16, amount: actual, age: 0 });
-          if (actual >= 45) {
-            this.damagePopups.push({ x: p.x, y: p.y - p.r - 34, text: "KRİTİK! 🔥", color: "#ffd166", scale: 1.15, age: 0 });
+          if (isCrit) {
+            this.damagePopups.push({ x: p.x, y: p.y - p.r - 34, text: typeof t === "function" ? t("combat.crit", "KRİTİK! 🔥") : "KRİTİK! 🔥", color: "#ffd166", scale: 1.15, age: 0 });
           }
           // Maç içi insan performansı takibi (Combat Primleri)
           if (shooter && shooter.control !== "bot" && p !== shooter && this.combatStats) {
@@ -4450,12 +4458,14 @@ class Game {
               if (!this.combatStats.firstKillClaimed) {
                 this.combatStats.firstKillClaimed = true;
                 this.combatStats.firstBlood = true;
-                this.damagePopups.push({ x: p.x, y: p.y - p.r - 48, text: "İLK KAN! 🩸 +20 🔩", color: "#ff4444", scale: 1.25, age: 0 });
+                this.damagePopups.push({ x: p.x, y: p.y - p.r - 48, text: typeof t === "function" ? t("combat.firstBlood", "İLK KAN! 🩸 +20 🔩") : "İLK KAN! 🩸 +20 🔩", color: "#ff4444", scale: 1.25, age: 0 });
               }
             }
           }
         } else if (rawDmg > 0) {
-          this.damagePopups.push({ x: p.x, y: p.y - p.r - 28, text: "KALKANLA ENGELLENDİ!", color: "#62d9ff", scale: 1.05, age: 0 });
+          this.triggerHitMarker(p.x, p.y - p.r, "block");
+          if (typeof SFX !== "undefined" && SFX.armorDeflect) SFX.armorDeflect();
+          this.damagePopups.push({ x: p.x, y: p.y - p.r - 28, text: typeof t === "function" ? t("combat.blocked", "BLOKE EDİLDİ! 🛡️") : "BLOKE EDİLDİ! 🛡️", color: "#62d9ff", scale: 1.05, age: 0 });
         }
         // Aşındırıcı mermi: atıcı hariç hedefe zamanlı hasar bulaştır
         if (spec.poison && p !== shooter) {
@@ -4483,7 +4493,7 @@ class Game {
             b.alive = false;
             setTimeout(() => {
               this.explode(b.x, b.y, { radius: 52, damage: 48, knockback: 13, special: "Varil" });
-              this.damagePopups.push({ x: b.x, y: b.y - 20, text: "VARİL PATLADI! 💥", color: "#ff8c00", scale: 1.25, age: 0 });
+              this.damagePopups.push({ x: b.x, y: b.y - 20, text: typeof t === "function" ? t("combat.barrelExploded", "VARİL PATLADI! 💥") : "VARİL PATLADI! 💥", color: "#ff8c00", scale: 1.25, age: 0 });
             }, 90);
           }
         }
@@ -4494,7 +4504,7 @@ class Game {
         if (c.dead) continue;
         if (Math.hypot(c.x - x, c.y - y) < radius + 12) {
           c.dead = true;
-          this.damagePopups.push({ x: c.x, y: c.y - 12, text: "SANDIK İMHA EDİLDİ!", color: "#ff9966", scale: 1.0, age: 0 });
+          this.damagePopups.push({ x: c.x, y: c.y - 12, text: typeof t === "function" ? t("combat.crateDestroyed", "SANDIK İMHA EDİLDİ! 📦") : "SANDIK İMHA EDİLDİ! 📦", color: "#ff9966", scale: 1.0, age: 0 });
         }
       }
     }
@@ -4521,13 +4531,18 @@ class Game {
     if (!target.alive) return 0;
     const actual = target.damage(amount);
     if (actual > 0) {
+      const isCrit = actual >= 45;
+      this.triggerHitMarker(target.x, target.y - target.r, isCrit ? "crit" : "hit");
+      if (typeof SFX !== "undefined" && SFX.hitConfirm) SFX.hitConfirm(isCrit);
       this.damagePopups.push({ x: target.x, y: target.y - target.r - 16, amount: actual, age: 0 });
       SFX.hit();
-      if (actual >= 45) {
-        this.damagePopups.push({ x: target.x, y: target.y - target.r - 34, text: "KRİTİK! 🔥", color: "#ffd166", scale: 1.15, age: 0 });
+      if (isCrit) {
+        this.damagePopups.push({ x: target.x, y: target.y - target.r - 34, text: typeof t === "function" ? t("combat.crit", "KRİTİK! 🔥") : "KRİTİK! 🔥", color: "#ffd166", scale: 1.15, age: 0 });
       }
     } else if (amount > 0) {
-      this.damagePopups.push({ x: target.x, y: target.y - target.r - 28, text: "KALKANLA ENGELLENDİ!", color: "#62d9ff", scale: 1.05, age: 0 });
+      this.triggerHitMarker(target.x, target.y - target.r, "block");
+      if (typeof SFX !== "undefined" && SFX.armorDeflect) SFX.armorDeflect();
+      this.damagePopups.push({ x: target.x, y: target.y - target.r - 28, text: typeof t === "function" ? t("combat.blocked", "BLOKE EDİLDİ! 🛡️") : "BLOKE EDİLDİ! 🛡️", color: "#62d9ff", scale: 1.05, age: 0 });
     }
     if (!target.alive) SFX.eliminate();
     return actual;
@@ -5012,7 +5027,7 @@ class Game {
     if (!cr.width || !cr.height) return;
     const sx = this.W / cr.width, sy = this.H / cr.height;
     let top = 0, right = 0;
-    for (const id of ["audio-control", "locale-control", "report-control"]) {
+    for (const id of ["audio-control", "locale-control", "feedback-control", "report-control"]) {
       const el = document.getElementById(id);
       if (!el || !el.getBoundingClientRect) continue;
       const r = el.getBoundingClientRect();
@@ -5206,6 +5221,9 @@ class Game {
     this.drawTether(ctx); // kanca ipi: mermilerin üstünde, patlamaların altında
     for (const ex of this.explosions) ex.draw(ctx);
     this.drawSuddenDeath(ctx);
+    if (typeof GameSettings === "undefined" || GameSettings.get("hitMarkers")) {
+      this.drawHitMarkers(ctx);
+    }
     if (typeof GameSettings === "undefined" || GameSettings.get("damagePopups")) {
       this.drawDamagePopups(ctx);
     }
@@ -6038,6 +6056,81 @@ class Game {
         this.startGame();
         return;
       }
+    }
+  }
+
+  triggerHitMarker(x, y, kind = "hit") {
+    if (!this.hitMarkers) this.hitMarkers = [];
+    this.hitMarkers.push({
+      x,
+      y,
+      kind, // "hit" | "crit" | "block"
+      age: 0,
+      maxAge: 0.28,
+    });
+  }
+
+  updateHitMarkers(dt) {
+    if (!this.hitMarkers || !this.hitMarkers.length) return;
+    for (const m of this.hitMarkers) m.age += dt;
+    this.hitMarkers = this.hitMarkers.filter((m) => m.age < m.maxAge);
+  }
+
+  drawHitMarkers(ctx) {
+    if (!this.hitMarkers || !this.hitMarkers.length) return;
+    for (const m of this.hitMarkers) {
+      const progress = m.age / m.maxAge; // 0 -> 1
+      const alpha = Math.max(0, 1 - progress);
+      const isCrit = m.kind === "crit";
+      const isBlock = m.kind === "block";
+
+      ctx.save();
+      ctx.translate(m.x, m.y);
+      ctx.globalAlpha = alpha;
+
+      if (isBlock) {
+        // Kalkan / blok: dönen mavi baklava / kalkan ikonu
+        const r = 8 + progress * 10;
+        ctx.strokeStyle = "#62d9ff";
+        ctx.lineWidth = 2.5;
+        ctx.beginPath();
+        ctx.moveTo(0, -r);
+        ctx.lineTo(r, 0);
+        ctx.lineTo(0, r);
+        ctx.lineTo(-r, 0);
+        ctx.closePath();
+        ctx.stroke();
+      } else {
+        // Standart veya Kritik hitmarker: 4 yöne açılan çapraz çizgiler (X)
+        const inner = (isCrit ? 6 : 4) + progress * 4;
+        const outer = (isCrit ? 16 : 11) + progress * 8;
+        ctx.strokeStyle = isCrit ? "#ff3333" : "#ffffff";
+        ctx.lineWidth = isCrit ? 3.0 : 2.0;
+        ctx.lineCap = "round";
+
+        // Gölge / parlama
+        ctx.shadowColor = isCrit ? "#ffdd55" : "#000000";
+        ctx.shadowBlur = isCrit ? 6 : 3;
+
+        ctx.beginPath();
+        for (const angle of [Math.PI / 4, 3 * Math.PI / 4, 5 * Math.PI / 4, 7 * Math.PI / 4]) {
+          const cos = Math.cos(angle);
+          const sin = Math.sin(angle);
+          ctx.moveTo(cos * inner, sin * inner);
+          ctx.lineTo(cos * outer, sin * outer);
+        }
+        ctx.stroke();
+
+        // Kritik vuruşta merkezde küçük kıvılcım/nokta
+        if (isCrit) {
+          ctx.fillStyle = "#ffe18b";
+          ctx.beginPath();
+          ctx.arc(0, 0, 3 * (1 - progress), 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+
+      ctx.restore();
     }
   }
 

@@ -28,6 +28,7 @@ start index.html         # Windows
 node tests/run.js
 node tests/market.js
 node tests/audio.js
+node tests/feedback.js
 node tests/i18n.js
 node tests/net.js       # online protocol + session (F3a)
 node tests/net-state.js # online state + terrain sync (F3b)
@@ -177,7 +178,7 @@ Adding new content is primarily **data-driven rather than code modifications**:
 
 ## Release & Versioning (F6)
 
-Version **single source of truth**: `js/version.js > GAME_VERSION` (currently **0.6.0**, channel `kapali-test`).
+Version **single source of truth**: `js/version.js > GAME_VERSION` (currently **0.6.1**, channel `kapali-test`).
 When bumping versions, update all three locations in sync:
 `js/version.js`, `docs/itch-release-copy.md`, and this line in `CLAUDE.md`.
 `node tests/release.js` verifies that all three match.

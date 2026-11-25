@@ -7,5 +7,5 @@
  *
  * `GAME_CHANNEL`: "kapali-test" → "demo" → "yayin" olarak ilerler.
  */
-const GAME_VERSION = "0.6.0";
+const GAME_VERSION = "0.6.1";
 const GAME_CHANNEL = "kapali-test";
