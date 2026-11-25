@@ -1030,6 +1030,68 @@ canvas#game {
   }
 }
 
+/* Yatay telefonlarda CSS viewport'u 760px'i geçebilir; yalnız genişlik
+   breakpoint'ine güvenmek masaüstü HUD'unu dokunmatik ekrana taşır. Kontrolleri
+   tek üst şeritte tutup savaş alt bandını D-pad için ölçülebilir bir referans yap. */
+@media (pointer: coarse) and (orientation: landscape) {
+  #stage { --audio-reserve: 390px; }
+  #hud .center { gap: 4px 6px; }
+  #turn-banner { font-size: 13px; }
+  #wind-indicator { font-size: 11px; padding-inline: 4px; }
+  #fullscreen-btn span,
+  #settings-btn span,
+  #quit-btn span { display: none; }
+  #fullscreen-btn,
+  #settings-btn,
+  #quit-btn { min-width: 40px; min-height: 40px; padding: 4px; }
+
+  #audio-control {
+    top: 8px;
+    right: 8px;
+    flex-direction: row;
+    align-items: center;
+    gap: 4px;
+    padding: 3px;
+  }
+  .audio-row { width: 44px; height: 46px; justify-content: center; }
+  #mute-btn,
+  #music-mute-btn { width: 44px; min-width: 44px; height: 44px; padding: 0; }
+  #mute-label,
+  #music-mute-label,
+  #volume-slider,
+  #music-volume-slider,
+  #volume-value,
+  #music-volume-value { display: none; }
+
+  #locale-control { top: 8px; right: 118px; height: 46px; }
+  #locale-control > label { display: none; }
+  #locale-select { min-height: 44px; max-width: 112px; }
+  #feedback-control { top: 8px; right: 290px; height: 42px; }
+  #feedback-btn { width: 42px; height: 42px; justify-content: center; padding: 0; }
+  #feedback-btn span,
+  #report-btn span { display: none; }
+  #report-control { top: 8px; right: 340px; height: 42px; }
+  #report-btn { width: 42px; height: 42px; justify-content: center; padding: 0; }
+
+  #battle-bar {
+    height: clamp(80px, 22dvh, 96px);
+    gap: 6px;
+    padding: 4px 6px;
+  }
+  #players { gap: 5px; }
+  .player-info { width: 126px; padding: 4px 6px; }
+  .player-info .p-avatar { width: 32px; height: 32px; }
+  #battle-actions { gap: 5px; }
+  #weapon-toggle { width: 72px; font-size: 10px; }
+  .act-slot { width: 58px; }
+  .act-slot .slot-icon { width: 30px; height: 30px; }
+  .act-slot .slot-name { max-width: 58px; font-size: 9px; }
+
+  #stage #mobile-controls {
+    bottom: calc(clamp(80px, 22dvh, 96px) + 12px + env(safe-area-inset-bottom, 0px));
+  }
+}
+
 @media (max-width: 760px) {
   #battle-bar {
     height: 116px;
@@ -2323,6 +2385,16 @@ kbd.accent {
   justify-content: center;
   padding: clamp(8px, 2.4vw, 24px);
   line-height: 1.4;
+}
+
+@media (pointer: coarse) and (orientation: landscape) {
+  #hud .center > button {
+    width: 44px;
+    min-width: 44px;
+    height: 44px;
+    min-height: 44px;
+    padding: 0;
+  }
 }
 
 #feedback-modal:modal {

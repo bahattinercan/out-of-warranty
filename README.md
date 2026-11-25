@@ -16,7 +16,7 @@
   <img src="https://img.shields.io/badge/Dependencies-Zero%20(No%20Build)-brightgreen?style=flat" alt="Zero Dependencies" />
   <img src="https://img.shields.io/badge/Tests-1400%2B%20Passing-success?style=flat" alt="Tests Passing" />
   <img src="https://img.shields.io/badge/i18n-6%20Languages-blue?style=flat" alt="Six-language support" />
-  <img src="https://img.shields.io/badge/Version-v0.6.2-orange?style=flat" alt="Version v0.6.2" />
+  <img src="https://img.shields.io/badge/Version-v0.6.3-orange?style=flat" alt="Version v0.6.3" />
 </p>
 
 ---
@@ -304,8 +304,11 @@ To generate a standalone, self-contained zip distribution ready for deployment t
 # Inspect package contents and size budget (Dry Run)
 node tools/build.js --dry
 
-# Build release zip (outputs dist/out-of-warranty-0.6.2.zip)
+# Build desktop release zip (outputs dist/out-of-warranty-0.6.3.zip)
 node tools/build.js
+
+# Build mobile release zip (outputs dist/out-of-warranty-0.6.3-mobile.zip)
+node tools/build.js --mobile
 ```
 
 The release package must include THIRD-PARTY-NOTICES.md and fonts/LICENSE-*.txt; publish the privacy document at a hosted URL for portal or Steam submissions.

@@ -25,6 +25,7 @@ const ctx = {
   window: { innerWidth: 960, innerHeight: 540, location: { search: "" }, addEventListener() {} },
   navigator: { maxTouchPoints: 1 },
   document: {
+    documentElement: { dataset: {} },
     addEventListener() {},
     getElementById: (id) => {
       if (!fakeElements.has(id)) fakeElements.set(id, {
@@ -76,6 +77,13 @@ const fakeGame = {
 
 ctrl.init(fakeGame);
 check("Dokunmatik cihazda etkinleşti", ctrl.enabled === true);
+ctx.navigator.maxTouchPoints = 0;
+ctx.document.documentElement.dataset.buildProfile = "mobile";
+const mobileBuildControls = new ctx.MobileControls();
+mobileBuildControls.init(fakeGame);
+check("Mobil ZIP profili dokunmatik cihaz olmasa da kontrolleri açar", mobileBuildControls.enabled === true);
+ctx.navigator.maxTouchPoints = 1;
+delete ctx.document.documentElement.dataset.buildProfile;
 fakeGame.render();
 check("Oyun çizim döngüsü render kancasından geçiyor", fakeGame.rendered === true);
 

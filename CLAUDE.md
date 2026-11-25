@@ -46,6 +46,7 @@ node tests/encoding.js     # encoding gate: UTF-8 validity, BOM and mojibake aud
 # Closed test / demo package (zero-dependency, index.html at root):
 node tools/build.js --dry   # file list + size check
 node tools/build.js         # produces dist/out-of-warranty-<version>.zip + manifest
+node tools/build.js --mobile # produces dist/out-of-warranty-<version>-mobile.zip + manifest
 ```
 
 ```bash
@@ -178,7 +179,7 @@ Adding new content is primarily **data-driven rather than code modifications**:
 
 ## Release & Versioning (F6)
 
-Version **single source of truth**: `js/version.js > GAME_VERSION` (currently **0.6.2**, channel `yayin`).
+Version **single source of truth**: `js/version.js > GAME_VERSION` (currently **0.6.3**, channel `yayin`).
 When bumping versions, update all three locations in sync:
 `js/version.js`, `docs/itch-release-copy.md`, and this line in `CLAUDE.md`.
 `node tests/release.js` verifies that all three match.

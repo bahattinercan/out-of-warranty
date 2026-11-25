@@ -8,6 +8,7 @@
  *
  * Kullanım:
  *   node tools/build.js                 → dist/out-of-warranty-<sürüm>.zip + manifest
+ *   node tools/build.js --mobile        → dist/out-of-warranty-<sürüm>-mobile.zip + manifest
  *   node tools/build.js --dry           → yalnız dosya listesi + toplam boyut
  *   node tools/build.js --out=C:/yol    → farklı çıktı klasörü
  *
@@ -208,12 +209,22 @@ function build(opts) {
   const o = opts || {};
   const root = o.root || ROOT;
   const outDir = o.out || path.join(root, "dist");
+  const target = o.mobile ? "mobile" : "desktop";
   const { version, channel } = readVersion(root);
   const files = collectFiles(root);
-  const entries = files.map((rel) => ({ path: rel, data: fs.readFileSync(path.join(root, rel)) }));
+  const entries = files.map((rel) => {
+    let data = fs.readFileSync(path.join(root, rel));
+    if (o.mobile && rel === "index.html") {
+      const html = data.toString("utf8");
+      if (!html.includes('<html lang="tr">')) throw new Error('Mobil profil işareti için <html lang="tr"> bulunamadı');
+      data = Buffer.from(html.replace('<html lang="tr">', '<html lang="tr" data-build-profile="mobile">'), "utf8");
+    }
+    return { path: rel, data };
+  });
   const manifest = {
     version,
     channel,
+    target,
     createdAt: new Date().toISOString(),
     totalBytes: entries.reduce((n, e) => n + e.data.length, 0),
     files: entries.map((e) => ({ path: e.path, bytes: e.data.length, crc32: crc32(e.data).toString(16).padStart(8, "0") })),
@@ -223,8 +234,9 @@ function build(opts) {
   fs.mkdirSync(outDir, { recursive: true });
   const zipBuf = buildZip(entries, new Date());
   const safeVersion = version.replace(/[^\w.-]/g, "_");
-  const zipPath = path.join(outDir, "out-of-warranty-" + safeVersion + ".zip");
-  const manifestPath = path.join(outDir, "manifest-" + safeVersion + ".json");
+  const suffix = o.mobile ? "-mobile" : "";
+  const zipPath = path.join(outDir, "out-of-warranty-" + safeVersion + suffix + ".zip");
+  const manifestPath = path.join(outDir, "manifest-" + safeVersion + suffix + ".json");
   fs.writeFileSync(zipPath, zipBuf);
   fs.writeFileSync(manifestPath, JSON.stringify(manifest, null, 2) + "\n");
   return { version, channel, zipPath, manifestPath, bytes: zipBuf.length, files: manifest.files, totalBytes: manifest.totalBytes, manifest };
@@ -237,7 +249,8 @@ if (require.main === module) {
   const args = process.argv.slice(2);
   const dry = args.includes("--dry");
   const outArg = args.find((a) => a.startsWith("--out="));
-  const res = build({ dry, out: outArg ? outArg.slice(6) : undefined });
+  const mobile = args.includes("--mobile");
+  const res = build({ dry, mobile, out: outArg ? outArg.slice(6) : undefined });
   const list = res.files;
   console.log(`sürüm: ${res.version} (${res.channel}) · ${list.length} dosya · ${(res.totalBytes / 1024).toFixed(1)} KB`);
   for (const f of list) console.log(`  ${String(f.bytes).padStart(8)}  ${f.path}`);

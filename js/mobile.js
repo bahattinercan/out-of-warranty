@@ -45,11 +45,13 @@ class MobileControls {
     this.cancelBtn = document.getElementById("touch-cancel");
 
     // Dokunmatik cihaz tespiti
-    const hasTouch = (typeof window !== "undefined") && (
+    const mobileBuild = document.documentElement && document.documentElement.dataset &&
+      document.documentElement.dataset.buildProfile === "mobile";
+    const hasTouch = mobileBuild || ((typeof window !== "undefined") && (
       "ontouchstart" in window ||
       (navigator && navigator.maxTouchPoints > 0) ||
       (window.location && window.location.search.indexOf("touch=1") >= 0)
-    );
+    ));
 
     this.enabled = !!hasTouch;
 

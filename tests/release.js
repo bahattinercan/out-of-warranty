@@ -191,6 +191,20 @@ try {
   }
   const manifestOnDisk = JSON.parse(fs.readFileSync(built.manifestPath, "utf8"));
   check("manifest dosyası yazıldı ve sürümü taşıyor", manifestOnDisk.version === ver.version);
+
+  const mobileBuilt = B.build({ root: ROOT, out: tmp, mobile: true });
+  check("mobil ZIP adı hedefi ve sürümü taşıyor",
+    path.basename(mobileBuilt.zipPath) === `out-of-warranty-${ver.version}-mobile.zip`);
+  const mobileBuf = fs.readFileSync(mobileBuilt.zipPath);
+  const mobileZip = B.listZip(mobileBuf);
+  const mobileIndexEntry = !mobileZip.error && mobileZip.entries.find((entry) => entry.path === "index.html");
+  const mobileIndex = mobileIndexEntry && B.extractStored(mobileBuf, mobileIndexEntry);
+  check("mobil ZIP index.html'de mobil profil işareti var",
+    !!mobileIndex && mobileIndex.toString("utf8").includes('data-build-profile="mobile"'));
+  const mobileManifest = JSON.parse(fs.readFileSync(mobileBuilt.manifestPath, "utf8"));
+  check("mobil manifest hedefi mobile", mobileManifest.target === "mobile");
+  check("masaüstü ve mobil manifest sürümü aynı",
+    mobileManifest.version === manifestOnDisk.version && mobileManifest.version === ver.version);
 } finally {
   fs.rmSync(tmp, { recursive: true, force: true });
 }
