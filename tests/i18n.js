@@ -424,7 +424,10 @@ for (const f of codeFiles) {
   }
 }
 // index.html: data-i18n taşımayan, metni olan öğeler.
-const htmlSrc = fs.readFileSync(path.join(__dirname, "..", "index.html"), "utf8");
+// SEO metni bilerek aynı sayfada iki dilde tutulur ve her bölüm `lang` taşır;
+// oyun arayüzü metinlerinden farklı olarak i18n anahtarıyla değiştirilmez.
+const htmlSrc = fs.readFileSync(path.join(__dirname, "..", "index.html"), "utf8")
+  .replace(/<main id="game-info"[\s\S]*?<\/main>/, "");
 const tagRe = /<([a-z]+)([^>]*)>([^<>{}]{2,60})<\/\1>/g;
 let tm;
 while ((tm = tagRe.exec(htmlSrc))) {

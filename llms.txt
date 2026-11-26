@@ -1,0 +1,12 @@
+# Out of Warranty
+
+> Out of Warranty (Garanti Dışı) is a browser-based, turn-based 2D artillery game. Players command 34 robots, use 20 weapons, and fight across destructible arenas. It supports solo play against computer-controlled opponents, local hot-seat matches, and online rooms for up to six players.
+
+## Play
+
+- [Play Out of Warranty](https://bahattinercan.github.io/out-of-warranty/): game page, English and Turkish overview, and frequently asked questions.
+
+## Privacy
+
+- [Privacy policy (English)](https://bahattinercan.github.io/out-of-warranty/docs/privacy-en.html)
+- [Gizlilik ve veriler (Türkçe)](https://bahattinercan.github.io/out-of-warranty/docs/privacy-and-data.html)

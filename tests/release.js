@@ -66,7 +66,9 @@ const html = fs.readFileSync(path.join(ROOT, "index.html"), "utf8");
 const refs = [];
 const re = /<(?:script|link)\b[^>]*(?:src|href)="([^"]+)"/g;
 let m;
-while ((m = re.exec(html))) refs.push(m[1]);
+while ((m = re.exec(html))) {
+  if (!/^https?:\/\//i.test(m[1])) refs.push(m[1]);
+}
 const missingOnDisk = refs.filter((r) => !fs.existsSync(path.join(ROOT, r)));
 check("index.html'in istediği her dosya diskte", missingOnDisk.length === 0, missingOnDisk.join(", "));
 const missingInPkg = refs.filter((r) => !has(r.replace(/^\.\//, "")));

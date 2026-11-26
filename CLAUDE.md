@@ -40,6 +40,7 @@ node tests/portal.js       # portal bridge: provider selection + CG/Poki SDK con
 node tests/reward-ad.js    # rewarded ads: 2× Scrap at match end (F5)
 node tests/release.js      # release package: scope, script order, ZIP, size gates (F6)
 node tests/encoding.js     # encoding gate: UTF-8 validity, BOM and mojibake audit
+node tests/seo.js          # static SEO metadata, crawler files, structured data, and language content
 ```
 
 ```bash

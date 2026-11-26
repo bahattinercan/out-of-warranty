@@ -13,5 +13,6 @@ This document describes the public Out of Warranty game and its privacy policy p
    - Turkish privacy policy: `https://bahattinercan.github.io/out-of-warranty/docs/privacy-and-data.html`
    - English privacy policy: `https://bahattinercan.github.io/out-of-warranty/docs/privacy-en.html`
 6. **Updates & Verification:** Commits to `main` trigger a Pages deployment. Confirm all three URLs load, the game assets load without console errors, and policy text renders correctly.
+7. **SEO Files:** The root `robots.txt`, `sitemap.xml`, and `llms.txt` are published with the game. After a deployment, open each URL under the project path and confirm that the sitemap's game and privacy URLs load. Run `node tests/seo.js` before publishing to check metadata, JSON-LD, and crawler files.
 
 For the document map, see [docs index](./index.md).
