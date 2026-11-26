@@ -20,7 +20,7 @@ const path = require("path");
 const JS_DIR = path.join(__dirname, "..", "js");
 const FILES = ["i18n.js", "version.js", "portal.js", "diagnostics.js", "audio.js", "characters.js", "progression.js", "profile.js", "parts.js",
   "market.js", "maps.js", "skills.js", "skill-fx.js", "robot-animation-manifest.js", "robots.js", "terrain.js", "weapons.js",
-  "entity.js", "projectile.js", "ai.js", "game.js", "net/protocol.js", "net/session.js",
+  "entity.js", "projectile.js", "vfx.js", "ai.js", "game.js", "net/protocol.js", "net/session.js",
   "net/state.js", "net/transport.js"];
 const EXPORT = "\n;globalThis.__I = { Game, Entity, Projectile, Terrain, CHARACTERS, MAPS, weaponById, " +
   "resolveRobotBuild, defaultRobotProgress, NET_MSG, NET_CMD, NET_PHASE, NET_PROTOCOL_VERSION, " +

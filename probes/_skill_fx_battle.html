@@ -86,6 +86,7 @@
   <script src="js/progression.js"></script>
   <script src="js/profile.js"></script>
   <script src="js/parts.js"></script>
+  <script src="js/market.js"></script>
   <script src="js/assets-manifest.js"></script>
   <script src="js/assets.js"></script>
   <script src="js/maps.js"></script>
@@ -97,6 +98,7 @@
   <script src="js/weapons.js"></script>
   <script src="js/entity.js"></script>
   <script src="js/projectile.js"></script>
+  <script src="js/vfx.js"></script>
   <script src="js/ai.js"></script>
   <script src="js/net/protocol.js"></script>
   <script src="js/net/transport.js"></script>
@@ -126,6 +128,12 @@ window.addEventListener("DOMContentLoaded", () => {
   game.players[2].damageReduce = { factor: 0.5, turns: 2 };
   game.players[2].nextShotMod = { dmgMult: 1 };
   game.players[2].glideTurns = 1;
+  game.players[1].poison = { dps: 8, turns: 2 };
+  game.players[0].skillCooldown = 0;
+  game.fires = [{ x: game.W * 0.5, y: game.H - 70, life: 50, max: 50 }];
+  game.windChangeFx = { from: -1.2, to: 2.8, age: 0.35, duration: 1.4 };
+  game.suddenDeath = true;
+  game.suddenDeathLevel = 70;
 
   // Cast efekti: PRES-4 pres vuruşu (öne inen plaka)
   game.turn = 0;

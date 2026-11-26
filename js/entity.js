@@ -443,10 +443,10 @@ class Entity {
     // Legacy karakter görsel ekleri; robotlar aparatlarını drawRobot içinde çizer.
     if (!drewRobot) drawCharExtras(ctx, cx, cy, this.r, this.facing, this.charDef ? this.charDef.drawExtra : null);
 
-    // Aktif modül auraları (kalkan, hasar azaltma, namlu yüklemesi, süzülme,
-    // hücum). Görsel dil js/skill-fx.js'te tek yerde; durum yine entity üstünde
-    // tutulur. Fonksiyon yoksa (eski/eksik sandbox) aura çizilmez — çökme yok.
-    if (typeof drawSkillAura === "function") {
+    // Aura görsellerini ortak VFX katmanı çizer; durum Entity üzerinde kalır.
+    if (typeof VFX !== "undefined") {
+      VFX.drawAura(ctx, this, cx, cy, timeMs);
+    } else if (typeof drawSkillAura === "function") {
       drawSkillAura(ctx, this, cx, cy, timeMs);
     } else if (this.blockShield) {
       ctx.beginPath();
@@ -456,9 +456,9 @@ class Entity {
       ctx.stroke();
     }
 
-    // Zehir — yeşil titreşimli aura
-    if (this.poison) {
-      const a = 0.35 + 0.25 * Math.sin(Date.now() / 120);
+    // Eski/eksik sandboxlarda zehir için halka fallback'i.
+    if (typeof VFX === "undefined" && this.poison) {
+      const a = 0.35 + 0.25 * Math.sin((timeMs || 0) / 120);
       ctx.beginPath();
       ctx.arc(cx, cy, this.r + 4, 0, Math.PI * 2);
       ctx.strokeStyle = `rgba(120,220,90,${a})`;

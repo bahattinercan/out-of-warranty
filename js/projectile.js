@@ -999,19 +999,44 @@ class Explosion {
   draw(ctx) {
     const p = this.t / this.life;
     const r = this.radius * (0.2 + p * 0.72);
-    const c = this.color || { r: 255, g: Math.floor(176 - p * 70), b: 58 };
+    const cr = this.color ? this.color.r : 255;
+    const cg = this.color ? this.color.g : Math.floor(176 - p * 70);
+    const cb = this.color ? this.color.b : 58;
+    const alpha = 1 - p;
     ctx.lineCap = "round";
-    ctx.lineWidth = Math.max(1, this.radius * 0.055 * (1 - p));
-    ctx.strokeStyle = `rgba(${c.r},${c.g},${c.b},${(1 - p) * 0.85})`;
-    for (let i = 0; i < 6; i++) {
-      const start = i * Math.PI / 3 + p * 0.22;
+    ctx.lineWidth = Math.max(1, this.radius * 0.05 * alpha);
+    ctx.strokeStyle = `rgba(${cr},${cg},${cb},${alpha * 0.9})`;
+    for (let i = 0; i < 8; i++) {
+      const start = i * Math.PI / 4 + p * 0.22;
       ctx.beginPath();
-      ctx.arc(this.x, this.y, r, start, start + Math.PI / 9);
+      ctx.arc(this.x, this.y, r, start, start + Math.PI / 7);
       ctx.stroke();
     }
-    ctx.fillStyle = `rgba(${c.r},${c.g},${c.b},${(1 - p) * 0.22})`;
+    ctx.strokeStyle = `rgba(${cr},${cg},${cb},${alpha * 0.45})`;
+    ctx.lineWidth = Math.max(1, this.radius * 0.022 * alpha);
     ctx.beginPath();
-    ctx.arc(this.x, this.y, this.radius * (0.16 + (1 - p) * 0.12), 0, Math.PI * 2);
+    ctx.arc(this.x, this.y, r * 0.68, 0, Math.PI * 2);
+    ctx.stroke();
+    for (let i = 0; i < 8; i++) {
+      const a = i * Math.PI / 4 + p * 0.22;
+      const inner = r * 0.82;
+      const outer = r * (1.02 + (i % 2) * 0.12);
+      ctx.beginPath();
+      ctx.moveTo(this.x + Math.cos(a) * inner, this.y + Math.sin(a) * inner);
+      ctx.lineTo(this.x + Math.cos(a) * outer, this.y + Math.sin(a) * outer);
+      ctx.stroke();
+    }
+    ctx.fillStyle = `rgba(${cr},${cg},${cb},${alpha * 0.2})`;
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, this.radius * (0.14 + alpha * 0.14), 0, Math.PI * 2);
     ctx.fill();
+    ctx.strokeStyle = `rgba(255,235,190,${alpha * 0.85})`;
+    ctx.lineWidth = Math.max(1, this.radius * 0.018 * alpha);
+    ctx.beginPath();
+    ctx.moveTo(this.x - r * 0.28, this.y);
+    ctx.lineTo(this.x + r * 0.28, this.y);
+    ctx.moveTo(this.x, this.y - r * 0.28);
+    ctx.lineTo(this.x, this.y + r * 0.28);
+    ctx.stroke();
   }
 }

@@ -844,7 +844,7 @@ function drawSkillFxAtlas(ctx, shape, x, y, size) {
 // `useSkill` başarılı olduğunda çağrılır (hem insan hem bot yolu). Efekt saf
 // görseldir; fizik/AI kararını etkilemez. `game.skillFx` yoksa (saf test
 // sandbox'ı) sessizce çıkar.
-function spawnSkillFx(entity, game, def) {
+function createSkillFx(entity, game, def, sequence) {
   if (!game || !Array.isArray(game.skillFx) || !def) return null;
   // Görsel kimlik önce türetilmiş tanımdan, yoksa taban karakter tanımından
   // okunur (eski/türetilmiş kayıtlarda fx taşınmamış olabilir).
@@ -866,23 +866,21 @@ function spawnSkillFx(entity, game, def) {
     params: def.params || {},
     t: 0, life: entry.life || 28, dead: false,
     seed: sfxHash((charDef && charDef.id ? charDef.id : "?") + "|" + shape + "|" +
-      (game.turn | 0) + "|" + (game.matchSeed | 0) + "|" + game.skillFx.length),
+      (game.turn | 0) + "|" + (game.matchSeed | 0) + "|" + (sequence || game.skillFx.length)),
   };
-  game.skillFx.push(fx);
   return fx;
 }
 
-function updateSkillFx(game) {
-  const list = game && game.skillFx;
-  if (!list || !list.length) return;
-  for (let i = list.length - 1; i >= 0; i--) {
-    const fx = list[i];
-    fx.t++;
-    if (fx.t >= fx.life) list.splice(i, 1);
-  }
+function spawnSkillFx(entity, game, def) {
+  return typeof VFX !== "undefined" ? VFX.emit(game, "skill", entity, game, def) : null;
 }
 
-function drawSkillFx(ctx, game) {
+function updateSkillFx(game) {
+  if (typeof VFX === "undefined") return;
+  VFX.update(game);
+}
+
+function drawSkillFxRaw(ctx, game) {
   const list = game && game.skillFx;
   if (!list || !list.length) return;
   for (let i = 0; i < list.length; i++) {
@@ -897,6 +895,10 @@ function drawSkillFx(ctx, game) {
     if (!drawSkillFxAtlas(ctx, fx.shape, -size * 0.48, -size * 0.48, size)) entry.draw(ctx, fx);
     ctx.restore();
   }
+}
+
+function drawSkillFx(ctx, game) {
+  if (typeof VFX !== "undefined") VFX.draw(ctx, game, "actors");
 }
 
 // Kart önizlemesi: aynı çiziciyi `size` kutusuna sığdırır (Projectile.drawIcon
@@ -935,6 +937,14 @@ function drawSkillAura(ctx, entity, cx, cy, timeMs) {
   const t = (timeMs || 0) / 1000;
   const pulse = 0.5 + 0.5 * Math.sin(t * 4.2);
   const tint = (entity.charDef && entity.charDef.accent) || entity.color || "#63e6be";
+
+  // Ready module indicator sits at the back/shoulder tool mount (local x=-0.53R).
+  if (entity.skillCooldown === 0) {
+    const mx = cx - entity.facing * R * 0.53;
+    const my = cy - R * 0.60;
+    sfxRing(ctx, mx, my, R * (0.20 + pulse * 0.06), tint, 1.5, 0.28 + pulse * 0.16);
+    sfxDisc(ctx, mx, my, R * 0.055, tint, 0.35 + pulse * 0.25);
+  }
 
   if (entity.blockShield) {
     const r = R * (1.35 + 0.06 * pulse);

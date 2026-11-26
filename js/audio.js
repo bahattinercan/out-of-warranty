@@ -72,6 +72,18 @@ const SFX = (() => {
   const PRIORITY = { CRITICAL: 4, ACTION: 3, FEEDBACK: 2, UI: 1 };
   const SFX_BUDGET = 40;      // eşzamanlı efekt kaynağı üst sınırı (müzik hariç)
   const CRITICAL_RESERVE = 4; // kritik olaylara her zaman ayrılan yuva (36 + 4)
+  const MUSIC_MASTER_GAIN = 0.32; // kritik savaş geri bildirimine daha fazla tepe payı bırakır
+  const SFX_TEXTURES = {
+    standard: { attackHz: 3900, bodyHz: 94, tailHz: 2500 },
+    teleport: { attackHz: 5200, bodyHz: 250, tailHz: 3400 },
+    drill: { attackHz: 2100, bodyHz: 72, tailHz: 1500 },
+    sniper: { attackHz: 6100, bodyHz: 118, tailHz: 4200 },
+    pellet: { attackHz: 4700, bodyHz: 130, tailHz: 3000 },
+    bounce: { attackHz: 2800, bodyHz: 82, tailHz: 1900 },
+    fire: { attackHz: 3300, bodyHz: 96, tailHz: 1600 },
+    metal: { attackHz: 5600, bodyHz: 128, tailHz: 3700 },
+    cluster: { attackHz: 4400, bodyHz: 68, tailHz: 2200 },
+  };
 
   // Pan derinliği: 1 tam stereo, mobilde sığ (tek kulaklıkta/speaker'da ses
   // kaybolmasın), mono çıkışta 0 (merkez). Sonda/test `setSpatialDepth` ile
@@ -270,7 +282,7 @@ const SFX = (() => {
       try { master.gain.value = (muted || volume === 0) ? 0 : 0.42 * volume; } catch (error) { disable(error); }
     }
     if (musicGain && !disabled) {
-      try { musicGain.gain.value = (musicMuted || musicVolume === 0) ? 0 : 0.42 * musicVolume; } catch (error) { disable(error); }
+      try { musicGain.gain.value = (musicMuted || musicVolume === 0) ? 0 : MUSIC_MASTER_GAIN * musicVolume; } catch (error) { disable(error); }
     }
     if (muted || volume === 0) {
       stopSfx();
@@ -372,7 +384,7 @@ const SFX = (() => {
 
         // Music gain: müzik kanalı için bağımsız kazanç
         musicGain = ctx.createGain();
-        musicGain.gain.value = (musicMuted || musicVolume === 0) ? 0 : 0.42 * musicVolume;
+        musicGain.gain.value = (musicMuted || musicVolume === 0) ? 0 : MUSIC_MASTER_GAIN * musicVolume;
         musicGain.connect(ctx.destination);
 
         bindUnlock(); // jest sonrası devam ettirmeyi garantiye al
@@ -486,6 +498,13 @@ const SFX = (() => {
       g.gain.exponentialRampToValueAtTime(opts.gain, t0 + attack);
       if (opts.sustain) g.gain.exponentialRampToValueAtTime(opts.gain * opts.sustain, t0 + dur * 0.62);
       g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+      if (opts.guitar) {
+        // A short filtered pick transient gives the driven saw wave a plucked
+        // string attack without adding a second oscillator to every note.
+        musicPick(t0, Math.min(0.018, dur * 0.12), opts.gain * 0.12);
+        filter.frequency.setValueAtTime(Math.min(5200, (opts.cutoff || 2600) * 1.35), t0);
+        filter.frequency.exponentialRampToValueAtTime(opts.cutoff || 2600, t0 + Math.min(0.045, dur * 0.28));
+      }
       if (drive) osc.connect(drive).connect(filter);
       else osc.connect(filter);
       filter.connect(g).connect(musicGain || master);
@@ -499,6 +518,33 @@ const SFX = (() => {
       };
       osc.start(t0);
       osc.stop(t0 + dur + 0.05);
+    });
+  }
+
+  function musicPick(time, dur, gain) {
+    playMusic(() => {
+      const src = ctx.createBufferSource();
+      const filter = ctx.createBiquadFilter();
+      const g = ctx.createGain();
+      src.buffer = noiseBuffer();
+      src.audioRole = "guitar-pick";
+      filter.type = "highpass";
+      filter.frequency.setValueAtTime(2800, time);
+      filter.Q.value = 0.65;
+      g.gain.setValueAtTime(0.0001, time);
+      g.gain.exponentialRampToValueAtTime(gain, time + Math.min(0.003, dur * 0.25));
+      g.gain.exponentialRampToValueAtTime(0.0001, time + dur);
+      src.connect(filter).connect(g).connect(musicGain || master);
+      track(src, [src, filter, g]);
+      musicVoiceGains.set(src, g);
+      musicSources.add(src);
+      const cleanup = sources.get(src);
+      src.onended = () => {
+        musicSources.delete(src);
+        if (cleanup) cleanup();
+      };
+      src.start(time);
+      src.stop(time + dur + 0.01);
     });
   }
 
@@ -673,6 +719,7 @@ const SFX = (() => {
       else g.connect(outputFor(opts));
       osc.connect(g);
       osc.effectVariation = opts.variationIndex;
+      osc.audioRole = opts.audioRole;
       track(osc, panner ? [osc, g, panner] : [osc, g]); voiceMeta.set(osc, { priority });
       osc.start(t0);
       osc.stop(t0 + dur + 0.02);
@@ -707,10 +754,34 @@ const SFX = (() => {
       else g.connect(outputFor(opts));
       src.connect(filt).connect(g);
       src.effectVariation = opts.variationIndex;
+      src.audioRole = opts.audioRole;
       track(src, panner ? [src, filt, g, panner] : [src, filt, g]); voiceMeta.set(src, { priority });
       src.start(t0);
       src.stop(t0 + dur + 0.02);
     }, opts);
+  }
+
+  function addShotTexture(v, family, heavy) {
+    const profile = SFX_TEXTURES[family] || SFX_TEXTURES.standard;
+    noise({ ...v, audioRole: "shot-attack", filter: "highpass", freq: profile.attackHz,
+      freqEnd: profile.attackHz * 0.62, dur: 0.024, gain: 0.035, attack: 0.001 });
+    tone({ ...v, audioRole: "shot-body", type: "sine", freq: profile.bodyHz - heavy * 22,
+      freqEnd: Math.max(38, profile.bodyHz * 0.62), dur: 0.095 + heavy * 0.035,
+      gain: 0.045, attack: 0.003 });
+    noise({ ...v, audioRole: "shot-tail", filter: "bandpass", freq: profile.tailHz,
+      freqEnd: profile.tailHz * 0.55, delay: 0.022, dur: 0.075, gain: 0.025, Q: 0.65 });
+  }
+
+  function addExplosionTexture(v, family, big, dur) {
+    const profile = SFX_TEXTURES[family] || SFX_TEXTURES.standard;
+    noise({ ...v, audioRole: "explosion-attack", filter: "highpass", freq: profile.attackHz,
+      freqEnd: profile.attackHz * 0.48, dur: 0.035, gain: 0.045, attack: 0.002 });
+    tone({ ...v, audioRole: "explosion-body", type: "sine", freq: profile.bodyHz - big * 24,
+      freqEnd: 36, dur: dur * 0.58, gain: 0.055, attack: 0.006 });
+    noise({ ...v, audioRole: "explosion-tail", filter: family === "fire" ? "bandpass" : "lowpass",
+      freq: family === "fire" ? profile.tailHz : 210 + big * 90,
+      freqEnd: family === "fire" ? profile.tailHz * 1.5 : 52, delay: 0.045,
+      dur: dur * 0.42, gain: 0.035, Q: 0.7 });
   }
 
   // ── Yüksek seviyeli efektler ───────────────────────────────────────────────
@@ -751,6 +822,7 @@ const SFX = (() => {
                dur: 0.13 + heavy * 0.08, gain: 0.19, attack: 0.003 });
         noise({ ...v, filter: "highpass", freq: 1500 - heavy * 700, freqEnd: 400, dur: 0.1 + heavy * 0.05, gain: 0.12 });
       }
+      addShotTexture(v, family, heavy);
     },
 
     // Patlama: pes "boom" (gürültü + alçalan ton). Yarıçap büyüdükçe daha derin/uzun.
@@ -772,6 +844,7 @@ const SFX = (() => {
         dur: dur * (isFire ? 0.7 : 0.9), gain: isFire ? 0.13 : 0.19, attack: 0.004 });
       if (big > 0.35 || isCluster) noise({ ...v, filter: "lowpass", freq: isCluster ? 300 : 180, freqEnd: 48,
         delay: 0.035, dur: dur * (isCluster ? 0.55 : 0.8), gain: isCluster ? 0.08 : 0.1 });
+      addExplosionTexture(v, family, big, dur);
     },
 
     // Zıplama: kısa yukarı kayan "boing".

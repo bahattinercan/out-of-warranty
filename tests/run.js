@@ -15,11 +15,11 @@ const path = require("path");
 
 // ── Kaynakları tek sandbox'ta yükle ─────────────────────────────────────────
 const JS_DIR = path.join(__dirname, "..", "js");
-const FILES = ["i18n.js", "version.js", "portal.js", "diagnostics.js", "audio.js", "characters.js", "progression.js", "profile.js", "parts.js", "market.js", "assets-manifest.js", "assets.js", "maps.js", "skills.js", "skill-fx.js", "robot-animation-manifest.js", "robot-rig-runtime.js", "rigs/kopek.js", "robots.js", "terrain.js", "weapons.js", "entity.js", "projectile.js", "ai.js", "game.js"];
+const FILES = ["i18n.js", "version.js", "portal.js", "diagnostics.js", "audio.js", "characters.js", "progression.js", "profile.js", "parts.js", "market.js", "assets-manifest.js", "assets.js", "maps.js", "skills.js", "skill-fx.js", "robot-animation-manifest.js", "robot-rig-runtime.js", "rigs/kopek.js", "robots.js", "terrain.js", "weapons.js", "entity.js", "projectile.js", "vfx.js", "ai.js", "game.js"];
 const bundle =
   FILES.map((f) => fs.readFileSync(path.join(JS_DIR, f), "utf8")).join("\n;\n") +
-  "\n;globalThis.__M = { CHARACTERS, MAPS, BIOMES, FACTORY_ZONES, PROP_DRAWERS, WEAPONS, SKILL_PROJECTILES, PROJECTILE_SHAPES, SHARED_SHAPES, PROJ_SUBSTEP, PROJ_MAX_SUBSTEPS, useSkill, drawCharExtras, drawRobot, robotMuzzlePoint, robotTopOffset, _rbProportions, RB_GUN_PIVOT_X, RB_GUN_PIVOT_Y, RB_GUN_MUZZLE, RB_VISUAL_SCALE, ROBOT_ANIMATIONS, ROBOT_ANIMATION_STATES, getRobotAnimationDef, resolveRobotAnimation, getRobotAnimationFrame, Entity, Projectile, Explosion, GRAVITY, Game, Terrain, BotController, AI_LIMITS, aiWorldKey, aiSimulateShot, aiCoarseCandidates, aiPathIsSafe, aiRandom, AI_DIFFICULTY, aiDamageMultiplier, aiAssignDamageScale, aiSelectWeapon, skillConsumesShot, SKILL_SHOT_KINDS, AI_SKILL_REPLACE_SCORE, " +
-  "SKILL_FX_SHAPES, SKILL_FX_KIND_DEFAULT, SKILL_FX_EXTENT, spawnSkillFx, updateSkillFx, drawSkillFx, drawSkillFxIcon, drawSkillAura, SkillFx, arenaOpponentRoster, " +
+  "\n;globalThis.__M = { CHARACTERS, MAPS, BIOMES, FACTORY_ZONES, PROP_DRAWERS, WEAPONS, SKILL_PROJECTILES, PROJECTILE_SHAPES, SHARED_SHAPES, PROJ_SUBSTEP, PROJ_MAX_SUBSTEPS, useSkill, drawCharExtras, drawRobot, robotMuzzlePoint, robotTopOffset, _rbProportions, RB_GUN_PIVOT_X, RB_GUN_PIVOT_Y, RB_GUN_MUZZLE, RB_VISUAL_SCALE, ROBOT_ANIMATIONS, ROBOT_ANIMATION_STATES, getRobotAnimationDef, resolveRobotAnimation, getRobotAnimationFrame, Entity, Projectile, Explosion, GRAVITY, Game, Terrain, BotController, AI_LIMITS, aiWorldKey, aiSimulateShot, aiCoarseCandidates, aiPathIsSafe, aiRandom, AI_DIFFICULTY, aiDamageMultiplier, aiAssignDamageScale, aiSelectWeapon, aiSelectRobot, aiSelectSkill, skillConsumesShot, SKILL_SHOT_KINDS, AI_SKILL_REPLACE_SCORE, " +
+  "SKILL_FX_SHAPES, SKILL_FX_KIND_DEFAULT, SKILL_FX_EXTENT, spawnSkillFx, updateSkillFx, drawSkillFx, drawSkillFxIcon, drawSkillAura, SkillFx, VFX, VFX_LIMITS, arenaOpponentRoster, " +
   "SERVICE_LEVELS, MAX_SERVICE_XP, MAX_TIER, MAX_ARENA_STAGE, START_SCRAP, BRANCHES, BRANCH_LABELS, TIER_COSTS, TIER_LEVEL_GATES, REWARD_BASE, DIFFICULTY_MULTIPLIER, levelForXp, xpForLevel, nextLevelXp, levelUpMessage, calculateMatchReward, resolveRobotBuild, upgradeEffectText, robotUpgradeSummary, totalTiers, sanitizeUpgrades, nextUpgradeStep, toSafeInt, defaultProfile, defaultRobotProgress, normalizeProfile, loadProfile, saveProfile, getRobotProgress, grantMatchReward, purchaseUpgrade, PROFILE_KEY, createSessionId, " +
   "DEFAULT_UNLOCKED_ROBOTS, ACCOUNT_LEVELS, ROBOT_PRICES, levelForAccountXp, xpForAccountLevel, nextAccountLevelXp, accountLevelUpBonus, accountLevelTitle, robotPriceSpec, isRobotUnlocked, canUnlockRobot, unlockRobot, " +
   "AMMO_DEPOT_CAP, AMMO_BULK_QTY, AMMO_BULK_QTY_BIG, AMMO_PRICES, ammoPriceFor, ammoBasePrice, weaponPowerScore, weaponStats, sellableWeapons, sanitizeAmmoDepot, getAmmoDepot, setAmmoDepot, mergeDepots, ammoDepotTotal, buyAmmo, mergeAmmoWithDepot, battleLoad, unspentDepot, settleDepot, weaponById, weaponBattleMax, isSellableWeapon, initialAmmo, " +
@@ -1263,6 +1263,21 @@ group("Efekt ikonu ve auralar");
   M.drawSkillAura(ctxAura, Object.assign(makeEntity(M.CHARACTERS[0]), { blockShield: true }), 100, 300, 0);
   check("kalkan aurası görünür iz bırakır", ctxAura.calls.stroke > 0);
 
+  const readyEntity = Object.assign(makeEntity(M.CHARACTERS[0]), { skillCooldown: 0 });
+  const readyCtx = mockCtx();
+  M.VFX.drawAura(readyCtx, readyEntity, 100, 300, 1234);
+  check("hazır modül aparat yuvasında vurgu çizer", readyCtx.calls.stroke > 0 && readyCtx.calls.fill > 0);
+  const cooldownCtx = mockCtx();
+  M.VFX.drawAura(cooldownCtx, Object.assign(makeEntity(M.CHARACTERS[0]), { skillCooldown: 2 }), 100, 300, 1234);
+  check("cooldown sırasında hazır modül vurgusu çizilmez", cooldownCtx.calls.stroke === 0 && cooldownCtx.calls.fill === 0);
+
+  const poison = Object.assign(makeEntity(M.CHARACTERS[0]), { skillCooldown: 2, poison: { dps: 8, turns: 2 } });
+  const poisonOpsA = [], poisonOpsB = [];
+  M.VFX.drawAura(mockCtx(poisonOpsA), poison, 100, 300, 1234);
+  M.VFX.drawAura(mockCtx(poisonOpsB), poison, 100, 300, 1234);
+  check("zehir kabarcıkları görünür ve aynı oyun saatinde deterministiktir",
+    poisonOpsA.filter((op) => op.startsWith("arc(")).length >= 6 && poisonOpsA.join("|") === poisonOpsB.join("|"));
+
   // globalAlpha sızıntı koruması: kalkan veya aura sonrası globalAlpha 1 kalmalı
   function alphaTrackingCtx() {
     let alpha = 1;
@@ -1320,6 +1335,34 @@ group("Yetenek efekti üretimi (useSkill entegrasyonu)");
     const fx = M.spawnSkillFx(e, g, { kind: "heal", label: "Eski Veri", params: {} });
     return !!fx && fx.shape === M.SKILL_FX_KIND_DEFAULT.heal;
   })());
+
+  const managed = { skillFx: [], explosions: [] };
+  const first = M.VFX.emit(managed, "explosion", 10, 20, 12);
+  check("ortak VFX API patlamayı var olan koleksiyona ekler",
+    first instanceof M.Explosion && managed.explosions[0] === first);
+  const explosionCtx = mockCtx();
+  first.draw(explosionCtx);
+  check("segmentli patlama çizimi halka ve radyal vurgular üretir",
+    explosionCtx.calls.stroke >= 10 && explosionCtx.calls.fill === 1);
+  const impactCtx = mockCtx();
+  M.VFX.draw(impactCtx, managed, "impacts");
+  check("impact katmanı patlamayı çizer", impactCtx.calls.stroke > 0);
+  M.VFX.update(managed);
+  check("ortak güncelleme patlama ömrünü ilerletir", first.t === 1);
+  for (let i = 1; i < first.life; i++) M.VFX.update(managed);
+  check("ömrü dolan patlama ortak yöneticiden temizlenir",
+    first.dead && !managed.explosions.includes(first));
+
+  for (let i = 0; i < M.VFX_LIMITS.explosion + 3; i++) M.VFX.emit(managed, "explosion", i, 0, 8);
+  check("patlama sınırı aşılınca en eski efektler atılır",
+    managed.explosions.length === M.VFX_LIMITS.explosion && managed.explosions[0].x === 3);
+
+  const skillManaged = { skillFx: [], explosions: [] };
+  const skillDef = M.CHARACTERS[0].skill;
+  const firstSkill = M.VFX.emit(skillManaged, "skill", e, skillManaged, skillDef);
+  for (let i = 0; i < M.VFX_LIMITS.skill + 2; i++) M.VFX.emit(skillManaged, "skill", e, skillManaged, skillDef);
+  check("skill cast sınırı aşılınca en eski efekt atılır",
+    skillManaged.skillFx.length === M.VFX_LIMITS.skill && skillManaged.skillFx[0] !== firstSkill);
 }
 
 // ── 6) Bilgisayar oyuncusu — balistik, güvenlik ve deterministik kararlar ───
@@ -1626,10 +1669,53 @@ group("Rüzgâr sürekliliği ve değişim bildirimi");
     set font(_) {}, set textAlign(_) {}, set textBaseline(_) {}, set fillStyle(_) {},
   };
   let windFxSafe = true;
-  try { windGame.drawWindChangeFx(fxCtx); } catch (_) { windFxSafe = false; }
+  try { M.VFX.draw(fxCtx, windGame, "wind"); } catch (_) { windFxSafe = false; }
   // Not: bant artık _csPanel ile çiziliyor (endüstriyel tema); sahte ctx
   // panelin kullandığı lineTo/closePath/createLinearGradient'i bilmeli.
   check("rüzgâr değişim efekti Canvas üzerinde hatasız çizilir", windFxSafe);
+
+  const worldFxGame = {
+    W: 960, H: 540, renderTimeMs: 1234,
+    fires: [{ x: 480, y: 430, life: 35, max: 50 }],
+    windChangeFx: { age: 0.4, duration: 1.2, to: -2.5 },
+    suddenDeath: true, suddenDeathLevel: 80,
+  };
+  const groundA = [], groundB = [], overlayA = [], overlayB = [];
+  const groundCtx = mockCtx(groundA);
+  const overlayCtx = mockCtx(overlayA);
+  M.VFX.draw(groundCtx, worldFxGame, "ground");
+  M.VFX.draw(overlayCtx, worldFxGame, "overlay");
+  M.VFX.draw(mockCtx(groundB), worldFxGame, "ground");
+  M.VFX.draw(mockCtx(overlayB), worldFxGame, "overlay");
+  check("ortak dünya katmanı ateşi ve ön plan çevre efektlerini deterministik çizer",
+    groundCtx.calls.fill > 0 && overlayCtx.calls.fill > 0 && overlayCtx.calls.stroke > 0 &&
+    groundA.join("|") === groundB.join("|") && overlayA.join("|") === overlayB.join("|"));
+  check("çevre VFX çizimi oyun efekt sayaçlarını değiştirmez",
+    worldFxGame.fires[0].life === 35 && worldFxGame.windChangeFx.age === 0.4 && worldFxGame.suddenDeathLevel === 80);
+}
+
+group("Düşman AI robot ve yetenek kararları");
+{
+  const first = M.aiSelectRobot(M.CHARACTERS[0], M.CHARACTERS, [], "FIX-8:1:normal");
+  const repeated = M.aiSelectRobot(M.CHARACTERS[0], M.CHARACTERS, [], "FIX-8:1:normal");
+  const second = M.aiSelectRobot(M.CHARACTERS[0], M.CHARACTERS.filter((robot) => robot !== first), [first], "FIX-8:2:normal");
+  check("robot seçimi aynı girdide tekrarlanabilir ve insan robotunu dışlar", first === repeated && first !== M.CHARACTERS[0]);
+  check("bot kadrosu robotları tekrar etmez ve beceri türlerini çeşitlendirir",
+    !!second && second !== first && second.skill.kind !== first.skill.kind, `${first.skill.kind}/${second && second.skill.kind}`);
+
+  const healGame = makeAiGame();
+  healGame.players[0].charDef = M.CHARACTERS.find((robot) => robot.skill.kind === "heal");
+  healGame.players[0].hp = healGame.players[0].maxHp;
+  check("tam canlı robot iyileştirme becerisini saklar", M.aiSelectSkill(healGame, 0) === null);
+  healGame.players[0].hp = 20;
+  check("düşük canlı robot iyileştirme becerisini seçer", M.aiSelectSkill(healGame, 0)?.kind === "heal");
+
+  const chargeGame = makeAiGame();
+  chargeGame.players[0].charDef = M.CHARACTERS.find((robot) => robot.skill.kind === "nextShot");
+  check("sonraki atışı güçlendiren beceri seçilir", M.aiSelectSkill(chargeGame, 0)?.kind === "nextShot");
+  const chargeBot = new M.BotController(19);
+  chargeBot.begin(chargeGame);
+  check("atış güçlendirme becerisi atıştan önce planlanır", chargeBot.skillPhase === "before");
 }
 
 group("Mod seçimi ve bot turu entegrasyonu");
@@ -1832,10 +1918,18 @@ group("Mod seçimi ve bot turu entegrasyonu");
     const hudEl = { classList: { toggle: (_name, force) => { hudHidden = !!force; } } };
     const playersEl = { children: [], appendChild() {}, removeChild() {} };
     const bannerEl = { textContent: "", style: {} };
-    const windEl = { textContent: "", classList: { toggle() {} } };
+    const windClasses = new Set();
+    const windTicks = Array.from({ length: 4 }, () => ({ classList: { toggle(name, force) { if (force) this.active = true; else this.active = false; } } }));
+    const windArrow = { textContent: "" };
+    const windReadout = { textContent: "" };
+    const windEl = {
+      textContent: "",
+      classList: { toggle(name, force) { if (force) windClasses.add(name); else windClasses.delete(name); } },
+      querySelectorAll: () => windTicks,
+    };
     const prevDoc = sandbox.document;
     sandbox.document = {
-      getElementById: (id) => id === "hud" ? hudEl : id === "players" ? playersEl : id === "turn-banner" ? bannerEl : id === "wind-indicator" ? windEl : null,
+      getElementById: (id) => id === "hud" ? hudEl : id === "players" ? playersEl : id === "turn-banner" ? bannerEl : id === "wind-indicator" ? windEl : id === "wind-arrow" ? windArrow : id === "wind-readout" ? windReadout : null,
     };
     const hudGame = { players: [], mode: null, profile: M.normalizeProfile({ version: 2 }), turnTimer: 0, turn: 0, updateWeaponHud() {} };
     let menusHideHud = true;
@@ -1845,6 +1939,19 @@ group("Mod seçimi ve bot turu entegrasyonu");
       if (!hudHidden) menusHideHud = false;
     }
     check("HUD menülerde gizlenir", menusHideHud);
+    hudGame.wind = -2.2;
+    M.Game.prototype.updateHud.call(hudGame);
+    check("rüzgâr ölçeri sola yönü, değeri ve üç kademeyi gösterir",
+      windArrow.textContent === "←" && windReadout.textContent.includes("2.2") &&
+      windTicks.filter((tick) => tick.classList.active).length === 3 && windClasses.has("wind-left"));
+    hudGame.wind = 0;
+    M.Game.prototype.updateHud.call(hudGame);
+    check("sakin rüzgârda yön işareti kalır, güç kademeleri söner",
+      windArrow.textContent === "•" && windTicks.every((tick) => !tick.classList.active) && windClasses.has("wind-calm"));
+    hudGame.wind = 2.1;
+    M.Game.prototype.updateHud.call(hudGame);
+    check("rüzgâr ölçeri sağ yönü ve üç güç kademesini gösterir",
+      windArrow.textContent === "→" && windTicks.filter((tick) => tick.classList.active).length === 3 && windClasses.has("wind-right"));
     sandbox.document = prevDoc;
   }
 

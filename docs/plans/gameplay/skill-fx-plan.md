@@ -1,8 +1,20 @@
 # Tactical Module VFX Plan (Bespoke Cast Effects & Persistent Auras)
 
 Date: September 26, 2026  
-Status: **Phases 1–5 Implemented.** Verified across `run.js` (735/735), `progression.js` (165/165), `audio.js` (21/21), and `maps.js` (960/960).  
+Status: **Phases 1–5 implemented; shared runtime manager added.** See the VFX runtime update below.
 Visual Probes: `_skill_fx_sheet.html` (contact sheet) and `_skill_fx_battle.html` (combat sandbox).
+
+## 8. Shared Battle VFX Runtime
+
+`js/vfx.js` owns transient skill-cast and explosion lifecycle through `VFX.emit(game, type, ...args)`, `VFX.update(game)`, and layer-specific `VFX.draw(ctx, game, layer)` calls. It also dispatches entity auras through `VFX.drawAura(ctx, entity, cx, cy, timeMs)` and world-effect rendering. The existing game state remains the backing data so state snapshots and gameplay integrations remain compatible.
+
+- `actors` draws skill casts above robots; `impacts` draws explosions after projectiles.
+- `ground` draws fire before robots; `overlay` draws sudden-death acid after impacts; `wind` draws after damage popups. Their simulation clocks and damage state remain owned by `Game`.
+- Ready modules pulse at the shoulder tool mount. Poison retains its green ring and gains deterministic rising bubbles driven by `timeMs`.
+- Per-match active limits are 32 skill effects and 64 explosions. Emitting at the limit evicts the oldest effect in that category.
+- Projectile bodies and trails remain tied to projectile physics/history in `Projectile.draw`; persistent robot auras remain in `Entity.draw`.
+- Online snapshots continue to carry skill cast effects through the existing `fx` field. Other effects remain local visual effects; no wire format change is introduced.
+- Rendering remains procedural, deterministic, dependency-free, and compatible with direct `file://` launch.
 
 ## 1. Problem Statement & Design Objectives
 

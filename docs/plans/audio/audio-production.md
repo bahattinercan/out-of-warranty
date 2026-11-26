@@ -18,3 +18,7 @@ The user rejected the AI-rendered sets and asked to improve the music made in co
 ## Listening Status
 
 The code-generated music still needs a human listening pass to judge its guitar timbre, melody, and combat mix; automated tests cannot establish musical fit.
+
+## 2026-11-26 Guitar Attack Pass
+
+Driven guitar notes now pair their existing shaped saw wave with a short, quiet, high-passed noise transient and a brief filter-brightness sweep. The menu keeps its clean, softer attack. The music bus ceiling was lowered to leave more peak headroom for critical combat feedback. The transient is tracked and stopped with the rest of the music voices; no runtime files or dependencies were added. Automated checks cover the transient's presence in battle and absence in the menu. Human listening remains open.

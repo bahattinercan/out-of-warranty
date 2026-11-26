@@ -29,7 +29,7 @@ const AI_DIFFICULTY = {
     predictTarget: false,
     multipleTargets: false,
     lethalSelf: 1.0,
-    useSkills: false,
+    useSkills: true,
     weaponElevations: 3,
     weaponPowerSteps: 2,
   },
@@ -51,7 +51,7 @@ const AI_DIFFICULTY = {
     predictTarget: false,
     multipleTargets: false,
     lethalSelf: 1.0,
-    useSkills: false,
+    useSkills: true,
     weaponElevations: 4,
     weaponPowerSteps: 3,
   },
@@ -115,6 +115,25 @@ const AI_LIMITS = {
 // harcamaz. Hasar veren modüller turun atış hakkını doldurduğu için ikisi
 // aynı turda kullanılamaz.
 const AI_SKILL_REPLACE_SCORE = 8;
+
+function aiSelectRobot(humanRobot, candidates, selected, seed) {
+  const used = new Set([humanRobot && humanRobot.id, ...(selected || []).map((robot) => robot && robot.id)]);
+  const pool = (candidates || CHARACTERS).filter((robot) => robot && !used.has(robot.id));
+  if (!pool.length) return null;
+  const roles = new Map(), skills = new Map();
+  for (const robot of selected || []) {
+    if (!robot) continue;
+    roles.set(robot.role, (roles.get(robot.role) || 0) + 1);
+    skills.set(robot.skill && robot.skill.kind, (skills.get(robot.skill && robot.skill.kind) || 0) + 1);
+  }
+  let hash = 2166136261;
+  for (const ch of String(seed == null ? "bot" : seed)) hash = Math.imul(hash ^ ch.charCodeAt(0), 16777619);
+  const offset = (hash >>> 0) % pool.length;
+  const diversity = (robot) => (roles.get(robot.role) || 0) * 3 + (skills.get(robot.skill && robot.skill.kind) || 0) * 2;
+  const best = Math.min(...pool.map(diversity));
+  const balanced = pool.filter((robot) => diversity(robot) === best);
+  return balanced[offset % balanced.length];
+}
 
 // Zorluk seviyesinin bot hasar ölçeği. İnsan robotları etkilenmez; değer
 // oyun başında `Entity.aiDamageMult` alanına yazılır (bkz. game.js startGame).
@@ -436,91 +455,90 @@ function aiShouldUseSkill(game, shooterIdx) {
 // Yetenek skorlaması — duruma göre en iyi yeteneği seç.
 function aiSelectSkill(game, shooterIdx) {
   const shooter = game.players[shooterIdx];
-  const target = game.players.find((p, i) => i !== shooterIdx && p.alive);
+  const targets = game.players.filter((p, i) => i !== shooterIdx && p.alive);
   const def = shooter.charDef && shooter.charDef.skill;
   if (!def) return null;
   const kind = def.kind;
+  const target = targets.slice().sort((a, b) => Math.hypot(a.x - shooter.x, a.y - shooter.y) - Math.hypot(b.x - shooter.x, b.y - shooter.y))[0];
+  const params = (shooter.resolvedSkill || def).params || def.params || {};
+  const distance = (other) => Math.hypot(other.x - shooter.x, (other.y - other.r) - (shooter.y - shooter.r));
+  const effectiveDamage = (other, raw) => other.blockShield ? 0 : Math.max(0, raw * (1 - other.armor) * (other.damageReduce ? other.damageReduce.factor : 1));
+  const threshold = { easy: 15, normal: 10, hard: 6, expert: 3 }[aiGetDifficulty(game)] || 10;
   let score = 0;
-  const dist = target ? Math.abs(target.x - shooter.x) : 0;
 
   switch (kind) {
-    case "heal":
-      // Can < 50% ise kullan
-      if (shooter.hp < shooter.maxHp * 0.5) score += 10;
-      else if (shooter.hp < shooter.maxHp * 0.7) score += 5;
-      else score += 1; // her zaman kullan ama düşük öncelik
+    case "heal": {
+      const healing = Math.min(shooter.maxHp - shooter.hp, params.amount || 25);
+      score = healing * (shooter.hp < shooter.maxHp * 0.35 ? 1.35 : 1);
       break;
+    }
 
     case "shield":
-      // Rakip yüksek hasarlı silah kullanıyorsa veya yakın mesafedeyse
-      if (target && dist < 200) score += 8;
-      if (shooter.hp < shooter.maxHp * 0.4) score += 6;
-      else score += 2;
+      score = targets.length ? Math.min(shooter.hp, target && target.weaponSpec ? target.weaponSpec.damage : 30) * (shooter.hp < shooter.maxHp * 0.4 ? 0.8 : 0.45) : 0;
       break;
 
-    case "damageReduce":
-      if (shooter.hp < shooter.maxHp * 0.6) score += 7;
-      else score += 2;
+    case "damageReduce": {
+      const turns = params.turns || 2;
+      score = targets.length ? Math.min(shooter.hp * 0.35, 28) * (1 - (params.factor || 0.5)) * turns : 0;
       break;
+    }
 
     case "nextShot":
-      // Her zaman kullan, ateş öncesi
-      score += 10;
+      score = shooter.nextShotMod ? 0 : 12 + (shooter.weaponSpec || WEAPONS[0]).damage * ((params.dmgMult || 1) - 1) +
+        (shooter.weaponSpec || WEAPONS[0]).radius * ((params.radiusMult || 1) - 1) * 0.2 + ((params.pellets || 1) - 1) * 8;
       break;
 
-    case "jump":
-      // Yakın mesafede rakibe yaklaşmak için
-      if (dist < 150) score += 8;
-      else score += 2;
+    case "jump": {
+      const blocked = target && aiLineObstacles(game.terrain, shooter.x, shooter.y - shooter.r, target.x, target.y - target.r) > 0;
+      score = shooter.onGround && target && blocked ? 16 : 0;
       break;
+    }
 
-    case "dash":
-      // Yakın mesafede yüksek hasar
-      if (dist < 100) score += 12;
-      else if (dist < 200) score += 6;
-      else score += 1;
+    case "dash": {
+      const range = params.range || 80;
+      score = targets.reduce((sum, other) => distance(other) <= range + other.r ? sum + effectiveDamage(other, params.contactDamage || 30) : sum, 0);
       break;
+    }
 
     case "melee": {
-      const range = def.params.range || 42;
-      if (target && dist < range) score += 15;
-      else score += 1;
+      const range = params.range || 42;
+      score = targets.reduce((sum, other) => {
+        const inFront = shooter.facing > 0 ? other.x >= shooter.x - shooter.r : other.x <= shooter.x + shooter.r;
+        return inFront && distance(other) <= range + other.r ? sum + effectiveDamage(other, params.damage || 35) : sum;
+      }, 0);
       break;
     }
 
     case "radial": {
-      const radius = def.params.radius || 72;
-      // Yakındaki rakiplere hasar
-      if (target && dist < radius) score += 12;
-      else score += 3;
+      const radius = params.radius || 72;
+      score = targets.reduce((sum, other) => sum + (distance(other) < radius + other.r ? effectiveDamage(other, (params.damage || 30) * (1 - distance(other) / (radius + other.r))) : 0), 0);
       break;
     }
 
     case "quake":
-      // Tüm rakiplere hasar
-      score += 10;
+      score = targets.reduce((sum, other) => sum + effectiveDamage(other, params.damage || 26), 0);
       break;
 
-    case "spit":
-      // Mermi üreten yetenek — atışın yerine geçer
-      score += 10;
+    case "spit": {
+      const proj = SKILL_PROJECTILES[params.proj];
+      score = proj ? targets.reduce((sum, other) => distance(other) < proj.radius + other.r + 100 ? sum + effectiveDamage(other, proj.damage) : sum, 0) : 0;
       break;
+    }
 
-    case "dig":
-      // Savunma — can düşükse
-      if (shooter.hp < shooter.maxHp * 0.4) score += 8;
-      else score += 2;
+    case "dig": {
+      const surrounded = target && aiLineObstacles(game.terrain, shooter.x, shooter.y - shooter.r, target.x, target.y - target.r) > 0;
+      score = shooter.hp < shooter.maxHp * 0.55 && surrounded ? Math.min(params.depth || 34, 24) : 0;
       break;
+    }
 
     case "glide":
-      // Mobilit — yüksekten atlamak için
-      score += 4;
+      score = !shooter.onGround && shooter.vy > 1 && shooter.y < game.terrain.h * 0.65 ? 12 : 0;
       break;
 
     default:
       score += 1;
   }
-  return { kind, score, def };
+  return score >= threshold ? { kind, score, def } : null;
 }
 
 function aiPathIsSafe(game, shooter, dir, distance) {
@@ -707,7 +725,7 @@ class BotController {
     // Yetenek seç. Hasar veren modüller turun atış hakkını doldurduğundan bot
     // da bunları ateş ETMEK YERİNE kullanır ("instead"); yardımcı modüller
     // (onarım, kalkan, sıçrama…) atışı harcamaz, ateş sonrası ("after") girer.
-    this.skillUsed = aiSelectSkill(game, this.shooterIdx);
+    this.skillUsed = aiShouldUseSkill(game, this.shooterIdx) ? aiSelectSkill(game, this.shooterIdx) : null;
     if (this.skillUsed) {
       const shooter = game.players[this.shooterIdx];
       const def = shooter.charDef && shooter.charDef.skill;
@@ -715,6 +733,8 @@ class BotController {
         // Modül yalnız anlamlıysa (hedef menzilde vb.) atışın yerine geçer.
         if (this.skillUsed.score >= AI_SKILL_REPLACE_SCORE) this.skillPhase = "instead";
         else { this.skillUsed = null; this.skillPhase = "none"; }
+      } else if (def && def.kind === "nextShot") {
+        this.skillPhase = "before";
       } else {
         // Diğer yetenekler ateş sonrası kullanılır
         this.skillPhase = "after";
@@ -985,6 +1005,10 @@ class BotController {
           return;
         }
 
+        if (this.skillPhase === "before" && this.skillUsed) {
+          const shooterEnt = game.players[this.shooterIdx];
+          if (useSkill(shooterEnt, game)) this.status = "Bilgisayar yetenek kullanıyor…";
+        }
         game.fire(this.choice.power);
 
         // Ateş sonrası yetenekler

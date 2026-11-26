@@ -88,13 +88,13 @@ function useSkill(entity, game) {
           if (p.poison) other.poison = { dps: p.poison.dps || 8, turns: p.poison.turns || 2 };
         }
       }
-      game.explosions.push(new Explosion(entity.x + dir * range * 0.6, fromY, range * 0.55, { r: 255, g: 207, b: 80 }));
+      VFX.emit(game, "explosion", entity.x + dir * range * 0.6, fromY, range * 0.55, { r: 255, g: 207, b: 80 });
       break;
     }
 
     case "radial":
       game.applyAreaDamage(fromX, fromY, p.radius || 72, p.damage || 30, p.knockback || 10, entity);
-      game.explosions.push(new Explosion(fromX, fromY, p.radius || 72, { r: 90, g: 225, b: 255 }));
+      VFX.emit(game, "explosion", fromX, fromY, p.radius || 72, { r: 90, g: 225, b: 255 });
       break;
 
     case "quake":
@@ -102,7 +102,7 @@ function useSkill(entity, game) {
         if (other === entity || !other.alive) continue;
         game.applySkillDamage(other, p.damage || 26, other.x, other.y - other.r + 24, p.knockback || 4);
       }
-      game.explosions.push(new Explosion(entity.x, entity.y - entity.r, 54, { r: 210, g: 160, b: 75 }));
+      VFX.emit(game, "explosion", entity.x, entity.y - entity.r, 54, { r: 210, g: 160, b: 75 });
       break;
 
     case "spit":

@@ -782,8 +782,6 @@ class Game {
       }
     }
 
-    for (const ex of this.explosions) ex.update();
-    this.explosions = this.explosions.filter((e) => !e.dead);
     if (typeof updateSkillFx === "function") updateSkillFx(this);
     for (const d of this.damagePopups) { d.age += dt; d.y -= 34 * dt; }
     this.damagePopups = this.damagePopups.filter((d) => d.age < 1.1);
@@ -4412,7 +4410,7 @@ class Game {
      * ikinci kez oyarsa iki taraf ayrışır. */
     if (this.onlineGuest) {
       const r = Math.max(1, Math.round(spec.radius));
-      this.explosions.push(new Explosion(x, y, r));
+      VFX.emit(this, "explosion", x, y, r);
       SFX.explosion(r, spec, { x, width: this.W });
       this.triggerScreenShake(Math.min(1.0, r / 45 * 0.55));
       return;
@@ -4423,7 +4421,7 @@ class Game {
     const radius = Math.round(spec.radius * (mod ? mod.radiusMult : 1));
 
     this.terrain.destroy(x, y, radius);
-    this.explosions.push(new Explosion(x, y, radius));
+    VFX.emit(this, "explosion", x, y, radius);
     SFX.explosion(radius, spec, { x, width: this.W });
     this.triggerScreenShake(Math.min(1.0, radius / 45 * 0.55));
 
@@ -4997,8 +4995,6 @@ class Game {
       }
     }
 
-    for (const ex of this.explosions) ex.update();
-    this.explosions = this.explosions.filter((e) => !e.dead);
     if (typeof updateSkillFx === "function") updateSkillFx(this);
 
     // Hasar yazıları: yukarı süzül + yaşlan (ömrü ~1.1 sn)
@@ -5197,7 +5193,7 @@ class Game {
     this.terrain.draw(ctx);
     this.drawMapMechanics(ctx);
     this.drawMines(ctx);
-    this.drawFires(ctx);
+    if (typeof VFX !== "undefined") VFX.draw(ctx, this, "ground");
     this.drawBarrels(ctx);
     this.drawCrates(ctx);
 
@@ -5208,7 +5204,7 @@ class Game {
     ctx.globalAlpha = 1;
 
     // Modül cast efektleri oyuncuların üstünde, mermilerin ve HUD'un altında.
-    if (typeof drawSkillFx === "function") drawSkillFx(ctx, this);
+    if (typeof VFX !== "undefined") VFX.draw(ctx, this, "actors");
 
     if (this.state === "AIMING") {
       if (typeof GameSettings === "undefined" || GameSettings.get("aimGuide")) {
@@ -5222,13 +5218,12 @@ class Game {
 
     for (const pr of this.projectiles) pr.draw(ctx);
     this.drawTether(ctx); // kanca ipi: mermilerin üstünde, patlamaların altında
-    for (const ex of this.explosions) ex.draw(ctx);
-    this.drawSuddenDeath(ctx);
+    if (typeof VFX !== "undefined") VFX.draw(ctx, this, "impacts");
+    if (typeof VFX !== "undefined") VFX.draw(ctx, this, "overlay");
     if (typeof GameSettings === "undefined" || GameSettings.get("damagePopups")) {
       this.drawDamagePopups(ctx);
     }
-    this.drawWindChangeFx(ctx);
-
+    if (typeof VFX !== "undefined") VFX.draw(ctx, this, "wind");
     if (hasShake) {
       ctx.restore();
     }
@@ -5286,39 +5281,6 @@ class Game {
       }
       ctx.restore();
     }
-  }
-
-  // Değişen rüzgâr yönünde kayan çizgiler ve kısa bir merkez bildirimi.
-  // Çizgi hızı/uzunluğu yeni şiddetle artar; böylece sayı okunmasa da değişim anlaşılır.
-  drawWindChangeFx(ctx) {
-    const fx = this.windChangeFx;
-    if (!fx) return;
-    const progress = Math.min(1, fx.age / fx.duration);
-    const alpha = Math.min(1, fx.age * 5) * (1 - progress);
-    const direction = fx.to >= 0 ? 1 : -1;
-    const strength = Math.min(1, Math.abs(fx.to) / 4);
-    const travel = fx.age * (240 + strength * 300);
-
-    ctx.save();
-    ctx.lineCap = "round";
-    ctx.strokeStyle = "#d9f4ff";
-    ctx.lineWidth = 2 + strength * 1.5;
-    for (let i = 0; i < 12; i++) {
-      const phase = (travel + i * 97) % (this.W + 180);
-      const x = direction > 0 ? phase - 90 : this.W + 90 - phase;
-      const y = 55 + ((i * 43) % Math.max(100, this.H - 150));
-      const length = 26 + strength * 54;
-      ctx.globalAlpha = alpha * (0.35 + (i % 3) * 0.18);
-      ctx.beginPath();
-      ctx.moveTo(x - direction * length, y);
-      ctx.quadraticCurveTo(x - direction * length * 0.45, y - 5, x, y);
-      ctx.stroke();
-    }
-
-    // Merkez "RÜZGÂR DEĞİŞTİ" yazı paneli kaldırıldı: sağ üstteki rüzgar
-    // göstergesi değişim sırasında "Rüzgar değişti: ← x.x" yazdığı için merkezde
-    // ayrıca metne gerek yok — kayan çizgiler değişimi görsel olarak anlatır.
-    ctx.restore();
   }
 
   renderCharSelect(ctx) {
@@ -5834,9 +5796,14 @@ class Game {
     if (!botSlots.length) return;
 
     const available = CHARACTERS.filter((robot) => robot !== humanRobot);
+    const selected = [];
     for (const slot of botSlots) {
-      const choiceIndex = Math.floor(Math.random() * available.length);
-      this.selectedChars[slot] = available.splice(choiceIndex, 1)[0];
+      const robot = aiSelectRobot(humanRobot, available, selected, `${humanRobot && humanRobot.id}:${slot}:${this.difficulty}`);
+      this.selectedChars[slot] = robot;
+      if (robot) {
+        selected.push(robot);
+        available.splice(available.indexOf(robot), 1);
+      }
     }
   }
 
@@ -6402,10 +6369,17 @@ class Game {
     }
     const wind = document.getElementById("wind-indicator");
     if (wind) {
+      const windArrow = document.getElementById("wind-arrow");
+      const windReadout = document.getElementById("wind-readout");
+      const windTicks = wind.querySelectorAll ? wind.querySelectorAll(".wind-meter i") : [];
       let windText;
+      let windDir = "calm";
+      let windStrength = 0;
       if (this.wind != null) {
         const dir = this.wind > 0 ? "→" : this.wind < 0 ? "←" : "•";
         const value = Math.abs(this.wind).toFixed(1);
+        windDir = this.wind > 0 ? "right" : this.wind < 0 ? "left" : "calm";
+        windStrength = this.wind === 0 ? 0 : Math.max(1, Math.ceil(Math.abs(this.wind)));
         windText = this.windChangeFx
           ? t("hud.wind.changed", "Rüzgar değişti: {dir} {value}", { dir, value })
           : t("hud.wind", "Rüzgar: {dir} {value}", { dir, value });
@@ -6413,7 +6387,16 @@ class Game {
         windText = t("hud.wind.none", "Rüzgar: -");
       }
       // aria-live bölgesini her karede yeniden yazıp ekran okuyucuyu spamleme.
-      if (wind.textContent !== windText) wind.textContent = windText;
+      if (windReadout) {
+        if (windReadout.textContent !== windText) windReadout.textContent = windText;
+      } else if (wind.textContent !== windText) {
+        wind.textContent = windText;
+      }
+      if (windArrow) windArrow.textContent = this.wind == null ? "•" : this.wind > 0 ? "→" : this.wind < 0 ? "←" : "•";
+      wind.classList.toggle("wind-left", windDir === "left");
+      wind.classList.toggle("wind-right", windDir === "right");
+      wind.classList.toggle("wind-calm", windDir === "calm");
+      for (let i = 0; i < windTicks.length; i++) windTicks[i].classList.toggle("active", i < windStrength);
       wind.classList.toggle("wind-changed", !!this.windChangeFx);
     }
     this.updateWeaponHud();
@@ -6665,13 +6648,13 @@ class Game {
     while (guard-- > 0 && t.isSolid(x, ty)) ty--;
     if (ty <= 2) return; // ekranın tepesine taştı: ışınlanma iptal (mühimmat yanar)
     // Varış efektleri: eski ve yeni konumda mor parıltı + "zap" sesi
-    this.explosions.push(new Explosion(shooter.x, shooter.y - shooter.r, 20, { r: 150, g: 90, b: 255 }));
+    VFX.emit(this, "explosion", shooter.x, shooter.y - shooter.r, 20, { r: 150, g: 90, b: 255 });
     shooter.x = Math.max(shooter.r, Math.min(t.w - shooter.r, x));
     shooter.y = ty;
     shooter.vx = 0;
     shooter.vy = 0;
     shooter.onGround = false; // yerleşmeyi fizik halleder (SETTLE bekler)
-    this.explosions.push(new Explosion(shooter.x, shooter.y - shooter.r, 20, { r: 150, g: 80, b: 255 }));
+    VFX.emit(this, "explosion", shooter.x, shooter.y - shooter.r, 20, { r: 150, g: 80, b: 255 });
     SFX.teleport();
   }
 
@@ -6685,7 +6668,7 @@ class Game {
     if (Math.hypot(ax - shooter.x, ay - (shooter.y - shooter.r)) < shooter.r + 8) return;
     this.tether = { owner: shooter, ax, ay, speed: 7.5, life: 240, blocked: 0 };
     // Tutunma anı: küçük beyaz çakma + metalik ses
-    this.explosions.push(new Explosion(ax, ay, 10, { r: 220, g: 220, b: 240 }));
+    VFX.emit(this, "explosion", ax, ay, 10, { r: 220, g: 220, b: 240 });
     SFX.hook();
   }
 
@@ -6799,25 +6782,6 @@ class Game {
         age: armed ? blinkAge : 0, spinAngle: 0, stuck: false, trail: [],
       });
       ctx.restore();
-    }
-  }
-
-  drawFires(ctx) {
-    if (!this.fires) return;
-    const now = Date.now();
-    for (const f of this.fires) {
-      const a = Math.max(0, f.life / f.max);
-      const flick = 0.6 + 0.4 * Math.sin(now / 80 + f.x);
-      for (let k = 0; k < 3; k++) {
-        const fx = f.x + (k - 1) * 5;
-        const h = (10 + k * 3) * flick * (0.5 + a * 0.5);
-        ctx.beginPath();
-        ctx.moveTo(fx - 4, f.y);
-        ctx.quadraticCurveTo(fx, f.y - h, fx + 4, f.y);
-        ctx.closePath();
-        ctx.fillStyle = `rgba(255,${110 + k * 45},40,${0.55 * a + 0.15})`;
-        ctx.fill();
-      }
     }
   }
 
@@ -7097,51 +7061,6 @@ class Game {
       this.screenShake.x = 0;
       this.screenShake.y = 0;
     }
-  }
-
-  drawSuddenDeath(ctx) {
-    if (!this.suddenDeath || !(this.suddenDeathLevel > 0)) return;
-    ctx.save();
-    const acidY = this.H - this.suddenDeathLevel;
-    const t = (this.renderTimeMs || 0) * 0.003;
-
-    const grad = ctx.createLinearGradient(0, acidY, 0, this.H);
-    grad.addColorStop(0, "rgba(0, 230, 118, 0.78)");
-    grad.addColorStop(0.2, "rgba(27, 94, 32, 0.88)");
-    grad.addColorStop(1, "rgba(10, 40, 15, 0.96)");
-
-    ctx.fillStyle = grad;
-    ctx.beginPath();
-    ctx.moveTo(0, this.H);
-    ctx.lineTo(0, acidY);
-    for (let x = 0; x <= this.W; x += 30) {
-      const wave = Math.sin(t * 3 + x * 0.04) * 4 + Math.cos(t * 2 + x * 0.02) * 2;
-      ctx.lineTo(x, acidY + wave);
-    }
-    ctx.lineTo(this.W, this.H);
-    ctx.closePath();
-    ctx.fill();
-
-    ctx.strokeStyle = "rgba(185, 255, 102, 0.9)";
-    ctx.lineWidth = 2.5;
-    ctx.beginPath();
-    for (let x = 0; x <= this.W; x += 30) {
-      const wave = Math.sin(t * 3 + x * 0.04) * 4 + Math.cos(t * 2 + x * 0.02) * 2;
-      if (x === 0) ctx.moveTo(x, acidY + wave);
-      else ctx.lineTo(x, acidY + wave);
-    }
-    ctx.stroke();
-
-    for (let i = 0; i < 8; i++) {
-      const bx = ((i * 127 + t * 40) % (this.W - 40)) + 20;
-      const by = acidY + 8 + ((i * 31 + t * 50) % Math.max(10, this.suddenDeathLevel - 10));
-      const br = 2 + (i % 3);
-      ctx.fillStyle = "rgba(185, 255, 102, 0.65)";
-      ctx.beginPath();
-      ctx.arc(bx, by, br, 0, Math.PI * 2);
-      ctx.fill();
-    }
-    ctx.restore();
   }
 
   // Görsel bozulma kurtarma mekanizması (canvas state recovery):

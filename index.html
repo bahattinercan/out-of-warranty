@@ -14,7 +14,13 @@
           <!-- Bu iki metni savaş döngüsü her karede yazar (game.js > updateHud):
                i18n anahtarı DOM'da değil kodda tutulur, aksi halde çift kaynak olur. -->
           <div id="turn-banner" data-i18n="hud.turnIdle">Sıra: -</div>
-          <div id="wind-indicator" role="status" aria-live="polite" data-i18n="hud.windIdle">Rüzgar: -</div>
+          <div id="wind-indicator" role="status" aria-live="polite">
+            <span id="wind-arrow" aria-hidden="true">•</span>
+            <span class="wind-meter" aria-hidden="true">
+              <i></i><i></i><i></i><i></i>
+            </span>
+            <span id="wind-readout" data-i18n="hud.windIdle">Rüzgar: -</span>
+          </div>
           <!-- Simge ile metin ayrı düğümlerde: çeviri yalnız metni değiştirir,
                glif (⛶ / ⏏) kaybolmaz. Öğenin kendi Türkçe metni fallback'tir. -->
           <button id="fullscreen-btn" title="Tam ekran (F)" data-i18n-title="hud.fullscreen.title">⛶ <span data-i18n="hud.fullscreen">Tam Ekran</span></button>
@@ -580,6 +586,7 @@
   <script src="js/weapons.js"></script>
   <script src="js/entity.js"></script>
   <script src="js/projectile.js"></script>
+  <script src="js/vfx.js"></script>
   <script src="js/ai.js"></script>
   <!-- Çevrimiçi katman (F3c): protokol → taşıma → durum → oturum → köprü →
        lobi ekranı. game.js bunlara YALNIZ çalışma zamanında dokunur (sınıf

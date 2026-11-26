@@ -312,6 +312,9 @@ html, body {
 .center { display: flex; flex-direction: row; flex-wrap: wrap; align-items: center; justify-content: center; gap: 2px 12px; }
 #turn-banner { font-size: 16px; font-weight: 700; font-family: var(--font-title); letter-spacing: .5px; white-space: nowrap; text-shadow: 0 1px 2px #000c; }
 #wind-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   font-size: 13px;
   opacity: .95;
   text-shadow: 0 1px 2px #000c;
@@ -320,6 +323,31 @@ html, body {
   border-radius: 7px;
   border: 1px solid transparent;
 }
+#wind-arrow {
+  display: inline-block;
+  min-width: 18px;
+  color: #dff8ff;
+  font-size: 19px;
+  font-weight: 800;
+  line-height: 1;
+  text-align: center;
+  text-shadow: 0 0 8px #4cc9f0aa;
+}
+.wind-meter { display: inline-flex; align-items: center; gap: 2px; height: 16px; }
+.wind-meter i {
+  display: block;
+  width: 4px;
+  height: 6px;
+  border-radius: 1px;
+  background: #ffffff35;
+  transform: skewX(-15deg);
+}
+.wind-meter i:nth-child(2) { height: 9px; }
+.wind-meter i:nth-child(3) { height: 12px; }
+.wind-meter i:nth-child(4) { height: 15px; }
+#wind-indicator.wind-right .wind-meter i.active { background: #7de7ff; box-shadow: 0 0 5px #4cc9f0aa; }
+#wind-indicator.wind-left .wind-meter i.active { background: #ffc66d; box-shadow: 0 0 5px #ffad42aa; }
+#wind-indicator.wind-calm #wind-arrow { color: #c9d2d8; text-shadow: none; }
 #wind-indicator.wind-changed {
   color: #dff8ff;
   border-color: #9fe8ff;

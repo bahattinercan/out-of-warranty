@@ -389,13 +389,13 @@ test("yoğun SFX akışı eşzamanlı kaynak sayısını sınırlar", () => {
 test("konumsal ses: sol/orta/sağ pan, ölü bant ve konumsuz merkez", () => {
   const t = setup();
   const spec = t.WEAPONS[0];
-  // Her atış iki panner üretir (ton + gürültü); sıra: atış başına 2.
+  // Her atış beş katman üretir; konumlu seslerin her katmanı aynı yöne panlanır.
   t.SFX.shoot(spec, { x: 0, width: 960 });
   t.SFX.shoot(spec, { x: 480, width: 960 }); // tam merkez → panner bile kurulmaz
   t.SFX.shoot(spec, { x: 960, width: 960 });
-  assert.equal(t.panners.length, 4, "yalnız yanlardaki atışlar pan düğümü kurmalı");
+  assert.equal(t.panners.length, 10, "yalnız yanlardaki atışların katmanları pan düğümü kurmalı");
   assert(t.panners[0].pan.value < -0.99, "sol kenar tam sola panlanmalı");
-  assert(t.panners[2].pan.value > 0.99, "sağ kenar tam sağa panlanmalı");
+  assert(t.panners[5].pan.value > 0.99, "sağ kenar tam sağa panlanmalı");
   const dead = setup();
   dead.SFX.shoot(spec, { x: 470, width: 960 }); // merkeze çok yakın → ölü bant
   assert.equal(dead.panners.length, 0, "merkez çevresinde pan titrememeli");
@@ -565,6 +565,18 @@ test("her ses efekti ailesi dÃ¶rt karÄ±ÅŸÄ±k varyantÄ± tekrar etmeden 
   }
 });
 
+test("silah ve patlama profilleri atak, gövde ve kuyruğu kaynakları temizleyerek katmanlar", () => {
+  const t = setup();
+  t.SFX.shoot({ id: "sniper", radius: 42, directHitDamage: true });
+  t.SFX.explosion(90, { id: "fireball", napalm: true });
+  const roles = new Set(t.sources.map(source => source.audioRole));
+  for (const role of ["shot-attack", "shot-body", "shot-tail", "explosion-attack", "explosion-body", "explosion-tail"]) {
+    assert(roles.has(role), `${role} katmanı üretilmeli`);
+  }
+  for (const source of t.sources) source.onended?.();
+  assert(t.sources.every(source => source.disconnected), "katman kaynaklarının tüm node bağlantıları kapanmalı");
+});
+
 test("arena-rock themes and result stings are generated in Web Audio", () => {
   const t = setup({ fileAudio: true });
   t.SFX.musicSync("MODE_SELECT");
@@ -578,6 +590,8 @@ test("arena-rock themes and result stings are generated in Web Audio", () => {
   t.SFX.musicSync("AIMING");
   const battleSources = t.sources.slice(menuSources.length);
   assert(t.waveShapers.some(node => node.curve?.length === 256 && node.oversample === "2x"), "battle guitar uses a soft drive curve");
+  assert(battleSources.some(source => source.audioRole === "guitar-pick"), "driven guitar notes include a short filtered pick transient");
+  assert(!menuSources.some(source => source.audioRole === "guitar-pick"), "clean menu theme keeps its softer attack");
   assert.equal(t.SFX.musicInfo().bpm, 126, "battle has a separate faster tempo");
   assert(menuSources.some(source => source.stops.length > 1), "theme change stops old notes");
   assert(battleSources.length > menuSources.length, "battle arrangement has denser layers");

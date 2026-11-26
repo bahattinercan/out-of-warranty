@@ -389,3 +389,15 @@ MiniMax Music 3 renders were tried and rejected by the user. Runtime playback no
 The dark ambient and subsequent junkyard-funk sets were rejected. The current procedural score follows the user's chosen classic arena-rock direction. A variation bag plays each theme's four arrangements once in shuffled order, then reshuffles without an immediate boundary repeat. Sound effects follow the same four-variation rule per effect family: weapon shots and explosions are classified separately, and each family cycles all four profiles in shuffled order without repeating at the boundary. Profiles alter pitch, duration, filter, attack and resonance while preserving peak gain. The human listening pass for the coded sound remains open; see `audio-production.md`.
 
 `tests/audio.js` covers the coded themes, state transitions, mute/volume pause and resume, result stings, and returning to the menu. See [`audio-production.md`](./audio-production.md) for the retired AI-render history and current listening status.
+
+### 2026-11-26 — SFX profile layers
+
+- `SFX_TEXTURES` family profiles add quiet attack, body, and tail layers to weapon shots and explosions. Existing families and the `SFX` call interface remain intact; spatial panning applies to every added layer.
+- `tests/audio.js` covers profile layer creation and node cleanup. `node probes/_audio_measure.js` passed every gate: dense scene peaked at 31 active effect sources and -16.2 dBFS, with no clipping.
+- Human speaker/headphone listening remains outstanding.
+
+### 2026-11-26 â€” Arena-rock gitar atak iyileÅŸtirmesi
+
+- SavaÅŸ temasÄ±nÄ±n drive'lÄ± gitar notalarÄ±na kÄ±sa, yÃ¼ksek geÃ§iren filtreli pena ataÄŸÄ± ve kÄ±sa filtre parlaklÄ±ÄŸÄ± sÃ¼pÃ¼rmesi eklendi. Kritik savaÅŸ geri bildirimine tepe payÄ± aÃ§mak iÃ§in mÃ¼zik ana kazanÃ§ sÄ±nÄ±rÄ± dÃ¼ÅŸÃ¼rÃ¼ldÃ¼; kullanÄ±cÄ± mÃ¼zik seviyesi tercihi korunuyor.
+- `tests/audio.js` savaÅŸ notasÄ±nda pena katmanÄ±nÄ±n varlÄ±ÄŸÄ±nÄ± ve menÃ¼ temasÄ±nda bulunmadÄ±ÄŸÄ±nÄ± denetler.
+- GerÃ§ek hoparlÃ¶r/kulaklÄ±k dinleme turu tamamlanmadÄ±; sentez tÄ±nÄ±sÄ± otomatik Ã¶lÃ§Ã¼mle doÄŸrulanamaz.
